@@ -28,9 +28,14 @@ export function subscribeUser(fn) {
   return () => { _listeners = _listeners.filter(l => l !== fn); };
 }
 
-// Sin backend de cuentas real todavía: recordamos localmente qué nombre usó
-// cada email al registrarse, para no perderlo (mostrando el prefijo del
-// correo) cada vez que esa persona vuelve a iniciar sesión.
+// Resto de la época sin cuentas reales: se guardaba localmente qué nombre había
+// usado cada correo, porque el "login" no sabía más que el correo y si no
+// mostraba el prefijo ("camiduenasg1") como si fuera un nombre.
+//
+// Ahora la cuenta trae nombres y apellidos de verdad, así que este mapa pasó a
+// ser solo un respaldo: solo se usa si el login no aporta un nombre. Dejarlo
+// mandar por encima de la cuenta era lo que hacía que el saludo siguiera
+// diciendo el prefijo del correo aunque la persona ya se hubiera registrado.
 const NOMBRES_KEY = "joi360_nombres_por_email";
 function nombreRecordado(email) {
   try { return JSON.parse(localStorage.getItem(NOMBRES_KEY) || "{}")[email]; } catch { return undefined; }
@@ -44,7 +49,7 @@ function recordarNombre(email, nombre) {
 }
 
 export function loginUser(nombre, email) {
-  const nombreFinal = nombreRecordado(email) || nombre;
+  const nombreFinal = (nombre || "").trim() || nombreRecordado(email) || (email || "").split("@")[0];
   recordarNombre(email, nombreFinal);
   updateUser(s => {
     s.auth = { nombre: nombreFinal, email, since: Date.now() };

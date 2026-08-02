@@ -134,23 +134,17 @@ export async function registrarUsuario({ nombres, apellidos, docTipo, docNumero,
   return { id: usuario.id, email: correo };
 }
 
+// El backend de la plataforma. El perfil no se escribe directo a la base desde
+// acá porque el servidor calcula además la huella del documento, con la que el
+// POS puede buscar a alguien por DNI sin que el número esté guardado en ninguna
+// tabla legible. Esa huella lleva un secreto que no puede viajar en el bundle.
+const API = "https://joi-pos-backend.vercel.app";
+
 async function guardarPerfil({ id, nombres, apellidos, docTipo, docNumero, email }) {
-  await fetch(`${SUPA_URL}/rest/v1/app_profiles?on_conflict=id`, {
+  await fetch(`${API}/api/pos/v1/perfiles`, {
     method: "POST",
-    headers: {
-      apikey: ANON_KEY,
-      Authorization: `Bearer ${ANON_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates,return=minimal",
-    },
-    body: JSON.stringify({
-      id,
-      nombres: nombres.trim(),
-      apellidos: apellidos.trim(),
-      doc_tipo: docTipo,
-      doc_mask: enmascararDocumento(docNumero),
-      email_mask: enmascararCorreo(email),
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, nombres, apellidos, docTipo, docNumero, email }),
   });
 }
 
@@ -162,6 +156,22 @@ export async function iniciarSesion(email, password) {
   });
   const u = r.user || {};
   const meta = u.user_metadata || {};
+
+  // El perfil se resincroniza en cada inicio de sesión. Los datos vienen en la
+  // propia respuesta del login, así que no cuesta una consulta extra, y las
+  // cuentas creadas antes de que existiera la huella del documento se completan
+  // solas la próxima vez que su dueño entra: nadie tiene que migrar nada a mano.
+  if (u.id && meta.nombres) {
+    guardarPerfil({
+      id: u.id,
+      nombres: meta.nombres,
+      apellidos: meta.apellidos || "",
+      docTipo: meta.doc_tipo,
+      docNumero: meta.doc_numero,
+      email: u.email,
+    }).catch(() => {});
+  }
+
   return {
     id: u.id,
     email: u.email,

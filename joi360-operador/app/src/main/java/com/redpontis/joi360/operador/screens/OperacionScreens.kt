@@ -6,13 +6,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -21,13 +27,23 @@ import androidx.compose.ui.unit.sp
 import com.redpontis.joi360.operador.data.*
 import com.redpontis.joi360.operador.nfc.rememberNfcScanner
 import com.redpontis.joi360.operador.ui.*
+import java.time.OffsetDateTime
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Control de accesos. Pensado para una puerta con cola detrás: el veredicto
- * ocupa la pantalla completa en verde o rojo, legible a un brazo de distancia,
- * y se limpia solo a los pocos segundos para atender al siguiente.
+ * Control de accesos.
+ *
+ * Pensado para una puerta con cola detrás: el veredicto ocupa la pantalla en
+ * verde o rojo, legible a un brazo de distancia. Pero un "acceso permitido"
+ * anónimo no le sirve a quien está en la puerta, así que el veredicto muestra
+ * a quién dejó pasar: nombre, si es un dependiente, y sus alergias si las
+ * tiene registradas. Debajo queda lo que ya pasó, para responder "¿ya entró
+ * fulano?" sin ir a buscar a ningún lado.
  */
 @Composable
 fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
@@ -38,7 +54,14 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
     var veredicto by remember { mutableStateOf<AccesoResult?>(null) }
     var procesando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var recientes by remember { mutableStateOf<List<AccesoRegistro>>(emptyList()) }
+    var verHistorial by remember { mutableStateOf(false) }
+    var version by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(version) {
+        Api.accesosRecientes(config.worldId).onSuccess { recientes = it }
+    }
 
     fun validar(codigo: String, origen: String = "nfc") {
         if (procesando) return
@@ -46,13 +69,13 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
         error = null
         scope.launch {
             Api.validarAcceso(config.worldId, codigo, tipo, origen)
-                .onSuccess { procesando = false; veredicto = it }
+                .onSuccess { procesando = false; veredicto = it; version++ }
                 .onFailure { procesando = false; error = it.message }
         }
     }
 
     val nfc = rememberNfcScanner(
-        enabled = config.capabilities.banditaNfc && veredicto == null && !procesando,
+        enabled = config.capabilities.banditaNfc && veredicto == null && !procesando && !verHistorial,
     ) { validar(it) }
 
     val escanearQr = rememberQrScanner(
@@ -60,54 +83,20 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
         onError = { error = it },
     ) { validar(it, origen = "manual") }
 
-    // El veredicto se autolimpia: en una puerta nadie tiene una mano libre.
-    LaunchedEffect(veredicto) {
-        if (veredicto != null) { delay(3500); veredicto = null }
+    if (verHistorial) {
+        HistorialAccesosScreen(config = config, onBack = { verHistorial = false })
+        return
     }
 
     val v = veredicto
     if (v != null) {
-        val ok = v.ok
-        Column(
-            Modifier
-                .fillMaxSize()
-                .background(if (ok) Joi.Ok else Joi.Danger)
-                .clickable { veredicto = null }
-                .padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(if (ok) "✓" else "✕", fontSize = 96.sp, color = Color.White, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(20.dp))
-            Text(
-                if (ok) "Acceso permitido" else "Acceso denegado",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                if (ok) (if (tipo == "ingreso") "Ingreso registrado" else "Salida registrada")
-                else motivoLegible(v.motivo),
-                fontSize = 18.sp,
-                color = Color.White.copy(alpha = 0.9f),
-                textAlign = TextAlign.Center,
-            )
-            // Cerrar el círculo en la puerta: el operador ve que el apoderado ya
-            // se enteró, sin tener que preguntarlo ni prometerlo de palabra.
-            if (ok && v.avisoApoderado != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "Se avisó al apoderado de ${v.avisoApoderado}",
-                    fontSize = 16.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Spacer(Modifier.height(36.dp))
-            Text("Toca para continuar", fontSize = 15.sp, color = Color.White.copy(alpha = 0.75f))
-        }
+        VeredictoAcceso(
+            resultado = v,
+            tipo = tipo,
+            recientes = recientes,
+            onVerHistorial = { veredicto = null; verHistorial = true },
+            onCerrar = { veredicto = null },
+        )
         return
     }
 
@@ -160,8 +149,297 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
             Spacer(Modifier.height(20.dp))
             Notice(error!!, NoticeTone.Danger)
         }
+
+        Spacer(Modifier.height(28.dp))
+        ListaAccesos(
+            accesos = recientes,
+            titulo = "Últimos accesos",
+            onVerHistorial = { verHistorial = true },
+        )
     }
 }
+
+/** Veredicto a pantalla completa, con la ficha de quien acaba de pasar. */
+@Composable
+private fun VeredictoAcceso(
+    resultado: AccesoResult,
+    tipo: String,
+    recientes: List<AccesoRegistro>,
+    onVerHistorial: () -> Unit,
+    onCerrar: () -> Unit,
+) {
+    val ok = resultado.ok
+    val tono = if (ok) Joi.Ok else Joi.Danger
+    val persona = resultado.persona
+
+    Column(
+        Modifier.fillMaxSize().background(Joi.Bg)
+            .safeDrawingPadding().verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 24.dp),
+    ) {
+        Spacer(Modifier.height(12.dp))
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Sello(
+                icon = if (ok) Icons.Default.HowToReg else Icons.Default.Block,
+                tint = tono,
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                if (ok) "Acceso permitido" else "Acceso denegado",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Joi.Ink,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (ok) (if (tipo == "ingreso") "Ingreso registrado" else "Salida registrada")
+                else motivoLegible(resultado.motivo),
+                style = MaterialTheme.typography.bodyLarge,
+                color = Joi.InkMuted,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        if (ok && persona != null) {
+            Spacer(Modifier.height(24.dp))
+            Panel {
+                Text(
+                    persona.nombre ?: "Sin nombre registrado",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Joi.Ink,
+                )
+                Spacer(Modifier.height(12.dp))
+                DataRow("Tipo de perfil", if (persona.esDependiente) "Dependiente" else "Titular")
+                if (persona.balance != null) {
+                    DataRow("Saldo", "S/ " + "%.2f".format(persona.balance))
+                }
+                if (!persona.tipoSangre.isNullOrBlank()) {
+                    DataRow("Tipo de sangre", persona.tipoSangre)
+                }
+            }
+            // Las alergias no van escondidas en una fila más: si esta persona
+            // va a consumir algo adentro, es lo que hay que ver primero.
+            if (!persona.alergias.isNullOrBlank()) {
+                Spacer(Modifier.height(14.dp))
+                Notice("Alergias registradas: " + persona.alergias, NoticeTone.Warn)
+            }
+            if (resultado.avisoApoderado != null) {
+                Spacer(Modifier.height(14.dp))
+                Notice(
+                    "Se avisó al apoderado de " + resultado.avisoApoderado + ".",
+                    NoticeTone.Info,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        BigButton("Siguiente persona", onClick = onCerrar)
+
+        Spacer(Modifier.height(28.dp))
+        ListaAccesos(
+            accesos = recientes,
+            titulo = "Últimos accesos",
+            onVerHistorial = onVerHistorial,
+        )
+    }
+}
+
+/** Historial completo, una jornada por vez. */
+@Composable
+private fun HistorialAccesosScreen(config: RenderConfig, onBack: () -> Unit) {
+    // Se navega por días y no por "cargar más": revisar una puerta es preguntar
+    // qué pasó tal día, no recorrer una lista infinita hacia atrás.
+    var offsetDias by remember { mutableIntStateOf(0) }
+    var accesos by remember { mutableStateOf<List<AccesoRegistro>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val dia = remember(offsetDias) { LocalDate.now().minusDays(offsetDias.toLong()) }
+    val diaIso = dia.format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+    LaunchedEffect(diaIso) {
+        accesos = null
+        error = null
+        Api.accesosRecientes(config.worldId, limite = 500, dia = diaIso)
+            .onSuccess { accesos = it }
+            .onFailure { error = it.message; accesos = emptyList() }
+    }
+
+    val etiquetaDia = when (offsetDias) {
+        0 -> "Hoy"
+        1 -> "Ayer"
+        else -> dia.format(DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es", "PE")))
+    }
+
+    Column(
+        Modifier.fillMaxSize().background(Joi.Bg)
+            .safeDrawingPadding()
+            .padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 24.dp),
+    ) {
+        ScreenHeader("Historial de accesos", config.worldName, onBack)
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FlechaDia(
+                icono = Icons.Default.ChevronLeft,
+                descripcion = "Día anterior",
+                habilitada = true,
+                onClick = { offsetDias++ },
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(etiquetaDia, style = MaterialTheme.typography.titleLarge, color = Joi.Ink)
+                Text(
+                    dia.format(DateTimeFormatter.ofPattern("EEEE d MMM yyyy", Locale("es", "PE"))),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Joi.InkMuted,
+                )
+            }
+            FlechaDia(
+                icono = Icons.Default.ChevronRight,
+                descripcion = "Día siguiente",
+                // No hay accesos del futuro: hoy es el tope.
+                habilitada = offsetDias > 0,
+                onClick = { if (offsetDias > 0) offsetDias-- },
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        val filas = accesos
+        when {
+            filas == null -> EmptyState("Cargando", "Buscando los accesos de " + etiquetaDia + ".")
+            error != null -> Notice(error!!, NoticeTone.Danger)
+            filas.isEmpty() -> EmptyState(
+                "Sin accesos",
+                "Nadie pasó por la puerta " + (if (offsetDias == 0) "todavía hoy" else "ese día") + ".",
+            )
+            else -> {
+                Text(
+                    filas.size.toString() + " " + (if (filas.size == 1) "acceso" else "accesos"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Joi.InkMuted,
+                )
+                Spacer(Modifier.height(10.dp))
+                LazyColumn(Modifier.weight(1f)) {
+                    items(filas, key = { it.id }) { FilaAcceso(it) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FlechaDia(
+    icono: ImageVector,
+    descripcion: String,
+    habilitada: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier
+            .size(52.dp)
+            .background(if (habilitada) Joi.Surface else Joi.SurfaceTint, RoundedCornerShape(14.dp))
+            .clickable(enabled = habilitada, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icono,
+            contentDescription = descripcion,
+            tint = if (habilitada) Joi.Ink else Joi.InkFaint,
+        )
+    }
+}
+
+/** Los últimos accesos, con salida al historial completo. */
+@Composable
+private fun ListaAccesos(
+    accesos: List<AccesoRegistro>,
+    titulo: String,
+    onVerHistorial: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(titulo, style = MaterialTheme.typography.titleMedium, color = Joi.Ink)
+        Text(
+            "Ver historial",
+            color = Joi.Primary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable(onClick = onVerHistorial).padding(8.dp),
+        )
+    }
+    Spacer(Modifier.height(10.dp))
+    if (accesos.isEmpty()) {
+        Text(
+            "Todavía no pasó nadie por la puerta.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Joi.InkMuted,
+        )
+    } else {
+        accesos.forEach { FilaAcceso(it) }
+    }
+}
+
+@Composable
+private fun FilaAcceso(a: AccesoRegistro) {
+    val entra = a.tipo != "salida"
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(36.dp).background(
+                if (entra) Joi.OkSoft else Joi.SurfaceTint,
+                RoundedCornerShape(10.dp),
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (entra) Icons.Default.Login else Icons.Default.Logout,
+                contentDescription = null,
+                tint = if (entra) Joi.Ok else Joi.InkMuted,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                a.nombre ?: "Sin nombre registrado",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (a.nombre != null) Joi.Ink else Joi.InkMuted,
+            )
+            Text(
+                if (entra) "Ingreso" else "Salida",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Joi.InkMuted,
+            )
+        }
+        Text(
+            horaDe(a.fechaIso),
+            style = MaterialTheme.typography.bodyMedium,
+            color = Joi.InkMuted,
+        )
+    }
+}
+
+/**
+ * La hora local, que es lo único que se lee de un vistazo en una lista.
+ *
+ * Se parsea con OffsetDateTime y no con Instant: Postgres devuelve el desfase
+ * como "+00:00" y Instant.parse solo acepta la forma con "Z", así que toda la
+ * columna de horas salía en "--:--".
+ */
+private fun horaDe(iso: String): String = runCatching {
+    OffsetDateTime.parse(iso)
+        .atZoneSameInstant(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("HH:mm"))
+}.getOrDefault("--:--")
 
 /** Check-in de entradas de evento. Mismo patrón de veredicto a pantalla completa. */
 @Composable

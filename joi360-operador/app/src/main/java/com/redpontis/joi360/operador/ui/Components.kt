@@ -25,12 +25,48 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // Altura mínima de acción primaria. Un POS se opera de pie, a veces con la
 // mano ocupada; 64dp es el piso por debajo del cual se falla el toque.
 private val ACTION_H = 64.dp
+
+/**
+ * Sello de veredicto.
+ *
+ * Misma figura que el lector NFC —un disco con halos concéntricos— pero quieta.
+ * La animación en el lector significa "estoy esperando"; acá ya no se espera
+ * nada, la respuesta llegó, y un pulso repitiéndose solo distrae a quien tiene
+ * gente en la puerta. Se reutiliza la forma porque es la misma familia visual:
+ * el operador reconoce el círculo antes de leer una palabra.
+ */
+@Composable
+fun Sello(
+    icon: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 112.dp,
+) {
+    Box(modifier.size(size * 1.62f), contentAlignment = Alignment.Center) {
+        // Dos halos fijos, donde el pulso del NFC los deja a mitad de recorrido:
+        // la silueta se reconoce igual sin movimiento.
+        Box(Modifier.size(size * 1.62f).background(tint.copy(alpha = 0.12f), CircleShape))
+        Box(Modifier.size(size * 1.30f).background(tint.copy(alpha = 0.18f), CircleShape))
+        Box(
+            Modifier.size(size).background(tint, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(size * 0.46f),
+            )
+        }
+    }
+}
 
 /** Acción primaria. Una sola por pantalla: la que cierra la tarea. */
 @Composable

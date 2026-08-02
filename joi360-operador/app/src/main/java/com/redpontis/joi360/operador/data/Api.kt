@@ -245,7 +245,47 @@ object Api {
                 motivo = j.optString("motivo").takeIf { it.isNotBlank() && it != "null" },
                 userId = j.optString("userId").takeIf { it.isNotBlank() && it != "null" },
                 avisoApoderado = j.optString("avisoApoderado").takeIf { it.isNotBlank() && it != "null" },
+                persona = j.optJSONObject("persona")?.let { p ->
+                    val r = p.optJSONObject("restricciones")
+                    Titular(
+                        userId = p.optString("userId"),
+                        nombre = p.optString("nombre").takeIf { it.isNotBlank() && it != "null" },
+                        esDependiente = p.optBoolean("esDependiente"),
+                        balance = p.optDouble("balance").takeIf { b -> !b.isNaN() },
+                        alergias = r?.optString("alergias")?.takeIf { it.isNotBlank() && it != "null" },
+                        tipoSangre = r?.optString("tipoSangre")?.takeIf { it.isNotBlank() && it != "null" },
+                        contactoEmergencia = null,
+                    )
+                },
             )
+        }
+
+    /**
+     * Lo que pasó por la puerta. Sin día, los últimos [limite]; con día, esa
+     * jornada completa — que es como se revisa un día ya cerrado.
+     */
+    suspend fun accesosRecientes(
+        worldId: String,
+        limite: Int = 20,
+        dia: String? = null,
+    ): Result<List<AccesoRegistro>> =
+        request(
+            "GET",
+            "/api/pos/v1/accesos/recientes?world_id=${enc(worldId)}&limit=$limite" +
+                (dia?.let { "&dia=$it" } ?: ""),
+        ).mapCatching { j ->
+            val arr = j.optJSONArray("accesos") ?: return@mapCatching emptyList()
+            (0 until arr.length()).map { i ->
+                val a = arr.getJSONObject(i)
+                AccesoRegistro(
+                    id = a.optString("id"),
+                    userId = a.optString("userId"),
+                    tipo = a.optString("tipo"),
+                    fechaIso = a.optString("fecha"),
+                    nombre = a.optString("nombre").takeIf { it.isNotBlank() && it != "null" },
+                    esDependiente = a.optBoolean("esDependiente"),
+                )
+            }
         }
 
     // ── Entradas de evento ────────────────────────────────────────────────

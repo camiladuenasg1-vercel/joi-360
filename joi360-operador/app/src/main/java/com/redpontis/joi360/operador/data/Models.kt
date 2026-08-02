@@ -58,6 +58,19 @@ data class AccesoResult(
     // Nombre del dependiente cuyo apoderado fue avisado. Null cuando quien pasó
     // es un adulto por su cuenta: ahí no hay a quién notificar.
     val avisoApoderado: String? = null,
+    // Quién acaba de pasar. Un "acceso permitido" sin nombre no le sirve a
+    // nadie parado en la puerta tratando de saber a quién dejó entrar.
+    val persona: Titular? = null,
+)
+
+/** Una marca en la puerta, ya con nombre. */
+data class AccesoRegistro(
+    val id: String,
+    val userId: String,
+    val tipo: String,
+    val fechaIso: String,
+    val nombre: String?,
+    val esDependiente: Boolean,
 )
 
 data class TicketResult(
