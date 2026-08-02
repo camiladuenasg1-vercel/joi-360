@@ -618,7 +618,13 @@ function TabModulos({ m }) {
       // que alguien visite la pestaña Motor de Eventos por separado — el mismo
       // gap que ya se resolvió en el wizard de creación (Step6Eventos), pero
       // para un mundo que ya existía.
-      if (modId === "eventos" && !mundo.eventosConfig) mundo.eventosConfig = { embebidoActivo: false, comisionEntrada: 5 };
+      if (modId === "eventos" && !mundo.eventosConfig) {
+        mundo.eventosConfig = {
+          modoEventos: mundo.type === "eventos_rp" ? "b2c" : "b2b",
+          embebidoActivo: false,
+          comisionEntrada: 5,
+        };
+      }
     });
     if (modId === "eventos") setEventosPopup(true);
     else notify(`Capacidad "${c.name}" agregada al mundo.`);
@@ -755,44 +761,153 @@ function TabModulos({ m }) {
   );
 }
 
-/* ── Popup de estrategia de Eventos al activar el módulo en un mundo YA
-   existente (mismo contenido que Step6Eventos del wizard de creación, para
-   que la decisión sea visible justo en el momento de activar, no una
-   pestaña aparte que hay que descubrir después). ── */
-function EventosActivadoPopup({ m, onClose }) {
-  const cfg = m.eventosConfig || { embebidoActivo: false, comisionEntrada: 5 };
+/* ── Selector de modelo del Motor de Eventos ───────────────────────────
+   Un solo componente para las dos superficies que deciden lo mismo: el popup
+   que salta al activar la capacidad y la pestaña Motor de Eventos. Antes eran
+   dos bloques distintos y ya habían derivado — el popup daba B2B por sentado y
+   dejaba marcar Embebido al lado, que es justo lo que no puede coexistir.
+
+   Las dependencias son reales, no cosméticas:
+     · B2B  → mundo organizador. Se le entrega un panel dedicado. No convive
+              con B2C ni con Embebido.
+     · B2C  → el evento lo crea un usuario final desde la app.
+     · Embebido → solo bajo B2C, y el evento es del mundo: lo carga su propio
+              panel y RedPontis lo aprueba. Al activarlo hay que definir la
+              comisión, porque sin modelo comercial no se puede liquidar. */
+function SelectorModoEventos({ m, compacto = false }) {
+  const cfg = m.eventosConfig || {};
+  const modo = cfg.modoEventos || (m.type === "eventos_rp" ? "b2c" : "b2b");
+  const esB2B = modo === "b2b";
+  const embebido = !!cfg.embebidoActivo;
+
   const setCfg = patch => update(s => {
-    const mu = (s.mundos||[]).find(x => x.id === m.id);
+    const mu = (s.mundos || []).find(x => x.id === m.id);
     if (mu) mu.eventosConfig = { ...(mu.eventosConfig || cfg), ...patch };
   });
+
+  // Cambiar a B2B apaga Embebido en el mismo gesto: dejar el flag prendido
+  // "por si acaso" es cómo se cuelan estados imposibles.
+  const elegirModo = nuevo => setCfg(
+    nuevo === "b2b"
+      ? { modoEventos: "b2b", embebidoActivo: false }
+      : { modoEventos: "b2c" }
+  );
+
+  const activarEmbebido = v => setCfg(
+    v
+      ? { embebidoActivo: true, modeloComisionEventos: cfg.modeloComisionEventos || "transaccional" }
+      : { embebidoActivo: false }
+  );
+
+  return (
+    <>
+      {/* JOI Eventos es B2C por definición: es el mundo donde publica el
+          usuario final. Ofrecer B2B ahí sería una opción que no existe. */}
+      {m.type !== "eventos_rp" && (
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {["b2b", "b2c"].map(op => {
+            const mo = MODOS_EVENTO[op];
+            const activo = modo === op;
+            return (
+              <button key={op} onClick={() => elegirModo(op)}
+                className={`p-4 rounded-xl border-2 text-left transition-colors ${activo ? "border-primary bg-primary-fixed/20" : "border-outline-variant hover:border-primary/40"}`}>
+                <Icon n={mo.icon} className={activo ? "text-primary text-[20px]" : "text-outline text-[20px]"} />
+                <p className="text-sm font-semibold mt-2">{mo.label}</p>
+                <p className="text-xs text-on-surface-variant mt-1">{mo.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {esB2B ? (
+        <div className="p-4 bg-secondary-fixed/30 border border-secondary/20 rounded-xl flex items-start gap-3">
+          <Icon n="business_center" className="text-secondary text-[20px] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold">Mundo organizador (B2B)</p>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              {m.nombre} gestiona sus eventos desde un panel propio, con aprobación final de RedPontis.
+              Embebido y B2C quedan fuera mientras el modo sea B2B.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={`p-4 rounded-xl border-2 transition-colors mb-4 ${embebido ? "border-primary bg-primary-fixed/20" : "border-outline-variant border-dashed"}`}>
+            <div className="flex justify-between items-start mb-2">
+              <Icon n={MODOS_EVENTO.embebido.icon} className={embebido ? "text-primary" : "text-outline"} />
+              <Toggle checked={embebido} onChange={activarEmbebido} />
+            </div>
+            <p className="text-sm font-semibold">Activar Embebido</p>
+            <p className="text-xs text-on-surface-variant mt-1">
+              El evento pasa a ser del mundo: se carga desde su propio panel y RedPontis lo aprueba
+              antes de que salga al superapp, en un carrusel propio separado del de comercios.
+            </p>
+          </div>
+
+          {embebido && !compacto && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-xs font-bold text-amber-900 mb-3 flex items-center gap-1.5">
+                <Icon n="payments" className="text-[16px]" /> Comisión de RedPontis para Embebido — obligatorio al activar
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {["transaccional", "mixto", "revenue"].map(modelo => (
+                  <button key={modelo} onClick={() => setCfg({ modeloComisionEventos: modelo })}
+                    className={`py-2.5 rounded-lg border text-xs font-semibold capitalize transition-colors ${(cfg.modeloComisionEventos || "transaccional") === modelo ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>
+                    {modelo === "transaccional" ? "% por entrada" : modelo === "mixto" ? "Mixto" : "Revenue fijo"}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {(cfg.modeloComisionEventos || "transaccional") !== "revenue" && (
+                  <Field label="Comisión por entrada (%)">
+                    <input className={inputCls} type="number" value={cfg.comisionEntrada || 0}
+                      onChange={e => setCfg({ comisionEntrada: +e.target.value })} />
+                  </Field>
+                )}
+                {(cfg.modeloComisionEventos === "mixto" || cfg.modeloComisionEventos === "revenue") && (
+                  <Field label={`Cuota fija mensual (${m.moneda})`}>
+                    <input className={inputCls} type="number" value={cfg.comisionFijaMensual || 0}
+                      onChange={e => setCfg({ comisionFijaMensual: +e.target.value })} />
+                  </Field>
+                )}
+              </div>
+            </div>
+          )}
+
+          {embebido && compacto && (
+            <p className="text-xs text-on-surface-variant">
+              Define la comisión de RedPontis en la pestaña <b>Motor de Eventos</b> antes de publicar el primer evento.
+            </p>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/* ── Popup de estrategia de Eventos ────────────────────────────────────
+   Salta al activar la capacidad en un mundo ya existente, para que la decisión
+   se tome en el momento y no en una pestaña que hay que descubrir después.
+   Se puede volver a abrir desde la pestaña Motor de Eventos: elegir el modelo
+   no es una puerta de un solo sentido, y un mundo puede cambiar de estrategia. */
+function EventosActivadoPopup({ m, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-2 mb-4">
-          <Icon n="confirmation_number" className="text-primary text-[22px]"/>
-          <h3 className="font-semibold">Motor de Eventos activado</h3>
+      <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-1">
+          <Icon n="confirmation_number" className="text-primary text-[22px]" />
+          <h3 className="font-semibold">Modelo del Motor de Eventos</h3>
         </div>
-        <div className="p-4 rounded-xl border-2 border-primary bg-primary-fixed/20 mb-3">
-          <div className="flex items-start gap-3">
-            <Icon n="business_center" className="text-primary text-[20px] mt-0.5"/>
-            <div>
-              <p className="text-sm font-semibold">Modelo: B2B</p>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Condición ya cumplida: <b>{m.nombre}</b> es una entidad independiente propia ({m.entidadLegal || "razón social"}, RUC {m.ruc || "—"}), no un sub-organizador de otro mundo.
-                Por eso opera B2B automáticamente — se le entrega un Dashboard de Organizador dedicado para autogestionar sus eventos (siempre con aprobación final de RedPontis).
-              </p>
-            </div>
-          </div>
+        <p className="text-xs text-on-surface-variant mb-4">
+          Define quién crea los eventos de <b>{m.nombre}</b>. Puedes cambiarlo después desde la pestaña Motor de Eventos.
+        </p>
+        <SelectorModoEventos m={m} compacto />
+        <div className="mt-5">
+          <BtnPrimary onClick={onClose} className="w-full justify-center">
+            <Icon n="check" className="text-[16px]" /> Listo
+          </BtnPrimary>
         </div>
-        <p className="text-xs font-mono uppercase text-outline mb-2">Opcional — sumar Embebido</p>
-        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors mb-5 ${cfg.embebidoActivo ? "border-primary bg-primary-fixed/20" : "border-outline-variant hover:border-primary/40"}`}>
-          <input type="checkbox" checked={!!cfg.embebidoActivo} onChange={e => setCfg({ embebidoActivo: e.target.checked })} className="mt-1 rounded text-primary" />
-          <div>
-            <p className="text-sm font-semibold">Embebido</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">El propio panel del mundo también podrá cargar y publicar sus eventos directo, sin depender del organizador.</p>
-          </div>
-        </label>
-        <BtnPrimary onClick={onClose} className="w-full justify-center"><Icon n="check" className="text-[16px]"/> Listo</BtnPrimary>
       </div>
     </div>
   );
@@ -2214,91 +2329,27 @@ function TabAcuerdo({ m }) {
    (si Embebido está activo) o el usuario final en JOI Eventos. */
 function TabEventos({ m, st, goto }) {
   const nav = useNavigate();
+  // Elegir el modelo no es una puerta de un solo sentido: un mundo puede
+  // cambiar de estrategia y tiene que poder volver a ver esta decisión.
+  const [verPopupModo, setVerPopupModo] = useState(false);
   const eventos = (st.eventos||[]).filter(e => e.mundoId === m.id);
-  const cfg = m.eventosConfig || { modoEventos: m.type === "eventos_rp" ? "b2c" : "b2b", embebidoActivo:false, comisionEntrada:5 };
-  const esB2B = (cfg.modoEventos || (m.type === "eventos_rp" ? "b2c" : "b2b")) === "b2b";
-
-  const setCfg = patch => update(s => {
-    const mu = (s.mundos||[]).find(x => x.id === m.id);
-    if (mu) mu.eventosConfig = { ...cfg, ...patch };
-  });
-  // B2B es excluyente: al elegirlo se apaga Embebido de una — nunca deben
-  // coexistir (un mundo B2B es un mundo "organizador", se entrega el panel).
-  const elegirModo = modo => setCfg(modo === "b2b" ? { modoEventos: "b2b", embebidoActivo: false } : { modoEventos: "b2c" });
+  // La configuración del modelo la lleva SelectorModoEventos, que es el mismo
+  // componente que usa el popup: dos copias del mismo formulario ya habían
+  // derivado una vez y esta pestaña terminó permitiendo lo que el popup no.
 
   return (
     <div className="space-y-8">
+      {verPopupModo && <EventosActivadoPopup m={m} onClose={() => setVerPopupModo(false)}/>}
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
-        <h3 className="font-semibold mb-1 flex items-center gap-2"><Icon n="settings" className="text-primary"/> Motor de Eventos — Configuración</h3>
+        <div className="flex justify-between items-start mb-1">
+          <h3 className="font-semibold flex items-center gap-2"><Icon n="settings" className="text-primary"/> Motor de Eventos — Configuración</h3>
+          <BtnOutline onClick={() => setVerPopupModo(true)}><Icon n="tune" className="text-[16px]"/> Volver a elegir el modelo</BtnOutline>
+        </div>
         <p className="text-xs text-on-surface-variant mb-4">
           Elige el modelo del mundo. <b>B2B</b> no convive con B2C ni Embebido — es un mundo organizador, se le entrega el panel dedicado. <b>B2C</b> sí puede convivir con Embebido (el propio mundo publica, bajo comisión de RedPontis).
         </p>
 
-        {m.type !== "eventos_rp" && (
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            {["b2b","b2c"].map(modo => {
-              const mo = MODOS_EVENTO[modo];
-              const activo = (cfg.modoEventos || "b2b") === modo;
-              return (
-                <button key={modo} onClick={() => elegirModo(modo)}
-                  className={`p-4 rounded-xl border-2 text-left transition-colors ${activo?"border-primary bg-primary-fixed/20":"border-outline-variant hover:border-primary/40"}`}>
-                  <Icon n={mo.icon} className={activo?"text-primary text-[20px]":"text-outline text-[20px]"}/>
-                  <p className="text-sm font-semibold mt-2">{mo.label}</p>
-                  <p className="text-xs text-on-surface-variant mt-1">{mo.desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {esB2B ? (
-          <div className="p-4 bg-secondary-fixed/30 border border-secondary/20 rounded-xl flex items-start gap-3">
-            <Icon n="business_center" className="text-secondary text-[20px] flex-shrink-0 mt-0.5"/>
-            <div>
-              <p className="text-sm font-semibold">Mundo organizador (B2B)</p>
-              <p className="text-xs text-on-surface-variant mt-0.5">Embebido y B2C quedan deshabilitados mientras el modo sea B2B. Entrega el panel al organizador dedicado desde el encabezado de este mundo.</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className={`p-4 rounded-xl border-2 transition-colors mb-4 ${cfg.embebidoActivo?"border-primary bg-primary-fixed/20":"border-outline-variant border-dashed"}`}>
-              <div className="flex justify-between items-start mb-2">
-                <Icon n={MODOS_EVENTO.embebido.icon} className={cfg.embebidoActivo?"text-primary":"text-outline"}/>
-                <Toggle checked={!!cfg.embebidoActivo} onChange={v => setCfg({ embebidoActivo: v })}/>
-              </div>
-              <p className="text-sm font-semibold">Activar Embebido</p>
-              <p className="text-xs text-on-surface-variant mt-1">El propio panel del mundo también podrá cargar y publicar eventos bajo el modelo B2C, sin depender de un organizador externo.</p>
-            </div>
-
-            {cfg.embebidoActivo && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <p className="text-xs font-bold text-amber-900 mb-3 flex items-center gap-1.5">
-                  <Icon n="payments" className="text-[16px]"/> Comisión de RedPontis para Embebido — obligatorio al activar
-                </p>
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {["transaccional","mixto","revenue"].map(modelo => (
-                    <button key={modelo} onClick={() => setCfg({ modeloComisionEventos: modelo })}
-                      className={`py-2.5 rounded-lg border text-xs font-semibold capitalize transition-colors ${(cfg.modeloComisionEventos||"transaccional")===modelo?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>
-                      {modelo === "transaccional" ? "% por entrada" : modelo === "mixto" ? "Mixto" : "Revenue fijo"}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {(cfg.modeloComisionEventos||"transaccional") !== "revenue" && (
-                    <Field label="Comisión por entrada (%)">
-                      <input className={inputCls} type="number" value={cfg.comisionEntrada||0} onChange={e => setCfg({ comisionEntrada:+e.target.value })}/>
-                    </Field>
-                  )}
-                  {(cfg.modeloComisionEventos==="mixto"||cfg.modeloComisionEventos==="revenue") && (
-                    <Field label={`Cuota fija mensual (${m.moneda})`}>
-                      <input className={inputCls} type="number" value={cfg.comisionFijaMensual||0} onChange={e => setCfg({ comisionFijaMensual:+e.target.value })}/>
-                    </Field>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        <SelectorModoEventos m={m} />
       </section>
 
       <div className="p-4 bg-surface-container-low border border-outline-variant rounded-xl flex items-center justify-between gap-4">

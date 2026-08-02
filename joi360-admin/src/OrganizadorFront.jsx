@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, session, organizadorLogin, organizadorLogout, organizadorSession, generarPassword, refreshEventosLive } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify } from "./ui";
-import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento } from "./supabase.js";
+import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo } from "./supabase.js";
 
 const TIPO_ENTRADA_BLANK = { id: "", nombre: "General", precio: 0, cupos: 100, descripcion: "", incluye: "" };
 
@@ -32,8 +32,80 @@ export function adminEvToRemote(ev, mundoId) {
     modo: ev.modo || "embebido",
     organizadorId: ev.organizadorId || null,
     imagenUrl: ev.imagenUrl || null,
+    // Plano del recinto. Por ahora un PDF y no un mapa interactivo: es lo que
+    // los organizadores ya tienen hecho, y pedirles otra cosa retrasaría el
+    // evento sin darle nada al asistente que no le dé el plano.
+    mapaUrl: ev.mapaUrl || null,
+    mapaNombre: ev.mapaNombre || null,
     uxComponents: ev.uxComponents || ["hero", "entradas", "agenda", "marketplace"],
   };
+}
+
+/**
+ * Plano del recinto.
+ *
+ * Es un PDF y no un mapa interactivo a propósito: el plano ya existe, lo hizo
+ * quien montó el evento, y pedirle que lo rehaga en otra herramienta atrasa el
+ * evento sin darle nada al asistente. Cuando haga falta ubicar puestos uno por
+ * uno se cambia; hoy alcanza con que la gente pueda abrirlo en el celular.
+ */
+function MapaDelEvento({ eventoId, url, nombre, onCambio }) {
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState("");
+
+  const subir = async e => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      setError("Por ahora el plano tiene que ser un PDF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("El PDF pesa más de 10 MB. Comprímelo antes de subirlo.");
+      return;
+    }
+    setError("");
+    setSubiendo(true);
+    try {
+      const ruta = `eventos/${eventoId || uid("ev")}/mapa-${Date.now()}.pdf`;
+      const publica = await uploadArchivo("joi360-media", ruta, file);
+      onCambio(publica, file.name);
+    } catch (err) {
+      setError(`No se pudo subir el plano: ${err.message}`);
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <Field label="Mapa del evento (PDF)" hint="Lo verá el asistente en la ficha del evento, dentro del app.">
+      {url ? (
+        <div className="flex items-center gap-3 p-3 border border-outline-variant rounded-lg bg-surface-container-low">
+          <Icon n="picture_as_pdf" className="text-error text-[22px]" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{nombre || "Plano del recinto"}</p>
+            <a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
+              Ver plano
+            </a>
+          </div>
+          <button type="button" onClick={() => onCambio(null, null)}
+            className="text-xs text-on-surface-variant hover:text-error transition-colors px-2 py-1">
+            Quitar
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-outline-variant rounded-lg cursor-pointer hover:border-primary/40 transition-colors">
+          <Icon n={subiendo ? "hourglass_empty" : "upload_file"} className="text-on-surface-variant text-[20px]" />
+          <span className="text-sm text-on-surface-variant">
+            {subiendo ? "Subiendo…" : "Subir plano en PDF"}
+          </span>
+          <input type="file" accept="application/pdf" className="hidden" onChange={subir} disabled={subiendo} />
+        </label>
+      )}
+      {error && <p className="text-xs text-error mt-2">{error}</p>}
+    </Field>
+  );
 }
 
 // Tickets reales por evento desde Supabase — base del aforo en tiempo real.
@@ -878,7 +950,7 @@ function TabLiqOrganizador({ m, eventos, ticketsMap }) {
 export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos = ["embebido"], organizadorFijo = null, organizadores = [] }) {
   const modoDefault = organizadorFijo ? "b2b" : (modosPermitidos[0] || "embebido");
   const blank = {
-    nombre: "", descripcion: "", fecha: "", hora: "18:00", lugar: "", imagenUrl: "",
+    nombre: "", descripcion: "", fecha: "", hora: "18:00", lugar: "", imagenUrl: "", mapaUrl: null, mapaNombre: null,
     tipo: "presencial", metodoAcceso: "qr",
     tipoEvento: "kermesse", // catálogo completo de Tipos de Evento: R2 (doc §5.2)
     privado: false,         // Rules Engine: privado → oculto del marketplace
@@ -1037,6 +1109,12 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
             <input className={inputCls} value={f.imagenUrl} onChange={e => setF({ ...f, imagenUrl: e.target.value })} placeholder="https://..." />
             {f.imagenUrl && <img src={f.imagenUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-outline-variant" onError={e => e.target.style.display = 'none'} />}
           </Field>
+          <MapaDelEvento
+            eventoId={f.id}
+            url={f.mapaUrl}
+            nombre={f.mapaNombre}
+            onCambio={(mapaUrl, mapaNombre) => setF({ ...f, mapaUrl, mapaNombre })}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Field label="Fecha *"><input className={inputCls} type="date" value={f.fecha} onChange={e => setF({ ...f, fecha: e.target.value })} /></Field>
             <Field label="Hora de inicio"><input className={inputCls} type="time" value={f.hora} onChange={e => setF({ ...f, hora: e.target.value })} /></Field>

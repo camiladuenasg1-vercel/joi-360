@@ -981,6 +981,8 @@ export async function refreshEventosLive(worldId) {
       organizador: r.organizador || null, moneda: r.moneda || "PEN",
       modo: r.modo || "embebido", organizadorId: r.organizador_id || null,
       imagenUrl: r.imagen_url || "",
+      mapaUrl: r.mapa_url || null,
+      mapaNombre: r.mapa_nombre || null,
       uxComponents: r.ux_components || ["hero", "entradas", "agenda", "marketplace"],
       tiposEntrada, createdAt: Date.parse(r.created_at) || Date.now(),
     });

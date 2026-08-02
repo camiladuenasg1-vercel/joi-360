@@ -475,6 +475,8 @@ export async function upsertEventoRemote(ev) {
       modo: ev.modo || "embebido",
       organizador_id: ev.organizadorId || null,
       imagen_url: ev.imagenUrl || null,
+      mapa_url: ev.mapaUrl || null,
+      mapa_nombre: ev.mapaNombre || null,
       ux_components: ev.uxComponents || ["hero", "entradas", "agenda", "marketplace"],
       updated_at: new Date().toISOString(),
     }]),
