@@ -1735,6 +1735,22 @@ const EVENT_SECTION_REGISTRY = {
   marketplace: (p) => <EventoMarketplaceSection {...p}/>,
 };
 
+// Una entrada deja de dar acceso apenas se usa o se anula. El POS ya lo
+// rechaza; acá se refleja para que nadie llegue a la puerta creyendo que
+// todavía le sirve.
+const esUsada = t => t.estado === "checkin" || t.estado === "checkout" || t.estado === "anulado";
+
+const horaCorta = iso => {
+  try {
+    return new Date(iso).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch { return ""; }
+};
+const fechaHoraCorta = iso => {
+  try {
+    return new Date(iso).toLocaleString("es-PE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch { return ""; }
+};
+
 // Mis Entradas — QR emitidos, estado de check-in.
 function MisEntradasList({ mundo, refreshKey }) {
   const userId = getSyntheticUserId();
@@ -1749,10 +1765,24 @@ function MisEntradasList({ mundo, refreshKey }) {
 
   useEffect(() => {
     let vivo = true;
-    fetchMisEntradasLive(userId, mundo.id)
+    const traer = () => fetchMisEntradasLive(userId, mundo.id)
       .then(rows => { if (vivo) setEntradas(rows || []); })
-      .catch(() => { if (vivo) setEntradas([]); });
-    return () => { vivo = false; };
+      .catch(() => { if (vivo) setEntradas(prev => prev ?? []); });
+    traer();
+
+    // El check-in ocurre en el POS, no acá: sin esto la persona sigue viendo
+    // "Lista para usar" con su QR después de haber entrado. Se refresca al
+    // volver a la pantalla —que es el momento natural, ya pasó la puerta— y
+    // cada pocos segundos mientras la tiene abierta, que es cuando está
+    // parada frente al operador.
+    const alVolver = () => { if (document.visibilityState === "visible") traer(); };
+    document.addEventListener("visibilitychange", alVolver);
+    const t = setInterval(traer, 8000);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
   }, [mundo.id, refreshKey, reload]);
 
   const transferir = async (ticketId) => {
@@ -1815,13 +1845,34 @@ function MisEntradasList({ mundo, refreshKey }) {
       {entradas.map(t => (
         <SectionCard key={t.id} className="p-4">
           <div className="flex gap-4 items-center">
-            <button className="flex-shrink-0 tap-active" onClick={() => setQrFullscreen(t)} aria-label="Ver QR a pantalla completa">
-              <QRCode label="" sub="" value={t.qr_code}/>
-            </button>
+            {/* Una entrada ya usada no vuelve a servir: mostrarle el QR a la
+                persona la invita a que lo intente y se lo rechacen en la
+                puerta. En su lugar va un sello que dice qué pasó y cuándo. */}
+            {esUsada(t) ? (
+              <div className="w-[74px] h-[74px] shrink-0 rounded-xl bg-[#f0ecf9] flex flex-col items-center justify-center gap-0.5">
+                <Icon name={t.estado === "anulado" ? "block" : "task_alt"} fill size="text-2xl"
+                  color={t.estado === "anulado" ? "text-red-500" : "text-green-600"}/>
+                {t.checkin_at && (
+                  <span className="text-[9px] font-bold text-[#777587]">{horaCorta(t.checkin_at)}</span>
+                )}
+              </div>
+            ) : (
+              <button className="flex-shrink-0 tap-active" onClick={() => setQrFullscreen(t)} aria-label="Ver QR a pantalla completa">
+                <QRCode label="" sub="" value={t.qr_code}/>
+              </button>
+            )}
             <div className="flex-1 min-w-0">
               <p className="font-black text-[#1b1b24] leading-tight">{t.events?.titulo || "Evento"}</p>
               <p className="text-xs text-[#777587] mt-0.5">{t.event_ticket_types?.nombre || "General"} · {t.events?.fecha} {t.events?.hora || ""}</p>
-              <p className="font-mono text-[9px] text-[#777587] mt-1 truncate">{t.qr_code}</p>
+              {esUsada(t) ? (
+                <p className="text-[10px] text-[#777587] mt-1">
+                  {t.estado === "anulado"
+                    ? "Esta entrada fue anulada y ya no da acceso."
+                    : `Ya se usó para ingresar${t.checkin_at ? ` · ${fechaHoraCorta(t.checkin_at)}` : ""}. No sirve para un segundo ingreso.`}
+                </p>
+              ) : (
+                <p className="font-mono text-[9px] text-[#777587] mt-1 truncate">{t.qr_code}</p>
+              )}
               <div className="mt-2 flex items-center gap-2">
                 <Chip label={t.estado === "checkin" ? "Dentro del evento" : t.estado === "checkout" ? "Evento completado" : t.estado === "anulado" ? "Anulada" : "Lista para usar"}
                   color={t.estado === "checkin" ? "bg-green-100 text-green-700" : t.estado === "checkout" ? "bg-gray-100 text-gray-500" : t.estado === "anulado" ? "bg-red-100 text-red-600" : "bg-[#e2dfff] text-[#3525cd]"}/>
