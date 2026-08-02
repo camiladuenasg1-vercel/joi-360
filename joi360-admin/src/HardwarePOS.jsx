@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
 import { Icon, BtnPrimary, BtnOutline, notify } from "./ui";
 import { HARDWARE_CATALOG, hardwareModelById } from "./store";
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
 
 const ESTADO_STYLE = {
   disponible:    "bg-green-100  text-green-700  border-green-200",
@@ -38,7 +38,7 @@ export function HardwarePOS() {
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-outline-variant">
-        {[{k:"pos",l:"POS / Tótem",i:"point_of_sale"},{k:"nfc",l:"Banditas NFC",i:"contactless"}].map(t => (
+        {[{k:"pos",l:"POS / Tótem",i:"point_of_sale"},{k:"nfc",l:"Banditas NFC",i:"contactless"},{k:"demanda",l:"Demanda de mundos",i:"inbox"}].map(t => (
           <button key={t.k} onClick={()=>setTab(t.k)}
             className={`px-4 py-2.5 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors ${tab===t.k?"text-primary border-primary font-semibold":"text-on-surface-variant border-transparent hover:text-primary"}`}>
             <Icon n={t.i} className="text-[18px]"/>{t.l}
@@ -48,6 +48,182 @@ export function HardwarePOS() {
 
       {tab === "pos" && <PosDevicesTab/>}
       {tab === "nfc" && <BanditasNfcTab/>}
+      {tab === "demanda" && <DemandaMundosTab/>}
+    </div>
+  );
+}
+
+/**
+ * Demanda de los mundos.
+ *
+ * RedPontis tenía el stock (las otras dos pestañas) pero no la otra mitad:
+ * cuánto le están pidiendo y desde dónde. Sin eso, decidir cuántos terminales
+ * comprar era adivinar, y un mundo podía quedarse semanas esperando sin que
+ * nadie tuviera el pedido a la vista.
+ *
+ * Junta los dos caminos de pedido —lotes de pulseras y equipos— porque la
+ * pregunta que resuelven es la misma: qué hay que conseguir y para quién.
+ */
+function DemandaMundosTab() {
+  const st = useStore();
+  const [equipos, setEquipos] = useState(null);
+  const [lotes, setLotes] = useState(null);
+  const [nota, setNota] = useState({});
+  const [guardando, setGuardando] = useState(null);
+
+  const cargar = () => {
+    fetchRequerimientosHardwareTodos().then(setEquipos).catch(() => setEquipos([]));
+    fetchSolicitudesLoteNfcTodas().then(setLotes).catch(() => setLotes([]));
+  };
+  useEffect(cargar, []);
+
+  const nombreMundo = id => (st.mundos || []).find(m => m.id === id)?.nombre || id;
+
+  const resolver = async (r, estado) => {
+    setGuardando(r.id);
+    try {
+      await resolverRequerimientoHardware(r.id, estado, nota[r.id]);
+      notify(`Requerimiento marcado como ${estado}.`);
+      setNota(n => ({ ...n, [r.id]: "" }));
+      cargar();
+    } catch (e) {
+      notify("No se pudo actualizar: " + e.message, "error");
+    } finally { setGuardando(null); }
+  };
+
+  if (equipos === null || lotes === null) {
+    return <p className="text-sm text-on-surface-variant">Cargando demanda…</p>;
+  }
+
+  const equiposPend = equipos.filter(r => r.estado === "pendiente");
+  const lotesPend = (lotes || []).filter(r => r.estado === "pendiente");
+
+  // Cuántas unidades hay que conseguir por modelo, sumando todos los mundos:
+  // es el número con el que se compra, no el conteo de solicitudes.
+  const porModelo = {};
+  equiposPend.forEach(r => {
+    const k = r.modelo_nombre || r.modelo_id;
+    porModelo[k] = (porModelo[k] || 0) + (r.cantidad || 0);
+  });
+  const banditasPend = lotesPend.reduce((a, r) => a + (r.cantidad || 0), 0);
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <TarjetaDemanda icono="pending_actions" titulo="Pedidos abiertos" valor={equiposPend.length + lotesPend.length} />
+        <TarjetaDemanda icono="point_of_sale" titulo="Equipos por entregar" valor={equiposPend.reduce((a, r) => a + (r.cantidad || 0), 0)} />
+        <TarjetaDemanda icono="contactless" titulo="Pulseras por entregar" valor={banditasPend} />
+        <TarjetaDemanda icono="public" titulo="Mundos esperando" valor={new Set([...equiposPend, ...lotesPend].map(r => r.world_id)).size} />
+      </div>
+
+      {Object.keys(porModelo).length > 0 && (
+        <section>
+          <h3 className="font-semibold mb-3">Qué hay que conseguir</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(porModelo).map(([modelo, cant]) => (
+              <span key={modelo} className="px-3 py-2 rounded-lg bg-primary-fixed/30 border border-primary/20 text-sm">
+                <b className="font-mono">{cant}</b> × {modelo}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h3 className="font-semibold mb-3">Requerimientos de equipo</h3>
+        {equipos.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">Ningún mundo ha pedido equipos todavía.</p>
+        ) : (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant/60">
+            {equipos.map(r => (
+              <div key={r.id} className="p-4">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {r.cantidad} × {r.modelo_nombre || r.modelo_id}
+                    </p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {nombreMundo(r.world_id)} · {new Date(r.created_at).toLocaleDateString("es-PE")}
+                    </p>
+                    {r.motivo && <p className="text-xs text-on-surface-variant mt-1">{r.motivo}</p>}
+                    {r.nota_redpontis && <p className="text-xs text-primary mt-1">Nota: {r.nota_redpontis}</p>}
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${
+                    r.estado === "entregado" ? "bg-green-100 text-green-700 border-green-200"
+                      : r.estado === "rechazado" ? "bg-red-100 text-red-700 border-red-200"
+                        : r.estado === "aprobado" ? "bg-blue-100 text-blue-700 border-blue-200"
+                          : "bg-amber-100 text-amber-700 border-amber-200"
+                  }`}>
+                    {r.estado.toUpperCase()}
+                  </span>
+                </div>
+
+                {r.estado === "pendiente" && (
+                  <div className="mt-3 flex flex-wrap gap-2 items-center">
+                    <input
+                      className="flex-1 min-w-[200px] h-9 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                      placeholder="Nota para el mundo (opcional) — ej. llega el viernes"
+                      value={nota[r.id] || ""}
+                      onChange={e => setNota(n => ({ ...n, [r.id]: e.target.value }))}
+                    />
+                    <BtnOutline disabled={guardando === r.id} onClick={() => resolver(r, "aprobado")}>
+                      <Icon n="check" className="text-[16px]" /> Aprobar
+                    </BtnOutline>
+                    <BtnPrimary disabled={guardando === r.id} onClick={() => resolver(r, "entregado")}>
+                      <Icon n="local_shipping" className="text-[16px]" /> Entregado
+                    </BtnPrimary>
+                    <BtnOutline disabled={guardando === r.id} onClick={() => resolver(r, "rechazado")}>
+                      Rechazar
+                    </BtnOutline>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h3 className="font-semibold mb-3">Lotes de pulseras pedidos por los mundos</h3>
+        {lotes.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">Ningún mundo ha pedido lotes todavía.</p>
+        ) : (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant/60">
+            {lotes.map(r => (
+              <div key={r.id} className="p-4 flex justify-between items-center gap-4">
+                <div>
+                  <p className="font-semibold">{r.cantidad} pulseras</p>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    {nombreMundo(r.world_id)} · {new Date(r.created_at).toLocaleDateString("es-PE")}
+                  </p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${
+                  r.estado === "entregado"
+                    ? "bg-green-100 text-green-700 border-green-200"
+                    : "bg-amber-100 text-amber-700 border-amber-200"
+                }`}>
+                  {String(r.estado).toUpperCase()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-on-surface-variant mt-2">
+          La entrega de lotes se hace desde la pestaña <b>Banditas NFC</b>, que es donde está el stock.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function TarjetaDemanda({ icono, titulo, valor }) {
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+      <div className="flex items-center gap-2 text-on-surface-variant mb-2">
+        <Icon n={icono} className="text-[18px]" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider">{titulo}</span>
+      </div>
+      <div className="text-2xl font-bold tabular-nums">{valor}</div>
     </div>
   );
 }

@@ -1513,3 +1513,40 @@ export async function fetchDetalleUsuario(userId) {
     saldoTotal: (wallets || []).reduce((a, w) => a + (Number(w.balance) || 0), 0),
   };
 }
+
+// ── Requerimiento de equipos (POS, tótem, lectores) ────────────────────────
+//
+// Las banditas ya tenían su cola (nfc_lote_requests). Los equipos no: el mundo
+// pedía un POS por WhatsApp y RedPontis se enteraba cuando podía. Es la misma
+// necesidad —"necesito equipo, ¿en qué va?"— así que sigue el mismo patrón:
+// el mundo pide, RedPontis ve la demanda agregada y resuelve.
+export async function crearRequerimientoHardware(worldId, modeloId, modeloNombre, cantidad, motivo) {
+  const rows = await rest("hardware_requests", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      world_id: worldId, modelo_id: modeloId, modelo_nombre: modeloNombre || null,
+      cantidad: +cantidad, motivo: motivo || null, estado: "pendiente",
+    }),
+  });
+  return rows?.[0] || null;
+}
+export async function fetchRequerimientosHardwareMundo(worldId) {
+  return rest(`hardware_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+// Cross-mundo: lo que RedPontis necesita para saber cuánto equipo comprar.
+export async function fetchRequerimientosHardwareTodos() {
+  return rest("hardware_requests?select=*&order=created_at.desc");
+}
+export async function resolverRequerimientoHardware(id, estado, nota) {
+  await rest(`hardware_requests?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      estado,
+      nota_redpontis: nota || null,
+      resuelto_at: estado === "pendiente" ? null : new Date().toISOString(),
+    }),
+  });
+}
+// Las solicitudes de lote de banditas ya tienen su fetch cross-mundo más
+// arriba (fetchSolicitudesLoteNfcTodas, sobre nfc_band_requests); el tablero
+// de demanda de hardware reutiliza esa misma, no hace falta otra.

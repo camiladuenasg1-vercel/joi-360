@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
-import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo } from "./store";
+import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -1707,6 +1707,142 @@ function SolicitarLoteNfcWidget({ worldId }) {
   );
 }
 
+/* ── Requerimiento de equipos (Panel Mundo) ─────────────────────────────
+   Las banditas ya tenían su cola; los equipos no. El mundo pedía un POS por
+   WhatsApp y RedPontis se enteraba cuando podía, así que ninguno de los dos
+   sabía en qué iba el pedido. Es la misma necesidad que la de banditas —
+   "necesito equipo, ¿en qué va lo que pedí?"— y sigue el mismo camino: el
+   mundo pide, RedPontis lo ve junto al resto de la demanda y responde. */
+function RequerirHardwareWidget({ worldId }) {
+  const [reqs, setReqs] = useState(null);
+  const [modeloId, setModeloId] = useState(HARDWARE_CATALOG[0]?.id || "");
+  const [cantidad, setCantidad] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  const load = () => fetchRequerimientosHardwareMundo(worldId).then(setReqs).catch(() => setReqs([]));
+  useEffect(() => { load(); }, [worldId]);
+
+  const modelo = HARDWARE_CATALOG.find(h => h.id === modeloId);
+
+  const pedir = async () => {
+    const n = +cantidad;
+    if (!n || n <= 0 || !modelo) return;
+    setEnviando(true);
+    try {
+      await crearRequerimientoHardware(
+        worldId, modelo.id, `${modelo.marca} ${modelo.modelo}`, n, motivo.trim() || null
+      );
+      setCantidad(""); setMotivo("");
+      notify(`Requerimiento de ${n} × ${modelo.marca} ${modelo.modelo} enviado a RedPontis.`);
+      load();
+    } catch (e) {
+      notify("No se pudo enviar el requerimiento: " + e.message, "error");
+    } finally { setEnviando(false); }
+  };
+
+  const pendientes = (reqs || []).filter(r => r.estado === "pendiente");
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Icon n="point_of_sale" className="text-primary text-[20px]" /> Requerir equipos
+        </h3>
+        {pendientes.length > 0 && (
+          <span className="w-6 h-6 rounded-full bg-tertiary text-white text-xs font-black flex items-center justify-center">
+            {pendientes.length}
+          </span>
+        )}
+      </div>
+      <div className="p-5">
+        <p className="text-xs text-on-surface-variant mb-3">
+          Pide terminales, tótems o lectores para tus comercios. RedPontis los asigna desde su stock
+          y acá ves en qué va cada pedido.
+        </p>
+
+        <div className="space-y-2">
+          <select className={inputCls} value={modeloId} onChange={e => setModeloId(e.target.value)}>
+            {HARDWARE_CATALOG.map(h => (
+              <option key={h.id} value={h.id}>{h.marca} {h.modelo} · {h.tipo}</option>
+            ))}
+          </select>
+          {modelo && <p className="text-[11px] text-on-surface-variant px-1">{modelo.desc}</p>}
+          <div className="flex gap-2">
+            <input className={`${inputCls} font-mono`} type="number" min="1" placeholder="Cantidad"
+              value={cantidad} onChange={e => setCantidad(e.target.value)} />
+            <BtnPrimary disabled={!cantidad || +cantidad <= 0 || enviando} onClick={pedir}>
+              {enviando ? "Enviando…" : "Requerir"}
+            </BtnPrimary>
+          </div>
+          {/* El motivo no es burocracia: es lo que le permite a RedPontis
+              priorizar entre "abro una sede nueva" y "se me malogró uno". */}
+          <input className={inputCls} placeholder="Motivo (opcional) — ej. apertura de segunda cafetería"
+            value={motivo} onChange={e => setMotivo(e.target.value)} />
+        </div>
+
+        {reqs === null ? (
+          <p className="text-sm text-on-surface-variant mt-4">Cargando…</p>
+        ) : reqs.length === 0 ? (
+          <p className="text-sm text-on-surface-variant mt-4">Sin requerimientos todavía.</p>
+        ) : (
+          <div className="mt-4 divide-y divide-outline-variant/60 border-t border-outline-variant">
+            {reqs.map(r => (
+              <div key={r.id} className="py-2.5 flex justify-between items-start gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-semibold">{r.cantidad} × {r.modelo_nombre || r.modelo_id}</p>
+                  <p className="font-mono text-[10px] text-outline">
+                    {new Date(r.created_at).toLocaleDateString("es-PE")}
+                  </p>
+                  {r.motivo && <p className="text-xs text-on-surface-variant mt-0.5">{r.motivo}</p>}
+                  {r.nota_redpontis && (
+                    <p className="text-xs text-primary mt-1">RedPontis: {r.nota_redpontis}</p>
+                  )}
+                </div>
+                <Pill color={
+                  r.estado === "entregado" ? "bg-ok"
+                    : r.estado === "rechazado" ? "bg-error"
+                      : r.estado === "aprobado" ? "bg-primary"
+                        : "bg-tertiary"
+                }>
+                  {r.estado.toUpperCase()}
+                </Pill>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Hardware del mundo: lo que pidió y en qué va.
+ *
+ * Las banditas y los equipos se piden por caminos distintos pero se preguntan
+ * juntos —"¿llegaron las pulseras?", "¿y el POS de la cafetería nueva?"— así
+ * que viven en la misma pantalla. Antes las banditas estaban escondidas dentro
+ * de Wallet y los equipos no existían como pedido: se resolvían por WhatsApp.
+ */
+function HardwareMundoTab({ m }) {
+  return (
+    <>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Hardware de {m.nombre}</h2>
+        <p className="text-on-surface-variant mt-1">
+          Pulseras NFC y equipos. Acá pides lo que necesitas y ves en qué va cada pedido,
+          sin tener que preguntar por fuera.
+        </p>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <SolicitarLoteNfcWidget worldId={m.id} />
+        <RequerirHardwareWidget worldId={m.id} />
+        <SolicitudesNfcWidget worldId={m.id} />
+      </div>
+    </>
+  );
+}
+
 function WalletMundoTab({ m }) {
   return (
     <>
@@ -2268,6 +2404,7 @@ function SponsorDashboard({ m, st, preview }) {
     ...(eventosEmbebidoOn ? [{ k: "eventos", l: "Eventos", i: "confirmation_number" }] : []),
     ...(accesosActivo ? [{ k: "accesos", l: "Control de Accesos", i: "door_open" }] : []),
     { k: "usuarios", l: "Usuarios", i: "group" },
+    { k: "hardware", l: "Hardware", i: "devices" },
     { k: "liquidacion", l: "Liquidación", i: "account_balance" },
     { k: "soporte", l: "Soporte", i: "support_agent" },
   ];
@@ -2411,6 +2548,7 @@ function SponsorDashboard({ m, st, preview }) {
           {tab === "eventos" && <SponsorEventosTab m={m} eventos={eventos} />}
           {tab === "accesos" && <SponsorAccesos m={m} />}
           {tab === "usuarios" && <UsuariosMundoTab m={m} />}
+          {tab === "hardware" && <HardwareMundoTab m={m} />}
           {tab === "liquidacion" && <LiquidacionMundoTab m={m} />}
           {tab === "soporte" && <SponsorSoporte m={m} tickets={tickets} preview={preview} />}
         </div>
