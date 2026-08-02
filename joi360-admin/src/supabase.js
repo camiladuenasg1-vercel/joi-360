@@ -95,13 +95,16 @@ export async function fetchAllFeatureFlags() {
 // Módulos fuera del alcance de los 3 casos TEC (Raimondi/Kermesse/BNPL) —
 // visibles en el catálogo como "Próximamente", no activables ni sincronizables.
 // Vive aquí (y no en store.js) porque store.js importa de este archivo.
-// "promociones" salió de esta lista 28-jul: ya tiene backend real (cupón QR,
-// alcance mínimo viable) — ver TabPromos/PromocionesTemplate. Banners, push
-// segmentado y A/B testing del spec completo siguen sin construir (Backlog
-// Capítulo 2), pero eso no bloquea que el cupón QR sí sea real y sincronizable.
+//
+// "promociones" volvió a esta lista 02-ago. Había salido el 28-jul porque el
+// cupón QR tenía backend real, pero JOI Promos no está operativo ni en el
+// superapp ni en el panel de RedPontis y quedó fuera del alcance. Dejarlo
+// activable ofrecía una capacidad que después no rendía nada: el mundo la
+// prendía y se encontraba con pestañas vacías.
 export const MODULOS_PROXIMAMENTE = new Set([
   "facturacion", "reservas", "loyalty", "credito", "subsidio",
   "estacionamiento", "asistencia", "cashback", "turnos", "transporte",
+  "promociones",
 ]);
 
 // Canales de emisión activables por mundo (claves emision_<id> en config de wallet)
