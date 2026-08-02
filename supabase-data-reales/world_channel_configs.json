@@ -1,0 +1,112 @@
+[
+  {
+    "id": "fe397d34-173d-45e4-a7f8-4c332750ae07",
+    "world_id": "mundo-jockey-plaza",
+    "channel_id": "transfer",
+    "channel_enabled": false,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "5a0dde87-dcc4-4581-9854-09a0bf54f50f",
+    "world_id": "mundo-jockey-plaza",
+    "channel_id": "qr_billetera",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "d4445ee1-6fd3-4f5a-b2f8-f58ab3e38e4d",
+    "world_id": "mundo-promos-rp",
+    "channel_id": "qr_billetera",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "06ab69e5-6860-4765-ae7d-9d97a7f96941",
+    "world_id": "mundo-eventos-rp",
+    "channel_id": "qr_billetera",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "cfe188fc-b52f-4c56-953a-b7ebb7facee3",
+    "world_id": "mundo-jockey-plaza",
+    "channel_id": "culqi",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "02c0814a-f6f6-40ac-8954-3a4691182c81",
+    "world_id": "mundo-eventos-rp",
+    "channel_id": "culqi",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "13e3de08-ff57-4228-b62c-9f86a08e3df6",
+    "world_id": "mundo-promos-rp",
+    "channel_id": "culqi",
+    "channel_enabled": false,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "b47b1df2-6a86-4073-a8b2-f0fd0e038bac",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "qr_billetera",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "c97cf428-fe98-4894-9e21-e1540fd4260b",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "transfer",
+    "channel_enabled": false,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "2146bd64-2b08-410b-83c6-266b22e8d3ca",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "culqi",
+    "channel_enabled": true,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  },
+  {
+    "id": "62ddba98-e214-45cb-90d2-48b5b997eacc",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "qubit",
+    "channel_enabled": false,
+    "monto_min_override": null,
+    "monto_max_override": null,
+    "horario_override": null,
+    "monedas_override": null
+  }
+]

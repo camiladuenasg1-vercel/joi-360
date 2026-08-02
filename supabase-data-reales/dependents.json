@@ -1,0 +1,29 @@
+[
+  {
+    "id": "183f4592-5f93-4b7c-97b8-488626346e54",
+    "world_id": "mundo-o6mufz",
+    "guardian_user_id": "7a07e0b3-2e26-4df9-a05e-6ddb0d062e15",
+    "dependent_user_id": "4ae24204-b895-4e69-a21e-e58faf71d23f",
+    "nombre": "Mateo Alvarado",
+    "alergias": "Soya",
+    "created_at": "2026-07-30T03:18:00.852656+00:00"
+  },
+  {
+    "id": "6173661b-651f-49b3-a16a-cb3c64a07922",
+    "world_id": "mundo-o6mufz",
+    "guardian_user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "dependent_user_id": "524b2890-2426-4692-bac0-af4a0a124893",
+    "nombre": "Camila",
+    "alergias": "Mariscos, Maní",
+    "created_at": "2026-07-30T06:54:42.332913+00:00"
+  },
+  {
+    "id": "3c005ff8-3f93-4d6c-87a9-4834823c6fb8",
+    "world_id": "mundo-o6mufz",
+    "guardian_user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "dependent_user_id": "ed0fd00c-52cf-42c1-b274-5e9412912665",
+    "nombre": "camila",
+    "alergias": "Lactosa, Frutos rojos",
+    "created_at": "2026-07-30T15:18:42.959148+00:00"
+  }
+]

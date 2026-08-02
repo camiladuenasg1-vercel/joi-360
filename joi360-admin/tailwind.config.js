@@ -1,0 +1,42 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: "#0035b9",
+        "primary-container": "#254edb",
+        "primary-fixed": "#dde1ff",
+        "primary-fixed-dim": "#b8c4ff",
+        "on-primary": "#ffffff",
+        secondary: "#006688",
+        "secondary-container": "#00c1fd",
+        "secondary-fixed": "#c2e8ff",
+        tertiary: "#5800c3",
+        "tertiary-fixed": "#eaddff",
+        "tertiary-container": "#722ce3",
+        error: "#ba1a1a",
+        "error-container": "#ffdad6",
+        surface: "#f8f9ff",
+        "surface-bright": "#f8f9ff",
+        "surface-dim": "#cbdbf5",
+        "surface-container": "#e5eeff",
+        "surface-container-low": "#eff4ff",
+        "surface-container-high": "#dce9ff",
+        "surface-container-highest": "#d3e4fe",
+        "surface-container-lowest": "#ffffff",
+        "on-surface": "#0b1c30",
+        "on-surface-variant": "#444655",
+        outline: "#747686",
+        "outline-variant": "#c4c5d7",
+        background: "#f8f9ff",
+        ok: "#008855",
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
+      },
+    },
+  },
+  plugins: [],
+};

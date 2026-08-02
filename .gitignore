@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Builds
+dist/
+build/
+out/
+
+# Vercel (ids de proyecto locales, no versionar)
+.vercel
+
+# joi-pos-backend tiene su propio repositorio y Vercel lo despliega desde ahí.
+# Se referencia en el README en vez de duplicarlo o anidarlo como submódulo.
+joi-pos-backend/
+
+# Entorno
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp

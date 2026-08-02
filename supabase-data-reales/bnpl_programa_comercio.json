@@ -1,0 +1,41 @@
+[
+  {
+    "id": "c5f1e611-2c27-437a-be6b-b367e6dd2364",
+    "world_id": "mundo-mok",
+    "merchant_id": "dd767be3-7819-4bdc-820b-317b47de2137",
+    "merchant_nombre": "Hiraoka",
+    "cuotas_activas": [
+      3,
+      6
+    ],
+    "comision_pct": 5,
+    "revenue_share_pct": 30,
+    "productos_financiables": [
+      {
+        "id": "pf-1",
+        "nombre": "Garantia extendida TV 55",
+        "precio": 299
+      },
+      {
+        "id": "pf-2",
+        "nombre": "Garantia extendida laptop",
+        "precio": 399
+      },
+      {
+        "id": "pf-3",
+        "nombre": "Smart TV LG 55 4K",
+        "precio": 1899
+      }
+    ],
+    "gestion_mora": "sin_cargo_suspension",
+    "activo": true,
+    "created_at": "2026-07-17T15:27:20.277821+00:00",
+    "mora_pct": 0,
+    "frecuencia": "mensual",
+    "dias_personalizados": null,
+    "dias_gracia": null,
+    "alcance": "puntuales",
+    "categorias": [],
+    "cuota_inicial": 0
+  }
+]

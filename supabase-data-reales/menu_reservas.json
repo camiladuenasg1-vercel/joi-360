@@ -1,0 +1,22 @@
+[
+  {
+    "id": "059eec3d-3681-407b-a3d0-022c2449dd9c",
+    "world_id": "mundo-o6mufz",
+    "merchant_id": "f937fc86-e9f5-41a2-89c9-40bd2de4a42e",
+    "merchant_nombre": "Non Solo Pasta",
+    "beneficiario_user_id": "4ae24204-b895-4e69-a21e-e58faf71d23f",
+    "beneficiario_nombre": "Mateo Alvarado",
+    "fecha": "2026-07-30",
+    "items": [
+      {
+        "id": "fca8ccfe-cab2-4b68-9425-cdc07a87366b",
+        "nombre": "Ensalada de Pollo a la Parrilla",
+        "precio": 13,
+        "cantidad": 1
+      }
+    ],
+    "monto": 13,
+    "estado": "CONFIRMADA",
+    "created_at": "2026-07-30T03:58:35.951104+00:00"
+  }
+]

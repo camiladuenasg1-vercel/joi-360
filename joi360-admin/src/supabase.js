@@ -1,0 +1,1420 @@
+// ============================================================================
+// JOI360 Admin · Capa de sincronización con Supabase (Fase 0 — Demo E2E)
+// El admin es la FUENTE DE ESCRITURA: todo lo que se configura aquí se
+// upserta a Supabase, y la superapp (joi360-app) lo renderiza en vivo.
+// Mismo patrón fetch-plano que joi360-app/src/supabaseClient.js.
+// ============================================================================
+
+const SUPA_URL = "https://kobtxrhycaloyjkeyspv.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvYnR4cmh5Y2Fsb3lqa2V5c3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzAwMjksImV4cCI6MjA5NzkwNjAyOX0.MlyyXGnsyMeVXaRfRbmFqwVhsh4FUFNztQoBaECd_i0";
+
+const headers = {
+  apikey: ANON_KEY,
+  Authorization: `Bearer ${ANON_KEY}`,
+  "Content-Type": "application/json",
+};
+
+async function rest(path, opts = {}) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { ...headers, ...(opts.headers || {}) },
+  });
+  if (!res.ok) throw new Error(`Supabase ${path} → HTTP ${res.status}: ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+const upsertHeaders = { Prefer: "resolution=merge-duplicates,return=minimal" };
+
+// ── Estado de sincronización (para el badge "Sync" del Shell) ───────────────
+// "idle" | "syncing" | "ok" | "error"
+let syncStatus = { state: "idle", at: null, error: null };
+const syncListeners = new Set();
+function setSyncStatus(state, error = null) {
+  syncStatus = { state, at: Date.now(), error };
+  syncListeners.forEach(fn => fn(syncStatus));
+}
+export function getSyncStatus() { return syncStatus; }
+export function onSyncStatus(fn) { syncListeners.add(fn); return () => syncListeners.delete(fn); }
+
+// ── Cache del catálogo de flags (capacity_id + flag_code → uuid) ────────────
+let flagIdCache = null;
+async function flagMap() {
+  if (flagIdCache) return flagIdCache;
+  const rows = await rest("capacity_feature_flags?select=id,capacity_id,flag_code");
+  flagIdCache = new Map(rows.map(r => [`${r.capacity_id}:${r.flag_code}`, r.id]));
+  return flagIdCache;
+}
+
+// Asegura que un flag exista en el catálogo global (Nivel 1). Devuelve su uuid.
+export async function ensureGlobalFlag(capacityId, flagCode, nombre, descripcion, uxComponent = null) {
+  const map = await flagMap();
+  const key = `${capacityId}:${flagCode}`;
+  if (map.has(key)) return map.get(key);
+  const rows = await rest("capacity_feature_flags", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      capacity_id: capacityId, flag_code: flagCode, name: nombre,
+      description: descripcion || null, default_value: false,
+      affects: "usuario_final", ux_component: uxComponent,
+    }),
+  });
+  map.set(key, rows[0].id);
+  return rows[0].id;
+}
+
+// ── Mapeo mundo(admin) → tablas Supabase ────────────────────────────────────
+function worldRow(m) {
+  return {
+    id: m.id,
+    code: m.codigo || m.id,
+    name: m.nombre,
+    vertical: m.vertical || "Educación",
+    status: (m.estado || "ACTIVO").toLowerCase(),
+    color_primary: m.color || "#0035b9",
+    currency: m.moneda || "PEN",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// Mundos creados directo en Supabase (u otro browser/sesión admin) — el admin
+// solo escribía hasta ahora, nunca releía worlds. Ver refreshMundosLive() en store.js.
+export async function fetchWorldsLive() {
+  return rest("worlds?select=*&order=created_at");
+}
+// Traídos en bulk (no por mundo) para reconstruir `modulos` de un mundo recién
+// reconciliado sin N+1 requests — mismas tablas que escribe syncAllWorlds().
+export async function fetchAllCapacityConfigs() {
+  return rest("world_capacity_configs?select=*");
+}
+export async function fetchAllFeatureFlags() {
+  return rest("world_feature_flags?select=*,capacity_feature_flags(capacity_id,flag_code)");
+}
+
+// Módulos fuera del alcance de los 3 casos TEC (Raimondi/Kermesse/BNPL) —
+// visibles en el catálogo como "Próximamente", no activables ni sincronizables.
+// Vive aquí (y no en store.js) porque store.js importa de este archivo.
+// "promociones" salió de esta lista 28-jul: ya tiene backend real (cupón QR,
+// alcance mínimo viable) — ver TabPromos/PromocionesTemplate. Banners, push
+// segmentado y A/B testing del spec completo siguen sin construir (Backlog
+// Capítulo 2), pero eso no bloquea que el cupón QR sí sea real y sincronizable.
+export const MODULOS_PROXIMAMENTE = new Set([
+  "facturacion", "reservas", "loyalty", "credito", "subsidio",
+  "estacionamiento", "asistencia", "cashback", "turnos", "transporte",
+]);
+
+// Canales de emisión activables por mundo (claves emision_<id> en config de wallet)
+// "yape"/"plin" unificados en "qr_billetera", "card" renombrado a "culqi".
+// "qubit" retirado 30-jul: era un PSP placeholder sin convenio real, nunca
+// activable — el canal "Tarjeta (Qubit)" se retiró junto con el PSP
+// (ver CANALES_EMISION en store.js).
+const CHANNEL_IDS = ["qr_billetera", "transfer", "culqi"];
+
+// Canales de adquirencia activables por mundo (claves adq_<id> en config de
+// comercios) — mismos ids que CANALES_ADQUIRENCIA en store.js (no se puede
+// importar de ahí, ver nota de MODULOS_PROXIMAMENTE más arriba).
+const ACQUIRING_CHANNEL_IDS = ["pos_fisico", "app_operador", "qr_estatico"];
+
+// ── SYNC COMPLETO (debounced desde store.update) ────────────────────────────
+// Deriva TODO el estado remoto desde los mundos locales:
+//   worlds + world_capacity_configs + world_feature_flags + world_channel_configs
+export async function syncAllWorlds(mundos) {
+  if (!mundos || !mundos.length) return;
+  setSyncStatus("syncing");
+  try {
+    // 1. worlds (bulk upsert por id)
+    await rest("worlds?on_conflict=id", {
+      method: "POST", headers: upsertHeaders,
+      body: JSON.stringify(mundos.map(worldRow)),
+    });
+
+    // 2. world_capacity_configs (bulk, on_conflict world_id+capacity_id)
+    const capRows = [];
+    for (const m of mundos) for (const mod of (m.modulos || [])) {
+      // Módulos "Próximamente" no se sincronizan: un localStorage viejo con
+      // crédito/etc. activado no debe volver a filtrarlos a Supabase.
+      if (MODULOS_PROXIMAMENTE.has(mod.id)) continue;
+      // Las claves emision_* viven en world_channel_configs, no en el config JSON
+      const config = { ...(mod.config || {}) };
+      for (const k of Object.keys(config)) if (k.startsWith("emision_") || k.startsWith("adq_")) delete config[k];
+      capRows.push({ world_id: m.id, capacity_id: mod.id, enabled: mod.enabled !== false, config });
+    }
+    if (capRows.length) await rest("world_capacity_configs?on_conflict=world_id,capacity_id", {
+      method: "POST", headers: upsertHeaders, body: JSON.stringify(capRows),
+    });
+
+    // 3. world_feature_flags (bulk, on_conflict world_id+flag_id)
+    const map = await flagMap();
+    const flagRows = [];
+    for (const m of mundos) for (const mod of (m.modulos || [])) {
+      // Wallet en modo identificación (perfiles sin saldo): las capacidades
+      // transaccionales dependen de modelo_perfil.modelo=consumo — se apagan solas.
+      const identificacion = mod.id === "wallet" && mod.config?.modelo_perfil_modelo === "identificacion";
+      for (const [code, enabled] of Object.entries(mod.serviciosActivos || {})) {
+        let flagId = map.get(`${mod.id}:${code}`);
+        if (!flagId) {
+          // Flag nuevo (ej. bnpl:*): nace en el Catálogo Global (Nivel 1) antes
+          // de ser toggleable a nivel Mundo (principio no negociable del doc).
+          try { flagId = await ensureGlobalFlag(mod.id, code, code); } catch { continue; }
+        }
+        const efectivo = identificacion && ["balance", "recarga", "p2p", "subwallet"].includes(code)
+          ? false : enabled === true;
+        flagRows.push({ world_id: m.id, flag_id: flagId, enabled: efectivo });
+      }
+    }
+    if (flagRows.length) await rest("world_feature_flags?on_conflict=world_id,flag_id", {
+      method: "POST", headers: upsertHeaders, body: JSON.stringify(flagRows),
+    });
+
+    // 4. world_channel_configs (bulk, on_conflict world_id+channel_id)
+    // CanalEmisionRow (MundoDetail.jsx) guarda el toggle como objeto
+    // {enabled, montoMinOverride, montoMaxOverride}, no como booleano plano —
+    // "!== false" sobre un objeto es siempre true, así que un canal apagado
+    // explícitamente (enabled:false) sincronizaba igual como habilitado.
+    const channelEnabled = val => typeof val === "object" && val !== null ? val.enabled !== false : val !== false;
+    const chRows = [];
+    for (const m of mundos) {
+      const wallet = (m.modulos || []).find(x => x.id === "wallet");
+      if (!wallet) continue;
+      for (const ch of CHANNEL_IDS) {
+        const key = `emision_${ch}`;
+        if (wallet.config && key in wallet.config) {
+          chRows.push({ world_id: m.id, channel_id: ch, channel_enabled: channelEnabled(wallet.config[key]) });
+        }
+      }
+      // Migración legacy: "card" fue renombrado a "culqi" al unificar canales.
+      // Un mundo con config vieja (emision_card, sin emision_culqi todavía) se
+      // migra en el sync mismo, para no depender de resetear el config a mano.
+      if (wallet.config && "emision_card" in wallet.config && !("emision_culqi" in wallet.config)) {
+        chRows.push({ world_id: m.id, channel_id: "culqi", channel_enabled: channelEnabled(wallet.config.emision_card) });
+      }
+    }
+    if (chRows.length) await rest("world_channel_configs?on_conflict=world_id,channel_id", {
+      method: "POST", headers: upsertHeaders, body: JSON.stringify(chRows),
+    });
+
+    // 5. world_acquiring_channel_configs (bulk, on_conflict world_id+channel_id)
+    // Gap real cerrado 30-jul: los toggles adq_* se guardaban en config y se
+    // borraban en el paso 2 (línea de arriba) sin destino — "Canales" en la
+    // config de un mundo siempre mostraba el default del catálogo porque el
+    // toggle real nunca llegaba a Supabase. Mismo patrón que el paso 4.
+    const acqRows = [];
+    for (const m of mundos) {
+      const comercios = (m.modulos || []).find(x => x.id === "comercios");
+      if (!comercios?.config) continue;
+      for (const ch of ACQUIRING_CHANNEL_IDS) {
+        const key = `adq_${ch}`;
+        if (key in comercios.config) {
+          acqRows.push({ world_id: m.id, channel_id: ch, channel_enabled: comercios.config[key] !== false });
+        }
+      }
+    }
+    if (acqRows.length) await rest("world_acquiring_channel_configs?on_conflict=world_id,channel_id", {
+      method: "POST", headers: upsertHeaders, body: JSON.stringify(acqRows),
+    });
+
+    setSyncStatus("ok");
+  } catch (e) {
+    console.warn("[supabase-sync]", e);
+    setSyncStatus("error", e.message);
+  }
+}
+
+// Debounce: una sola sincronización por ráfaga de cambios en el store.
+let syncTimer = null;
+export function scheduleSync(getMundos) {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncAllWorlds(getMundos()), 800);
+}
+
+// ── STORAGE (bucket joi360-media) ───────────────────────────────────────────
+// Contratos PDF, foto de perfil de comercio, imágenes de producto. Sin SDK
+// de Supabase en este proyecto (solo el rest() de arriba) — se llama directo
+// al endpoint REST de Storage, igual patrón fetch-plano que el resto del archivo.
+export async function uploadArchivo(bucket, path, file) {
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Storage upload → HTTP ${res.status}: ${await res.text()}`);
+  return `${SUPA_URL}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+// ── CATÁLOGO GLOBAL de canales de emisión (Gantt #96) ───────────────────────
+// Gap real encontrado: joi360-app lee su catálogo de canales desde la tabla
+// `emission_channels` (fetchEmissionChannels), pero nada en el admin la
+// escribía — quedaba como un seed manual congelado, desconectado de
+// CANALES_EMISION/Emision.jsx. Se llama explícitamente desde Emision.jsx en
+// cada guardado del catálogo (no es per-mundo, por eso no vive en
+// syncAllWorlds). `rows` ya viene armado por el caller (necesita cruzar
+// PSP_PROVIDERS, que vive en store.js — este archivo no puede importar de
+// store.js para evitar el ciclo, ver nota de MODULOS_PROXIMAMENTE arriba).
+export async function syncEmissionChannels(rows) {
+  if (!rows || !rows.length) return;
+  await rest("emission_channels?on_conflict=id", {
+    method: "POST", headers: upsertHeaders, body: JSON.stringify(rows),
+  });
+}
+
+// Gap real encontrado 27-jul: ids retirados del catálogo (ej. "yape"/"plin"
+// unificados en "qr_billetera", "card" renombrado a "culqi") quedaban
+// global_active=true en Supabase para siempre porque el upsert de arriba
+// nunca desactiva lo que ya no está en el catálogo actual. Se llama junto
+// con syncEmissionChannels en cada guardado del catálogo.
+export async function pruneStaleEmissionChannels(currentIds) {
+  const rows = await rest("emission_channels?select=id&global_active=eq.true");
+  const stale = (rows || []).map(r => r.id).filter(id => !currentIds.includes(id));
+  if (!stale.length) return;
+  await rest(`emission_channels?id=in.(${stale.join(",")})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ global_active: false }),
+  });
+}
+
+export async function deleteWorldRemote(worldId) {
+  try {
+    await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  } catch (e) { console.warn("[supabase-sync] delete world", e); }
+}
+
+// ── Errores controlados — catálogo en tabla, no mensajes genéricos ──────────
+// error_catalog define título/mensaje/acción por código; error_log registra
+// ocurrencias para monitoreo. Fallback local si la tabla aún no existe.
+let errCatalogCache = null;
+export async function errorControlado(code) {
+  if (!errCatalogCache) {
+    try {
+      const rows = await rest("error_catalog?select=*");
+      errCatalogCache = new Map((rows || []).map(r => [r.code, r]));
+    } catch { errCatalogCache = new Map(); }
+  }
+  return errCatalogCache.get(code) || {
+    code, titulo: "No se pudo completar", severidad: "error",
+    mensaje: "Ocurrió un problema al procesar la operación.", accion: "Inténtalo nuevamente.",
+  };
+}
+export function logErrorControlado(code, contexto = null, worldId = null) {
+  rest("error_log", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ code, contexto, world_id: worldId, origen: "admin" }),
+  }).catch(() => {});
+}
+
+// Widget de monitoreo (Gantt #97) — RedPontis ve las ocurrencias reales
+// registradas por logErrorControlado en ambas apps (origen: admin | app).
+export async function fetchErrorLog(limit = 200) {
+  return rest(`error_log?select=*&order=created_at.desc&limit=${limit}`);
+}
+export async function fetchErrorCatalogMap() {
+  const rows = await rest("error_catalog?select=*");
+  return new Map((rows || []).map(r => [r.code, r]));
+}
+
+// ── Control de Accesos (Gantt #92) — sin hardware real: un operador escanea
+// o tipea el código del usuario, mismo patrón que Asistencia de Kermesse.
+export async function fetchAccesosMundo(worldId, limit = 30) {
+  return rest(`access_log?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
+}
+export async function registrarAccesoRemote(worldId, userId, tipo, zona) {
+  await rest("access_log", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, user_id: userId, tipo, zona: zona || null }),
+  });
+}
+
+// ── Comercios (merchants) ────────────────────────────────────────────────────
+export async function addMerchantRemote(mundoId, comercio) {
+  const rows = await rest("merchants", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      world_id: mundoId, name: comercio.nombre,
+      status: "activo",
+      mdr_override: +comercio.tarifa || null,
+      fixed_fee_override: +comercio.fijoTx || null,
+      ruc: comercio.ruc || null, razon_social: comercio.razonSocial || null,
+      direccion_fiscal: comercio.direccionFiscal || null,
+      apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
+      contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
+      banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
+    }),
+  });
+  return rows?.[0]?.id || null;
+}
+export async function fetchMerchantsRemote(worldId) {
+  return rest(`merchants?world_id=eq.${worldId}&select=*&order=created_at`);
+}
+
+// ── Eliminación segura de Comercio (nuevo, 29-jul): antes solo existía alta,
+// nunca baja. Deshabilitar primero (deja de admitir compras — la app ya
+// filtra merchants por status=eq.activo, así que este PATCH basta para
+// sacarlo de la vitrina sin tocar código de la app) y solo se permite
+// eliminar definitivamente si el chequeo de bloqueos sale limpio.
+export async function actualizarEstadoMerchantRemote(merchantId, status) {
+  await rest(`merchants?id=eq.${merchantId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status }),
+  });
+}
+export async function eliminarMerchantRemote(merchantId) {
+  await rest(`merchants?id=eq.${merchantId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+// No existe un estado "liquidado" persistido por comercio en ningún lado del
+// sistema — generarLiquidaciones() (store.js) simula el volumen del mundo con
+// un hash determinista, no lee transacciones reales, y no hay tabla de lotes
+// de liquidación en Supabase. Por eso "ventas pendientes de liquidar" usa como
+// proxy HONESTO las ventas reales del comercio desde el último corte TEÓRICO
+// (según liquidacion_horaCorte configurado en el mundo) — no una liquidación
+// efectivamente cerrada, porque esa noción no existe hoy. Documentado así en
+// vez de fingir una verificación que el sistema no puede hacer de verdad.
+const BNPL_ESTADOS_TERMINALES = new Set(["cerrado", "incobrable", "rechazado"]);
+export async function verificarBloqueosEliminacionMerchant(worldId, merchantId, ultimoCorteISO) {
+  const [contratos, ventas, reservas, hardware] = await Promise.all([
+    rest(`bnpl_contratos?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=id,estado`).catch(() => []),
+    rest(`transactions?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&type=eq.compra&created_at=gte.${ultimoCorteISO}&select=id,amount`).catch(() => []),
+    rest(`menu_reservas?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&estado=eq.CONFIRMADA&fecha=gte.${ultimoCorteISO.slice(0, 10)}&select=id,monto`).catch(() => []),
+    rest(`pos_devices?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=id,estado`).catch(() => []),
+  ]);
+  const bnplActivos = (contratos || []).filter(c => !BNPL_ESTADOS_TERMINALES.has(c.estado));
+  const montoVentasPendientes = (ventas || []).reduce((a, t) => a + (+t.amount || 0), 0);
+  const montoReservas = (reservas || []).reduce((a, r) => a + (+r.monto || 0), 0);
+  return {
+    bnplActivos: bnplActivos.length,
+    ventasPendientes: { count: (ventas || []).length, monto: montoVentasPendientes },
+    reservasFuturas: { count: (reservas || []).length, monto: montoReservas },
+    hardwareAsignado: (hardware || []).length,
+    bloqueaDuro: bnplActivos.length > 0 || montoVentasPendientes > 0 || (reservas || []).length > 0,
+  };
+}
+
+// ── Solicitudes de Alta de Comercio (Gantt #52/#57): BackOffice Mundo envía,
+// Admin RP aprueba/rechaza en Gobierno.jsx (misma cola cross-mundo que eventos).
+export async function crearSolicitudComercio(worldId, worldNombre, data) {
+  await rest("merchant_requests", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([{
+      world_id: worldId, world_nombre: worldNombre, nombre: data.nombre, rubro_id: data.rubro || null,
+      ruc: data.ruc || null, razon_social: data.razonSocial || null, direccion_fiscal: data.direccionFiscal || null,
+      apoderado_nombre: data.apoderadoNombre || null, apoderado_documento: data.apoderadoDocumento || null, apoderado_correo: data.apoderadoCorreo || null,
+      contacto_nombre: data.contactoNombre || null, contacto_documento: data.contactoDocumento || null, contacto_correo: data.contactoCorreo || null,
+      banco: data.banco || null, cuenta_bancaria: data.cuentaBancaria || null, cci: data.cci || null,
+      tarifa: +data.tarifa || null, fijo_tx: +data.fijoTx || null, pos_solicitados: +data.pos || 0,
+      estado: "PENDIENTE",
+    }]),
+  });
+}
+export async function fetchSolicitudesComercioGlobal() {
+  return rest(`merchant_requests?estado=eq.PENDIENTE&select=*&order=created_at.desc`);
+}
+export async function fetchSolicitudesComercioMundo(worldId) {
+  return rest(`merchant_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+export async function resolverSolicitudComercio(id, estado, motivoRechazo = null) {
+  const body = { estado };
+  if (estado === "RECHAZADO") body.motivo_rechazo = motivoRechazo;
+  await rest(`merchant_requests?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Historial de resueltos (30-jul) — cola de aprobaciones cross-mundo: antes
+// solo se veían los pendientes; una vez aprobado/rechazado el ítem
+// desaparecía sin dejar rastro visible en el propio panel de Gobierno.
+export async function fetchEventosResueltosGlobal(limit = 30) {
+  return rest(`events?estado=in.(PUBLICADO,RECHAZADO)&select=*&order=updated_at.desc&limit=${limit}`);
+}
+export async function fetchSolicitudesComercioResueltasGlobal(limit = 30) {
+  return rest(`merchant_requests?estado=in.(APROBADO,RECHAZADO)&select=*&order=created_at.desc&limit=${limit}`);
+}
+
+// ── Reconciliación: comercios creados/editados DIRECTO en Supabase (por otra
+// sesión/otro panel) no existen en el store local (localStorage) del admin —
+// sin esto, sus paneles (Cobrar, Mi catálogo) no son alcanzables desde aquí.
+// Usa el UUID remoto como id local: un solo identificador, sin duplicar.
+export async function reconciliarComerciosMundo(worldId, comerciosLocales) {
+  const remotos = await fetchMerchantsRemote(worldId);
+  const localIds = new Set((comerciosLocales || []).map(c => c.supabaseId || c.id));
+  const nuevos = (remotos || [])
+    .filter(r => r.status !== "inactivo" && !localIds.has(r.id))
+    .map(r => ({
+      id: r.id, supabaseId: r.id, mundoId: worldId, nombre: r.name,
+      rubro: "otro", tarifa: r.mdr_override ?? 1.5, fijoTx: r.fixed_fee_override ?? 0.10,
+      pos: 0, posSolicitados: 0, estado: "ACTIVO", visibleEnApp: r.visible_en_app !== false,
+      createdAt: Date.parse(r.created_at) || Date.now(),
+    }));
+  return nuevos;
+}
+
+// ── Motor de Eventos (Caso 3) ────────────────────────────────────────────────
+export async function upsertEventoRemote(ev) {
+  await rest("events?on_conflict=id", {
+    method: "POST", headers: upsertHeaders,
+    body: JSON.stringify([{
+      id: ev.id,
+      world_id: ev.mundoId,
+      organizador: ev.organizador?.nombre || ev.organizador || null,
+      titulo: ev.titulo,
+      descripcion: ev.descripcion || null,
+      tipo: ev.tipoEvento || "kermesse",
+      categoria: ev.categoria || null,
+      fecha: ev.fecha || null,
+      hora: ev.hora || null,
+      lugar: ev.lugar || null,
+      aforo_total: +ev.aforo || 0,
+      aforo_tipo: ev.aforoTipo || "general",
+      privado: ev.privado === true,
+      estado: ev.estado || "PUBLICADO",
+      moneda: ev.moneda || "PEN",
+      // Criterio del evento — B2B (organizador dedicado) | B2C (usuario final)
+      // | Embebido (RedPontis/Sponsor lo publica directo). Techo: modosDeMundo(m).
+      modo: ev.modo || "embebido",
+      organizador_id: ev.organizadorId || null,
+      imagen_url: ev.imagenUrl || null,
+      ux_components: ev.uxComponents || ["hero", "entradas", "agenda", "marketplace"],
+      updated_at: new Date().toISOString(),
+    }]),
+  });
+}
+
+// Eventos creados directo en Supabase / otro browser-sesión admin — mismo gap
+// que refreshMundosLive(). Ver refreshEventosLive() en store.js.
+export async function fetchEventosDeMundo(worldId) {
+  return rest(`events?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+
+export async function syncTicketTypesRemote(eventId, tipos) {
+  // Reemplazo completo: la edición del drawer define el set vigente.
+  const existentes = await rest(`event_ticket_types?event_id=eq.${eventId}&select=id`);
+  const keep = new Set((tipos || []).map(t => t.supabaseId).filter(Boolean));
+  for (const row of existentes || []) {
+    if (!keep.has(row.id)) {
+      await rest(`event_ticket_types?id=eq.${row.id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+    }
+  }
+  const out = [];
+  for (const t of tipos || []) {
+    const body = {
+      event_id: eventId, nombre: t.nombre, descripcion: t.descripcion || t.incluye || null,
+      precio: +t.precio || 0, moneda: t.moneda || "PEN", cupos: +t.cupos || 0,
+      min_por_compra: +t.minPorCompra || 1, max_por_compra: +t.maxPorCompra || 4,
+      venta_desde: t.ventaDesde || null, venta_hasta: t.ventaHasta || null,
+      validacion: "QR",
+      permite_reingreso: t.permiteReingreso !== false,
+      vigencia_hasta: t.vigenciaHasta || null,
+      preventa: !!t.preventa, precompra: !!t.precompra, prereserva: !!t.prereserva,
+    };
+    if (t.supabaseId) {
+      await rest(`event_ticket_types?id=eq.${t.supabaseId}`, {
+        method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(body),
+      });
+      out.push({ ...t });
+    } else {
+      const rows = await rest("event_ticket_types", {
+        method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(body),
+      });
+      out.push({ ...t, supabaseId: rows[0].id });
+    }
+  }
+  return out;
+}
+
+export async function fetchTicketsDeEvento(eventId) {
+  return rest(`event_tickets?event_id=eq.${eventId}&select=*&order=created_at.desc`);
+}
+// Recibe el ticket completo (no solo el id): necesita event_id para generar
+// el nuevo qr_code con el mismo formato que comprarTicketsLive.
+export async function setTicketEstado(ticket, estado) {
+  const patch = { estado };
+  if (estado === "checkin") {
+    patch.checkin_at = new Date().toISOString();
+    // Rotación real del QR en cada ingreso (spec: "cada ingreso invalida el
+    // QR anterior y genera uno nuevo" — evita fraude por duplicación de
+    // código, antes el mismo qr_code se reutilizaba indefinidamente).
+    patch.qr_code = `JOI-${ticket.event_id}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`.toUpperCase();
+  }
+  if (estado === "checkout") patch.checkout_at = new Date().toISOString();
+  await rest(`event_tickets?id=eq.${ticket.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch),
+  });
+}
+export async function fetchTicketTypesDeEvento(eventId) {
+  return rest(`event_ticket_types?event_id=eq.${eventId}&select=*&order=precio`);
+}
+export async function deleteEventoRemote(eventId) {
+  try { await rest(`events?id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }); }
+  catch (e) { console.warn("[supabase-sync] delete evento", e); }
+}
+
+// ── BNPL (Caso 1 — Mok / Hiraoka) ───────────────────────────────────────────
+export async function upsertProgramaBNPL(worldId, merchantId, programa) {
+  await rest("bnpl_programa_comercio?on_conflict=world_id,merchant_id", {
+    method: "POST", headers: upsertHeaders,
+    body: JSON.stringify([{
+      world_id: worldId, merchant_id: merchantId,
+      merchant_nombre: programa.merchantNombre || null,
+      cuotas_activas: programa.cuotasActivas || [3],
+      comision_pct: +programa.comisionPct || 5,
+      revenue_share_pct: +programa.revenueSharePct || 30,
+      productos_financiables: programa.productosFinanciables || [],
+      gestion_mora: programa.gestionMora || "sin_cargo_suspension",
+      mora_pct: +programa.moraPct || 0,
+      frecuencia: programa.frecuencia || "mensual",
+      dias_personalizados: programa.frecuencia === "personalizada" ? (+programa.diasPersonalizados || null) : null,
+      dias_gracia: programa.diasGracia != null ? +programa.diasGracia : null,
+      alcance: programa.alcance || "puntuales",
+      categorias: programa.categorias || [],
+      cuota_inicial: +programa.cuotaInicial || 0,
+      activo: programa.activo !== false,
+    }]),
+  });
+}
+// Campañas temporales de Productos Financiables (Gantt #61) — vigentes por
+// rango de fecha, adicionan productos financiables sobre el alcance base.
+export async function fetchCampanasBNPL(worldId, merchantId) {
+  return rest(`bnpl_campanas?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=*&order=created_at.desc`);
+}
+export async function crearCampanaBNPL(worldId, merchantId, data) {
+  const rows = await rest("bnpl_campanas", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify([{
+      world_id: worldId, merchant_id: merchantId, nombre: data.nombre,
+      fecha_inicio: data.fechaInicio || null, fecha_fin: data.fechaFin || null,
+      productos: data.productos || [],
+    }]),
+  });
+  return rows?.[0] || null;
+}
+export async function eliminarCampanaBNPL(id) {
+  await rest(`bnpl_campanas?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+export async function fetchProgramaBNPL(worldId, merchantId = null) {
+  const q = merchantId
+    ? `bnpl_programa_comercio?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=*`
+    : `bnpl_programa_comercio?world_id=eq.${worldId}&select=*`;
+  return rest(q);
+}
+export async function fetchContratosBNPL(worldId, merchantId = null) {
+  const base = `bnpl_contratos?world_id=eq.${worldId}&select=*&order=created_at.desc`;
+  return rest(merchantId ? `${base}&merchant_id=eq.${merchantId}` : base);
+}
+export async function updateContratoBNPL(id, patch) {
+  await rest(`bnpl_contratos?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+}
+// Administración de Solicitudes (Gantt #31) — antes la evaluación crediticia
+// era 100% self-service en la app (un timeout falso que siempre aprobaba,
+// sin que el comercio la viera ni tuviera contexto del usuario). Ahora una
+// solicitud con evaluación requerida nace "pendiente_aprobacion" y el
+// comercio la resuelve aquí, con visibilidad del historial del usuario.
+// Solicitud BNPL iniciada por el operador en el punto de venta (App Operador,
+// Gantt #45) — mismo esquema que crearContratoBNPLLive (app), pero disponible
+// desde el admin porque acá el flujo lo dispara el operador, no el usuario.
+export async function crearSolicitudBNPLDesdeOperador(payload) {
+  const rows = await rest("bnpl_contratos", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload),
+  });
+  return rows?.[0] || null;
+}
+// ── Menú — catálogo de platos + programación semanal ────────────────────
+// Distinto de `products` (vitrina general de compras puntuales): un plato de
+// Menú tiene alérgenos y se programa por día de la semana con recurrencia.
+// Genérico a propósito — cualquier mundo con capacidad "menu" puede usarlo,
+// no es específico al caso Raimondi.
+export async function fetchMenuItemsMerchant(merchantId) {
+  return rest(`menu_items?merchant_id=eq.${merchantId}&select=*&order=created_at.desc`);
+}
+export async function crearMenuItemRemote(payload) {
+  const rows = await rest("menu_items", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) });
+  return rows?.[0] || null;
+}
+export async function actualizarMenuItemRemote(id, patch) {
+  await rest(`menu_items?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+}
+export async function eliminarMenuItemRemote(id) {
+  await rest(`menu_items?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+export async function fetchProgramacionMerchant(merchantId) {
+  return rest(`menu_programacion?merchant_id=eq.${merchantId}&select=*`);
+}
+// Reemplaza toda la programación de un plato en un solo paso (borra + inserta)
+// en vez de diffear día por día — más simple y suficientemente barato para
+// el tamaño real de este catálogo (unos pocos platos por comercio).
+export async function guardarProgramacionItem(worldId, merchantId, menuItemId, diasSemana, cuposMax) {
+  await rest(`menu_programacion?menu_item_id=eq.${menuItemId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  if (!diasSemana.length) return;
+  const rows = diasSemana.map(dia => ({ world_id: worldId, merchant_id: merchantId, menu_item_id: menuItemId, dia_semana: dia, cupos_max: cuposMax || null }));
+  await rest("menu_programacion", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(rows) });
+}
+export async function fetchReservasMenuMerchant(merchantId, fecha) {
+  return rest(`menu_reservas?merchant_id=eq.${merchantId}&fecha=eq.${fecha}&select=*&order=created_at.desc`);
+}
+
+// ── Promociones — cupón QR (Gantt #38-#41, Backlog Capítulo 2) ─────────────
+// Alcance mínimo viable confirmado por la usuaria 28-jul: antes TabPromos
+// (MundoDetail.jsx) y PromocionesTemplate (app) eran 100% mock local
+// (st.promos en memoria) — 'promociones' seguía en MODULOS_PROXIMAMENTE por
+// eso. Ahora hay tabla real; el catálogo sigue en MODULOS_PROXIMAMENTE
+// porque banners/push/A-B testing (el resto del spec) siguen sin construir.
+export async function fetchPromocionesMundo(worldId) {
+  return rest(`promociones?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+export async function crearPromocionRemote(payload) {
+  const rows = await rest("promociones", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload),
+  });
+  return rows?.[0] || null;
+}
+export async function actualizarPromocionRemote(id, patch) {
+  await rest(`promociones?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+}
+// Canje en el punto de venta: el operador teclea/escanea el código, se valida
+// vigencia/estado/cupos disponibles y recién ahí se incrementa el uso.
+export async function canjearCuponRemote(codigoQr, worldId, userId) {
+  const codigo = (codigoQr || "").trim().toUpperCase();
+  if (!codigo) return { ok: false, motivo: "codigo_vacio" };
+  const rows = await rest(`promociones?codigo_qr=eq.${codigo}&world_id=eq.${worldId}&select=*`);
+  const promo = rows?.[0];
+  if (!promo) return { ok: false, motivo: "no_encontrado" };
+  if (promo.estado !== "VIGENTE") return { ok: false, motivo: "pausada" };
+  if (promo.vigencia_hasta && promo.vigencia_hasta < new Date().toISOString().slice(0, 10)) return { ok: false, motivo: "vencida" };
+  if (promo.usos_max != null && promo.usos_actuales >= promo.usos_max) return { ok: false, motivo: "agotada" };
+  await rest(`promociones?id=eq.${promo.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ usos_actuales: promo.usos_actuales + 1 }),
+  });
+  await rest("promociones_canjes", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ promocion_id: promo.id, world_id: worldId, user_id: userId || "operador" }),
+  });
+  return { ok: true, promo };
+}
+
+export async function resolverSolicitudBNPL(id, estado, motivo = null) {
+  const patch = { estado };
+  if (estado === "rechazado") patch.rechazo_motivo = motivo || null;
+  await rest(`bnpl_contratos?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+}
+export async function crearNotificacionBNPL(worldId, merchantId, contratoId, mensaje, tipo = "suspension") {
+  await rest("bnpl_notificaciones", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([{ world_id: worldId, merchant_id: merchantId, contrato_id: contratoId, tipo, mensaje }]),
+  });
+}
+export async function fetchNotificacionesBNPL(worldId, merchantId, soloNoLeidas = true) {
+  const base = `bnpl_notificaciones?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=*&order=created_at.desc`;
+  return rest(soloNoLeidas ? `${base}&leida=eq.false` : base);
+}
+export async function marcarNotificacionBNPLLeida(id) {
+  await rest(`bnpl_notificaciones?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ leida: true }) });
+}
+
+// Ciclo de vida del financiamiento (Gantt #27-#29) — misma lógica que
+// joi360-app/src/supabaseClient.js (duplicada a propósito: cada front evalúa
+// los contratos que ve — el admin los de todo el mundo, la app los del user).
+export function evaluarCicloContrato(c) {
+  // Solicitudes que aún no fueron aprobadas por el comercio no entran al ciclo
+  // de pago (Gantt #31) — no tienen cuota 1 cobrada, evaluarlas por fecha de
+  // vencimiento las marcaría "vencida"/"suspendido" antes de siquiera existir.
+  if (c.estado === "pendiente_aprobacion" || c.estado === "rechazado") return { contrato: c, patch: null, nuevaSuspension: false };
+  const hoy = new Date().toISOString().slice(0, 10);
+  let cronogramaTocado = false;
+  const cronograma = (c.cronograma || []).map(q => {
+    if (q.estado !== "pendiente") return q;
+    const limite = new Date(q.fecha);
+    limite.setDate(limite.getDate() + (c.dias_gracia || 0));
+    if (limite.toISOString().slice(0, 10) < hoy) { cronogramaTocado = true; return { ...q, estado: "vencida" }; }
+    return q;
+  });
+  const hayVencida = cronograma.some(q => q.estado === "vencida");
+  const estado = (c.estado !== "cerrado" && hayVencida)
+    ? ((c.gestion_mora || "sin_cargo_suspension") === "sin_cargo_suspension" ? "suspendido" : "en_mora")
+    : c.estado;
+  const nuevaSuspension = estado === "suspendido" && c.estado !== "suspendido";
+  return { contrato: { ...c, cronograma, estado }, patch: (cronogramaTocado || estado !== c.estado) ? { cronograma, estado } : null, nuevaSuspension };
+}
+export async function sincronizarCicloBNPL(contratos) {
+  const out = [];
+  for (const c of contratos || []) {
+    const { contrato, patch, nuevaSuspension } = evaluarCicloContrato(c);
+    if (patch) {
+      try {
+        await updateContratoBNPL(c.id, patch);
+        if (nuevaSuspension) {
+          await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+            `Contrato de "${c.producto}" suspendido por mora — cuota vencida fuera del período de gracia.`);
+        }
+      } catch (e) { console.warn("[bnpl-lifecycle] sync", e); }
+    }
+    out.push(contrato);
+  }
+  return out;
+}
+
+// ── Gestión del Financiamiento — 9 acciones administrativas sobre un
+// contrato ya firmado (Caso BNPL, roadmap Flujos UX). Todas parten del mismo
+// patrón: recalculan cronograma/estado con updateContratoBNPL() y registran
+// una fila en bnpl_notificaciones (tabla ya existente, reusada con nuevos
+// valores de `tipo`) — es la forma en que "notifica a RedPontis" hoy, igual
+// que ya hacía la suspensión automática por mora.
+// Gap documentado a propósito: ninguna de estas dispara una re-aceptación
+// interactiva del usuario en la app (el doc lo pide) — construir ese flujo es
+// una superficie nueva completa en joi360-app, fuera de esta pasada.
+const cuotasPendientes = c => (c.cronograma || []).filter(q => q.estado === "pendiente" || q.estado === "vencida");
+export const saldoPendienteBNPL = c => cuotasPendientes(c).reduce((a, q) => a + (+q.monto || 0), 0);
+
+function generarCuotas(desdeN, cantidad, montoPorCuota, primerVenc) {
+  return Array.from({ length: cantidad }, (_, i) => {
+    const fecha = new Date(primerVenc);
+    fecha.setMonth(fecha.getMonth() + i);
+    return { n: desdeN + i, fecha: fecha.toISOString().slice(0, 10), monto: montoPorCuota, estado: "pendiente" };
+  });
+}
+
+// 1) Reprogramar cuotas — redistribuye el saldo pendiente en un nuevo número de cuotas futuras.
+export async function reprogramarCuotasBNPL(c, nuevasCuotas, primerVenc) {
+  const saldo = saldoPendienteBNPL(c);
+  const pagadas = (c.cronograma || []).filter(q => q.estado === "pagada");
+  const montoPorCuota = +(saldo / nuevasCuotas).toFixed(2);
+  const cronograma = [...pagadas, ...generarCuotas(pagadas.length + 1, nuevasCuotas, montoPorCuota, primerVenc)];
+  await updateContratoBNPL(c.id, { cronograma, cuotas: cronograma.length, estado: "firmado" });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Cuotas reprogramadas en "${c.producto}": ${nuevasCuotas} cuotas nuevas de S/ ${montoPorCuota.toFixed(2)} desde ${primerVenc}.`, "reprogramacion");
+}
+
+// 2) Modificar fecha de vencimiento de una cuota puntual.
+export async function modificarFechaCuotaBNPL(c, n, nuevaFecha) {
+  const cronograma = (c.cronograma || []).map(q => q.n === n
+    ? { ...q, fecha: nuevaFecha, estado: q.estado === "vencida" ? "pendiente" : q.estado } : q);
+  await updateContratoBNPL(c.id, { cronograma });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Cuota ${n} de "${c.producto}" movida a ${nuevaFecha}.`, "modificacion_fecha");
+}
+
+// 3) Refinanciar saldo pendiente — como reprogramar, pero puede además cambiar la tasa aplicada.
+export async function refinanciarBNPL(c, nuevasCuotas, primerVenc, nuevoInteresPct) {
+  const saldo = saldoPendienteBNPL(c);
+  const conInteres = nuevoInteresPct ? saldo * (1 + nuevoInteresPct / 100) : saldo;
+  const pagadas = (c.cronograma || []).filter(q => q.estado === "pagada");
+  const montoPorCuota = +(conInteres / nuevasCuotas).toFixed(2);
+  const cronograma = [...pagadas, ...generarCuotas(pagadas.length + 1, nuevasCuotas, montoPorCuota, primerVenc)];
+  await updateContratoBNPL(c.id, { cronograma, cuotas: cronograma.length, estado: "firmado", interes_pct: nuevoInteresPct ?? c.interes_pct });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Refinanciado "${c.producto}": saldo de S/ ${saldo.toFixed(2)} en ${nuevasCuotas} cuotas nuevas de S/ ${montoPorCuota.toFixed(2)}.`, "refinanciamiento");
+}
+
+// 4) Condonar intereses — recalcula las cuotas pendientes quitando el % de interés del contrato.
+export async function condonarInteresesBNPL(c) {
+  const interesPct = +c.interes_pct || 0;
+  if (!interesPct) return;
+  const cronograma = (c.cronograma || []).map(q => q.estado === "pagada" ? q : { ...q, monto: +(q.monto / (1 + interesPct / 100)).toFixed(2) });
+  await updateContratoBNPL(c.id, { cronograma, interes_pct: 0 });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Intereses condonados en las cuotas pendientes de "${c.producto}".`, "condonacion");
+}
+
+// 5) Eliminar mora — limpia cuotas vencidas y reactiva el contrato suspendido/en mora.
+export async function eliminarMoraBNPL(c) {
+  const cronograma = (c.cronograma || []).map(q => q.estado === "vencida" ? { ...q, estado: "pendiente" } : q);
+  await updateContratoBNPL(c.id, { cronograma, estado: "firmado" });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Mora eliminada — contrato de "${c.producto}" reactivado.`, "eliminacion_mora");
+}
+
+// 6) Aplicar descuento extraordinario — reduce el saldo pendiente en un monto fijo, prorrateado.
+export async function aplicarDescuentoBNPL(c, montoDescuento) {
+  const saldo = saldoPendienteBNPL(c);
+  if (saldo <= 0) return;
+  const factor = Math.max(0, (saldo - montoDescuento) / saldo);
+  const cronograma = (c.cronograma || []).map(q => (q.estado === "pendiente" || q.estado === "vencida")
+    ? { ...q, monto: +(q.monto * factor).toFixed(2) } : q);
+  await updateContratoBNPL(c.id, { cronograma });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Descuento extraordinario de S/ ${montoDescuento.toFixed(2)} aplicado a "${c.producto}".`, "descuento");
+}
+
+// 7) Registrar pago manual de una cuota puntual (ej. pago en efectivo fuera del app).
+export async function registrarPagoManualBNPL(c, n) {
+  const cronograma = (c.cronograma || []).map(q => q.n === n ? { ...q, estado: "pagada", pagada_manual: true } : q);
+  const quedanPendientes = cronograma.some(q => q.estado !== "pagada");
+  await updateContratoBNPL(c.id, { cronograma, estado: quedanPendientes ? c.estado : "cerrado" });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Pago manual registrado: cuota ${n} de "${c.producto}".`, "pago_manual");
+}
+
+// 8) Cancelar anticipadamente — cierra el contrato; las cuotas pendientes quedan canceladas.
+export async function cancelarAnticipadoBNPL(c) {
+  const cronograma = (c.cronograma || []).map(q => q.estado === "pagada" ? q : { ...q, estado: "cancelada" });
+  await updateContratoBNPL(c.id, { cronograma, estado: "cerrado" });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Contrato de "${c.producto}" cancelado anticipadamente.`, "cancelacion");
+}
+
+// 9) Declarar incobrable — marca el contrato como pérdida, saca las cuotas pendientes de cobranza activa.
+export async function declararIncobrableBNPL(c) {
+  const saldo = saldoPendienteBNPL(c);
+  const cronograma = (c.cronograma || []).map(q => q.estado === "pagada" ? q : { ...q, estado: "incobrable" });
+  await updateContratoBNPL(c.id, { cronograma, estado: "incobrable" });
+  await crearNotificacionBNPL(c.world_id, c.merchant_id, c.id,
+    `Contrato de "${c.producto}" declarado incobrable — saldo de S/ ${saldo.toFixed(2)} dado de baja.`, "incobrable");
+}
+
+// ── Cola de aprobación de eventos (release gate de RedPontis por mundo) ─────
+export async function fetchEventosPendientes(worldId) {
+  return rest(`events?world_id=eq.${worldId}&estado=eq.PENDIENTE_APROBACION&select=*&order=created_at.desc`);
+}
+// Cola global (Gantt #101, Gobierno.jsx) — misma tabla, sin filtrar por mundo,
+// para la vista de aprobaciones a nivel RedPontis (cross-mundo).
+export async function fetchEventosPendientesGlobal() {
+  return rest(`events?estado=eq.PENDIENTE_APROBACION&select=*&order=created_at.desc`);
+}
+// Reportes RedPontis cross-mundo (Gantt #81 — eventos/entradas/recaudación):
+// mismas tablas que ya usa el reporte por-mundo, sin filtrar por world_id.
+export async function fetchEventosGlobalTodos() {
+  return rest(`events?select=*&order=fecha.desc`);
+}
+export async function fetchTicketsGlobalTodos() {
+  return rest(`event_tickets?select=*`);
+}
+export async function setEventoEstadoRemote(eventId, estado, motivoRechazo = null) {
+  const body = { estado, updated_at: new Date().toISOString() };
+  if (estado === "RECHAZADO") body.motivo_rechazo = motivoRechazo;
+  await rest(`events?id=eq.${eventId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Alertas al mundo (30-jul) — antes rechazar una aprobación (evento o
+// solicitud de comercio) no dejaba ningún rastro visible para el sponsor
+// afectado; ahora cada rechazo genera una alerta real que su dashboard lee.
+export async function crearAlertaMundo(worldId, tipo, titulo, mensaje, referenciaId = null) {
+  await rest("world_alerts", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, tipo, titulo, mensaje, referencia_id: referenciaId }),
+  });
+}
+export async function fetchAlertasMundo(worldId, limit = 50) {
+  return rest(`world_alerts?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
+}
+export async function marcarAlertaMundoLeida(id) {
+  await rest(`world_alerts?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ leida: true }) });
+}
+
+// ── Publicación del Catálogo Global (Nivel 1) a Supabase ────────────────────
+// Empuja MODULE_CATALOG → capacities + capacity_feature_flags para que la
+// superapp renderice cualquier capacidad nueva sin tocar su código.
+export async function syncCatalogRemote(catalog, uxMap = {}) {
+  setSyncStatus("syncing");
+  try {
+    await rest("capacities?on_conflict=id", {
+      method: "POST", headers: upsertHeaders,
+      body: JSON.stringify(catalog.map(c => ({
+        id: c.id, name: c.name, tier: c.tier, category: c.category,
+        description: c.desc || null, icon: c.icon || "extension",
+        active_by_default: c.tier === "CORE", forced_active: c.id === "wallet",
+        version: "1.0", status: "activo",
+      }))),
+    });
+    let flags = 0, uxAsignados = 0;
+    for (const c of catalog) {
+      for (const sv of (c.servicios || [])) {
+        if (typeof sv === "string") continue; // servicios legados sin id estable
+        const ux = uxMap[`${c.id}:${sv.id}`] || null;
+        try { await ensureGlobalFlag(c.id, sv.id, sv.nombre, sv.desc || null, ux); flags++; } catch {}
+        // Activar ux_component también en flags ya existentes (Schema Registry)
+        if (ux) {
+          try {
+            await rest(`capacity_feature_flags?capacity_id=eq.${c.id}&flag_code=eq.${encodeURIComponent(sv.id)}`, {
+              method: "PATCH", headers: { Prefer: "return=minimal" },
+              body: JSON.stringify({ ux_component: ux }),
+            });
+            uxAsignados++;
+          } catch {}
+        }
+      }
+    }
+    setSyncStatus("ok");
+    return { capacidades: catalog.length, flags, uxAsignados };
+  } catch (e) {
+    setSyncStatus("error", e.message);
+    throw e;
+  }
+}
+
+// ── Liquidación real (Gantt nuevo, 29-jul): antes generarLiquidaciones()
+// (store.js) simulaba el volumen con un hash determinista y el lote solo
+// vivía en memoria local — nunca en Supabase. Reemplazado por lectura real
+// de `transactions` y persistencia real en la tabla `liquidaciones`
+// (unique world_id+fecha, upsert idempotente para que "Forzar corte" no
+// duplique el lote del día).
+export async function fetchTodasLiquidacionesRemote() {
+  return rest(`liquidaciones?select=*&order=fecha.desc`);
+}
+export async function fetchLiquidacionesMundoRemote(worldId) {
+  return rest(`liquidaciones?world_id=eq.${worldId}&select=*&order=fecha.desc`);
+}
+export async function fetchVolumenPeriodoMundo(worldId, desdeISO, hastaISO) {
+  const rows = await rest(`transactions?world_id=eq.${worldId}&type=eq.compra&created_at=gte.${desdeISO}&created_at=lt.${hastaISO}&select=amount`);
+  return { volumen: (rows || []).reduce((a, t) => a + (+t.amount || 0), 0), txCount: (rows || []).length };
+}
+export async function upsertLoteLiquidacionRemote(lote) {
+  const rows = await rest("liquidaciones?on_conflict=world_id,fecha", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(lote),
+  });
+  return rows?.[0] || null;
+}
+export async function marcarLiquidacionRemote(id, estado, extra = {}) {
+  const body = { estado };
+  if (extra.voucherUrl !== undefined) body.voucher_url = extra.voucherUrl;
+  if (extra.voucherNombre !== undefined) body.voucher_nombre = extra.voucherNombre;
+  if (extra.observacion !== undefined) body.observacion = extra.observacion;
+  await rest(`liquidaciones?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(body) });
+}
+
+// Bug real encontrado 29-jul (auditoría de BackOffice Mundo): "Visible en
+// app" (SponsorComercios, Fronts.jsx) escribía solo a
+// mundo.sponsorConfig.comerciosOcultos — un campo que NUNCA se sincroniza a
+// Supabase (confirmado: cero referencias a sponsorConfig en todo supabase.js)
+// y que la app tampoco leía aunque existiera. El toggle daba un toast de
+// éxito sin ningún efecto real — mismo patrón que el bug de Publicidad ya
+// cerrado esta sesión. Corregido con una columna real en merchants.
+export async function actualizarVisibilidadMerchantRemote(merchantId, visible) {
+  await rest(`merchants?id=eq.${merchantId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ visible_en_app: visible }),
+  });
+}
+export async function actualizarFotoMerchantRemote(merchantId, photoUrl) {
+  await rest(`merchants?id=eq.${merchantId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ photo_url: photoUrl }),
+  });
+}
+
+// ── Soporte real (Gantt nuevo, 29-jul): hallazgo de la auditoría de
+// BackOffice Mundo — st.tickets (usado por Soporte.jsx de Admin RP,
+// SponsorSoporte del panel de Mundo, y el ticket de merchant en
+// MerchantDashboard) era 100% local, sin ninguna sincronización a Supabase
+// en ningún punto. Un sponsor o comercio "enviaba" un ticket a RedPontis con
+// un toast de éxito, pero si RedPontis estaba en otro navegador/dispositivo
+// (el caso real, son organizaciones distintas) nunca lo veía. Tabla real
+// support_tickets + reconciliación al montar App.jsx, mismo patrón que
+// liquidaciones.
+export async function crearTicketSoporteRemote(payload) {
+  const rows = await rest("support_tickets", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload),
+  });
+  return rows?.[0] || null;
+}
+export async function fetchTicketsSoporteRemote() {
+  return rest(`support_tickets?select=*&order=created_at.desc`);
+}
+export async function actualizarTicketSoporteRemote(id, patch) {
+  await rest(`support_tickets?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(patch),
+  });
+}
+
+// ── POS — inventario real (Caso 2 Raimondi: cierra el dead code local) ─────
+// Tabla pos_devices ya existía (creada por el otro chat de catálogos) con
+// columnas en español (modelo, estado) — nos adaptamos a ese esquema en vez
+// de duplicarlo; solo se agregó `serial` (aditivo).
+export async function fetchPosDevicesRemote() {
+  return rest("pos_devices?select=*&order=created_at.desc");
+}
+// Hardware prestado a un evento puntual (Gantt #60) — assignPosDeviceRemote
+// ya soporta eventId desde antes; esto solo lo hace visible dentro de la
+// pantalla del evento en vez de solo en el inventario global de Hardware.
+export async function fetchPosDevicesDeEvento(eventId) {
+  return rest(`pos_devices?event_id=eq.${eventId}&select=*`);
+}
+// Designación de Hardware por comercio, a nivel Mundo (Gantt #57) — antes el
+// admin del mundo solo veía "POS solicitados" (un número tecleado a mano en
+// el alta del comercio); esto trae la asignación REAL desde pos_devices.
+export async function fetchPosDevicesDeMundo(worldId) {
+  return rest(`pos_devices?world_id=eq.${worldId}&select=id,merchant_id,modelo,estado,serial`);
+}
+// Volumen real transaccionado por comercio dentro del mundo (Gantt #57) —
+// referencia honesta para "seguimiento de liquidación cross-comercio": el
+// motor de liquidación (generarLiquidaciones) calcula el lote en AGREGADO
+// por mundo, no por comercio, así que no existe un monto de liquidación real
+// por comercio que mostrar. Lo que sí es real es el volumen de transacciones
+// por comercio, que se muestra como referencia junto con esa aclaración.
+export async function fetchVolumenPorComercioMundo(worldId) {
+  return rest(`transactions?world_id=eq.${worldId}&type=eq.compra&select=merchant_id,amount`);
+}
+export async function registerPosDeviceRemote(modelo, serial, tipoIngreso = "venta") {
+  const rows = await rest("pos_devices", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ modelo, serial, estado: "disponible", tipo_ingreso: tipoIngreso }),
+  });
+  return rows?.[0] || null;
+}
+// Carga masiva (Gantt #53 — spec: "Código de equipo, individual o carga
+// masiva vía archivo"): filas ya parseadas por el caller desde el archivo
+// subido (modelo/serial/tipoIngreso), inserta todas de una vez.
+export async function registerPosDevicesBulkRemote(rows) {
+  if (!rows?.length) return [];
+  const body = rows.map(r => ({ modelo: r.modelo, serial: r.serial, estado: "disponible", tipo_ingreso: r.tipoIngreso || "venta" }));
+  return rest("pos_devices", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify(body),
+  });
+}
+// eventId es opcional (Gantt #64/#73): un POS puede asignarse solo a
+// mundo+merchant como antes, o además a un evento puntual (préstamo temporal
+// de hardware mientras dura el evento — se libera igual que cualquier POS).
+export async function assignPosDeviceRemote(deviceId, worldId, merchantId, eventId = null) {
+  await rest(`pos_devices?id=eq.${deviceId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "asignado", world_id: worldId, merchant_id: merchantId, event_id: eventId, assigned_at: new Date().toISOString() }),
+  });
+}
+export async function releasePosDeviceRemote(deviceId) {
+  await rest(`pos_devices?id=eq.${deviceId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "disponible", world_id: null, merchant_id: null, event_id: null, assigned_at: null }),
+  });
+}
+
+// ── Banditas NFC — stock real por lote (30-jul) ─────────────────────────────
+// Carga masiva desde CSV: un código único por bandita, agrupado por lote.
+// upsert por codigo (unique) para que reintentar un CSV no duplique filas.
+export async function fetchNfcBandsRemote(worldId = null) {
+  return rest(worldId ? `nfc_bands?world_id=eq.${worldId}&select=*&order=created_at.desc` : `nfc_bands?select=*&order=created_at.desc`);
+}
+export async function registerNfcBandsBulkRemote(rows) {
+  if (!rows?.length) return [];
+  const body = rows.map(r => ({ codigo: r.codigo, lote: r.lote, estado: "disponible" }));
+  return rest("nfc_bands?on_conflict=codigo", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(body),
+  });
+}
+export async function asignarNfcBandRemote(bandId, worldId) {
+  await rest(`nfc_bands?id=eq.${bandId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "asignada", world_id: worldId }),
+  });
+}
+export async function liberarNfcBandRemote(bandId) {
+  await rest(`nfc_bands?id=eq.${bandId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "disponible", world_id: null }),
+  });
+}
+
+// ── Solicitud de LOTE de banditas NFC — el mundo pide más stock a RedPontis
+// (distinto de nfc_requests, que es un usuario final pidiendo SU pulsera).
+// entregarLoteNfcRemote() asigna banditas reales del almacén (world_id IS
+// NULL, estado disponible) al mundo — no fabrica códigos nuevos, consume
+// stock real ya cargado por CSV, igual que el flujo manual de asignar de a
+// una, solo que aquí RedPontis entrega N de una vez contra una solicitud.
+export async function crearSolicitudLoteNfcRemote(worldId, cantidad) {
+  await rest("nfc_band_requests", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, cantidad, estado: "pendiente" }),
+  });
+}
+export async function fetchSolicitudesLoteNfcMundo(worldId) {
+  return rest(`nfc_band_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+export async function fetchSolicitudesLoteNfcTodas() {
+  return rest(`nfc_band_requests?select=*&order=created_at.desc`);
+}
+export async function fetchStockAlmacenNfc() {
+  const rows = await rest(`nfc_bands?world_id=is.null&estado=eq.disponible&select=id`);
+  return rows?.length || 0;
+}
+export async function entregarLoteNfcRemote(requestId, worldId, cantidad) {
+  const disponibles = await rest(`nfc_bands?world_id=is.null&estado=eq.disponible&select=id&limit=${cantidad}`);
+  if (!disponibles || disponibles.length < cantidad) {
+    throw new Error(`Solo hay ${disponibles?.length || 0} banditas disponibles en almacén — no alcanza para entregar ${cantidad}.`);
+  }
+  const ids = disponibles.map(b => `"${b.id}"`).join(",");
+  await rest(`nfc_bands?id=in.(${ids})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "asignada", world_id: worldId }),
+  });
+  await rest(`nfc_band_requests?id=eq.${requestId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "entregado", resolved_at: new Date().toISOString() }),
+  });
+}
+
+// ── Canales de adquirencia por mundo — el gap real: los toggles adq_* que
+// ModuleConfigDrawer guarda en config se borraban en cada sync (ver el
+// `delete config[k]` de adq_* en syncAllWorlds) y nunca llegaban a ningún
+// lado — por eso "Canales" en la config de un mundo siempre mostraba el
+// default del catálogo. Mismo patrón world_id+channel_id que world_channel_configs.
+export async function syncWorldAcquiringChannels(worldId, rows) {
+  if (!rows?.length) return;
+  await rest("world_acquiring_channel_configs?on_conflict=world_id,channel_id", {
+    method: "POST", headers: upsertHeaders,
+    body: JSON.stringify(rows.map(r => ({ world_id: worldId, channel_id: r.channel_id, channel_enabled: r.channel_enabled }))),
+  });
+}
+export async function fetchWorldAcquiringChannels(worldId) {
+  return rest(`world_acquiring_channel_configs?world_id=eq.${worldId}&select=channel_id,channel_enabled`);
+}
+
+// ── Cronograma real por evento (Gantt #66/#78) — antes EventoAgendaSection
+// en la app renderizaba 3 items hardcodeados idénticos para todo evento.
+export async function fetchAgendaEvento(eventId) {
+  return rest(`event_agenda_items?event_id=eq.${eventId}&select=*&order=orden,hora`);
+}
+export async function upsertAgendaItem(item) {
+  const rows = await rest("event_agenda_items", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify([item]),
+  });
+  return rows?.[0] || null;
+}
+export async function deleteAgendaItem(id) {
+  await rest(`event_agenda_items?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+
+// ── Reingresos reales (Gantt #79) — event_tickets.checkin_at/checkout_at son
+// columnas únicas (se sobrescriben en cada escaneo, ver setTicketEstado); acá
+// va el log aparte que sí conserva cada ingreso/salida para armar el
+// historial real y permitir reingreso sin repensar el schema de tickets.
+export async function logCheckinEvento(eventId, ticketId, tipo) {
+  await rest("event_checkin_log", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ event_id: eventId, ticket_id: ticketId, tipo }),
+  });
+}
+export async function fetchCheckinLogEvento(eventId) {
+  return rest(`event_checkin_log?event_id=eq.${eventId}&select=*&order=created_at.desc`);
+}
+
+// ── Catálogo de productos por comercio (Cafetería, Kiosco...) ──────────────
+// eventId opcional: catálogo regular (event_id IS NULL) vs. catálogo propio
+// de un evento específico (Gantt #70 — ej. menú exclusivo de la kermesse).
+export async function fetchProductsRemote(merchantId, eventId = null) {
+  const base = `products?merchant_id=eq.${merchantId}&select=*&order=created_at`;
+  return rest(eventId ? `${base}&event_id=eq.${eventId}` : `${base}&event_id=is.null`);
+}
+export async function upsertProductRemote(product, eventId = null) {
+  if (product.id) {
+    await rest(`products?id=eq.${product.id}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ name: product.name, price: product.price, category: product.category || null, stock: product.stock ?? null, active: product.active !== false, image_url: product.image_url || null }),
+    });
+    return product.id;
+  }
+  const rows = await rest("products", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: product.world_id, merchant_id: product.merchant_id, event_id: eventId, name: product.name, price: product.price, category: product.category || null, stock: product.stock ?? null, active: true, image_url: product.image_url || null }),
+  });
+  return rows?.[0]?.id || null;
+}
+export async function deleteProductRemote(id) {
+  await rest(`products?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+
+// ── Comercios afiliados a un evento (Gantt #63/#67 — Caso 3 Kermesse) ──────
+// Antes: la vitrina de un evento en la app mostraba TODOS los comercios
+// activos del mundo, sin afiliación real. Ver EventoMarketplaceSection (app).
+export async function fetchEventMerchants(eventId) {
+  return rest(`event_merchants?event_id=eq.${eventId}&select=*&order=created_at`);
+}
+export async function afiliarComercioEvento(eventId, merchantId, merchantNombre) {
+  const rows = await rest("event_merchants?on_conflict=event_id,merchant_id", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify([{ event_id: eventId, merchant_id: merchantId, merchant_nombre: merchantNombre }]),
+  });
+  return rows?.[0] || null;
+}
+export async function desafiliarComercioEvento(id) {
+  await rest(`event_merchants?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+export async function updateUbicacionEventoComercio(id, ubicacion) {
+  await rest(`event_merchants?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ ubicacion }),
+  });
+}
+
+// ── Cobro POS con identificación previa del pagador (Caso 2 Raimondi) ──────
+// Busca la wallet por su código (user_id completo o de un dependiente),
+// debita, e inscribe la venta con merchant_id (antes: transactions no
+// distinguía qué comercio cobró → imposible aislar "mis ventas").
+export async function buscarWalletPorCodigo(codigo, worldId) {
+  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=id,user_id,balance`);
+  return rows?.[0] || null;
+}
+export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia) {
+  const wallet = (await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`))?.[0];
+  if (!wallet) return { ok: false, motivo: "sin_wallet" };
+  if (+wallet.balance < monto) return { ok: false, motivo: "saldo", balance: +wallet.balance };
+  const nuevoSaldo = +wallet.balance - monto;
+  await rest(`wallets?id=eq.${wallet.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ balance: nuevoSaldo }),
+  });
+  await rest("transactions", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ wallet_id: wallet.id, world_id: worldId, merchant_id: merchantId, amount: monto, type: "compra", status: "completada", reference: referencia }),
+  });
+  return { ok: true, balance: nuevoSaldo };
+}
+// Recarga presencial en POS (efectivo / tarjeta presente) — el operador recibe
+// el pago físico y acredita el monto a la billetera del cliente ya identificado.
+export async function recargarPOSRemote(userId, worldId, merchantId, monto, canalId, referencia) {
+  const wallet = (await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`))?.[0];
+  if (!wallet) return { ok: false, motivo: "sin_wallet" };
+  const nuevoSaldo = +wallet.balance + monto;
+  await rest(`wallets?id=eq.${wallet.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ balance: nuevoSaldo }),
+  });
+  await rest("transactions", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ wallet_id: wallet.id, world_id: worldId, merchant_id: merchantId, amount: monto, type: "recarga", status: "completada", reference: referencia, channel_id: canalId }),
+  });
+  return { ok: true, balance: nuevoSaldo };
+}
+export async function fetchVentasComercio(merchantId, limit = 300) {
+  return rest(`transactions?merchant_id=eq.${merchantId}&type=eq.compra&select=id,amount,reference,status,created_at&order=created_at.desc&limit=${limit}`);
+}
+// Ventas reales del día (Gantt #101) — antes "Resumen del día" del Merchant
+// Dashboard usaba mockMerchantTxs() (datos falsos) para las 4 tarjetas de
+// cabecera, mientras VentasComercioWidget mostraba el feed real justo debajo
+// — números falsos y reales conviviendo sin ninguna etiqueta que avisara.
+export async function fetchVentasComercioHoy(merchantId) {
+  const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+  return rest(`transactions?merchant_id=eq.${merchantId}&type=eq.compra&created_at=gte.${inicio.toISOString()}&select=amount,status,created_at&order=created_at.desc`);
+}
+
+// ── Familiares / dependientes vinculados a un tutor ────────────────────────
+export async function fetchDependientesMundo(worldId) {
+  return rest(`dependents?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+export async function fetchDependientesDe(guardianUserId, worldId) {
+  return rest(`dependents?guardian_user_id=eq.${guardianUserId}&world_id=eq.${worldId}&select=*&order=created_at`);
+}
+export async function crearDependienteRemote(worldId, guardianUserId, nombre, alergias) {
+  // wallets.user_id es tipo uuid — el id del dependiente debe ser un UUID puro.
+  const dependentUserId = crypto.randomUUID();
+  const rows = await rest("dependents", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, alergias: alergias || null }),
+  });
+  // El dependiente obtiene su propia wallet — reutiliza toda la infra de saldo.
+  await rest("wallets?on_conflict=user_id,world_id", {
+    method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({ user_id: dependentUserId, world_id: worldId, balance: 0, currency: "PEN" }),
+  });
+  return rows?.[0] || null;
+}
+
+// ── Solicitudes de pulsera NFC (antes: botones decorativos sin backend) ────
+export async function crearSolicitudNfcRemote(worldId, userId) {
+  await rest("nfc_requests", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, user_id: userId, status: "pendiente" }),
+  });
+}
+export async function fetchSolicitudesNfcMundo(worldId) {
+  return rest(`nfc_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+// Cross-mundo, para que RedPontis mida cuántas banditas físicas necesita
+// producir/asignar por mundo (Hardware → Banditas NFC → "Demanda por mundo").
+export async function fetchSolicitudesNfcTodas() {
+  return rest(`nfc_requests?select=*&order=created_at.desc`);
+}
+export async function resolverSolicitudNfcRemote(id, status) {
+  await rest(`nfc_requests?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ── Reportes en vivo del mundo, por tipo de transacción ────────────────────
+export async function fetchTransaccionesMundo(worldId, tipo, limit = 15) {
+  return rest(`transactions?world_id=eq.${worldId}&type=eq.${tipo}&select=amount,reference,status,created_at,channel_id,wallets(user_id)&order=created_at.desc&limit=${limit}`);
+}
+
+// ── Consumos del mundo en vivo (para paneles merchant/sponsor) ──────────────
+export async function fetchConsumosMundo(worldId, limit = 15) {
+  return rest(`transactions?world_id=eq.${worldId}&type=eq.compra&select=amount,reference,status,created_at&order=created_at.desc&limit=${limit}`);
+}
+
+// Historial de ventas agrupado por comercio (Gantt #53) — fetchConsumosMundo
+// arriba es un feed cronológico plano sin merchant_id, no sirve para armar un
+// ranking por comercio. Trae todas las compras del mundo con su merchant_id
+// crudo; el agrupado/sumado se hace en el widget (join con la lista local de
+// comercios, que ya trae el nombre real).
+export async function fetchVentasPorComercioMundo(worldId, limit = 1000) {
+  return rest(`transactions?world_id=eq.${worldId}&type=eq.compra&select=merchant_id,amount,created_at&order=created_at.desc&limit=${limit}`);
+}
+// Historial de Ventas del Mundo (Gantt #58) — tabla real por transacción, no
+// agregada, para filtrar por comercio/fecha/usuario/producto (reference es el
+// campo más cercano a "producto" que guarda transactions: no hay línea de
+// detalle de ítem, solo una descripción de referencia por venta).
+export async function fetchHistorialVentasMundo(worldId, limit = 300) {
+  return rest(`transactions?world_id=eq.${worldId}&type=eq.compra&select=id,merchant_id,amount,reference,status,created_at,wallets(user_id)&order=created_at.desc&limit=${limit}`);
+}
+
+// ── KPIs reales para el dashboard del sponsor por módulo (30-jul) — antes el
+// tab "Mis módulos" solo dejaba editar condiciones, sin ninguna cifra real de
+// lo que efectivamente pasa en cada módulo. products no tiene world_id propio
+// (cuelga de merchant_id) así que se resuelve vía los comercios del mundo.
+export async function fetchProductosMundo(worldId) {
+  const merchants = await rest(`merchants?world_id=eq.${worldId}&select=id`);
+  const ids = (merchants || []).map(m => m.id);
+  if (!ids.length) return [];
+  return rest(`products?merchant_id=in.(${ids.join(",")})&select=id,name,stock,price,merchant_id`);
+}
+export async function fetchMenuReservasMundo(worldId, limit = 300) {
+  return rest(`menu_reservas?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
+}
+export async function fetchAlertasConsumoMundo(worldId, limit = 100) {
+  return rest(`consumo_alertas?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
+}
+export async function fetchPerfilesExtendidosMundo(worldId) {
+  return rest(`user_profiles?world_id=eq.${worldId}&select=user_id,tipo_sangre,alergias,clinica`);
+}
+
+// ── Organizadores B2B (entidad real — antes: OrganizadorFront era solo una
+// vista previa del Admin RP, sin actor propio ni login) ─────────────────────
+export async function crearOrganizadorRemote(worldId, nombre, entidadLegal, ruc, usuario, password) {
+  const rows = await rest("organizadores", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, nombre, entidad_legal: entidadLegal || null, ruc: ruc || null, usuario, password, estado: "activo" }),
+  });
+  return rows?.[0] || null;
+}
+export async function fetchOrganizadoresRemote(worldId) {
+  return rest(`organizadores?world_id=eq.${worldId}&select=*&order=created_at`);
+}
+export async function desactivarOrganizadorRemote(id) {
+  await rest(`organizadores?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ estado: "inactivo" }) });
+}
+
+// ── Checklist pre-demo: sondeo del estado real de la infraestructura ────────
+export async function probeDemoInfra() {
+  const probe = async (path) => { try { await rest(path); return true; } catch { return false; } };
+  const [eventsOk, bnplOk, writeOk] = await Promise.all([
+    probe("events?select=id&limit=1"),
+    probe("bnpl_contratos?select=id&limit=1"),
+    // La escritura del admin requiere las políticas RLS de la migración:
+    rest("worlds?select=id&limit=1").then(async () => {
+      try {
+        await rest("worlds?on_conflict=id", {
+          method: "POST", headers: upsertHeaders,
+          body: JSON.stringify([{ id: "mundo-eventos-rp", name: "JOI Eventos", code: "EV-RP-000", vertical: "Especial RedPontis", status: "activo", currency: "PEN", color_primary: "#722ce3" }]),
+        });
+        return true;
+      } catch { return false; }
+    }).catch(() => false),
+  ]);
+  return { eventsOk, bnplOk, writeOk };
+}

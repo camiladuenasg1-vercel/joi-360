@@ -1,0 +1,16 @@
+[
+  {
+    "id": "13774be9-2103-4121-b095-75569a6a9ffe",
+    "world_id": "mundo-promos-rp",
+    "merchant_nombre": "JOI Promos",
+    "titulo": "15% en tu primera compra JOI",
+    "tipo": "Descuento %",
+    "valor": null,
+    "vigencia_hasta": null,
+    "usos_max": null,
+    "usos_actuales": 0,
+    "codigo_qr": "15ENTUEIHQ",
+    "estado": "VIGENTE",
+    "created_at": "2026-07-29T01:23:38.631+00:00"
+  }
+]

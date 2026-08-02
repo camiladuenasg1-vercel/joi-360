@@ -1,0 +1,161 @@
+[
+  {
+    "id": "3762239c-7ed1-412d-9c2b-133571e80202",
+    "world_id": "mundo-mok",
+    "merchant_id": "dd767be3-7819-4bdc-820b-317b47de2137",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "producto": "Smart TV LG 55 4K",
+    "monto_total": null,
+    "cuotas": 6,
+    "cuota_inicial": 0,
+    "frecuencia": "mensual",
+    "primer_venc": null,
+    "estado": "firmado",
+    "cronograma": [
+      {
+        "n": 1,
+        "fecha": "2026-08-27",
+        "monto": 373.47,
+        "estado": "pagada"
+      },
+      {
+        "n": 2,
+        "fecha": "2026-09-27",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 3,
+        "fecha": "2026-10-27",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 4,
+        "fecha": "2026-11-27",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 5,
+        "fecha": "2026-12-27",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 6,
+        "fecha": "2027-01-27",
+        "monto": 373.47,
+        "estado": "pendiente"
+      }
+    ],
+    "ecore_program_id": null,
+    "created_at": "2026-07-22T21:30:06.446993+00:00",
+    "merchant_nombre": "Hiraoka",
+    "monto": 1899,
+    "dias_gracia": 5,
+    "interes_pct": 18,
+    "gestion_mora": "sin_cargo_suspension",
+    "rechazo_motivo": null
+  },
+  {
+    "id": "5ff1f0b5-d9d9-4dcf-9fb8-6c84826b50e0",
+    "world_id": "mundo-mok",
+    "merchant_id": "dd767be3-7819-4bdc-820b-317b47de2137",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "producto": "Garantia extendida laptop",
+    "monto_total": null,
+    "cuotas": 3,
+    "cuota_inicial": 0,
+    "frecuencia": "mensual",
+    "primer_venc": null,
+    "estado": "firmado",
+    "cronograma": [
+      {
+        "n": 1,
+        "fecha": "2026-08-27",
+        "monto": 133,
+        "estado": "pagada"
+      },
+      {
+        "n": 2,
+        "fecha": "2026-09-27",
+        "monto": 133,
+        "estado": "pendiente"
+      },
+      {
+        "n": 3,
+        "fecha": "2026-10-27",
+        "monto": 133,
+        "estado": "pendiente"
+      }
+    ],
+    "ecore_program_id": null,
+    "created_at": "2026-07-22T21:26:09.257762+00:00",
+    "merchant_nombre": "Hiraoka",
+    "monto": 399,
+    "dias_gracia": 5,
+    "interes_pct": 0,
+    "gestion_mora": "sin_cargo_suspension",
+    "rechazo_motivo": null
+  },
+  {
+    "id": "edc71c0d-6f86-46f8-a158-b3156c2d2c19",
+    "world_id": "mundo-mok",
+    "merchant_id": "dd767be3-7819-4bdc-820b-317b47de2137",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "producto": "Smart TV LG 55 4K",
+    "monto_total": null,
+    "cuotas": 6,
+    "cuota_inicial": 0,
+    "frecuencia": "mensual",
+    "primer_venc": null,
+    "estado": "firmado",
+    "cronograma": [
+      {
+        "n": 1,
+        "fecha": "2026-08-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 2,
+        "fecha": "2026-09-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 3,
+        "fecha": "2026-10-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 4,
+        "fecha": "2026-11-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 5,
+        "fecha": "2026-12-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      },
+      {
+        "n": 6,
+        "fecha": "2027-01-22",
+        "monto": 373.47,
+        "estado": "pendiente"
+      }
+    ],
+    "ecore_program_id": null,
+    "created_at": "2026-07-17T16:12:23.303268+00:00",
+    "merchant_nombre": "Hiraoka",
+    "monto": 1899,
+    "dias_gracia": 5,
+    "interes_pct": 18,
+    "gestion_mora": "sin_cargo_suspension",
+    "rechazo_motivo": null
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "2c589862-3dbb-4205-afec-23002f3e64c4",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "pos_fisico",
+    "channel_enabled": true,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  },
+  {
+    "id": "33435415-a496-4a58-93cd-5e275ceb15c0",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "tap2phone",
+    "channel_enabled": true,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  },
+  {
+    "id": "72528d73-e8ce-4e98-a7a2-81ce7e5b6531",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "qr_estatico",
+    "channel_enabled": true,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  },
+  {
+    "id": "501e64e4-6639-4390-bbc1-2302e7b04a35",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "qr_dinamico",
+    "channel_enabled": true,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  },
+  {
+    "id": "04b6486b-3809-4ce9-a316-7e6f5d3ea12e",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "bandita_nfc",
+    "channel_enabled": true,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  },
+  {
+    "id": "fa3d809c-1c7b-42e2-ace5-5e35960a3408",
+    "world_id": "mundo-o6mufz",
+    "channel_id": "totem",
+    "channel_enabled": false,
+    "created_at": "2026-07-30T15:19:40.429652+00:00"
+  }
+]

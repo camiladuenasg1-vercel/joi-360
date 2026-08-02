@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+:root { --font-sans: 'Inter', system-ui, sans-serif; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: #fcf8ff;
+  color: #1b1b24;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  line-height: 1;
+  user-select: none;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,0.04), 0 2px 8px -2px rgba(0,0,0,0.03);
+}
+
+.glass-nav {
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 8px 32px -4px rgba(53,37,205,0.08), 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* World card dark style */
+.world-card-dark {
+  background: linear-gradient(135deg, #1e2340 0%, #151929 100%);
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.world-card-active {
+  background: linear-gradient(135deg, #1e2340 0%, #151929 100%);
+}
+
+/* Aura background for Hub */
+.aura-bg {
+  background: 
+    radial-gradient(circle at 0% 0%, rgba(53,37,205,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(53,37,205,0.03) 0%, transparent 50%),
+    #fcf8ff;
+}
+
+/* Scrollbar hide */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Active tap */
+.tap-active:active { transform: scale(0.96); transition: transform 0.1s cubic-bezier(0.2,0,0,1); }
+
+/* Card stack 3D */
+.card-perspective { perspective: 1000px; transform-style: preserve-3d; }
+
+/* Aura shadow for primary */
+.aura-primary { box-shadow: 0 8px 24px -4px rgba(53,37,205,0.25); }
+.aura-primary-sm { box-shadow: 0 4px 12px -2px rgba(53,37,205,0.20); }

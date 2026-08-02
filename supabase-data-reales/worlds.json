@@ -1,0 +1,93 @@
+[
+  {
+    "id": "mundo-eventos-rp",
+    "code": "EV-RP-000",
+    "name": "JOI Eventos",
+    "vertical": "Especial RedPontis",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#722ce3",
+    "currency": "PEN",
+    "created_at": "2026-06-24T23:43:04.336942+00:00",
+    "updated_at": "2026-07-30T15:31:33.312+00:00"
+  },
+  {
+    "id": "mundo-promos-rp",
+    "code": "PR-RP-000",
+    "name": "JOI Promos",
+    "vertical": "Especial RedPontis",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#006688",
+    "currency": "PEN",
+    "created_at": "2026-06-24T23:43:04.336942+00:00",
+    "updated_at": "2026-07-30T15:31:33.312+00:00"
+  },
+  {
+    "id": "mundo-mok",
+    "code": "RT-MOK-001",
+    "name": "Mok",
+    "vertical": "Retail",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#7e3000",
+    "currency": "PEN",
+    "created_at": "2026-07-17T15:27:18.166745+00:00",
+    "updated_at": "2026-07-30T15:31:33.312+00:00"
+  },
+  {
+    "id": "mundo-dziuoh",
+    "code": "CC-RP-01",
+    "name": "Clinica Ricardo Palma",
+    "vertical": "Salud",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#0e7c43",
+    "currency": "PEN",
+    "created_at": "2026-07-22T21:33:30.07241+00:00",
+    "updated_at": "2026-07-30T15:31:33.312+00:00"
+  },
+  {
+    "id": "mundo-o6mufz",
+    "code": "ED-LIM-006",
+    "name": "Colegio Raimondi",
+    "vertical": "Educación",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#0035b9",
+    "currency": "PEN",
+    "created_at": "2026-07-30T02:18:36.676817+00:00",
+    "updated_at": "2026-07-30T15:31:33.313+00:00"
+  },
+  {
+    "id": "mundo-raimondi",
+    "code": "ED-LIM-001",
+    "name": "Colegio Raimondi",
+    "vertical": "Educación",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#0035b9",
+    "currency": "PEN",
+    "created_at": "2026-07-30T05:54:34.270004+00:00",
+    "updated_at": "2026-07-30T15:31:33.313+00:00"
+  },
+  {
+    "id": "mundo-jockey-plaza",
+    "code": "CC-JP-01",
+    "name": "Jockey Plaza",
+    "vertical": "Retail",
+    "sponsor_id": null,
+    "status": "activo",
+    "logo_url": null,
+    "color_primary": "#00897b",
+    "currency": "PEN",
+    "created_at": "2026-06-24T23:43:04.336942+00:00",
+    "updated_at": "2026-07-30T15:31:33.313+00:00"
+  }
+]

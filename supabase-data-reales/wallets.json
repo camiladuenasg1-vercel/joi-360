@@ -1,0 +1,306 @@
+[
+  {
+    "id": "401b6706-3fee-47f2-9f64-1678087992a8",
+    "user_id": "1549ddb3-71b4-4e32-996a-eedb146b357f",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "e9bcdf1a-aea5-4fc9-acdb-5521a9662435",
+    "user_id": "1549ddb3-71b4-4e32-996a-eedb146b357f",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "658beb95-655a-42f8-9328-e5d1bdc7c417",
+    "user_id": "121d9428-fe92-4ea5-85c3-3323d7940955",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "e58bf819-5f23-43ed-9305-17bd7f020dff",
+    "user_id": "121d9428-fe92-4ea5-85c3-3323d7940955",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "60bf6bcc-ac0c-497d-b258-daed23fda038",
+    "user_id": "cf5bfc38-5652-4ea6-b462-3b6959c4aaa8",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "f3812b4f-0d69-496c-89b0-a2b07c3489fd",
+    "user_id": "cf5bfc38-5652-4ea6-b462-3b6959c4aaa8",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "01c95011-ec6e-4614-96ad-20241599e10b",
+    "user_id": "837c5e53-81d7-4a2e-ab87-47a2c4d0200d",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "5e47f83d-4ace-4698-b829-97fba42993d9",
+    "user_id": "837c5e53-81d7-4a2e-ab87-47a2c4d0200d",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "13e1cefe-f27d-4eeb-beaf-285b1590a335",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "24459132-17f7-4e48-ae14-d8ecb1c6890e",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "0d5bad6c-eee4-4df9-a84a-71edb66a7c38",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "world_id": "mundo-promos-rp",
+    "balance": 124,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "d708162d-682f-431a-bff7-7f5d1ccc3919",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "world_id": "mundo-jockey-plaza",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "24036885-22d8-4ca5-a125-c1ff7747eb76",
+    "user_id": "4ae24204-b895-4e69-a21e-e58faf71d23f",
+    "world_id": "mundo-o6mufz",
+    "balance": 47,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "87a89270-bd3a-4fae-8da1-78e18753f533",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "world_id": "mundo-mok",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "925a899f-1db5-4076-aa24-d7a743acd54f",
+    "user_id": "7a07e0b3-2e26-4df9-a05e-6ddb0d062e15",
+    "world_id": "mundo-o6mufz",
+    "balance": 90,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "d8dd2a0e-82fc-4ac5-8329-39db5112506f",
+    "user_id": "7a07e0b3-2e26-4df9-a05e-6ddb0d062e15",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "0b76ea38-2b32-4a4b-99e0-b232659b25ed",
+    "user_id": "7a07e0b3-2e26-4df9-a05e-6ddb0d062e15",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "38d5e0ab-c1d0-446d-92f6-56be8ad44e13",
+    "user_id": "d264d68b-0fc9-4ae1-b5a1-29e16968e52b",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "880e8166-84ad-474d-9c7d-29553dd3dc29",
+    "user_id": "d264d68b-0fc9-4ae1-b5a1-29e16968e52b",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "02ab99e9-a260-4353-9f64-a246023600ad",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "world_id": "mundo-jockey-plaza",
+    "balance": 288,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "91d64d51-7d4e-40dd-a3b1-3439a2c3ddf4",
+    "user_id": "1f3e1fea-3868-4387-875c-721c6b72e355",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "e3db8713-1407-4f73-a4af-5115d9be5650",
+    "user_id": "1f3e1fea-3868-4387-875c-721c6b72e355",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "44a45a10-3b6b-4760-a271-a3949fed5f10",
+    "user_id": "5be72d31-d94b-4309-8b11-b92f69a57927",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "d1461448-c41b-476a-a4af-d49553fdd9ff",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "world_id": "mundo-mok",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "64330036-27ae-4db4-a994-91b5240e6ac7",
+    "user_id": "562fed16-baa2-4e63-84cb-1fee292150f3",
+    "world_id": "mundo-dziuoh",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "a7c7c304-6ba9-4347-8215-7addd2b06c7a",
+    "user_id": "5be72d31-d94b-4309-8b11-b92f69a57927",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "4b0ad495-f762-4f99-acbe-6e3d94418355",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "world_id": "mundo-dziuoh",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "bf3a29a2-9e03-40a9-8adf-f82fa77d849d",
+    "user_id": "ce672e09-6b01-480b-959d-eebdb9bee1d3",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "5e9e07ed-9979-4da4-859f-79194f431758",
+    "user_id": "c0015c2f-9973-4acd-bb85-647b56e9678c",
+    "world_id": "mundo-eventos-rp",
+    "balance": 100,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "377ee205-8e4f-447e-aaed-43d9769616b1",
+    "user_id": "ce672e09-6b01-480b-959d-eebdb9bee1d3",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "f8db46ee-8bb7-44b8-8ec8-eebf8fc1743e",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-promos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "7397d495-9c1c-462f-a1ef-41bbb70bcf4d",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-eventos-rp",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "8acf45e5-e7be-49f0-8000-788e2e322766",
+    "user_id": "524b2890-2426-4692-bac0-af4a0a124893",
+    "world_id": "mundo-o6mufz",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "5c3491bc-08bb-4fd6-bef2-574794379762",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-mok",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "d0ffe6bd-5e4f-42f9-a074-e63e768e2659",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-raimondi",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "49e8bb37-8387-4475-9fbf-3f2d681be3f7",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-jockey-plaza",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "6ba9aa7e-c244-4449-8e76-e16abe015e77",
+    "user_id": "ed0fd00c-52cf-42c1-b274-5e9412912665",
+    "world_id": "mundo-o6mufz",
+    "balance": 0,
+    "currency": "PEN",
+    "status": "activa"
+  },
+  {
+    "id": "edc5646c-3f06-4bc2-888d-354b2ba8bb47",
+    "user_id": "e623678d-da27-45ec-85be-10f61525bc50",
+    "world_id": "mundo-o6mufz",
+    "balance": 70.1,
+    "currency": "PEN",
+    "status": "activa"
+  }
+]

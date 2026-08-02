@@ -1,0 +1,14 @@
+[
+  {
+    "id": "f9757d4e-1559-4d14-a882-2f0148989a80",
+    "modelo": "pos_ingenico",
+    "world_id": "mundo-mok",
+    "merchant_id": "dd767be3-7819-4bdc-820b-317b47de2137",
+    "estado": "asignado",
+    "assigned_at": "2026-07-24T21:54:35.291+00:00",
+    "created_at": "2026-07-24T21:52:40.923512+00:00",
+    "serial": "ING-MOK-001",
+    "event_id": null,
+    "tipo_ingreso": "venta"
+  }
+]

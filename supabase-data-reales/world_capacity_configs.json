@@ -1,0 +1,558 @@
+[
+  {
+    "id": "dbe60e34-0b42-4c6b-8e84-35534c92b3cc",
+    "world_id": "mundo-dziuoh",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "72871033-52b7-4694-b3cb-736054cb731a",
+    "world_id": "mundo-dziuoh",
+    "capacity_id": "consumos",
+    "enabled": true,
+    "config": {
+      "anulacionHasta": 24,
+      "horarioOperativo": null
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "e04d8901-6f1b-4483-bcca-9d96afaf398c",
+    "world_id": "mundo-dziuoh",
+    "capacity_id": "inventario",
+    "enabled": true,
+    "config": {
+      "skuMax": 500,
+      "categoriasMax": 20,
+      "stockNegativo": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "b3116f2c-14fb-4075-b590-817697065d6e",
+    "world_id": "mundo-dziuoh",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": false,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "monedaPermitida": "PEN",
+      "medios_usaPulsera": true,
+      "recarga_qr_enabled": true,
+      "transferencia_enabled": false,
+      "recarga_efectivo_enabled": true,
+      "perfiles_habilitarFamiliares": true,
+      "recarga_tarjeta_presente_enabled": true,
+      "recarga_tarjeta_no_presente_enabled": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "a5df5ac7-d2e8-4615-bc9f-6c77a05f3879",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "accesos",
+    "enabled": true,
+    "config": {
+      "zonas": "Principal,Cafetería,Auditorio",
+      "validacionDoble": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "a56c382f-4f2b-4dbd-851c-7c75bde844df",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "bnpl",
+    "enabled": false,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "e1e8febe-3ba8-4591-9ff0-8c74f5ee9b8d",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "2818bb78-02f4-4bb8-8a02-e88e976f2e2e",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "consumos",
+    "enabled": true,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "0b985a62-9e60-4205-8e04-cf9e7c9fb0c1",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "credito",
+    "enabled": false,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "4810ac66-12c0-4789-a31f-0ee1b87ea672",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "eventos",
+    "enabled": true,
+    "config": {
+      "allowB2C": true,
+      "ventanaPickup": 30,
+      "comisionEntrada": 1
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "c3b1bcfd-d18b-45a7-8258-a50db5599709",
+    "world_id": "mundo-eventos-rp",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": true,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "monedaPermitida": "PEN"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "87285dc7-bedb-41d8-8f00-2d2fe2cf0989",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "bnpl",
+    "enabled": false,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "050aa197-9290-4a01-bdd7-e5f2d3fcb6b1",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "6116f7bc-86ad-4114-84f7-e3b85131bf9f",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "consumos",
+    "enabled": true,
+    "config": {
+      "anulacionHasta": 24,
+      "horarioOperativo": null
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "a690fec6-f05e-420c-afd1-8205a1b43c90",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "credito",
+    "enabled": false,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "2c505cb3-5efc-401c-8522-4a501e8c3070",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "eventos",
+    "enabled": true,
+    "config": {
+      "allowB2C": false,
+      "ventanaPickup": 45,
+      "comisionEntrada": 2
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "c0123097-7544-41e2-a4c2-50f545403560",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "inventario",
+    "enabled": true,
+    "config": {
+      "skuMax": 10,
+      "stockNegativo": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "5ea98f60-ec02-4d32-a0cc-ad0dddbeb09d",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "loyalty",
+    "enabled": false,
+    "config": {
+      "equivalencia": 0.1,
+      "caducidadMeses": 12
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "56390f62-e7ce-42c9-8b0f-9017b6064ece",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "promociones",
+    "enabled": true,
+    "config": {
+      "maxCuponesUsuario": 5
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "b5fea745-3130-49e4-9346-fabbac9cf33d",
+    "world_id": "mundo-jockey-plaza",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": true,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "monedaPermitida": "PEN"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "a90fd90a-faca-40dc-b504-e1c1a4c03126",
+    "world_id": "mundo-mok",
+    "capacity_id": "bnpl",
+    "enabled": true,
+    "config": {
+      "cuotas3": true,
+      "cuotas6": true,
+      "cuotas12": false,
+      "diasGracia": 5,
+      "montoMaxBNPL": 3000,
+      "sinEvaluacion": true,
+      "scoreObligatorio": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "f01992f5-e1eb-4449-b867-a27848e26dd8",
+    "world_id": "mundo-mok",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "validFrom": "2026-07-24",
+      "mdrDefault": 1.5,
+      "validUntil": null,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis",
+      "retentionPercentage": 0,
+      "settlementFrequency": "quincenal",
+      "liquidacion_modeloRecaudacion": "mundo"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "2ef00bd9-e349-4153-bfac-c3695be6a6ac",
+    "world_id": "mundo-mok",
+    "capacity_id": "credito",
+    "enabled": false,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "c6600d2f-e4ea-4b14-b209-b443c2c4d96c",
+    "world_id": "mundo-mok",
+    "capacity_id": "eventos",
+    "enabled": true,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "19b46247-2e35-4383-9b15-4fa0ec6d128c",
+    "world_id": "mundo-mok",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": true,
+      "p2pEnabled": false,
+      "monedaPermitida": "PEN",
+      "perfiles_modelo": "identificacion"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "d3db322e-6720-4385-9272-105ca07d545f",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "accesos",
+    "enabled": true,
+    "config": {
+      "zonas": "Principal,Cafetería,Auditorio",
+      "validacionDoble": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "9f807037-656a-4d79-82fc-cd244643c473",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "6eede926-4edc-45fe-8674-e61e643fd4a1",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "consumos",
+    "enabled": true,
+    "config": {
+      "anulacionHasta": 24,
+      "horarioOperativo": null
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "61822a32-ceb6-4b4c-a361-e35648a8d660",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "control",
+    "enabled": true,
+    "config": {
+      "horarioConsumo": "07:00-17:00",
+      "registroAlergias": true,
+      "alertasAdminEmail": true,
+      "limiteGlobalMundo": 200,
+      "limiteDiarioPerfil": 30,
+      "montoAprobacionPadre": 50,
+      "maxPerfilesControlados": 2,
+      "soloMercantesAfiliados": true,
+      "perfilesControladosActivo": true,
+      "notificacionConsumoRealTime": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "2942f0cd-24c5-45bc-b6ef-2e665cab3908",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "eventos",
+    "enabled": true,
+    "config": {
+      "allowB2C": false,
+      "ventanaPickup": 30,
+      "comisionEntrada": 5
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "b4882393-3d98-4cb3-a05b-32938af16b56",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "inventario",
+    "enabled": true,
+    "config": {
+      "skuMax": 500,
+      "categoriasMax": 20,
+      "stockNegativo": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "46a9a475-9bf8-4a1d-913f-f54b72d371cf",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "menu",
+    "enabled": true,
+    "config": {
+      "cuposPorMenu": 100,
+      "diasAnticipacion": 7
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "d3ba5a01-b514-432c-9b8f-5391db11ef12",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "perfil_ext",
+    "enabled": true,
+    "config": {},
+    "enabled_at": null
+  },
+  {
+    "id": "7336294b-2d68-4a0b-ad72-452847f7f758",
+    "world_id": "mundo-o6mufz",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": false,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "recarga_qr_min": null,
+      "monedaPermitida": "PEN",
+      "perfiles_modelo": "consumo",
+      "montoSuscripcion": 29.9,
+      "medios_usaPulsera": true,
+      "recarga_qr_enabled": true,
+      "perfilesSuscripcion": true,
+      "perfiles_habilitarFamiliares": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "eae4d801-d138-4289-bdc5-662cdb17c291",
+    "world_id": "mundo-promos-rp",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "c2c9aabd-fb7c-4ebd-b061-6afc6e9686cf",
+    "world_id": "mundo-promos-rp",
+    "capacity_id": "promociones",
+    "enabled": true,
+    "config": {
+      "maxCuponesUsuario": 5
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "dd54def1-a7ea-49b8-8498-87029994f6ff",
+    "world_id": "mundo-promos-rp",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": true,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "monedaPermitida": "PEN"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "049fb56e-5410-4309-9294-c11e43c7f6cc",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "accesos",
+    "enabled": true,
+    "config": {
+      "zonas": "Principal,Cafetería,Auditorio",
+      "validacionDoble": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "57bd7636-cf0f-4cea-9519-3e0d9794a088",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "comercios",
+    "enabled": true,
+    "config": {
+      "mdrDefault": 1.5,
+      "fijoTxDefault": 0.1,
+      "tipoOnboarding": "Manual RedPontis"
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "b1bc7681-f46c-40fc-96f1-2cb268407863",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "consumos",
+    "enabled": true,
+    "config": {
+      "anulacionHasta": 24,
+      "horarioOperativo": null
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "39a78146-6152-49ce-bf23-7fb169d46271",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "control",
+    "enabled": true,
+    "config": {
+      "horarioConsumo": "07:00-17:00",
+      "registroAlergias": true,
+      "alertasAdminEmail": true,
+      "limiteGlobalMundo": 200,
+      "limiteDiarioPerfil": 30,
+      "montoAprobacionPadre": 50,
+      "maxPerfilesControlados": 2,
+      "soloMercantesAfiliados": true,
+      "perfilesControladosActivo": true,
+      "notificacionConsumoRealTime": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "23f10c93-5b74-48a4-a592-c1188c83ac26",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "eventos",
+    "enabled": true,
+    "config": {
+      "allowB2C": false,
+      "ventanaPickup": 30,
+      "comisionEntrada": 5
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "6e586322-6abb-4e65-b22c-676da802c989",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "inventario",
+    "enabled": true,
+    "config": {
+      "skuMax": 500,
+      "categoriasMax": 20,
+      "stockNegativo": false
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "e1ce1861-b74a-4269-a372-e351f59467c6",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "menu",
+    "enabled": true,
+    "config": {
+      "cuposPorMenu": 100,
+      "diasAnticipacion": 7
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "af1ac814-24e3-4294-bb18-171d7b35a83b",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "perfil_ext",
+    "enabled": true,
+    "config": {
+      "camposMedicos": true,
+      "grupoFamiliar": true
+    },
+    "enabled_at": null
+  },
+  {
+    "id": "7f7873bc-af3f-471c-8c67-85a97a96cf6e",
+    "world_id": "mundo-raimondi",
+    "capacity_id": "wallet",
+    "enabled": true,
+    "config": {
+      "kycL2": true,
+      "saldoMax": 5000,
+      "p2pEnabled": true,
+      "limiteDiario": 500,
+      "monedaPermitida": "PEN",
+      "montoSuscripcion": 5,
+      "perfilesSuscripcion": false
+    },
+    "enabled_at": null
+  }
+]

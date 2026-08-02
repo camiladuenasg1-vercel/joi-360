@@ -1,0 +1,15 @@
+[
+  {
+    "id": "c3e8e681-68dc-443b-97d0-24491dce622f",
+    "world_id": "mundo-o6mufz",
+    "merchant_id": "f937fc86-e9f5-41a2-89c9-40bd2de4a42e",
+    "name": "Sandwich mixto",
+    "price": 23,
+    "category": "sandwich",
+    "stock": null,
+    "active": true,
+    "created_at": "2026-07-30T07:15:00.920762+00:00",
+    "event_id": null,
+    "image_url": "https://kobtxrhycaloyjkeyspv.supabase.co/storage/v1/object/public/joi360-media/productos/f937fc86-e9f5-41a2-89c9-40bd2de4a42e-1785423913963-Vive_la_experiencia_JOI.jpg"
+  }
+]

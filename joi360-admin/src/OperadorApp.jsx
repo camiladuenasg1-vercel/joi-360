@@ -1,0 +1,373 @@
+/**
+ * App Operador — shell móvil dentro de joi360-admin (Gantt #42-#45).
+ * Decisión de arquitectura confirmada 27-jul: no es un deploy separado, es una
+ * ruta /operador/:comercioId mobile-first que reusa la sesión de merchant y el
+ * backend ya existentes. Selector de modo: Venta QR / Confirmar Reserva /
+ * Solicitud BNPL / Control de Accesos.
+ */
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useStore } from "./hooks";
+import { merchantLogout, rubroNombre } from "./store";
+import { Icon, BtnPrimary, BtnOutline, notify, inputCls } from "./ui";
+import { MerchantGate, CobrarPanel, bnplLimitesDelMundo } from "./Fronts.jsx";
+import {
+  fetchAccesosMundo, registrarAccesoRemote, buscarWalletPorCodigo,
+  errorControlado, logErrorControlado, fetchProgramaBNPL, fetchProductsRemote,
+  crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
+} from "./supabase.js";
+
+export function OperadorApp() {
+  const { comercioId } = useParams();
+  const st = useStore();
+  const comercio = (st.comercios || []).find(x => x.id === comercioId);
+  if (!comercio) return <div className="min-h-screen flex items-center justify-center bg-surface-bright"><p className="text-on-surface-variant">Comercio no encontrado.</p></div>;
+  const m = (st.mundos || []).find(x => x.id === comercio.mundoId);
+  const sess = st.merchantSession?.comercioId === comercioId;
+  if (!sess) return <MerchantGate comercio={comercio} m={m} />;
+  return <OperadorShell comercio={comercio} m={m} />;
+}
+
+const MODOS = [
+  { id: "qr", nombre: "Venta QR", icon: "qr_code_scanner", desc: "Cobrar identificando al cliente por su código JOI." },
+  { id: "bnpl", nombre: "Solicitud BNPL", icon: "calendar_clock", desc: "Financiar una compra en el punto de venta." },
+  { id: "accesos", nombre: "Control de Accesos", icon: "door_open", desc: "Registrar entrada o salida por código." },
+  { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
+];
+
+function OperadorShell({ comercio, m }) {
+  const [modo, setModo] = useState(null);
+  const bnplOn = !!bnplLimitesDelMundo(m);
+  const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
+
+  const disponibles = MODOS.filter(md => {
+    if (md.id === "bnpl") return bnplOn;
+    if (md.id === "accesos") return accesosOn;
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen bg-surface-bright">
+      <header className="bg-surface-container-lowest border-b border-outline-variant px-4 h-14 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-2 min-w-0">
+          {modo && (
+            <button onClick={() => setModo(null)} className="p-1 -ml-1 rounded hover:bg-surface-container flex-shrink-0">
+              <Icon n="arrow_back" className="text-[20px]" />
+            </button>
+          )}
+          <div className="min-w-0">
+            <p className="font-bold text-sm truncate">{modo ? MODOS.find(md => md.id === modo)?.nombre : comercio.nombre}</p>
+            <p className="font-mono text-[9px] text-on-surface-variant uppercase truncate">{modo ? comercio.nombre : rubroNombre(comercio.rubro)}</p>
+          </div>
+        </div>
+        <button onClick={() => { merchantLogout(); notify("Sesión cerrada.", "info"); }} className="p-1.5 rounded hover:bg-surface-container flex-shrink-0">
+          <Icon n="logout" className="text-[18px] text-on-surface-variant" />
+        </button>
+      </header>
+
+      <div className="max-w-md mx-auto p-4">
+        {!modo && (
+          <div className="space-y-3">
+            {disponibles.map(md => (
+              <button key={md.id} onClick={() => setModo(md.id)}
+                className="w-full flex items-center gap-4 p-4 bg-surface-container-lowest border border-outline-variant rounded-2xl text-left hover:border-primary/40 tap-active transition-colors">
+                <div className="w-11 h-11 rounded-xl bg-primary-fixed flex items-center justify-center flex-shrink-0">
+                  <Icon n={md.icon} className="text-primary text-[22px]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm">{md.nombre}</p>
+                  <p className="text-xs text-on-surface-variant">{md.desc}</p>
+                </div>
+                <Icon n="chevron_right" className="text-outline text-[20px] flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+        {modo === "qr" && <CobrarPanel comercio={comercio} m={m} />}
+        {modo === "bnpl" && <SolicitudBNPLOperador comercio={comercio} m={m} />}
+        {modo === "accesos" && <AccesosOperador comercio={comercio} m={m} />}
+        {modo === "reserva" && <ReservaProximamente />}
+      </div>
+    </div>
+  );
+}
+
+// ── Confirmar Reserva: honesto, no simulado — el motor de Reservas grande
+// (zonas/canchas/espacios) sigue en MODULOS_PROXIMAMENTE, sin código real. ──
+function ReservaProximamente() {
+  return (
+    <div className="text-center py-16 border-2 border-dashed border-outline-variant rounded-xl">
+      <Icon n="event_busy" className="text-[48px] text-outline mb-3 block mx-auto" />
+      <p className="font-bold text-on-surface mb-1">Próximamente</p>
+      <p className="text-sm text-on-surface-variant max-w-xs mx-auto">
+        El motor de Reservas de zonas/canchas/espacios todavía no existe — es un capítulo del Backlog, distinto del micro-reserva de Menú del Caso Raimondi (ese sí es real). No hay ninguna reserva que confirmar aquí todavía.
+      </p>
+    </div>
+  );
+}
+
+// ── Solicitud BNPL en Punto de Venta ────────────────────────────────────
+function SolicitudBNPLOperador({ comercio, m }) {
+  const merchantId = comercio.supabaseId || comercio.id;
+  const limites = bnplLimitesDelMundo(m);
+  const [prog, setProg] = useState(null); // null=cargando, undefined=sin programa
+  const [productos, setProductos] = useState([]);
+  const [codigo, setCodigo] = useState("");
+  const [buscando, setBuscando] = useState(false);
+  const [cliente, setCliente] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  const [productoSel, setProductoSel] = useState(null);
+  const [cuotasSel, setCuotasSel] = useState(null);
+  const [solicitud, setSolicitud] = useState(null); // {id, estado}
+  const [busy, setBusy] = useState(false);
+
+  React.useEffect(() => {
+    fetchProgramaBNPL(m.id, merchantId).then(rows => {
+      const r = rows?.[0];
+      setProg(r?.activo ? r : undefined);
+    }).catch(() => setProg(undefined));
+    fetchProductsRemote(merchantId).then(rows => setProductos((rows || []).filter(p => p.active))).catch(() => {});
+  }, [m.id, merchantId]);
+
+  const productosFinanciables = () => {
+    if (!prog) return [];
+    if (prog.alcance === "catalogo") return productos.map(p => ({ id: p.id, nombre: p.name, precio: +p.price }));
+    if (prog.alcance === "categorias") return productos.filter(p => (prog.categorias || []).includes(p.category)).map(p => ({ id: p.id, nombre: p.name, precio: +p.price }));
+    return prog.productos_financiables || [];
+  };
+
+  const identificar = async () => {
+    if (!codigo.trim()) return;
+    setBuscando(true); setNotFound(false); setCliente(null);
+    try {
+      const w = await buscarWalletPorCodigo(codigo, m.id);
+      if (w) setCliente(w);
+      else {
+        const err = await errorControlado("wallet_no_encontrada");
+        logErrorControlado("wallet_no_encontrada", `operador-bnpl:${merchantId}`, m.id);
+        setNotFound([err.mensaje, err.accion].filter(Boolean).join(" "));
+      }
+    } finally { setBuscando(false); }
+  };
+
+  const cuotasDisponibles = (prog?.cuotas_activas || []).filter(n => (limites?.cuotas || []).includes(n));
+  const INTERES = { 3: 0, 6: 0.18, 12: 0.24 };
+
+  const cronogramaDe = (monto, cuotas, diasGracia, frecuencia) => {
+    const interes = INTERES[cuotas] ?? 0.24;
+    const cuotaMonto = +((monto * (1 + interes)) / cuotas).toFixed(2);
+    const base = new Date();
+    base.setDate(base.getDate() + (diasGracia || 0));
+    const pasoDias = frecuencia === "semanal" ? 7 : frecuencia === "quincenal" ? 15 : null;
+    return Array.from({ length: cuotas }, (_, i) => {
+      const f = new Date(base);
+      if (pasoDias) f.setDate(f.getDate() + pasoDias * (i + 1)); else f.setMonth(f.getMonth() + i + 1);
+      return { n: i + 1, fecha: f.toISOString().slice(0, 10), monto: cuotaMonto, estado: "pendiente" };
+    });
+  };
+
+  const solicitar = async () => {
+    if (!productoSel || !cuotasSel || !cliente) return;
+    setBusy(true);
+    try {
+      const diasGracia = prog.dias_gracia != null ? prog.dias_gracia : (limites?.diasGracia || 5);
+      const frecuencia = prog.frecuencia || "mensual";
+      const cron = cronogramaDe(productoSel.precio, cuotasSel, diasGracia, frecuencia);
+      const estadoInicial = limites?.sinEvaluacion ? "aprobado" : "pendiente_aprobacion";
+      const row = await crearSolicitudBNPLDesdeOperador({
+        world_id: m.id, merchant_id: merchantId, merchant_nombre: comercio.nombre,
+        user_id: cliente.user_id, producto: productoSel.nombre, monto: productoSel.precio,
+        cuotas: cuotasSel, dias_gracia: diasGracia, interes_pct: (INTERES[cuotasSel] ?? 0.24) * 100,
+        gestion_mora: prog.gestion_mora || "sin_cargo_suspension", frecuencia,
+        primer_venc: (cron[1] || cron[0]).fecha, cronograma: cron, estado: estadoInicial,
+      });
+      setSolicitud({ id: row?.id, estado: estadoInicial, cron });
+      notify(estadoInicial === "aprobado" ? "Solicitud aprobada — cobra la 1ra cuota para firmar." : "Solicitud enviada — quedó en tu bandeja de Solicitudes BNPL para aprobar.");
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `operador-bnpl:${merchantId}`, m.id);
+      notify(err.mensaje, "error");
+    } finally { setBusy(false); }
+  };
+
+  const cobrarPrimeraCuota = async () => {
+    setBusy(true);
+    try {
+      const cron = solicitud.cron.map((q, i) => i === 0 ? { ...q, estado: "pagada" } : q);
+      await updateContratoBNPL(solicitud.id, { cronograma: cron, estado: "firmado" });
+      setSolicitud({ ...solicitud, estado: "firmado" });
+      notify("Cuota 1 cobrada — contrato firmado.");
+    } finally { setBusy(false); }
+  };
+
+  if (!limites) return (
+    <div className="text-center py-16 border-2 border-dashed border-outline-variant rounded-xl">
+      <Icon n="calendar_clock" className="text-[48px] text-outline mb-3 block mx-auto" />
+      <p className="text-sm text-on-surface-variant">El mundo {m?.nombre} no habilita BNPL.</p>
+    </div>
+  );
+  if (prog === null) return <p className="text-sm text-on-surface-variant py-8 text-center">Cargando programa…</p>;
+  if (!prog) return (
+    <div className="text-center py-16 border-2 border-dashed border-outline-variant rounded-xl">
+      <Icon n="block" className="text-[48px] text-outline mb-3 block mx-auto" />
+      <p className="text-sm text-on-surface-variant">Este comercio no tiene un programa BNPL activo.</p>
+    </div>
+  );
+
+  if (solicitud) {
+    return (
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 text-center">
+        <Icon n={solicitud.estado === "firmado" ? "verified" : solicitud.estado === "aprobado" ? "task_alt" : "hourglass_top"} className="text-[40px] text-primary mb-2 block mx-auto" />
+        <p className="font-bold mb-1">
+          {solicitud.estado === "firmado" ? "Contrato firmado" : solicitud.estado === "aprobado" ? "Aprobada — falta cobrar la 1ra cuota" : "Pendiente de aprobación"}
+        </p>
+        <p className="text-xs text-on-surface-variant mb-4">{productoSel?.nombre} · {cuotasSel}x</p>
+        {solicitud.estado === "aprobado" && (
+          <BtnPrimary onClick={cobrarPrimeraCuota} disabled={busy} className="w-full">
+            <Icon n="point_of_sale" className="text-[18px]" /> {busy ? "Cobrando…" : `Cobrar 1ra cuota y firmar`}
+          </BtnPrimary>
+        )}
+        {solicitud.estado !== "firmado" && solicitud.estado !== "aprobado" && (
+          <BtnOutline onClick={() => { setSolicitud(null); setCliente(null); setCodigo(""); setProductoSel(null); setCuotasSel(null); }} className="w-full">
+            Nueva solicitud
+          </BtnOutline>
+        )}
+        {solicitud.estado === "firmado" && (
+          <BtnOutline onClick={() => { setSolicitud(null); setCliente(null); setCodigo(""); setProductoSel(null); setCuotasSel(null); }} className="w-full">
+            Nueva solicitud
+          </BtnOutline>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
+      <div>
+        <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar al cliente</p>
+        <div className="flex gap-2">
+          <input className={`${inputCls} font-mono`} placeholder="Código JOI" value={codigo} onChange={e => setCodigo(e.target.value)} disabled={!!cliente} onKeyDown={e => e.key === "Enter" && identificar()} />
+          {!cliente ? (
+            <BtnPrimary disabled={!codigo.trim() || buscando} onClick={identificar}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+          ) : (
+            <BtnOutline onClick={() => { setCliente(null); setCodigo(""); }}><Icon n="close" className="text-[16px]" /></BtnOutline>
+          )}
+        </div>
+        {notFound && <p className="text-xs text-error mt-2">{notFound}</p>}
+      </div>
+      {cliente && (
+        <div>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 2 · Producto</p>
+          <div className="flex flex-wrap gap-2">
+            {productosFinanciables().length === 0 && <p className="text-xs text-on-surface-variant">Sin productos financiables definidos.</p>}
+            {productosFinanciables().map((p, i) => (
+              <button key={p.id || i} onClick={() => { setProductoSel(p); setCuotasSel(null); }}
+                className={`px-3 py-2 rounded-xl border text-xs text-left ${productoSel?.id === p.id ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
+                <p className="font-bold">{p.nombre}</p>
+                <p className="text-outline">S/ {Number(p.precio).toFixed(2)}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {productoSel && (
+        <div>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 3 · Cuotas</p>
+          <div className="flex gap-2">
+            {cuotasDisponibles.map(n => (
+              <button key={n} onClick={() => setCuotasSel(n)}
+                className={`flex-1 py-2 rounded-xl border text-center ${cuotasSel === n ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
+                <p className="font-bold text-sm">{n}x</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {cuotasSel && (
+        <BtnPrimary onClick={solicitar} disabled={busy} className="w-full">
+          <Icon n="send" className="text-[16px]" /> {busy ? "Enviando…" : "Iniciar solicitud"}
+        </BtnPrimary>
+      )}
+    </div>
+  );
+}
+
+// ── Control de Accesos, mobile — mismo mecanismo que TabAccesos
+// (MundoDetail.jsx), scoped al mundo de este comercio. ──────────────────
+function AccesosOperador({ comercio, m }) {
+  const zonas = (m?.modulos || []).find(x => x.id === "accesos")?.config?.zonas?.split(",").map(z => z.trim()).filter(Boolean) || ["Principal"];
+  const [codigo, setCodigo] = useState("");
+  const [tipo, setTipo] = useState("entrada");
+  const [zona, setZona] = useState(zonas[0]);
+  const [busy, setBusy] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [log, setLog] = useState(null);
+
+  const cargar = () => fetchAccesosMundo(m.id).then(r => setLog((r || []).slice(0, 8))).catch(() => setLog([]));
+  React.useEffect(() => { cargar(); }, [m.id]);
+
+  const registrar = async () => {
+    const code = codigo.trim();
+    if (!code) return;
+    setBusy(true); setResultado(null);
+    try {
+      const w = await buscarWalletPorCodigo(code, m.id);
+      if (!w) {
+        const err = await errorControlado("wallet_no_encontrada");
+        logErrorControlado("wallet_no_encontrada", `operador-accesos:${m.id}`, m.id);
+        setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+        return;
+      }
+      await registrarAccesoRemote(m.id, w.user_id, tipo, zona);
+      setResultado({ ok: true, mensaje: `${tipo === "entrada" ? "Entrada" : "Salida"} registrada.` });
+      setCodigo(""); cargar();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `operador-accesos:${m.id}`, m.id);
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-3">
+        <input className={`${inputCls} font-mono`} placeholder="Código JOI (QR o pulsera)" value={codigo} onChange={e => setCodigo(e.target.value)} onKeyDown={e => e.key === "Enter" && registrar()} />
+        <div className="grid grid-cols-2 gap-2">
+          <select className={inputCls} value={tipo} onChange={e => setTipo(e.target.value)}>
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+          </select>
+          <select className={inputCls} value={zona} onChange={e => setZona(e.target.value)}>
+            {zonas.map(z => <option key={z} value={z}>{z}</option>)}
+          </select>
+        </div>
+        <BtnPrimary onClick={registrar} disabled={!codigo.trim() || busy} className="w-full">
+          <Icon n="door_open" className="text-[18px]" /> {busy ? "Registrando…" : "Registrar"}
+        </BtnPrimary>
+        {resultado && (
+          <p className={`text-sm flex items-center gap-1.5 ${resultado.ok ? "text-ok" : "text-error"}`}>
+            <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
+          </p>
+        )}
+      </div>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden">
+        <p className="px-4 py-3 border-b border-outline-variant font-mono text-[10px] uppercase text-outline">Últimos registros</p>
+        {log === null ? (
+          <p className="px-4 py-4 text-xs text-on-surface-variant">Cargando…</p>
+        ) : log.length === 0 ? (
+          <p className="px-4 py-4 text-xs text-on-surface-variant">Sin registros todavía.</p>
+        ) : (
+          <div className="divide-y divide-outline-variant/60">
+            {log.map(l => (
+              <div key={l.id} className="px-4 py-2.5 flex justify-between items-center text-xs">
+                <span className="font-mono text-outline">{l.user_id.slice(0, 10)}…</span>
+                <span className={l.tipo === "entrada" ? "text-ok font-bold" : "text-outline font-bold"}>{l.tipo.toUpperCase()}</span>
+                <span className="text-on-surface-variant">{new Date(l.created_at).toLocaleTimeString("es-PE")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,822 @@
+/**
+ * Hardware / POS — Inventario de dispositivos de RedPontis
+ * Lista unidades físicas por modelo, con estado y asignación a merchant/mundo.
+ * Tabla pos_devices en Supabase — asignación real (Caso 2 Raimondi).
+ */
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useStore } from "./hooks";
+import { Icon, BtnPrimary, BtnOutline, notify } from "./ui";
+import { HARDWARE_CATALOG, hardwareModelById } from "./store";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado } from "./supabase.js";
+
+const ESTADO_STYLE = {
+  disponible:    "bg-green-100  text-green-700  border-green-200",
+  asignado:      "bg-blue-100   text-blue-700   border-blue-200",
+  en_reparacion: "bg-amber-100  text-amber-700  border-amber-200",
+  baja:          "bg-red-100    text-red-700    border-red-200",
+};
+const TIPO_INGRESO_LABEL = { gratis: "Gratis", alquiler: "Alquiler", venta: "Venta" };
+
+export function HardwarePOS() {
+  const nav = useNavigate();
+  const [tab, setTab] = useState("pos");
+
+  return (
+    <div className="max-w-6xl">
+      <button onClick={()=>nav("/admin/catalogos")}
+        className="flex items-center gap-1.5 text-on-surface-variant hover:text-primary text-xs font-semibold mb-4 transition-colors">
+        <Icon n="arrow_back" className="text-[14px]"/> Catálogos Globales
+      </button>
+
+      <div className="mb-6">
+        <p className="font-mono text-[10px] text-outline uppercase tracking-widest mb-1">Plataforma › Catálogos › Hardware</p>
+        <h1 className="text-3xl font-bold mb-2">Inventario de Hardware</h1>
+        <p className="text-sm text-on-surface-variant max-w-3xl">
+          Stock físico real de RedPontis: dispositivos POS/Tótem por número de serie y banditas NFC por lote.
+        </p>
+      </div>
+
+      <div className="flex gap-1 mb-6 border-b border-outline-variant">
+        {[{k:"pos",l:"POS / Tótem",i:"point_of_sale"},{k:"nfc",l:"Banditas NFC",i:"contactless"}].map(t => (
+          <button key={t.k} onClick={()=>setTab(t.k)}
+            className={`px-4 py-2.5 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors ${tab===t.k?"text-primary border-primary font-semibold":"text-on-surface-variant border-transparent hover:text-primary"}`}>
+            <Icon n={t.i} className="text-[18px]"/>{t.l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "pos" && <PosDevicesTab/>}
+      {tab === "nfc" && <BanditasNfcTab/>}
+    </div>
+  );
+}
+
+function PosDevicesTab() {
+  const st  = useStore();
+  const [filterModelo, setFilterModelo] = useState("all");
+  const [filterEstado, setFilterEstado] = useState("all");
+  const [showAddUnit,  setShowAddUnit]  = useState(false);
+  const [newUnit, setNewUnit] = useState({ modelo_id:"pos_ingenico", serial:"", tipoIngreso:"venta" });
+  const [stock, setStock] = useState(null);
+  const [assigningId, setAssigningId] = useState(null);
+  const [assignForm, setAssignForm] = useState({ worldId:"", merchantId:"", eventId:"" });
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkRows, setBulkRows] = useState([]);
+  const [bulkFileName, setBulkFileName] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const mundos  = st.mundos || [];
+  const comercios = st.comercios || [];
+  const eventos = st.eventos || [];
+
+  const load = () => fetchPosDevicesRemote()
+    .then(rows => setStock((rows || []).map(r => ({ id:r.id, modelo_id:r.modelo, serial:r.serial, estado:r.estado, world_id:r.world_id, merchant_id:r.merchant_id, event_id:r.event_id, tipo_ingreso:r.tipo_ingreso || "venta" }))))
+    .catch(() => setStock([]));
+  useEffect(() => { load(); }, []);
+
+  const filtered = (stock || []).filter(d=>
+    (filterModelo==="all" || d.modelo_id===filterModelo) &&
+    (filterEstado==="all" || d.estado===filterEstado)
+  );
+
+  const addUnit = async () => {
+    if(!newUnit.serial.trim()) return;
+    try {
+      await registerPosDeviceRemote(newUnit.modelo_id, newUnit.serial.trim(), newUnit.tipoIngreso);
+      notify(`Unidad "${newUnit.serial}" registrada en stock.`);
+      setNewUnit({ modelo_id:"pos_ingenico", serial:"", tipoIngreso:"venta" });
+      setShowAddUnit(false);
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-registrar", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
+  // Carga masiva vía archivo (Gantt #53): CSV/texto con una unidad por línea
+  // — modelo_id,serial,tipo_ingreso — parseado en el cliente, sin librería.
+  const parseBulkFile = (file) => {
+    setBulkFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const modeloIds = new Set(HARDWARE_CATALOG.map(m => m.id));
+      const rows = lines.map(line => {
+        const [modelo, serial, tipo] = line.split(",").map(s => (s || "").trim());
+        return {
+          modelo: modeloIds.has(modelo) ? modelo : HARDWARE_CATALOG[0].id,
+          serial: (serial || "").toUpperCase(),
+          tipoIngreso: ["gratis", "alquiler", "venta"].includes(tipo) ? tipo : "venta",
+          valido: modeloIds.has(modelo) && !!serial,
+        };
+      });
+      setBulkRows(rows);
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmarBulk = async () => {
+    const validas = bulkRows.filter(r => r.valido);
+    if (!validas.length) return;
+    setBulkBusy(true);
+    try {
+      await registerPosDevicesBulkRemote(validas);
+      notify(`${validas.length} unidades registradas en stock.`);
+      setShowBulk(false); setBulkRows([]); setBulkFileName("");
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-carga-masiva", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setBulkBusy(false); }
+  };
+
+  const releaseDevice = async (d) => {
+    await releasePosDeviceRemote(d.id);
+    notify(`${d.serial} liberado — estado: disponible.`);
+    load();
+  };
+
+  const comerciosDelMundo = (worldId) => comercios.filter(c => c.mundoId === worldId);
+  // Eventos publicados del mundo (Gantt #64/#73) — un POS puede prestarse
+  // temporalmente a un evento puntual, además de su asignación a merchant.
+  const eventosDelMundo = (worldId) => eventos.filter(e => e.mundoId === worldId && e.estado === "PUBLICADO");
+
+  const confirmAssign = async (d) => {
+    if (!assignForm.worldId || !assignForm.merchantId) return;
+    try {
+      await assignPosDeviceRemote(d.id, assignForm.worldId, assignForm.merchantId, assignForm.eventId || null);
+      const merchant = comercios.find(c => (c.supabaseId || c.id) === assignForm.merchantId);
+      notify(`${d.serial} asignado a ${merchant?.nombre || "comercio"}.`);
+      setAssigningId(null);
+      setAssignForm({ worldId:"", merchantId:"", eventId:"" });
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-asignar", assignForm.worldId || null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
+  // Stats por modelo
+  const byModelo = HARDWARE_CATALOG.map(m=>({
+    ...m,
+    total:     (stock||[]).filter(d=>d.modelo_id===m.id).length,
+    disponible:(stock||[]).filter(d=>d.modelo_id===m.id&&d.estado==="disponible").length,
+    asignado:  (stock||[]).filter(d=>d.modelo_id===m.id&&d.estado==="asignado").length,
+  })).filter(m=>m.total>0);
+
+  return (
+    <div>
+      <div className="mb-6 flex items-end justify-between">
+        <p className="text-sm text-on-surface-variant max-w-3xl">
+          Unidades físicas en stock de RedPontis (tabla <code>pos_devices</code> en vivo). Cada dispositivo tiene número de serie único,
+          modelo e historial de asignación real a un mundo y comercio.
+        </p>
+        <div className="flex gap-2 flex-shrink-0">
+          <BtnOutline onClick={()=>setShowBulk(true)}>
+            <Icon n="upload_file" className="text-[16px]"/> Carga masiva
+          </BtnOutline>
+          <BtnPrimary onClick={()=>setShowAddUnit(true)}>
+            <Icon n="add" className="text-[16px]"/> Registrar unidad
+          </BtnPrimary>
+        </div>
+      </div>
+
+      {/* Model summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {byModelo.map(m=>(
+          <button key={m.id} onClick={()=>setFilterModelo(filterModelo===m.id?"all":m.id)}
+            className={`p-3 rounded-xl border text-left transition-all ${filterModelo===m.id?"border-primary bg-primary-fixed/20":"border-outline-variant hover:border-primary/40"}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <Icon n={m.icon} className="text-[16px] text-primary"/>
+              <span className="text-xs font-bold leading-tight">{m.modelo}</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-green-700 font-mono">{m.disponible} disp.</span>
+              <span className="text-blue-700 font-mono">{m.asignado} asig.</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {["all","disponible","asignado","en_reparacion","baja"].map(e=>(
+          <button key={e} onClick={()=>setFilterEstado(e)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterEstado===e?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant hover:border-primary/40"}`}>
+            {e==="all"?"Todos":e.replace("_"," ")}
+          </button>
+        ))}
+        <span className="ml-auto font-mono text-[10px] text-outline self-center">{stock===null?"cargando…":`${filtered.length} unidades`}</span>
+      </div>
+
+      {/* Device table */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+              <th className="px-4 py-3 text-left font-medium">Número de serie</th>
+              <th className="px-4 py-3 text-left font-medium">Modelo</th>
+              <th className="px-4 py-3 text-left font-medium">Tipo</th>
+              <th className="px-4 py-3 text-left font-medium">Ingreso</th>
+              <th className="px-4 py-3 text-left font-medium">Estado</th>
+              <th className="px-4 py-3 text-left font-medium">Mundo asignado</th>
+              <th className="px-4 py-3 text-left font-medium">Merchant asignado</th>
+              <th className="px-4 py-3 text-left font-medium">Evento</th>
+              <th className="px-4 py-3 text-right font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-outline-variant/60">
+            {stock !== null && filtered.length===0 && (
+              <tr><td colSpan="9" className="p-10 text-center text-on-surface-variant">
+                <Icon n="devices" className="text-[36px] text-outline mb-2 block mx-auto"/>
+                Sin unidades con estos filtros.
+              </td></tr>
+            )}
+            {filtered.map(d=>{
+              const modelo   = hardwareModelById(d.modelo_id);
+              const mundo    = mundos.find(m=>m.id===d.world_id);
+              const merchant = comercios.find(c=>(c.supabaseId||c.id)===d.merchant_id);
+              const evento   = eventos.find(e=>e.id===d.event_id);
+              const assigning = assigningId === d.id;
+              return (
+                <React.Fragment key={d.id}>
+                  <tr className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs font-bold">{d.serial}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Icon n={modelo?.icon||"devices"} className="text-[16px] text-outline"/>
+                        <div>
+                          <p className="text-xs font-medium">{modelo?.modelo||d.modelo_id}</p>
+                          <p className="font-mono text-[9px] text-outline">{modelo?.marca}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-on-surface-variant">{modelo?.tipo}</td>
+                    <td className="px-4 py-3 text-xs text-on-surface-variant">{TIPO_INGRESO_LABEL[d.tipo_ingreso] || "Venta"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${ESTADO_STYLE[d.estado]||""}`}>
+                        {d.estado.replace("_"," ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs">{mundo?.nombre||<span className="text-outline">—</span>}</td>
+                    <td className="px-4 py-3 text-xs">{merchant?.nombre||<span className="text-outline">—</span>}</td>
+                    <td className="px-4 py-3 text-xs">{evento?.nombre||<span className="text-outline">—</span>}</td>
+                    <td className="px-4 py-3 text-right">
+                      {d.estado==="disponible" && !assigning && (
+                        <button onClick={()=>{ setAssigningId(d.id); setAssignForm({ worldId:"", merchantId:"", eventId:"" }); }}
+                          className="text-xs text-primary hover:underline font-medium">Asignar</button>
+                      )}
+                      {d.estado==="asignado" && (
+                        <button onClick={()=>releaseDevice(d)}
+                          className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
+                      )}
+                    </td>
+                  </tr>
+                  {assigning && (
+                    <tr className="bg-primary-fixed/10">
+                      <td colSpan="9" className="px-4 py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                            value={assignForm.worldId}
+                            onChange={e=>setAssignForm({ worldId:e.target.value, merchantId:"", eventId:"" })}>
+                            <option value="">Elegir mundo…</option>
+                            {mundos.map(m=><option key={m.id} value={m.id}>{m.nombre}</option>)}
+                          </select>
+                          <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs" disabled={!assignForm.worldId}
+                            value={assignForm.merchantId}
+                            onChange={e=>setAssignForm({...assignForm, merchantId:e.target.value})}>
+                            <option value="">Elegir comercio…</option>
+                            {comerciosDelMundo(assignForm.worldId).map(c=><option key={c.id} value={c.supabaseId || c.id}>{c.nombre}</option>)}
+                          </select>
+                          <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs" disabled={!assignForm.worldId || eventosDelMundo(assignForm.worldId).length === 0}
+                            value={assignForm.eventId}
+                            onChange={e=>setAssignForm({...assignForm, eventId:e.target.value})}>
+                            <option value="">Sin evento (asignación permanente)</option>
+                            {eventosDelMundo(assignForm.worldId).map(ev=><option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+                          </select>
+                          <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!assignForm.merchantId} onClick={()=>confirmAssign(d)}>
+                            Confirmar asignación
+                          </BtnPrimary>
+                          <button onClick={()=>setAssigningId(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add unit modal */}
+      {showAddUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget&&setShowAddUnit(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setShowAddUnit(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-md z-10">
+            <h2 className="font-semibold text-lg mb-4">Registrar nueva unidad</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Modelo</label>
+                <select className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                  value={newUnit.modelo_id} onChange={e=>setNewUnit({...newUnit,modelo_id:e.target.value})}>
+                  {HARDWARE_CATALOG.map(m=><option key={m.id} value={m.id}>{m.marca} {m.modelo}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Número de serie</label>
+                <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm font-mono"
+                  placeholder="Ej: ING-MV5K-003" value={newUnit.serial}
+                  onChange={e=>setNewUnit({...newUnit,serial:e.target.value.toUpperCase()})}/>
+              </div>
+              <div>
+                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Tipo de ingreso</label>
+                <select className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                  value={newUnit.tipoIngreso} onChange={e=>setNewUnit({...newUnit,tipoIngreso:e.target.value})}>
+                  <option value="venta">Venta</option>
+                  <option value="alquiler">Alquiler</option>
+                  <option value="gratis">Gratis</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <BtnOutline className="flex-1" onClick={()=>setShowAddUnit(false)}>Cancelar</BtnOutline>
+              <BtnPrimary className="flex-1" onClick={addUnit} disabled={!newUnit.serial.trim()}>
+                <Icon n="add" className="text-[16px]"/> Registrar
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk upload modal (Gantt #53) */}
+      {showBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget&&setShowBulk(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setShowBulk(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
+            <h2 className="font-semibold text-lg mb-1">Carga masiva de unidades</h2>
+            <p className="text-xs text-on-surface-variant mb-4">
+              Archivo .csv o .txt, una unidad por línea: <code className="font-mono bg-surface-container-low px-1 rounded">modelo_id,serial,tipo_ingreso</code>.
+              Modelos válidos: {HARDWARE_CATALOG.map(m=>m.id).join(", ")}. Tipo de ingreso: gratis / alquiler / venta (default venta).
+            </p>
+            <input type="file" accept=".csv,.txt" className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full"
+              onChange={e => e.target.files?.[0] && parseBulkFile(e.target.files[0])}/>
+            {bulkRows.length > 0 && (
+              <div className="mt-4 max-h-64 overflow-y-auto border border-outline-variant rounded-lg">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-surface-container-low font-mono text-[9px] uppercase text-outline">
+                    <th className="px-3 py-2 text-left">Modelo</th><th className="px-3 py-2 text-left">Serie</th><th className="px-3 py-2 text-left">Ingreso</th><th className="px-3 py-2 text-left">Válido</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-outline-variant/60">
+                    {bulkRows.map((r, i) => (
+                      <tr key={i} className={r.valido ? "" : "bg-error-container/20"}>
+                        <td className="px-3 py-1.5 font-mono">{r.modelo}</td>
+                        <td className="px-3 py-1.5 font-mono">{r.serial || "—"}</td>
+                        <td className="px-3 py-1.5">{TIPO_INGRESO_LABEL[r.tipoIngreso]}</td>
+                        <td className="px-3 py-1.5">{r.valido ? <Icon n="check_circle" className="text-ok text-[14px]"/> : <Icon n="error" className="text-error text-[14px]"/>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="px-3 py-2 text-[10px] text-on-surface-variant font-mono">{bulkFileName} · {bulkRows.filter(r=>r.valido).length} de {bulkRows.length} válidas</p>
+              </div>
+            )}
+            <div className="flex gap-3 mt-6">
+              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName("");}}>Cancelar</BtnOutline>
+              <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
+                <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} unidades`}
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Banditas NFC — stock real por lote, carga masiva vía CSV ────────────── */
+const ESTADO_STYLE_NFC = {
+  disponible: "bg-green-100 text-green-700 border-green-200",
+  asignada:   "bg-blue-100  text-blue-700  border-blue-200",
+  bloqueada:  "bg-red-100   text-red-700   border-red-200",
+};
+
+function BanditasNfcTab() {
+  const st = useStore();
+  const mundos = st.mundos || [];
+  const [bandas, setBandas] = useState(null);
+  const [solicitudes, setSolicitudes] = useState(null);
+  const [expandedWorldId, setExpandedWorldId] = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
+  const [solicitudesLote, setSolicitudesLote] = useState(null);
+  const [stockAlmacen, setStockAlmacen] = useState(null);
+  const [entregandoLoteId, setEntregandoLoteId] = useState(null);
+  const [filterLote, setFilterLote] = useState("all");
+  const [filterEstado, setFilterEstado] = useState("all");
+  const [assigningId, setAssigningId] = useState(null);
+  const [assignWorldId, setAssignWorldId] = useState("");
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkLote, setBulkLote] = useState("");
+  const [bulkRows, setBulkRows] = useState([]);
+  const [bulkFileName, setBulkFileName] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const load = () => fetchNfcBandsRemote()
+    .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id }))))
+    .catch(() => setBandas([]));
+  const loadSolicitudes = () => fetchSolicitudesNfcTodas().then(setSolicitudes).catch(() => setSolicitudes([]));
+  const loadSolicitudesLote = () => fetchSolicitudesLoteNfcTodas().then(setSolicitudesLote).catch(() => setSolicitudesLote([]));
+  const loadStockAlmacen = () => fetchStockAlmacenNfc().then(setStockAlmacen).catch(() => setStockAlmacen(0));
+  useEffect(() => { load(); loadSolicitudes(); loadSolicitudesLote(); loadStockAlmacen(); }, []);
+
+  const entregarLote = async (req) => {
+    setEntregandoLoteId(req.id);
+    try {
+      await entregarLoteNfcRemote(req.id, req.world_id, req.cantidad);
+      notify(`${req.cantidad} banditas entregadas.`);
+      loadSolicitudesLote(); loadStockAlmacen(); load();
+    } catch (e) {
+      notify(e.message, "error");
+    } finally { setEntregandoLoteId(null); }
+  };
+
+  const resolverSolicitud = async (id, status) => {
+    setResolvingId(id);
+    try {
+      await resolverSolicitudNfcRemote(id, status);
+      loadSolicitudes();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "nfc-solicitud-resolver", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setResolvingId(null); }
+  };
+
+  // Demanda por mundo: cuántas banditas necesita cada mundo (solicitudes
+  // pendientes reales de usuarios, tabla nfc_requests) vs. cuántas ya tiene
+  // asignadas en stock (nfc_bands) — la señal que RedPontis usa para decidir
+  // cuánto stock físico enviar/asignar a cada mundo.
+  const demandaPorMundo = mundos.map(m => {
+    const reqs = (solicitudes || []).filter(r => r.world_id === m.id);
+    const pendientes = reqs.filter(r => r.status === "pendiente");
+    const asignadasStock = (bandas || []).filter(b => b.world_id === m.id).length;
+    return { mundo: m, pendientes, entregadas: reqs.filter(r => r.status === "entregada").length, rechazadas: reqs.filter(r => r.status === "rechazada").length, asignadasStock, totalSolicitudes: reqs.length };
+  }).filter(d => d.totalSolicitudes > 0 || d.asignadasStock > 0);
+
+  const filtered = (bandas || []).filter(b =>
+    (filterLote === "all" || b.lote === filterLote) &&
+    (filterEstado === "all" || b.estado === filterEstado)
+  );
+
+  // Carga masiva: un lote se sube a la vez (nombre del lote se elige antes de
+  // adjuntar el archivo), CSV/texto con un código de bandita por línea — sin
+  // librería, mismo patrón que la carga masiva de POS de arriba.
+  const parseBulkFile = (file) => {
+    if (!bulkLote.trim()) { notify("Elige el nombre del lote antes de adjuntar el archivo.", "error"); return; }
+    setBulkFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const rows = lines.map(line => {
+        const primeraColumna = line.split(",")[0].trim();
+        const codigo = primeraColumna.toUpperCase();
+        return { codigo, lote: bulkLote.trim(), valido: !!codigo };
+      });
+      setBulkRows(rows);
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmarBulk = async () => {
+    const validas = bulkRows.filter(r => r.valido);
+    if (!validas.length) return;
+    setBulkBusy(true);
+    try {
+      await registerNfcBandsBulkRemote(validas);
+      notify(`${validas.length} banditas del lote "${bulkLote}" registradas en stock.`);
+      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "nfc-carga-masiva", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setBulkBusy(false); }
+  };
+
+  const confirmAssign = async (b) => {
+    if (!assignWorldId) return;
+    try {
+      await asignarNfcBandRemote(b.id, assignWorldId);
+      const mundo = mundos.find(m => m.id === assignWorldId);
+      notify(`Bandita ${b.codigo} asignada a ${mundo?.nombre || "mundo"}.`);
+      setAssigningId(null); setAssignWorldId("");
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "nfc-asignar", assignWorldId || null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
+  const liberar = async (b) => {
+    await liberarNfcBandRemote(b.id);
+    notify(`${b.codigo} liberada — estado: disponible.`);
+    load();
+  };
+
+  const lotes = [...new Set((bandas || []).map(b => b.lote))];
+  const byLote = lotes.map(lote => ({
+    lote,
+    total: (bandas || []).filter(b => b.lote === lote).length,
+    disponible: (bandas || []).filter(b => b.lote === lote && b.estado === "disponible").length,
+    asignada: (bandas || []).filter(b => b.lote === lote && b.estado === "asignada").length,
+  }));
+
+  return (
+    <div>
+      <div className="mb-6 flex items-end justify-between">
+        <p className="text-sm text-on-surface-variant max-w-3xl">
+          Stock real de pulseras NFC (tabla <code>nfc_bands</code> en vivo). Cada bandita tiene un código único, agrupada por lote de carga.
+          {stockAlmacen !== null && <span className="block mt-1 font-mono text-xs text-primary">{stockAlmacen} sin asignar en almacén</span>}
+        </p>
+        <BtnPrimary className="flex-shrink-0" onClick={()=>setShowBulk(true)}>
+          <Icon n="upload_file" className="text-[16px]"/> Cargar lote (CSV)
+        </BtnPrimary>
+      </div>
+
+      {/* Solicitudes de LOTE — el mundo pidió más stock (nfc_band_requests),
+          distinto de las solicitudes individuales de usuarios de abajo. Entregar
+          consume del almacén (world_id IS NULL) y lo asigna al mundo. */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden mb-8">
+        <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
+          <h3 className="font-semibold flex items-center gap-2"><Icon n="local_shipping" className="text-primary text-[20px]"/> Solicitudes de lote de mundos</h3>
+          <button onClick={loadSolicitudesLote} className="p-1.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant"><Icon n="refresh" className="text-[16px]"/></button>
+        </div>
+        {solicitudesLote === null ? (
+          <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
+        ) : solicitudesLote.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-on-surface-variant">Ningún mundo ha pedido más banditas todavía.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+                <th className="px-5 py-3 text-left font-medium">Mundo</th>
+                <th className="px-5 py-3 text-right font-medium">Cantidad</th>
+                <th className="px-5 py-3 text-left font-medium">Fecha</th>
+                <th className="px-5 py-3 text-center font-medium">Estado</th>
+                <th className="px-5 py-3 text-right font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60">
+              {solicitudesLote.map(r => {
+                const mundo = mundos.find(m => m.id === r.world_id);
+                return (
+                  <tr key={r.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-5 py-3 font-medium">{mundo?.nombre || r.world_id}</td>
+                    <td className="px-5 py-3 text-right font-mono font-bold">{r.cantidad}</td>
+                    <td className="px-5 py-3 text-xs text-on-surface-variant">{new Date(r.created_at).toLocaleDateString("es-PE")}</td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${r.estado === "entregado" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>{r.estado}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {r.estado === "pendiente" && (
+                        <button disabled={entregandoLoteId === r.id} onClick={() => entregarLote(r)}
+                          className="text-xs text-primary hover:underline font-medium disabled:opacity-50">
+                          {entregandoLoteId === r.id ? "Entregando…" : "Marcar entregado"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Demanda por mundo — solicitudes reales de usuarios (nfc_requests), la
+          cantidad que RedPontis necesita medir para saber cuánto stock asignar. */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden mb-8">
+        <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
+          <h3 className="font-semibold flex items-center gap-2"><Icon n="query_stats" className="text-primary text-[20px]"/> Demanda por mundo</h3>
+          <button onClick={loadSolicitudes} className="p-1.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant"><Icon n="refresh" className="text-[16px]"/></button>
+        </div>
+        {solicitudes === null ? (
+          <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
+        ) : demandaPorMundo.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-on-surface-variant">Sin solicitudes de pulsera todavía en ningún mundo.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+                <th className="px-5 py-3 text-left font-medium">Mundo</th>
+                <th className="px-5 py-3 text-right font-medium">Pendientes</th>
+                <th className="px-5 py-3 text-right font-medium">Entregadas</th>
+                <th className="px-5 py-3 text-right font-medium">Rechazadas</th>
+                <th className="px-5 py-3 text-right font-medium">Banditas ya asignadas</th>
+                <th className="px-5 py-3 text-right font-medium"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60">
+              {demandaPorMundo.map(d => (
+                <React.Fragment key={d.mundo.id}>
+                  <tr className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-5 py-3 font-medium">{d.mundo.nombre}</td>
+                    <td className="px-5 py-3 text-right">
+                      {d.pendientes.length > 0
+                        ? <span className="font-mono font-black text-tertiary">{d.pendientes.length}</span>
+                        : <span className="font-mono text-outline">0</span>}
+                    </td>
+                    <td className="px-5 py-3 text-right font-mono text-on-surface-variant">{d.entregadas}</td>
+                    <td className="px-5 py-3 text-right font-mono text-on-surface-variant">{d.rechazadas}</td>
+                    <td className="px-5 py-3 text-right font-mono text-on-surface-variant">{d.asignadasStock}</td>
+                    <td className="px-5 py-3 text-right">
+                      {d.pendientes.length > 0 && (
+                        <button onClick={() => setExpandedWorldId(expandedWorldId === d.mundo.id ? null : d.mundo.id)}
+                          className="text-xs text-primary hover:underline font-medium">
+                          {expandedWorldId === d.mundo.id ? "Ocultar" : "Ver solicitudes"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedWorldId === d.mundo.id && (
+                    <tr className="bg-primary-fixed/10">
+                      <td colSpan="6" className="px-5 py-3">
+                        <div className="space-y-2">
+                          {d.pendientes.map(r => (
+                            <div key={r.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2 border border-outline-variant/60">
+                              <div>
+                                <p className="text-xs font-medium">{r.nombre || <span className="font-mono text-outline">{r.user_id.slice(0, 20)}…</span>}</p>
+                                <p className="font-mono text-[10px] text-outline">{new Date(r.created_at).toLocaleDateString("es-PE")}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button disabled={resolvingId === r.id} onClick={() => resolverSolicitud(r.id, "entregada")}
+                                  className="px-2.5 py-1 rounded bg-ok/10 text-ok text-xs font-bold">Entregar</button>
+                                <button disabled={resolvingId === r.id} onClick={() => resolverSolicitud(r.id, "rechazada")}
+                                  className="px-2.5 py-1 rounded bg-error-container text-error text-xs font-bold">Rechazar</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {byLote.length === 0 ? (
+        bandas !== null && (
+          <div className="p-10 text-center text-on-surface-variant border border-dashed border-outline-variant rounded-xl mb-6">
+            <Icon n="contactless" className="text-[36px] text-outline mb-2 block mx-auto"/>
+            Sin banditas cargadas todavía. Usa "Cargar lote (CSV)" para el primero.
+          </div>
+        )
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          {byLote.map(l => (
+            <button key={l.lote} onClick={()=>setFilterLote(filterLote===l.lote?"all":l.lote)}
+              className={`p-3 rounded-xl border text-left transition-all ${filterLote===l.lote?"border-primary bg-primary-fixed/20":"border-outline-variant hover:border-primary/40"}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Icon n="contactless" className="text-[16px] text-primary"/>
+                <span className="text-xs font-bold leading-tight">Lote {l.lote}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-green-700 font-mono">{l.disponible} disp.</span>
+                <span className="text-blue-700 font-mono">{l.asignada} asig.</span>
+              </div>
+              <p className="font-mono text-[9px] text-outline mt-1">{l.total} total</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {byLote.length > 0 && (
+        <>
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {["all", "disponible", "asignada", "bloqueada"].map(e => (
+              <button key={e} onClick={()=>setFilterEstado(e)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterEstado===e?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant hover:border-primary/40"}`}>
+                {e==="all"?"Todos":e}
+              </button>
+            ))}
+            <span className="ml-auto font-mono text-[10px] text-outline self-center">{bandas===null?"cargando…":`${filtered.length} banditas`}</span>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+                  <th className="px-4 py-3 text-left font-medium">Código</th>
+                  <th className="px-4 py-3 text-left font-medium">Lote</th>
+                  <th className="px-4 py-3 text-left font-medium">Estado</th>
+                  <th className="px-4 py-3 text-left font-medium">Mundo asignado</th>
+                  <th className="px-4 py-3 text-right font-medium">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/60">
+                {filtered.length === 0 && (
+                  <tr><td colSpan="5" className="p-10 text-center text-on-surface-variant">Sin banditas con estos filtros.</td></tr>
+                )}
+                {filtered.map(b => {
+                  const mundo = mundos.find(m => m.id === b.world_id);
+                  const assigning = assigningId === b.id;
+                  return (
+                    <React.Fragment key={b.id}>
+                      <tr className="hover:bg-surface-container-low transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs font-bold">{b.codigo}</td>
+                        <td className="px-4 py-3 text-xs">{b.lote}</td>
+                        <td className="px-4 py-3">
+                          <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${ESTADO_STYLE_NFC[b.estado]||""}`}>{b.estado}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">{mundo?.nombre || <span className="text-outline">—</span>}</td>
+                        <td className="px-4 py-3 text-right">
+                          {b.estado==="disponible" && !assigning && (
+                            <button onClick={()=>{ setAssigningId(b.id); setAssignWorldId(""); }}
+                              className="text-xs text-primary hover:underline font-medium">Asignar</button>
+                          )}
+                          {b.estado==="asignada" && (
+                            <button onClick={()=>liberar(b)} className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
+                          )}
+                        </td>
+                      </tr>
+                      {assigning && (
+                        <tr className="bg-primary-fixed/10">
+                          <td colSpan="5" className="px-4 py-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                                value={assignWorldId} onChange={e=>setAssignWorldId(e.target.value)}>
+                                <option value="">Elegir mundo…</option>
+                                {mundos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                              </select>
+                              <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!assignWorldId} onClick={()=>confirmAssign(b)}>
+                                Confirmar asignación
+                              </BtnPrimary>
+                              <button onClick={()=>setAssigningId(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {showBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget&&setShowBulk(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setShowBulk(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
+            <h2 className="font-semibold text-lg mb-1">Cargar lote de banditas NFC</h2>
+            <p className="text-xs text-on-surface-variant mb-4">
+              Elige el nombre del lote y adjunta un archivo .csv o .txt con un código de bandita por línea (ej. el código único impreso en cada pulsera).
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
+              <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
+            </div>
+            <input type="file" accept=".csv,.txt" disabled={!bulkLote.trim()}
+              className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full disabled:opacity-50"
+              onChange={e => e.target.files?.[0] && parseBulkFile(e.target.files[0])}/>
+            {bulkRows.length > 0 && (
+              <div className="mt-4 max-h-64 overflow-y-auto border border-outline-variant rounded-lg">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-surface-container-low font-mono text-[9px] uppercase text-outline">
+                    <th className="px-3 py-2 text-left">Código</th><th className="px-3 py-2 text-left">Lote</th><th className="px-3 py-2 text-left">Válido</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-outline-variant/60">
+                    {bulkRows.map((r, i) => (
+                      <tr key={i} className={r.valido ? "" : "bg-error-container/20"}>
+                        <td className="px-3 py-1.5 font-mono">{r.codigo || "—"}</td>
+                        <td className="px-3 py-1.5">{r.lote}</td>
+                        <td className="px-3 py-1.5">{r.valido ? <Icon n="check_circle" className="text-ok text-[14px]"/> : <Icon n="error" className="text-error text-[14px]"/>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="px-3 py-2 text-[10px] text-on-surface-variant font-mono">{bulkFileName} · {bulkRows.filter(r=>r.valido).length} de {bulkRows.length} válidas</p>
+              </div>
+            )}
+            <div className="flex gap-3 mt-6">
+              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");}}>Cancelar</BtnOutline>
+              <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
+                <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} banditas`}
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
