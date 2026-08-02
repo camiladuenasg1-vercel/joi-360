@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -1850,6 +1850,86 @@ function PromocionesMundoTab({ m }) {
 // (mismo motor que ya usaba el corte global de RedPontis, ver
 // generarLiquidacionMundo en store.js) en vez de quedar "solo lectura" de
 // algo que nunca se generó.
+/**
+ * Usuarios, vistos desde el mundo.
+ *
+ * A este lado le toca lo agregado: cuántos son, cuántos usan la billetera, qué
+ * saldo circula. El colegio administra un programa, no un padrón — no necesita
+ * el documento ni el correo de nadie para operar, así que acá no están. Ese
+ * detalle vive en el panel de RedPontis, y aun ahí llega enmascarado.
+ */
+function UsuariosMundoTab({ m }) {
+  const [filas, setFilas] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    fetchUsuariosDeMundo(m.id)
+      .then(r => { if (vivo) setFilas(r); })
+      .catch(e => { if (vivo) { setError(e.message); setFilas([]); } });
+    return () => { vivo = false; };
+  }, [m.id]);
+
+  if (filas === null) {
+    return <p className="text-on-surface-variant text-sm">Cargando usuarios…</p>;
+  }
+
+  const titulares = filas.filter(f => f.tipo === "titular").length;
+  const dependientes = filas.filter(f => f.tipo === "dependiente").length;
+  const conSaldo = filas.filter(f => f.balance > 0).length;
+  const saldo = filas.reduce((a, f) => a + f.balance, 0);
+  const familias = filas.filter(f => f.dependientesACargo > 0).length;
+
+  const kpis = [
+    { i: "group", l: "Personas en el mundo", v: filas.length },
+    { i: "person", l: "Titulares", v: titulares },
+    { i: "family_restroom", l: "Dependientes", v: dependientes },
+    { i: "diversity_3", l: "Familias con dependientes", v: familias },
+    { i: "account_balance_wallet", l: "Con saldo disponible", v: conSaldo },
+    { i: "payments", l: "Saldo en circulación", v: `S/ ${saldo.toFixed(2)}` },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Usuarios</h2>
+        <p className="text-on-surface-variant mt-1 max-w-2xl">
+          El pulso de {m.nombre} en números. Los datos personales de cada persona no se
+          muestran acá: el mundo administra un programa, no un padrón.
+        </p>
+      </div>
+
+      {error && (
+        <div className="text-sm text-error bg-error-container/40 border border-error/30 rounded-lg px-3 py-2">
+          No se pudieron cargar los usuarios: {error}
+        </div>
+      )}
+
+      {filas.length === 0 && !error ? (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl py-14 text-center">
+          <Icon n="person_off" className="text-[32px] text-on-surface-variant/50" />
+          <p className="font-semibold mt-3">Todavía no hay usuarios</p>
+          <p className="text-on-surface-variant text-sm mt-1 max-w-md mx-auto">
+            Aparecerán acá en cuanto se registren desde el superapp y se sumen a {m.nombre}.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {kpis.map(k => (
+            <div key={k.l} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+              <div className="flex items-center gap-2 text-on-surface-variant mb-2">
+                <Icon n={k.i} className="text-[18px]" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider">{k.l}</span>
+              </div>
+              <div className="text-3xl font-bold tabular-nums">{k.v}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LiquidacionMundoTab({ m }) {
   const [lotes, setLotes] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -2187,6 +2267,7 @@ function SponsorDashboard({ m, st, preview }) {
     ...(bnplActivo ? [{ k: "bnpl", l: "BNPL / SNPL", i: "calendar_clock" }] : []),
     ...(eventosEmbebidoOn ? [{ k: "eventos", l: "Eventos", i: "confirmation_number" }] : []),
     ...(accesosActivo ? [{ k: "accesos", l: "Control de Accesos", i: "door_open" }] : []),
+    { k: "usuarios", l: "Usuarios", i: "group" },
     { k: "liquidacion", l: "Liquidación", i: "account_balance" },
     { k: "soporte", l: "Soporte", i: "support_agent" },
   ];
@@ -2329,6 +2410,7 @@ function SponsorDashboard({ m, st, preview }) {
           )}
           {tab === "eventos" && <SponsorEventosTab m={m} eventos={eventos} />}
           {tab === "accesos" && <SponsorAccesos m={m} />}
+          {tab === "usuarios" && <UsuariosMundoTab m={m} />}
           {tab === "liquidacion" && <LiquidacionMundoTab m={m} />}
           {tab === "soporte" && <SponsorSoporte m={m} tickets={tickets} preview={preview} />}
         </div>

@@ -141,6 +141,7 @@ const NAV = [
     { to: "/admin/mundos", icon: "public", label: "Todos los Mundos" },
   ]},
   { group: "Operación", items: [
+    { to: "/admin/usuarios", icon: "group", label: "Usuarios" },
     { to: "/admin/liquidacion", icon: "account_balance", label: "Liquidación" },
     { to: "/admin/calculadora", icon: "calculate", label: "Calculadora Comercial" },
     { to: "/admin/soporte", icon: "support_agent", label: "Soporte" },

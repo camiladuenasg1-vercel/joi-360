@@ -1418,3 +1418,76 @@ export async function probeDemoInfra() {
   ]);
   return { eventsOk, bnplOk, writeOk };
 }
+
+// ── Usuarios del superapp (personas reales, no comercios) ──────────────────
+//
+// Lo que se lee acá es deliberadamente incompleto: app_profiles guarda el
+// nombre y las versiones enmascaradas, mientras que el correo y el número de
+// documento completos viven en auth.users, donde la llave anónima no llega.
+// Es decir: este panel no puede filtrar un dato sensible aunque alguien se lo
+// proponga, porque nunca lo tuvo. Para soporte real hace falta llave de
+// servicio y un endpoint server-side, no una pantalla más.
+export async function fetchPerfilesUsuarios(ids = null) {
+  const filtro = ids?.length ? `&id=in.(${ids.join(",")})` : "";
+  return rest(`app_profiles?select=*${filtro}&order=created_at.desc`);
+}
+
+// La pertenencia a un mundo no tiene tabla propia: wallets(user_id, world_id)
+// ya la describe, y es la misma fila que sostiene el saldo.
+export async function fetchUsuariosDeMundo(worldId) {
+  const wallets = await rest(`wallets?world_id=eq.${worldId}&select=id,user_id,balance,status`);
+  if (!wallets?.length) return [];
+  const ids = [...new Set(wallets.map(w => w.user_id))];
+  const [perfiles, dependientes] = await Promise.all([
+    fetchPerfilesUsuarios(ids).catch(() => []),
+    rest(`dependents?world_id=eq.${worldId}&select=guardian_user_id,dependent_user_id,nombre`).catch(() => []),
+  ]);
+  const porId = Object.fromEntries((perfiles || []).map(p => [p.id, p]));
+  const aCargo = {};
+  (dependientes || []).forEach(d => {
+    aCargo[d.guardian_user_id] = (aCargo[d.guardian_user_id] || 0) + 1;
+  });
+  const esDependiente = new Set((dependientes || []).map(d => d.dependent_user_id));
+  const nombreDependiente = Object.fromEntries((dependientes || []).map(d => [d.dependent_user_id, d.nombre]));
+
+  return wallets.map(w => {
+    const p = porId[w.user_id];
+    return {
+      userId: w.user_id,
+      walletId: w.id,
+      balance: Number(w.balance) || 0,
+      estadoWallet: w.status || "activa",
+      // Un dependiente no tiene cuenta propia: existe porque un titular lo creó.
+      // Distinguirlo evita contar dos veces a la misma familia como "usuarios".
+      tipo: esDependiente.has(w.user_id) ? "dependiente" : p ? "titular" : "sin_perfil",
+      nombre: p ? `${p.nombres} ${p.apellidos}`.trim() : nombreDependiente[w.user_id] || null,
+      docTipo: p?.doc_tipo || null,
+      docMask: p?.doc_mask || null,
+      emailMask: p?.email_mask || null,
+      creado: p?.created_at || null,
+      dependientesACargo: aCargo[w.user_id] || 0,
+    };
+  });
+}
+
+// Detalle de una persona: consumo real y en qué mundos está.
+export async function fetchDetalleUsuario(userId) {
+  const wallets = await rest(`wallets?user_id=eq.${userId}&select=id,world_id,balance,status`);
+  const walletIds = (wallets || []).map(w => w.id);
+  const movimientos = walletIds.length
+    ? await rest(`transactions?wallet_id=in.(${walletIds.join(",")})&select=*&order=created_at.desc&limit=100`).catch(() => [])
+    : [];
+  const consumo = (movimientos || [])
+    .filter(t => t.type === "compra" && t.status !== "rechazada")
+    .reduce((a, t) => a + Math.abs(Number(t.amount) || 0), 0);
+  const recargado = (movimientos || [])
+    .filter(t => t.type === "recarga" && t.status !== "rechazada")
+    .reduce((a, t) => a + Math.abs(Number(t.amount) || 0), 0);
+  return {
+    mundos: wallets || [],
+    movimientos: movimientos || [],
+    consumo,
+    recargado,
+    saldoTotal: (wallets || []).reduce((a, w) => a + (Number(w.balance) || 0), 0),
+  };
+}

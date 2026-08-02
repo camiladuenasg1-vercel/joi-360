@@ -16,6 +16,7 @@ import { Gobierno } from "./Gobierno";
 import { ContratoView } from "./Contrato";
 import { Anunciantes } from "./Anunciantes";
 import { Liquidacion } from "./Liquidacion";
+import { Usuarios } from "./Usuarios";
 import { Soporte } from "./Soporte";
 import { Monitoreo } from "./Monitoreo";
 import { Calculadora } from "./Calculadora";
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/admin/hardware-pos" element={<A title="JOI 360 · Hardware / POS"><HardwarePOS /></A>} />
         <Route path="/contrato/:id" element={<ContratoView />} />
         <Route path="/admin/anunciantes" element={<A title="JOI 360 · Anunciantes"><Anunciantes /></A>} />
+        <Route path="/admin/usuarios" element={<A title="JOI 360 · Usuarios"><Usuarios /></A>} />
         <Route path="/admin/liquidacion" element={<A title="JOI 360 · Liquidación"><Liquidacion /></A>} />
         <Route path="/admin/soporte" element={<A title="JOI 360 · Soporte"><Soporte /></A>} />
         <Route path="/admin/monitoreo" element={<A title="JOI 360 · Monitoreo de Errores"><Monitoreo /></A>} />

@@ -23,8 +23,15 @@ async function rest(path, opts = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// ── Identidad sintética (sin Supabase Auth todavía — login simulado) ──────
+// ── Identidad del usuario ─────────────────────────────────────────────────
+// Con cuentas reales este id es el uuid de Supabase Auth. Se guarda en la
+// misma llave que usaba la identidad sintética para que todo lo que ya cuelga
+// de ella —wallet, dependientes, entradas, actividad— quede asociado a una
+// persona verificada sin tocar una sola consulta.
 const SYNTH_KEY = "joi360_synthetic_user_id";
+export function setUserId(id) {
+  if (id) localStorage.setItem(SYNTH_KEY, id);
+}
 export function getSyntheticUserId() {
   let id = localStorage.getItem(SYNTH_KEY);
   if (!id) {
