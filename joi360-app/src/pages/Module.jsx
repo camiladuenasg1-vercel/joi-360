@@ -24,6 +24,16 @@ import {
 import { showToast } from "../components/Toast.jsx";
 
 // ─── QR helper ────────────────────────────────────────────────────────────────
+// Un importe no lleva signo, ni letras, ni más de dos decimales. Filtrarlo al
+// escribir evita que un "-" llegue al backend disfrazado de monto válido, y de
+// paso le ahorra al usuario descubrir el error recién al tocar el botón.
+function soloImporte(v) {
+  const limpio = String(v).replace(/[^\d.]/g, "");
+  const [entero, ...resto] = limpio.split(".");
+  if (!resto.length) return entero;
+  return `${entero}.${resto.join("").slice(0, 2)}`;
+}
+
 const QR_CELLS = Array.from({length:81},(_,i)=>(i*7+3)%3!==0?"bg-[#1b1b24] rounded-[1px]":"");
 function QRCode({ label, sub, value }) {
   return (
@@ -122,7 +132,7 @@ function WalletTemplate({ cfg, u }) {
 
   const enviarP2P = async () => {
     const monto = +p2pMonto;
-    if (!monto || !p2pCodigo.trim()) return;
+    if (!(monto > 0) || !p2pCodigo.trim()) return;
     setP2pSending(true); setP2pResult(null);
     try {
       const r = await transferirP2PRemote(myCode, p2pCodigo.trim(), mundoId, monto);
@@ -130,7 +140,11 @@ function WalletTemplate({ cfg, u }) {
         const code = r.motivo === "saldo" ? "saldo_insuficiente" : "transferencia_no_valida";
         const err = await errorControlado(code);
         logErrorControlado(code, "wallet-p2p", mundoId);
-        r.mensaje = [err.mensaje, err.accion].filter(Boolean).join(" ");
+        r.mensaje = r.motivo === "monto"
+          ? "El monto debe ser mayor a cero, con hasta dos decimales."
+          : r.motivo === "destino"
+            ? "No puedes transferirte a ti mismo."
+            : [err.mensaje, err.accion].filter(Boolean).join(" ");
       }
       setP2pResult(r);
       if (r.ok) { refresh(); setP2pMonto(""); }
@@ -228,7 +242,7 @@ function WalletTemplate({ cfg, u }) {
                     <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-4">
                       <span className="text-[#777587] font-bold mr-2 text-lg">{currency}</span>
                       <input className="flex-1 text-xl font-black text-[#1b1b24] bg-transparent py-3 outline-none" type="number"
-                        value={p2pMonto} onChange={e=>setP2pMonto(e.target.value)} placeholder="0.00"/>
+                        value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                     </div>
                   </div>
                   {p2pResult && !p2pResult.ok && (
@@ -681,7 +695,7 @@ function RestriccionesTemplate({ cfg, u }) {
 
   const recargar = async (dep) => {
     const monto = +rechargeMonto;
-    if (!monto) return;
+    if (!(monto > 0)) return;
     setRecharging(true); setRechargeError(null);
     try {
       const r = await transferirP2PRemote(guardianId, dep.dependent_user_id, worldId, monto);
@@ -690,7 +704,9 @@ function RestriccionesTemplate({ cfg, u }) {
         const code = r.motivo === "saldo" ? "saldo_insuficiente" : "transferencia_no_valida";
         const err = await errorControlado(code);
         logErrorControlado(code, "dependiente-recarga", worldId);
-        setRechargeError([err.mensaje, err.accion].filter(Boolean).join(" "));
+        setRechargeError(r.motivo === "monto"
+          ? "El monto debe ser mayor a cero, con hasta dos decimales."
+          : [err.mensaje, err.accion].filter(Boolean).join(" "));
       }
     } catch (e) {
       const err = await errorControlado("transferencia_no_valida");
@@ -827,7 +843,7 @@ function RestriccionesTemplate({ cfg, u }) {
                   <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-3 flex-1">
                     <span className="text-[#777587] font-bold mr-1 text-sm">S/</span>
                     <input autoFocus className="flex-1 text-lg font-black text-[#1b1b24] bg-transparent py-2.5 outline-none" type="number"
-                      value={rechargeMonto} onChange={e=>setRechargeMonto(e.target.value)} placeholder="0.00"/>
+                      value={rechargeMonto} onChange={e=>setRechargeMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                   </div>
                   <button disabled={!rechargeMonto || recharging} onClick={()=>recargar(c)}
                     className="px-4 py-2.5 bg-[#3525cd] text-white rounded-2xl font-bold text-sm tap-active disabled:opacity-50">

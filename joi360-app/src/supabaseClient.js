@@ -469,27 +469,47 @@ export function logErrorControlado(code, contexto = null, worldId = null) {
 // Reutilizada por: WalletTemplate (P2P entre usuarios) y la recarga de un
 // tutor hacia el dependiente (mismo mecanismo, distinto origen en la UI).
 export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) {
+  // El monto tiene que ser positivo, y esto se valida ANTES que el saldo.
+  //
+  // Con un monto negativo la comparación de abajo pasa sola (0 < -120 es
+  // falso), y la transferencia se invierte: al origen se le resta un negativo
+  // —o sea, se le crea dinero— y al destino se le suma, dejándolo en rojo.
+  // Ya pasó una vez en Raimondi: una wallet quedó en S/ -120 y otra ganó 120
+  // que nadie depositó. Va acá y no en cada pantalla porque esta función es el
+  // único punto por el que pasan tanto el P2P entre usuarios como la recarga
+  // de un tutor a su dependiente.
+  const importe = Number(monto);
+  if (!Number.isFinite(importe) || importe <= 0) {
+    return { ok: false, motivo: "monto" };
+  }
+  // Céntimos: más precisión que eso no existe en un saldo y solo sirve para
+  // arrastrar errores de redondeo.
+  if (Math.round(importe * 100) !== importe * 100) {
+    return { ok: false, motivo: "monto" };
+  }
+  if (fromUserId === toUserId) return { ok: false, motivo: "destino" };
+
   const origen = await getOrCreateWallet(fromUserId, worldId);
-  if (+origen.balance < monto) return { ok: false, motivo: "saldo", balance: +origen.balance };
+  if (+origen.balance < importe) return { ok: false, motivo: "saldo", balance: +origen.balance };
   const destino = await getOrCreateWallet(toUserId, worldId);
   await rest(`wallets?id=eq.${origen.id}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: +origen.balance - monto }),
+    body: JSON.stringify({ balance: +origen.balance - importe }),
   });
   await rest(`wallets?id=eq.${destino.id}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: +destino.balance + monto }),
+    body: JSON.stringify({ balance: +destino.balance + importe }),
   });
   const ref = `transferencia-${Date.now()}`;
   await rest("transactions", {
     method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: origen.id, world_id: worldId, amount: monto, type: "transferencia_p2p", status: "completada", reference: `${ref}-envio` }),
+    body: JSON.stringify({ wallet_id: origen.id, world_id: worldId, amount: importe, type: "transferencia_p2p", status: "completada", reference: `${ref}-envio` }),
   });
   await rest("transactions", {
     method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: destino.id, world_id: worldId, amount: monto, type: "transferencia_p2p", status: "completada", reference: `${ref}-recibo` }),
+    body: JSON.stringify({ wallet_id: destino.id, world_id: worldId, amount: importe, type: "transferencia_p2p", status: "completada", reference: `${ref}-recibo` }),
   });
-  return { ok: true, balance: +origen.balance - monto };
+  return { ok: true, balance: +origen.balance - importe };
 }
 
 // ── Solicitud de pulsera NFC (antes: botones decorativos sin backend) ─────
