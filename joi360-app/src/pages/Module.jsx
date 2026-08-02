@@ -1885,6 +1885,157 @@ function MisEntradasList({ mundo, refreshKey }) {
 //   allowB2C → usuario puede crear evento
 //   Estados del marketplace: Loading / Empty / Con resultados / Error / Compra realizada
 // ══════════════════════════════════════════════════════════════════════════════
+/**
+ * Carrusel de eventos del propio mundo.
+ *
+ * Separado del listado general a propósito: un evento embebido lo creó el
+ * mundo y lo aprobó RedPontis, mientras que los demás vienen de un organizador
+ * externo o de un usuario final. Para un apoderado de Raimondi, "la kermesse
+ * del colegio" y "un evento que alguien publicó en la app" no son la misma
+ * cosa, y mezclarlos en una lista los volvía indistinguibles.
+ *
+ * Va en horizontal y no en columna porque son pocos y cada uno merece una
+ * tarjeta grande con su portada; apilados verticalmente empujaban el resto del
+ * módulo fuera de pantalla.
+ */
+function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span
+          className="w-1.5 h-4 rounded-full"
+          style={{ background: mundo.color || "#3525cd" }}
+        />
+        <p className="text-[11px] font-black uppercase tracking-wider text-[#1b1b24]">
+          Eventos de {mundo.nombre}
+        </p>
+      </div>
+
+      {/* -mx-5 + px-5: la franja sangra hasta el borde de la pantalla, que es
+          lo que hace legible que hay más tarjetas a la derecha. */}
+      <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-2 snap-x snap-mandatory scrollbar-none">
+        {eventos.map(ev => (
+          <TarjetaEventoMundo
+            key={ev.id}
+            ev={ev}
+            mundo={mundo}
+            vendidas={vendidasMap[ev.id] || 0}
+            onVerEntradas={onVerEntradas}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas }) {
+  const [comercios, setComercios] = useState(null);
+  const lleno = ev.aforo_total > 0 && vendidas >= ev.aforo_total;
+
+  useEffect(() => {
+    let vivo = true;
+    fetchEventMerchantsLive(ev.id)
+      .then(r => { if (vivo) setComercios(r || []); })
+      .catch(() => { if (vivo) setComercios([]); });
+    return () => { vivo = false; };
+  }, [ev.id]);
+
+  return (
+    <div className="snap-start shrink-0 w-[290px] rounded-2xl overflow-hidden bg-white border border-[#e4e1ee]">
+      {/* Portada real cuando existe; si no, el degradado del mundo. Un
+          placeholder gris haría ver el evento como algo sin terminar. */}
+      <div
+        className="h-36 relative"
+        style={{
+          background: ev.imagen_url
+            ? `url(${ev.imagen_url}) center/cover`
+            : `linear-gradient(135deg,${mundo.color || "#3525cd"},#4f46e5)`,
+        }}
+      >
+        {!ev.imagen_url && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Icon name="festival" fill size="text-5xl" color="text-white/70" />
+          </div>
+        )}
+        {lleno && (
+          <div className="absolute top-2 right-2">
+            <Chip label="Agotado" color="bg-red-100 text-red-700" />
+          </div>
+        )}
+      </div>
+
+      <div className="p-4">
+        <p className="font-black text-[#1b1b24] leading-tight mb-1.5">{ev.titulo}</p>
+
+        <p className="text-xs font-semibold flex items-center gap-1 mb-1" style={{ color: mundo.color || "#3525cd" }}>
+          <Icon name="calendar_today" size="text-xs" color="text-current" />
+          {ev.fecha}{ev.hora && ` · ${ev.hora}`}
+        </p>
+        {ev.lugar && (
+          <p className="text-xs text-[#777587] flex items-center gap-1 mb-2">
+            <Icon name="location_on" size="text-xs" color="text-[#777587]" />
+            {ev.lugar}
+          </p>
+        )}
+
+        {ev.descripcion && (
+          <p className="text-xs text-[#56546b] leading-5 mb-3 line-clamp-3">{ev.descripcion}</p>
+        )}
+
+        {ev.aforo_total > 0 && (
+          <div className="mb-3">
+            <div className="flex justify-between text-[10px] text-[#777587] mb-1">
+              <span>Aforo</span><span>{vendidas}/{ev.aforo_total}</span>
+            </div>
+            <ProgressBar value={vendidas} max={ev.aforo_total} />
+          </div>
+        )}
+
+        {/* Comercios del evento: quién va a estar vendiendo adentro. Es de las
+            primeras cosas que se preguntan antes de comprar una entrada. */}
+        {Array.isArray(comercios) && comercios.length > 0 && (
+          <div className="mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#777587] mb-1.5">
+              Comercios en el evento
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {comercios.slice(0, 4).map(c => (
+                <span key={c.id} className="text-[10px] px-2 py-1 rounded-full bg-[#f0ecf9] text-[#3525cd] font-semibold">
+                  {c.merchant_nombre}
+                </span>
+              ))}
+              {comercios.length > 4 && (
+                <span className="text-[10px] px-2 py-1 text-[#777587] font-semibold">
+                  +{comercios.length - 4}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {ev.mapa_url && (
+          <a
+            href={ev.mapa_url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#f0ecf9] tap-active"
+          >
+            <Icon name="map" size="text-base" color="text-[#3525cd]" />
+            <span className="text-xs font-bold text-[#3525cd]">Ver mapa del evento</span>
+          </a>
+        )}
+
+        <PrimaryBtn
+          label={lleno ? "Agotado" : "Ver entradas"}
+          icon={lleno ? "block" : "confirmation_number"}
+          disabled={lleno}
+          onClick={() => onVerEntradas(ev)}
+        />
+      </div>
+    </div>
+  );
+}
+
 function EventosTemplate({ cfg, u }) {
   const st = useStore();
   const evCfg = cfg.mundo.eventosConfig || {};
@@ -1921,6 +2072,12 @@ function EventosTemplate({ cfg, u }) {
   }, [worldId, reloadKey]);
 
   const allEvents = liveEvents || [];
+  // Los eventos del propio mundo se separan del resto. Un evento embebido lo
+  // creó el mundo y lo aprobó RedPontis; los demás vienen de un organizador o
+  // de un usuario final. Mostrarlos en la misma lista los volvía
+  // indistinguibles justo donde la diferencia importa.
+  const eventosDelMundo = allEvents.filter(e => e.modo === "embebido");
+  const otrosEventos = allEvents.filter(e => e.modo !== "embebido");
   const [tab, setTab] = useState("eventos");
   const [creando, setCreando] = useState(false);
   const [step, setStep] = useState(1);
@@ -2181,10 +2338,29 @@ function EventosTemplate({ cfg, u }) {
             </SectionCard>
           )}
 
+          {/* Carrusel propio del mundo — solo eventos Embebido, que son los que
+              el mundo creó desde su panel y RedPontis aprobó. Van en su propia
+              franja y no mezclados con el resto porque no son "un evento más
+              del marketplace": son del colegio, y para el apoderado esa
+              distinción es la que importa. */}
+          {eventosDelMundo.length > 0 && (
+            <CarruselDelMundo
+              eventos={eventosDelMundo}
+              mundo={cfg.mundo}
+              vendidasMap={vendidasMap}
+              onVerEntradas={setDetalle}
+            />
+          )}
+
           {/* Estado: con resultados */}
-          {allEvents.length > 0 && (
+          {otrosEventos.length > 0 && (
             <div className="space-y-3">
-              {allEvents.map(ev=>{
+              {eventosDelMundo.length > 0 && (
+                <p className="text-[11px] font-black uppercase tracking-wider text-[#777587] pt-2">
+                  Otros eventos de la comunidad
+                </p>
+              )}
+              {otrosEventos.map(ev=>{
                 const icon = ICONS[ev.categoria]||"festival";
                 const vendidas = vendidasMap[ev.id] || 0;
                 const lleno = ev.aforo_total > 0 && vendidas >= ev.aforo_total;

@@ -141,6 +141,23 @@ export async function syncAllWorlds(mundos) {
       // Las claves emision_* viven en world_channel_configs, no en el config JSON
       const config = { ...(mod.config || {}) };
       for (const k of Object.keys(config)) if (k.startsWith("emision_") || k.startsWith("adq_")) delete config[k];
+
+      // El modelo del Motor de Eventos vivía SOLO en el localStorage del admin
+      // (m.eventosConfig). Es la decisión que define quién puede crear un
+      // evento y dónde se renderiza, o sea justo lo que el superapp y el POS
+      // necesitan saber — y no tenían cómo. Viaja con el resto de la
+      // render-config, que es donde el resto del ecosistema ya mira.
+      if (mod.id === "eventos") {
+        const ec = m.eventosConfig || {};
+        config.modoEventos = ec.modoEventos || (m.type === "eventos_rp" ? "b2c" : "b2b");
+        // B2B nunca convive con embebido: se normaliza al escribir para que un
+        // estado imposible no llegue a la base aunque el local venga sucio.
+        config.embebidoActivo = config.modoEventos === "b2b" ? false : !!ec.embebidoActivo;
+        config.modeloComisionEventos = ec.modeloComisionEventos || "transaccional";
+        if (ec.comisionEntrada != null) config.comisionEntrada = ec.comisionEntrada;
+        if (ec.comisionFijaMensual != null) config.comisionFijaMensual = ec.comisionFijaMensual;
+      }
+
       capRows.push({ world_id: m.id, capacity_id: mod.id, enabled: mod.enabled !== false, config });
     }
     if (capRows.length) await rest("world_capacity_configs?on_conflict=world_id,capacity_id", {
