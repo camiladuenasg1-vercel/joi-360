@@ -918,6 +918,28 @@ export async function refreshMundosLive() {
     serviciosActivos: serviciosPorCapacidad.get(`${worldId}:${c.capacity_id}`) || {},
   }));
 
+  // El modelo del Motor de Eventos se reconstruye desde Supabase, no se hereda
+  // de lo que tuviera esta pestaña.
+  //
+  // Se escribía a la base pero nunca se leía de vuelta, y con varias pestañas
+  // del admin abiertas cada una guardaba su propia copia en memoria: la última
+  // en sincronizar pisaba a las demás. Así se perdió una configuración real —
+  // un mundo pasado a B2C+Embebido volvió solo a B2B minutos después, porque
+  // otra pestaña con el estado viejo sincronizó encima.
+  const eventosConfigDe = worldId => {
+    const cap = (capsByWorld.get(worldId) || []).find(c => c.capacity_id === "eventos");
+    const cfg = cap?.config;
+    if (!cfg?.modoEventos) return undefined; // nunca sincronizado: no se inventa
+    return {
+      modoEventos: cfg.modoEventos,
+      embebidoActivo: cfg.modoEventos === "b2b" ? false : !!cfg.embebidoActivo,
+      modeloComisionEventos: cfg.modeloComisionEventos || "transaccional",
+      ...(cfg.comisionEntrada != null ? { comisionEntrada: cfg.comisionEntrada } : {}),
+      ...(cfg.comisionFijaMensual != null ? { comisionFijaMensual: cfg.comisionFijaMensual } : {}),
+      ...(cfg.monetizacion != null ? { monetizacion: cfg.monetizacion } : {}),
+    };
+  };
+
   update(st => {
     if (!st.mundos) st.mundos = [];
     const byId = new Map(st.mundos.map(m => [m.id, m]));
@@ -933,6 +955,9 @@ export async function refreshMundosLive() {
         // Mundo ya reconciliado antes con modulos vacíos (capacity_configs no
         // existían todavía en ese momento) — reintenta el backfill.
         if (!(base.modulos || []).length) base.modulos = modulosDe(w.id);
+        // La base manda sobre lo que tuviera esta pestaña en memoria.
+        const ec = eventosConfigDe(w.id);
+        if (ec) base.eventosConfig = ec;
       }
       else st.mundos.push({
         ...patch, fixed: false, redpontis: false, type: "standard",
@@ -940,7 +965,13 @@ export async function refreshMundosLive() {
         modulos: modulosDe(w.id),
         entrega: { entregado: false, credenciales: null, fechaEntrega: null },
         sponsorConfig: { bienvenida: `¡Hola, {nombre}! Bienvenido al ecosistema ${w.name}.`, bannerTitulo: "", bannerActivo: false, comerciosOcultos: [] },
-        eventosConfig: null, acuerdo: {},
+        eventosConfig: eventosConfigDe(w.id) || null,
+        // acuerdo va en null y no en {}: generarLiquidacionMundo hace
+        // `m.acuerdo || {tipo:"transaccional", revShare:5}`, y un objeto vacío
+        // es truthy, así que el fallback no aplicaba y `acuerdo.tipo` quedaba
+        // undefined. Ninguna rama del cálculo coincidía y la comisión salía 0
+        // en silencio para todo mundo llegado por reconciliación.
+        acuerdo: null,
         createdAt: Date.parse(w.created_at) || Date.now(),
       });
     }
