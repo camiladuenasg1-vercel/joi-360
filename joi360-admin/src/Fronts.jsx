@@ -1717,9 +1717,16 @@ function SolicitarLoteNfcWidget({ worldId }) {
    sabía en qué iba el pedido. Es la misma necesidad que la de banditas —
    "necesito equipo, ¿en qué va lo que pedí?"— y sigue el mismo camino: el
    mundo pide, RedPontis lo ve junto al resto de la demanda y responde. */
+// Un mundo pide unidades físicas que RedPontis despacha desde su stock —
+// "Tap2Phone App" (pos_type "tap2phone") no es un equipo que se envíe, es
+// habilitar el celular que el comercio ya tiene (canal de software, hoy sin
+// integración real, ver CANALES_ADQUIRENCIA). Mezclarlo acá invitaba a
+// "requerir" algo que RedPontis nunca podría despachar.
+const HARDWARE_FISICO = HARDWARE_CATALOG.filter(h => h.pos_type !== "tap2phone");
+
 function RequerirHardwareWidget({ worldId }) {
   const [reqs, setReqs] = useState(null);
-  const [modeloId, setModeloId] = useState(HARDWARE_CATALOG[0]?.id || "");
+  const [modeloId, setModeloId] = useState(HARDWARE_FISICO[0]?.id || "");
   const [cantidad, setCantidad] = useState("");
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -1727,7 +1734,7 @@ function RequerirHardwareWidget({ worldId }) {
   const load = () => fetchRequerimientosHardwareMundo(worldId).then(setReqs).catch(() => setReqs([]));
   useEffect(() => { load(); }, [worldId]);
 
-  const modelo = HARDWARE_CATALOG.find(h => h.id === modeloId);
+  const modelo = HARDWARE_FISICO.find(h => h.id === modeloId);
 
   const pedir = async () => {
     const n = +cantidad;
@@ -1767,7 +1774,7 @@ function RequerirHardwareWidget({ worldId }) {
 
         <div className="space-y-2">
           <select className={inputCls} value={modeloId} onChange={e => setModeloId(e.target.value)}>
-            {HARDWARE_CATALOG.map(h => (
+            {HARDWARE_FISICO.map(h => (
               <option key={h.id} value={h.id}>{h.marca} {h.modelo} · {h.tipo}</option>
             ))}
           </select>
