@@ -2154,10 +2154,28 @@ function ActoresSponsors({ m }) {
   );
 }
 
+const ACUERDO_LABELS = {
+  transaccional: { t: "Transaccional puro", d: "Solo % sobre volumen procesado. Sin fijos." },
+  revenue: { t: "Revenue puro", d: "Fee fijo mensual. Sin variable." },
+  mixto: { t: "Mixto", d: "Fijo mensual + % transaccional." },
+  fijo: { t: "Venta fija", d: "Pago único o periódico cerrado. Sin variable." },
+};
+const FRECUENCIA_LABELS = { diaria: "Diaria", semanal: "Semanal", quincenal: "Quincenal", mensual: "Mensual" };
+
+function ModeloRow({ k, v }) {
+  return (
+    <div className="flex justify-between items-start gap-3">
+      <p className="font-mono text-[10px] text-outline uppercase pt-0.5 flex-shrink-0">{k}</p>
+      <p className="text-right text-sm">{v}</p>
+    </div>
+  );
+}
+
 /* ── TabAcuerdo — Acuerdo Comercial del mundo (Sheet 10) ─────────────── */
 function TabAcuerdo({ m }) {
   const comerciosMod = (m.modulos || []).find(x => x.id === "comercios");
   const cfg = comerciosMod?.config || {};
+  const acuerdo = m.acuerdo || null;
   const [f, setF] = useState({
     mdrDefault: cfg.mdrDefault ?? 1.5,
     fijoTxDefault: cfg.fijoTxDefault ?? 0.10,
@@ -2190,133 +2208,144 @@ function TabAcuerdo({ m }) {
         com.config.validUntil = f.validUntil || null;
       }
     });
-    notify("Acuerdo comercial guardado");
+    notify("Tarifas de merchant guardadas");
     setDirty(false);
   };
 
-  if (!comerciosMod) {
-    return (
-      <div className="p-6 bg-surface-container-low rounded-xl border border-outline-variant text-center">
-        <Icon n="handshake" className="text-[32px] text-on-surface-variant mb-2"/>
-        <p className="text-sm text-on-surface-variant">
-          Este mundo no tiene la capacidad <b>Comercios</b> activa. Actívala primero en la pestaña Capacidades para definir su acuerdo comercial.
-        </p>
-      </div>
-    );
-  }
-
-  const fee = +f.fijoTxDefault || 0;
-  const mdr = +f.mdrDefault || 0;
-  const ejemplo100 = 100 - (100 * mdr / 100) - fee;
-  const retencionMonto = ejemplo100 * (+f.retentionPercentage || 0) / 100;
-  const netoSponsor = ejemplo100 - retencionMonto;
+  const label = acuerdo ? (ACUERDO_LABELS[acuerdo.tipo] || { t: acuerdo.tipo, d: "" }) : null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-5">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Modelo comercial real, tal como quedó grabado en la creación del
+            mundo (m.acuerdo) — es el mismo objeto que usa el motor de
+            Liquidación (procesarLiquidacionMundo), no un cálculo aparte. */}
         <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
-          <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
-            <Icon n="storefront" className="text-[16px] text-primary"/> Tarifa a Merchants (default del mundo)
+          <h4 className="flex items-center gap-2 font-semibold border-b border-outline-variant/50 pb-2 mb-3">
+            <Icon n="handshake" className="text-outline text-[20px]" /> Modelo comercial
+          </h4>
+          {!acuerdo ? (
+            <p className="text-sm text-on-surface-variant">
+              Este mundo no tiene un acuerdo comercial grabado — fue creado antes de que este paso existiera en el asistente, o quedó incompleto. Contacta a Plataforma para completarlo.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <ModeloRow k="Tipo" v={<><b className="text-primary uppercase">{label.t}</b>{label.d && <span className="block text-[11px] text-on-surface-variant font-normal normal-case mt-0.5">{label.d}</span>}</>} />
+              {(acuerdo.tipo === "transaccional" || acuerdo.tipo === "mixto") && <ModeloRow k="Revenue share" v={`${acuerdo.revShare}%`} />}
+              {(acuerdo.tipo === "revenue" || acuerdo.tipo === "mixto" || acuerdo.tipo === "fijo") && <ModeloRow k={acuerdo.tipo === "fijo" ? "Monto cerrado" : "Fijo mensual"} v={`${m.moneda} ${acuerdo.fijoMensual}`} />}
+              <ModeloRow k="Setup" v={`${m.moneda} ${acuerdo.setup}`} />
+              <ModeloRow k="Vigencia" v={acuerdo.vigencia} />
+              <ModeloRow k="Frecuencia de liquidación" v={FRECUENCIA_LABELS[acuerdo.frecuenciaLiquidacion] || acuerdo.frecuenciaLiquidacion} />
+            </div>
+          )}
+          <p className="text-[10px] text-on-surface-variant mt-3 italic">
+            Este es el modelo que corre en Liquidación. Para cambiarlo (revenue share, fijo, vigencia) contacta a Plataforma — no es autoservicio desde aquí para evitar desalinear liquidaciones ya generadas.
           </p>
-          <p className="text-[11px] text-on-surface-variant mb-3">
-            Aplica a todo merchant nuevo. Un merchant individual puede tener su propia tarifa (override) al crearlo o editarlo en Actores.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="MDR — Merchant Discount Rate (%)">
-              <input className={inputCls} type="number" step="0.1" min="0" max="10" value={f.mdrDefault}
-                onChange={e => set({ mdrDefault: e.target.value })}/>
-            </Field>
-            <Field label={`Comisión fija por Tx (${m.moneda})`}>
-              <input className={inputCls} type="number" step="0.01" min="0" value={f.fijoTxDefault}
-                onChange={e => set({ fijoTxDefault: e.target.value })}/>
-            </Field>
-          </div>
-        </div>
-
-        <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
-          <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
-            <Icon n="account_balance" className="text-[16px] text-secondary"/> Modelo de recaudación
-          </p>
-          <p className="text-[11px] text-on-surface-variant mb-3">
-            Quién recauda los pagos de los comercios de este mundo — decisión comercial, no un default técnico.
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {[["redpontis","RedPontis recauda"],["mundo","El Mundo recauda"]].map(([k,l]) => (
-              <button key={k} onClick={() => set({ modeloRecaudacion: k })}
-                className={`py-2.5 rounded-lg border text-xs font-semibold transition-colors ${f.modeloRecaudacion===k?"bg-secondary text-white border-secondary":"border-outline-variant text-on-surface-variant"}`}>
-                {l}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
-            <Icon n="event_repeat" className="text-[16px] text-secondary"/> Frecuencia de liquidación
-          </p>
-          <p className="text-[11px] text-on-surface-variant mb-3">
-            Con qué frecuencia se transfiere al sponsor los fondos acumulados, ya descontadas comisiones y retención.
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {["diario","semanal","quincenal","mensual"].map(freq => (
-              <button key={freq} onClick={() => set({ settlementFrequency: freq })}
-                className={`py-2.5 rounded-lg border text-xs font-semibold capitalize transition-colors ${f.settlementFrequency===freq?"bg-secondary text-white border-secondary":"border-outline-variant text-on-surface-variant"}`}>
-                {freq}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <p className="text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
-            <Icon n="lock" className="text-[16px]"/> Retención RedPontis — confidencial
-          </p>
-          <p className="text-[11px] text-amber-800 mb-3">
-            Solo visible y editable desde Plataforma. El Admin del Mundo (sponsor) <b>nunca</b> ve este porcentaje — solo el monto neto ya liquidado.
-          </p>
-          <Field label="% Retención sobre lo liquidado">
-            <input className={inputCls} type="number" step="0.1" min="0" max="100" value={f.retentionPercentage}
-              onChange={e => set({ retentionPercentage: e.target.value })}/>
-          </Field>
         </div>
 
         <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
-          <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
-            <Icon n="event" className="text-[16px] text-on-surface-variant"/> Vigencia del acuerdo
+          <h4 className="flex items-center gap-2 font-semibold border-b border-outline-variant/50 pb-2 mb-3">
+            <Icon n="description" className="text-outline text-[20px]" /> Contrato
+          </h4>
+          <p className="text-[11px] text-on-surface-variant mb-3">
+            El PDF subido aquí es el contrato real firmado con el sponsor. Reemplaza cualquier borrador generado automáticamente.
           </p>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Desde"><input className={inputCls} type="date" value={f.validFrom} onChange={e => set({ validFrom: e.target.value })}/></Field>
-            <Field label="Hasta" hint="Vacío = vigente indefinidamente">
-              <input className={inputCls} type="date" value={f.validUntil} onChange={e => set({ validUntil: e.target.value })}/>
-            </Field>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <BtnPrimary onClick={save} disabled={!dirty}>
-            <Icon n="save" className="text-[16px]"/> Guardar acuerdo
-          </BtnPrimary>
+          <ContratoControl m={m} />
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="p-4 bg-primary-fixed/10 border border-primary/20 rounded-xl">
-          <p className="text-[10px] font-mono uppercase text-on-surface-variant mb-3">Simulación · venta de {m.moneda} 100</p>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-on-surface-variant">Venta bruta</span><span className="font-mono">{m.moneda} 100.00</span></div>
-            <div className="flex justify-between text-error"><span className="text-on-surface-variant">− MDR ({mdr}%)</span><span className="font-mono">− {m.moneda} {(100*mdr/100).toFixed(2)}</span></div>
-            <div className="flex justify-between text-error"><span className="text-on-surface-variant">− Fijo por Tx</span><span className="font-mono">− {m.moneda} {fee.toFixed(2)}</span></div>
-            <div className="h-px bg-outline-variant my-2"/>
-            <div className="flex justify-between font-semibold"><span>= Liquidado bruto al sponsor</span><span className="font-mono">{m.moneda} {ejemplo100.toFixed(2)}</span></div>
-            <div className="flex justify-between text-error"><span className="text-on-surface-variant">− Retención RedPontis ({f.retentionPercentage}%)</span><span className="font-mono">− {m.moneda} {retencionMonto.toFixed(2)}</span></div>
-            <div className="h-px bg-outline-variant my-2"/>
-            <div className="flex justify-between font-bold text-primary"><span>Neto al sponsor</span><span className="font-mono">{m.moneda} {netoSponsor.toFixed(2)}</span></div>
+      {!comerciosMod ? (
+        <div className="p-6 bg-surface-container-low rounded-xl border border-outline-variant text-center">
+          <Icon n="storefront" className="text-[32px] text-on-surface-variant mb-2"/>
+          <p className="text-sm text-on-surface-variant">
+            Este mundo no tiene la capacidad <b>Comercios</b> activa, así que no hay tarifas de merchant que configurar. Actívala en la pestaña Capacidades si el mundo va a tener comercios propios.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <p className="text-xs font-mono uppercase text-outline">Tarifas a merchants de este mundo</p>
+          <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+            <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
+              <Icon n="storefront" className="text-[16px] text-primary"/> Tarifa a Merchants (default del mundo)
+            </p>
+            <p className="text-[11px] text-on-surface-variant mb-3">
+              Aplica a todo merchant nuevo. Un merchant individual puede tener su propia tarifa (override) al crearlo o editarlo en Actores.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="MDR — Merchant Discount Rate (%)">
+                <input className={inputCls} type="number" step="0.1" min="0" max="10" value={f.mdrDefault}
+                  onChange={e => set({ mdrDefault: e.target.value })}/>
+              </Field>
+              <Field label={`Comisión fija por Tx (${m.moneda})`}>
+                <input className={inputCls} type="number" step="0.01" min="0" value={f.fijoTxDefault}
+                  onChange={e => set({ fijoTxDefault: e.target.value })}/>
+              </Field>
+            </div>
+          </div>
+
+          <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+            <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
+              <Icon n="account_balance" className="text-[16px] text-secondary"/> Modelo de recaudación
+            </p>
+            <p className="text-[11px] text-on-surface-variant mb-3">
+              Quién recauda los pagos de los comercios de este mundo — decisión comercial, no un default técnico.
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {[["redpontis","RedPontis recauda"],["mundo","El Mundo recauda"]].map(([k,l]) => (
+                <button key={k} onClick={() => set({ modeloRecaudacion: k })}
+                  className={`py-2.5 rounded-lg border text-xs font-semibold transition-colors ${f.modeloRecaudacion===k?"bg-secondary text-white border-secondary":"border-outline-variant text-on-surface-variant"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
+              <Icon n="event_repeat" className="text-[16px] text-secondary"/> Frecuencia de liquidación
+            </p>
+            <p className="text-[11px] text-on-surface-variant mb-3">
+              Con qué frecuencia se transfiere al sponsor los fondos acumulados, ya descontadas comisiones y retención.
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {["diario","semanal","quincenal","mensual"].map(freq => (
+                <button key={freq} onClick={() => set({ settlementFrequency: freq })}
+                  className={`py-2.5 rounded-lg border text-xs font-semibold capitalize transition-colors ${f.settlementFrequency===freq?"bg-secondary text-white border-secondary":"border-outline-variant text-on-surface-variant"}`}>
+                  {freq}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+              <Icon n="lock" className="text-[16px]"/> Retención RedPontis — confidencial
+            </p>
+            <p className="text-[11px] text-amber-800 mb-3">
+              Solo visible y editable desde Plataforma. El Admin del Mundo (sponsor) <b>nunca</b> ve este porcentaje — solo el monto neto ya liquidado.
+            </p>
+            <Field label="% Retención sobre lo liquidado">
+              <input className={inputCls} type="number" step="0.1" min="0" max="100" value={f.retentionPercentage}
+                onChange={e => set({ retentionPercentage: e.target.value })}/>
+            </Field>
+          </div>
+
+          <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+            <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
+              <Icon n="event" className="text-[16px] text-on-surface-variant"/> Vigencia de la tarifa
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Desde"><input className={inputCls} type="date" value={f.validFrom} onChange={e => set({ validFrom: e.target.value })}/></Field>
+              <Field label="Hasta" hint="Vacío = vigente indefinidamente">
+                <input className={inputCls} type="date" value={f.validUntil} onChange={e => set({ validUntil: e.target.value })}/>
+              </Field>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <BtnPrimary onClick={save} disabled={!dirty}>
+              <Icon n="save" className="text-[16px]"/> Guardar tarifas
+            </BtnPrimary>
           </div>
         </div>
-        <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant text-[11px] text-on-surface-variant space-y-1">
-          <p><b className="text-on-surface">Moneda de liquidación:</b> {m.moneda}</p>
-          <p><b className="text-on-surface">Frecuencia:</b> {f.settlementFrequency}</p>
-          <p><b className="text-on-surface">Vigente desde:</b> {f.validFrom || "—"}</p>
-          <p><b className="text-on-surface">Vigente hasta:</b> {f.validUntil || "Indefinido"}</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
