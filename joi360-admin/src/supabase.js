@@ -965,10 +965,15 @@ export async function marcarAlertaMundoLeida(id) {
 export async function syncCatalogRemote(catalog, uxMap = {}) {
   setSyncStatus("syncing");
   try {
+    // capacities.tier/name/category no admiten NULL — un solo registro
+    // corrupto (ej. un catalogoOverrides viejo sin tier) tumbaba el POST
+    // completo (Postgres rechaza todo el batch, no solo la fila mala), así
+    // que el resto del catálogo tampoco se publicaba. Se rellena con
+    // defaults seguros en vez de fallar en bloque.
     await rest("capacities?on_conflict=id", {
       method: "POST", headers: upsertHeaders,
       body: JSON.stringify(catalog.map(c => ({
-        id: c.id, name: c.name, tier: c.tier, category: c.category,
+        id: c.id, name: c.name || c.id, tier: c.tier || "OPCIONAL", category: c.category || "Mixto",
         description: c.desc || null, icon: c.icon || "extension",
         active_by_default: c.tier === "CORE", forced_active: c.id === "wallet",
         version: "1.0", status: "activo",
