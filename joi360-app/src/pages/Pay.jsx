@@ -126,7 +126,7 @@ export default function PayPage() {
         {/* Tabs */}
         <div className="px-5 mb-5">
           <div className="flex gap-1 glass-card rounded-2xl p-1">
-            {[{k:"qr",l:"Pagar QR"},{k:"recargar",l:"Recargar"},{k:"nfc",l:"Bandita NFC"}].map(t=>(
+            {[{k:"qr",l:"Pagar QR"},{k:"recargar",l:"Recargar"},...(walletCfg?.has("bandita") && walletCfg?.config?.usaPulseraNfc !== false ? [{k:"nfc",l:"Bandita NFC"}] : [])].map(t=>(
               <button key={t.k} onClick={() => { setTab(t.k); setMonto(""); setQrGenerated(false); setCanalSel(null); }}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t.k?"bg-[#3525cd] text-white aura-primary-sm":"text-[#464555]"}`}>
                 {t.l}
@@ -285,7 +285,7 @@ export default function PayPage() {
           )}
 
           {/* NFC TAB */}
-          {tab==="nfc" && (
+          {tab==="nfc" && walletCfg?.has("bandita") && walletCfg?.config?.usaPulseraNfc !== false && (
             <div className="space-y-4">
               {nfcReq === undefined && (
                 <div className="glass-card rounded-3xl p-6 text-center">

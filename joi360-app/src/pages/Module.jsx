@@ -2240,7 +2240,6 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas }) {
 }
 
 function EventosTemplate({ cfg, u }) {
-  const st = useStore();
   const evCfg = cfg.mundo.eventosConfig || {};
   const canCreate = cfg.config.allowB2C;
   const pickup = cfg.config.ventanaPickup || 30;
@@ -2261,15 +2260,11 @@ function EventosTemplate({ cfg, u }) {
       .then(([evs, vend]) => { if (vivo) { setLiveEvents(evs || []); setVendidasMap(vend || {}); } })
       .catch(() => {
         if (!vivo) return;
-        // Fallback: seed local (tabla events aún no migrada)
-        const locales = (st.eventos || []).filter(e => e.mundoId === worldId && e.estado === "PUBLICADO")
-          .map(e => ({ id: e.id, titulo: e.titulo || e.nombre, descripcion: e.descripcion, fecha: e.fecha, hora: e.hora,
-            lugar: e.lugar, tipo: "kermesse", organizador: e.organizador?.nombre, aforo_total: e.aforo || 0,
-            ux_components: ["hero","entradas","agenda","marketplace"], __localVendidas: e.vendidas || 0 }));
-        if (locales.length) {
-          setLiveEvents(locales);
-          setVendidasMap(Object.fromEntries(locales.map(e => [e.id, e.__localVendidas])));
-        } else { setLiveEvents([]); setLiveError(true); }
+        // Antes caía a un fallback de seed local (mock) si el fetch real
+        // fallaba por CUALQUIER motivo, no solo "tabla no migrada" — mostraba
+        // eventos inventados como si fueran reales del mundo, sin avisar.
+        // Ahora se muestra el estado de error real, con reintento explícito.
+        setLiveEvents([]); setLiveError(true);
       });
     return () => { vivo = false; };
   }, [worldId, reloadKey]);

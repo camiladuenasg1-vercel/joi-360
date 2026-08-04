@@ -399,9 +399,10 @@ export async function crearDependienteRemote(worldId, guardianUserId, nombre, dn
     method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, dni: dni || null, alergias: alergias || null }),
   });
+  const moneda = await monedaDeMundo(worldId);
   await rest("wallets?on_conflict=user_id,world_id", {
     method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-    body: JSON.stringify({ user_id: dependentUserId, world_id: worldId, balance: 0, currency: "PEN" }),
+    body: JSON.stringify({ user_id: dependentUserId, world_id: worldId, balance: 0, currency: moneda }),
   });
   // "Cobro por vinculación de perfil" (configField perfiles_suscripcion): si el
   // mundo lo exige, se cobra al tutor al vincular un dependiente nuevo.
@@ -710,6 +711,13 @@ export async function fetchWorldConfigLive(worldId) {
 }
 
 // ── Wallet ──────────────────────────────────────────────────────────────
+// La moneda de una wallet nueva debe ser la real del mundo (worlds.moneda),
+// no un "PEN" fijo — hoy no se nota porque los mundos reales son todos PEN,
+// pero era la fuente de verdad equivocada.
+async function monedaDeMundo(worldId) {
+  const rows = await rest(`worlds?id=eq.${worldId}&select=moneda`).catch(() => []);
+  return rows?.[0]?.moneda || "PEN";
+}
 export async function getOrCreateWallet(userId, worldId) {
   // 1) Camino feliz: la wallet ya existe (caso normal en todo acceso post-creación).
   const existing = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`);
@@ -719,10 +727,11 @@ export async function getOrCreateWallet(userId, worldId) {
   //    reenviaría balance:0 y BORRARÍA el saldo real si alguien ganó la carrera).
   //    Esto es justo lo que pasa cuando useWalletLive dispara fetchWalletBalance
   //    y fetchTxHistory en paralelo la primera vez que se visita un mundo.
+  const moneda = await monedaDeMundo(worldId);
   const created = await rest(`wallets?on_conflict=user_id,world_id`, {
     method: "POST",
     headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
-    body: JSON.stringify({ user_id: userId, world_id: worldId, balance: 0, currency: "PEN" }),
+    body: JSON.stringify({ user_id: userId, world_id: worldId, balance: 0, currency: moneda }),
   });
   if (created && created.length) return created[0];
 
