@@ -569,28 +569,9 @@ function seed() {
         acuerdo: { tipo: "transaccional", revShare: 1, fijoMensual: 0, setup: 0, vigencia: "indefinida", nota: "Fase 0 — 1% rev-share sobre entradas vendidas" },
         createdAt: now,
       },
-      {
-        id: "mundo-promos-rp",
-        fixed: true,
-        redpontis: true,
-        type: "promos_rp",
-        nombre: "JOI Promos",
-        codigo: "PR-RP-000",
-        vertical: "Especial RedPontis",
-        entidadLegal: "RedPontis S.A.C.",
-        ruc: "20612345678",
-        moneda: "PEN",
-        estado: "ACTIVO",
-        color: "#006688",
-        descripcion: "Mundo RedPontis de promociones: anunciantes registran promos sueltas con vigencia. Visibles para todos los usuarios del ecosistema.",
-        eventosConfig: null,
-        modulos: (() => {
-          const mods = ["wallet", "promociones", "comercios"].map(defaultModuleState);
-          return mods;
-        })(),
-        acuerdo: { tipo: "mixto", revShare: 10, fijoMensual: 0, setup: 0, vigencia: "indefinida" },
-        createdAt: now,
-      },
+      // JOI Promos (mundo-promos-rp) existió como segundo mundo especial de
+      // RedPontis pero se sacó del alcance activo por pedido explícito de la
+      // usuaria: "solo vamos a manejar un mundo propio de JOI, JOI Eventos".
       // Antes había 2 mundos demo horneados aquí (Jockey Plaza, Colegio
       // Raimondi con ids fijos mundo-jockey-plaza/mundo-raimondi) — el mismo
       // problema que comercios/tickets/liquidaciones: si state.mundos se

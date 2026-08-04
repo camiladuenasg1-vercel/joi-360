@@ -18,10 +18,10 @@ export function AdminDashboard() {
   const totalCom = (st.comercios||[]).length;
   const pendientes = (st.liquidaciones || []).filter(l => l.estado === "PENDIENTE").length;
   const ticketsAbiertos = (st.tickets || []).filter(t => t.estado === "ABIERTO").length;
-  const totalAnunciantes = (st.anunciantes || []).length;
-  const promosVigentes = (st.promos || []).filter(p => p.estado === "VIGENTE").length;
   const comisionTotal = (st.liquidaciones || []).reduce((a, l) => a + (l.comision || 0), 0);
 
+  // Anunciantes/Promos (JOI Promos) salieron del alcance activo — solo se
+  // maneja JOI Eventos como mundo propio de RedPontis.
   const kpis = [
     { label: "Mundos activos", value: mundosActivos, total: totalMundos, icon: "public", color: "#0035b9", link: "/admin/mundos" },
     { label: "Módulos contratados", value: totalModulosActivos, icon: "extension", color: "#006688", link: "/admin/modulos-mundo" },
@@ -29,8 +29,6 @@ export function AdminDashboard() {
     { label: "Comisión acumulada", value: `S/ ${comisionTotal.toFixed(0)}`, icon: "account_balance", color: "#0e7c43", link: "/admin/liquidacion" },
     { label: "Liq. pendientes", value: pendientes, icon: "pending_actions", color: pendientes > 0 ? "#ba1a1a" : "#747686", link: "/admin/liquidacion" },
     { label: "Tickets abiertos", value: ticketsAbiertos, icon: "support_agent", color: ticketsAbiertos > 2 ? "#ba1a1a" : "#0035b9", link: "/admin/soporte" },
-    { label: "Anunciantes", value: totalAnunciantes, icon: "domain", color: "#5800c3", link: "/admin/anunciantes" },
-    { label: "Promos vigentes", value: promosVigentes, icon: "campaign", color: "#006688", link: "/admin/mundos/mundo-promos-rp" },
   ];
 
   return (
