@@ -293,6 +293,25 @@ export async function pruneStaleEmissionChannels(currentIds) {
   });
 }
 
+// Mismo patrón que emission_channels — Adquirencia.jsx (medios de aceptación)
+// no tenía ningún consumidor de Supabase, así que lo configurado ahí solo
+// vivía en localStorage de quien lo editó. Se llama en cada guardado.
+export async function syncAcquiringChannels(rows) {
+  if (!rows || !rows.length) return;
+  await rest("acquiring_channels?on_conflict=id", {
+    method: "POST", headers: upsertHeaders, body: JSON.stringify(rows),
+  });
+}
+export async function pruneStaleAcquiringChannels(currentIds) {
+  const rows = await rest("acquiring_channels?select=id&global_active=eq.true");
+  const stale = (rows || []).map(r => r.id).filter(id => !currentIds.includes(id));
+  if (!stale.length) return;
+  await rest(`acquiring_channels?id=in.(${stale.join(",")})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ global_active: false }),
+  });
+}
+
 export async function deleteWorldRemote(worldId) {
   try {
     await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });

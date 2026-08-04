@@ -2,6 +2,20 @@ import React, { useState } from "react";
 import { useStore } from "./hooks";
 import { update, uid, HARDWARE_CATALOG, REDES_PAGO } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify } from "./ui";
+import { syncAcquiringChannels, pruneStaleAcquiringChannels } from "./supabase";
+
+// Mismo patrón que Emision.jsx/emission_channels: empuja el catálogo a
+// Supabase en cada guardado — antes esto solo vivía en localStorage de quien
+// lo editó, así que nadie más (ni el propio admin desde otra sesión) lo veía.
+function pushChannelsToSupabase(channels) {
+  const rows = channels.map(ch => ({
+    id: ch.id, name: ch.nombre, icon: ch.icon, description: ch.desc,
+    settlement_policy: ch.liquidacion, mdr: ch.mdr, fijo_tx: ch.fijoTx,
+    networks: ch.redIds || [], global_active: ch.habilitado,
+  }));
+  syncAcquiringChannels(rows).catch(e => console.warn("[acquiring_channels sync]", e));
+  pruneStaleAcquiringChannels(channels.map(ch => ch.id)).catch(e => console.warn("[acquiring_channels prune]", e));
+}
 
 const CHANNELS_SEED = [
   { id: "pos", icon: "point_of_sale", nombre: "POS Físico", desc: "Terminales físicas de cobro en los comercios del ecosistema", liquidacion: "Al día siguiente hábil", mdr: 1.5, fijoTx: 0.10, habilitado: true, redIds: ["visa", "mc", "joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
@@ -33,10 +47,13 @@ export function Adquirencia() {
   const totalPOS = (st.comercios||[]).reduce((a, c) => a + (c.pos || 0), 0);
 
   const toggleChannel = (ch) => {
+    let next = channels;
     update(s => {
       if (!s.adqChannels) s.adqChannels = JSON.parse(JSON.stringify(CHANNELS_SEED));
       ((s.adqChannels||[]).find(x => x.id === ch.id)||{}).habilitado = !ch.habilitado;
+      next = s.adqChannels;
     });
+    pushChannelsToSupabase(next);
     notify(`Canal "${ch.nombre}" ${!ch.habilitado ? "activado" : "desactivado"}. Los mundos que lo usen reflejarán el cambio.`, "info");
   };
 
@@ -171,10 +188,13 @@ function ChannelDrawer({ ch, onClose, channels }) {
   if (!ch || !f) return null;
 
   const save = () => {
+    let next = channels;
     update(s => {
       if (!s.adqChannels) s.adqChannels = JSON.parse(JSON.stringify(CHANNELS_SEED));
       Object.assign((s.adqChannels||[]).find(x => x.id === ch.id) || {}, { mdr: f.mdr, fijoTx: f.fijoTx, liquidacion: f.liquidacion, redIds: f.redIds });
+      next = s.adqChannels;
     });
+    pushChannelsToSupabase(next);
     notify(`Canal "${ch.nombre}" configurado. Los cambios aplican a todos los mundos que lo utilizan.`);
     onClose();
   };
@@ -250,10 +270,13 @@ function NuevoCanalDrawer({ open, onClose, channels }) {
 
   const save = () => {
     if (!f.nombre) { notify("El nombre del canal es obligatorio.", "error"); return; }
+    let next = channels;
     update(s => {
       if (!s.adqChannels) s.adqChannels = JSON.parse(JSON.stringify(CHANNELS_SEED));
       s.adqChannels.push({ ...f, id: uid("canal"), habilitado: true });
+      next = s.adqChannels;
     });
+    pushChannelsToSupabase(next);
     notify(`Canal "${f.nombre}" creado y habilitado.`);
     setF({ ...CANAL_BLANK, redIds: ["joi_wallet"] });
     onClose();
