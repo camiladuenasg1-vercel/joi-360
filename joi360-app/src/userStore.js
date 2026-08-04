@@ -51,15 +51,12 @@ function recordarNombre(email, nombre) {
 export function loginUser(nombre, email) {
   const nombreFinal = (nombre || "").trim() || nombreRecordado(email) || (email || "").split("@")[0];
   recordarNombre(email, nombreFinal);
+  // Antes afiliaba automáticamente a "mundo-eventos-rp" y "mundo-promos-rp"
+  // en cada login — mundo-promos-rp ni siquiera existe ya (JOI Promos salió
+  // del alcance: no hay módulo de Promociones construido) y unirse a un
+  // mundo debe ser una elección explícita, no algo que pasa solo por loguear.
   updateUser(s => {
     s.auth = { nombre: nombreFinal, email, since: Date.now() };
-    // Auto-join fixed RP worlds on first login
-    const rpIds = ["mundo-eventos-rp", "mundo-promos-rp"];
-    rpIds.forEach(id => {
-      if (!s.memberships.includes(id)) s.memberships.push(id);
-      if (s.balances[id] === undefined) s.balances[id] = 0;
-      if (s.puntos[id] === undefined) s.puntos[id] = 0;
-    });
   });
 }
 export function logoutUser() {
