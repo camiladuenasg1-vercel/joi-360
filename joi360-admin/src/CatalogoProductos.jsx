@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useStore } from "./hooks";
 import { update, uid, HARDWARE_CATALOG } from "./store";
-import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
+import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 
 // Catálogo maestro inicial — se persiste y es fuente para todos los selects
 const CATALOG_SEED = [
@@ -165,7 +165,7 @@ export function CatalogoProductos() {
                 <td className="px-5 py-3 text-center">
                   {stockEditId === item.id ? (
                     <div className="flex items-center gap-1 justify-center">
-                      <input type="number" className="w-16 text-center px-1 py-0.5 border border-outline-variant rounded text-sm" value={stockDelta} onChange={e => setStockDelta(+e.target.value)} />
+                      <NumInput className="w-16 text-center px-1 py-0.5 border border-outline-variant rounded text-sm" value={stockDelta} onChange={v => setStockDelta(v)} />
                       <button onClick={() => adjustStock(item)} className="text-ok hover:underline text-xs">✓</button>
                       <button onClick={() => { setStockEditId(null); setStockDelta(0); }} className="text-outline hover:underline text-xs">✕</button>
                     </div>
@@ -235,11 +235,11 @@ function ProductoDrawer({ open, onClose, editing, onSave }) {
         </div>
         <Field label="Descripción"><textarea className={`${inputCls} h-20 py-2`} value={f.desc} onChange={e => setF({ ...f, desc: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Precio (PEN)"><input className={inputCls} type="number" min="0" value={f.precio} onChange={e => setF({ ...f, precio: +e.target.value })} /></Field>
-          {f.tipo === "Hardware" && <Field label="Stock disponible"><input className={inputCls} type="number" min="0" value={f.stockDisponible} onChange={e => setF({ ...f, stockDisponible: +e.target.value })} /></Field>}
+          <Field label="Precio (PEN)"><NumInput className={inputCls} min="0" value={f.precio} onChange={v => setF({ ...f, precio: v })} /></Field>
+          {f.tipo === "Hardware" && <Field label="Stock disponible"><NumInput className={inputCls} min="0" value={f.stockDisponible} onChange={v => setF({ ...f, stockDisponible: v })} /></Field>}
         </div>
         {f.tipo === "Hardware" && (
-          <Field label="Stock reservado (comprometido con mundos)"><input className={inputCls} type="number" min="0" value={f.stockReservado} onChange={e => setF({ ...f, stockReservado: +e.target.value })} /></Field>
+          <Field label="Stock reservado (comprometido con mundos)"><NumInput className={inputCls} min="0" value={f.stockReservado} onChange={v => setF({ ...f, stockReservado: v })} /></Field>
         )}
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={f.activo} onChange={e => setF({ ...f, activo: e.target.checked })} className="rounded text-primary" />

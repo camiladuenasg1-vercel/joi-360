@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, MODULE_CATALOG, CORE_IDS, VERTICALS, GIROS_POR_VERTICAL, modosDeMundo } from "./store";
-import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
+import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { uploadArchivo } from "./supabase.js";
 
 const COLORS = ["#0035b9", "#006688", "#722ce3", "#0e7c43", "#b3541e"];
@@ -567,7 +567,7 @@ function Step4Servicios({ f, set }) {
                             <Toggle checked={!!val} onChange={upd} />
                           ) : (
                             <div className="relative">
-                              <input type="number" className={`${inputCls} !h-8 !text-xs`} value={val ?? ""} onChange={e => upd(e.target.value === "" ? null : +e.target.value)} />
+                              <NumInput allowNull={!!cf.nullable} className={`${inputCls} !h-8 !text-xs`} value={val} onChange={upd} />
                               {cf.type === "percent" && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-outline">%</span>}
                             </div>
                           )}
@@ -699,16 +699,16 @@ function Step5Acuerdo({ f, set, costoModulosFijo, costoModulosSetup, mundoId }) 
       <div className="grid grid-cols-2 gap-4">
         {(f.acuerdo.tipo === "transaccional" || f.acuerdo.tipo === "mixto") && (
           <Field label="Revenue share (%)" hint="% sobre volumen transaccional bruto — no sobre margen (el cálculo por margen requiere un modelo de costos que aún no existe; queda en backlog)">
-            <input className={inputCls} type="number" step="0.1" value={f.acuerdo.revShare} onChange={e => set({ acuerdo: { ...f.acuerdo, revShare: +e.target.value } })} />
+            <NumInput className={inputCls} step="0.1" value={f.acuerdo.revShare} onChange={v => set({ acuerdo: { ...f.acuerdo, revShare: v } })} />
           </Field>
         )}
         {(f.acuerdo.tipo === "revenue" || f.acuerdo.tipo === "mixto" || f.acuerdo.tipo === "fijo") && (
           <Field label={`Fijo ${f.acuerdo.tipo === "fijo" ? "(monto cerrado)" : "mensual"} (S/)`}>
-            <input className={inputCls} type="number" value={f.acuerdo.fijoMensual} onChange={e => set({ acuerdo: { ...f.acuerdo, fijoMensual: +e.target.value } })} />
+            <NumInput className={inputCls} value={f.acuerdo.fijoMensual} onChange={v => set({ acuerdo: { ...f.acuerdo, fijoMensual: v } })} />
           </Field>
         )}
         <Field label="Setup inicial (S/)" hint="One-shot al activar">
-          <input className={inputCls} type="number" value={f.acuerdo.setup} onChange={e => set({ acuerdo: { ...f.acuerdo, setup: +e.target.value } })} />
+          <NumInput className={inputCls} value={f.acuerdo.setup} onChange={v => set({ acuerdo: { ...f.acuerdo, setup: v } })} />
         </Field>
         <Field label="Vigencia">
           <select className={inputCls} value={f.acuerdo.vigencia} onChange={e => set({ acuerdo: { ...f.acuerdo, vigencia: e.target.value } })}>

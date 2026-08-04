@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useStore } from "./hooks";
 import { update, uid, HARDWARE_CATALOG, REDES_PAGO } from "./store";
-import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify } from "./ui";
+import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
 import { syncAcquiringChannels, pruneStaleAcquiringChannels } from "./supabase";
 
 // Mismo patrón que Emision.jsx/emission_channels: empuja el catálogo a
@@ -224,7 +224,7 @@ function ChannelDrawer({ ch, onClose, channels }) {
             <div className="flex justify-between items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-3">
               <div><p className="text-sm font-medium">Porcentaje sobre el monto de la transacción (%)</p><p className="text-xs text-on-surface-variant">MDR — Merchant Discount Rate. Se descuenta del monto que recibe el comercio.</p></div>
               <div className="flex items-center gap-1">
-                <input type="number" step="0.1" min="0" value={f.mdr} onChange={e => setF({ ...f, mdr: +e.target.value })} className="w-16 text-right px-2 py-1.5 text-sm border border-outline-variant rounded focus:ring-2 focus:ring-primary/20 bg-surface outline-none" />
+                <NumInput step="0.1" min="0" value={f.mdr} onChange={v => setF({ ...f, mdr: v })} className="w-16 text-right px-2 py-1.5 text-sm border border-outline-variant rounded focus:ring-2 focus:ring-primary/20 bg-surface outline-none" />
                 <span className="text-xs text-on-surface-variant font-bold">%</span>
               </div>
             </div>
@@ -232,7 +232,7 @@ function ChannelDrawer({ ch, onClose, channels }) {
               <div><p className="text-sm font-medium">Cargo fijo por transacción (PEN)</p><p className="text-xs text-on-surface-variant">Opcional. Monto fijo adicional por cada operación exitosa.</p></div>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-on-surface-variant font-bold">S/</span>
-                <input type="number" step="0.01" min="0" value={f.fijoTx} onChange={e => setF({ ...f, fijoTx: +e.target.value })} className="w-16 text-right px-2 py-1.5 text-sm border border-outline-variant rounded focus:ring-2 focus:ring-primary/20 bg-surface outline-none" />
+                <NumInput step="0.01" min="0" value={f.fijoTx} onChange={v => setF({ ...f, fijoTx: v })} className="w-16 text-right px-2 py-1.5 text-sm border border-outline-variant rounded focus:ring-2 focus:ring-primary/20 bg-surface outline-none" />
               </div>
             </div>
           </div>
@@ -301,8 +301,8 @@ function NuevoCanalDrawer({ open, onClose, channels }) {
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="MDR (%) — tasa sobre el monto"><input className={inputCls} type="number" step="0.1" value={f.mdr} onChange={e => setF({ ...f, mdr: +e.target.value })} /></Field>
-          <Field label="Cargo fijo por transacción (PEN)"><input className={inputCls} type="number" step="0.01" value={f.fijoTx} onChange={e => setF({ ...f, fijoTx: +e.target.value })} /></Field>
+          <Field label="MDR (%) — tasa sobre el monto"><NumInput className={inputCls} step="0.1" value={f.mdr} onChange={v => setF({ ...f, mdr: v })} /></Field>
+          <Field label="Cargo fijo por transacción (PEN)"><NumInput className={inputCls} step="0.01" value={f.fijoTx} onChange={v => setF({ ...f, fijoTx: v })} /></Field>
         </div>
 
         <section>

@@ -101,12 +101,12 @@ export const inputCls = "w-full h-10 px-3 bg-surface-container-lowest border bor
 // nunca puede terminar de escribir. Este componente guarda el string crudo
 // mientras el input tiene foco y solo emite el número parseado al perder
 // el foco (o Enter), igual que cualquier campo numérico nativo esperaría.
-export function NumInput({ value, onChange, className = inputCls, ...props }) {
+export function NumInput({ value, onChange, className = inputCls, allowNull = false, ...props }) {
   const [raw, setRaw] = useState(() => (value === null || value === undefined ? "" : String(value)));
   const [focused, setFocused] = useState(false);
   useEffect(() => { if (!focused) setRaw(value === null || value === undefined ? "" : String(value)); }, [value, focused]);
   const commit = (str) => {
-    if (str === "" || str === "-" || str === "." || str === "-.") { onChange(0); return; }
+    if (str === "" || str === "-" || str === "." || str === "-.") { onChange(allowNull ? null : 0); return; }
     const n = Number(str);
     if (!Number.isNaN(n)) onChange(n);
   };

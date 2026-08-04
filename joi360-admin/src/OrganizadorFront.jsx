@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, session, organizadorLogin, organizadorLogout, organizadorSession, generarPassword, refreshEventosLive } from "./store";
-import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify } from "./ui";
+import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
 import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo } from "./supabase.js";
 
 const TIPO_ENTRADA_BLANK = { id: "", nombre: "General", precio: 0, cupos: 100, descripcion: "", incluye: "" };
@@ -1151,23 +1151,23 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
                   <input className={inputCls} value={te.nombre} onChange={e => updTipo(idx, { nombre: e.target.value })} placeholder="Ej. General, VIP, Estudiante" />
                 </Field>
                 <Field label="Precio (PEN)">
-                  <input className={inputCls} type="number" min="0" value={te.precio} onChange={e => updTipo(idx, { precio: +e.target.value })} />
+                  <NumInput className={inputCls} min="0" value={te.precio} onChange={v => updTipo(idx, { precio: v })} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Cupos disponibles">
-                  <input className={inputCls} type="number" min="1" value={te.cupos} onChange={e => updTipo(idx, { cupos: +e.target.value })} />
+                  <NumInput className={inputCls} min="1" value={te.cupos} onChange={v => updTipo(idx, { cupos: v })} />
                 </Field>
                 <Field label="Ya vendidas (si editas)">
-                  <input className={inputCls} type="number" min="0" value={te.cuposVendidos || 0} onChange={e => updTipo(idx, { cuposVendidos: +e.target.value })} />
+                  <NumInput className={inputCls} min="0" value={te.cuposVendidos || 0} onChange={v => updTipo(idx, { cuposVendidos: v })} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Mínimo por compra">
-                  <input className={inputCls} type="number" min="1" value={te.minPorCompra || 1} onChange={e => updTipo(idx, { minPorCompra: Math.max(1, +e.target.value) })} />
+                  <NumInput className={inputCls} min="1" value={te.minPorCompra || 1} onChange={v => updTipo(idx, { minPorCompra: Math.max(1, v) })} />
                 </Field>
                 <Field label="Máximo por compra">
-                  <input className={inputCls} type="number" min="1" value={te.maxPorCompra || 4} onChange={e => updTipo(idx, { maxPorCompra: Math.max(1, +e.target.value) })} />
+                  <NumInput className={inputCls} min="1" value={te.maxPorCompra || 4} onChange={v => updTipo(idx, { maxPorCompra: Math.max(1, v) })} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">

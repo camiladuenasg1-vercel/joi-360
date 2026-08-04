@@ -6,7 +6,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CANALES_EMISION, PSP_PROVIDERS, CATEGORIAS_EMISION, canalesPorCategoria, update, getState } from "./store";
-import { Icon, Toggle, BtnPrimary, BtnOutline, Field, inputCls, notify, InfoTip } from "./ui";
+import { Icon, Toggle, BtnPrimary, BtnOutline, Field, inputCls, notify, InfoTip, NumInput } from "./ui";
 import { syncEmissionChannels, pruneStaleEmissionChannels } from "./supabase";
 
 // Empuja el catálogo global a `emission_channels` (Supabase) — antes esta
@@ -219,11 +219,11 @@ export function Emision() {
                 </select>
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Monto mínimo (S/)"><input className={inputCls} type="number" value={f.montoMin||0} onChange={e=>setF({...f,montoMin:+e.target.value})}/></Field>
-                <Field label="Monto máximo (S/ · 0=sin límite)"><input className={inputCls} type="number" value={f.montoMax||0} onChange={e=>setF({...f,montoMax:+e.target.value})}/></Field>
+                <Field label="Monto mínimo (S/)"><NumInput className={inputCls} value={f.montoMin||0} onChange={v=>setF({...f,montoMin:v})}/></Field>
+                <Field label="Monto máximo (S/ · 0=sin límite)"><NumInput className={inputCls} value={f.montoMax||0} onChange={v=>setF({...f,montoMax:v})}/></Field>
               </div>
               <Field label="Comisión PSP (%)" hint="Esta comisión la cobra el PSP — RedPontis la traslada al sponsor en la liquidación">
-                <input className={inputCls} type="number" step="0.01" value={f.comisionPSP||0} onChange={e=>setF({...f,comisionPSP:+e.target.value})}/>
+                <NumInput className={inputCls} step="0.01" value={f.comisionPSP||0} onChange={v=>setF({...f,comisionPSP:v})}/>
               </Field>
               <Field label="¿Quién absorbe la comisión PSP?">
                 <select className={inputCls} value={f.comisionTarget||"sponsor"} onChange={e=>setF({...f,comisionTarget:e.target.value})}>

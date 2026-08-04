@@ -5,9 +5,39 @@
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 import { useStore } from "./hooks";
 import { Icon, BtnPrimary, BtnOutline, notify } from "./ui";
 import { HARDWARE_CATALOG, hardwareModelById } from "./store";
+
+// Carga masiva de hardware/banditas: antes solo leía .csv/.txt como texto
+// plano (readAsText), así que un .xlsx real (formato binario zip, no texto)
+// se leía como basura y la carga "no funcionaba" sin ningún error visible —
+// bug real reportado por la usuaria. Ahora detecta el formato y, si es
+// Excel, lo parsea con SheetJS; el resultado son las mismas "líneas"
+// separadas por coma que el parser de cada carga ya esperaba, así que el
+// resto de la lógica (columnas, validación) no cambia.
+function leerLineasDeArchivo(file, cb) {
+  if (/\.xlsx?$/i.test(file.name)) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const wb = XLSX.read(reader.result, { type: "array" });
+      const hoja = wb.Sheets[wb.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json(hoja, { header: 1, raw: false, blankrows: false });
+      const lineas = filas
+        .map(fila => fila.map(c => String(c ?? "").trim()).join(","))
+        .filter(l => l.replace(/,/g, "").trim());
+      cb(lineas);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => {
+      cb(String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean));
+    };
+    reader.readAsText(file);
+  }
+}
 import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
 
 const ESTADO_STYLE = {
@@ -268,13 +298,11 @@ function PosDevicesTab() {
     }
   };
 
-  // Carga masiva vía archivo (Gantt #53): CSV/texto con una unidad por línea
-  // — modelo_id,serial,tipo_ingreso — parseado en el cliente, sin librería.
+  // Carga masiva vía archivo (Gantt #53): CSV/Excel con una unidad por línea
+  // — modelo_id,serial,tipo_ingreso.
   const parseBulkFile = (file) => {
     setBulkFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    leerLineasDeArchivo(file, lines => {
       const modeloIds = new Set(HARDWARE_CATALOG.map(m => m.id));
       const rows = lines.map(line => {
         const [modelo, serial, tipo] = line.split(",").map(s => (s || "").trim());
@@ -286,8 +314,7 @@ function PosDevicesTab() {
         };
       });
       setBulkRows(rows);
-    };
-    reader.readAsText(file);
+    });
   };
 
   const confirmarBulk = async () => {
@@ -533,10 +560,10 @@ function PosDevicesTab() {
           <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
             <h2 className="font-semibold text-lg mb-1">Carga masiva de unidades</h2>
             <p className="text-xs text-on-surface-variant mb-4">
-              Archivo .csv o .txt, una unidad por línea: <code className="font-mono bg-surface-container-low px-1 rounded">modelo_id,serial,tipo_ingreso</code>.
+              Archivo .csv, .txt o .xlsx, una unidad por línea/fila: <code className="font-mono bg-surface-container-low px-1 rounded">modelo_id,serial,tipo_ingreso</code>.
               Modelos válidos: {HARDWARE_CATALOG.map(m=>m.id).join(", ")}. Tipo de ingreso: gratis / alquiler / venta (default venta).
             </p>
-            <input type="file" accept=".csv,.txt" className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full"
+            <input type="file" accept=".csv,.txt,.xlsx,.xls" className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full"
               onChange={e => e.target.files?.[0] && parseBulkFile(e.target.files[0])}/>
             {bulkRows.length > 0 && (
               <div className="mt-4 max-h-64 overflow-y-auto border border-outline-variant rounded-lg">
@@ -646,22 +673,19 @@ function BanditasNfcTab() {
   );
 
   // Carga masiva: un lote se sube a la vez (nombre del lote se elige antes de
-  // adjuntar el archivo), CSV/texto con un código de bandita por línea — sin
-  // librería, mismo patrón que la carga masiva de POS de arriba.
+  // adjuntar el archivo), CSV/Excel con un código de bandita por línea —
+  // mismo patrón que la carga masiva de POS de arriba.
   const parseBulkFile = (file) => {
     if (!bulkLote.trim()) { notify("Elige el nombre del lote antes de adjuntar el archivo.", "error"); return; }
     setBulkFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    leerLineasDeArchivo(file, lines => {
       const rows = lines.map(line => {
         const primeraColumna = line.split(",")[0].trim();
         const codigo = primeraColumna.toUpperCase();
         return { codigo, lote: bulkLote.trim(), valido: !!codigo };
       });
       setBulkRows(rows);
-    };
-    reader.readAsText(file);
+    });
   };
 
   const confirmarBulk = async () => {
@@ -952,14 +976,14 @@ function BanditasNfcTab() {
           <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
             <h2 className="font-semibold text-lg mb-1">Cargar lote de banditas NFC</h2>
             <p className="text-xs text-on-surface-variant mb-4">
-              Elige el nombre del lote y adjunta un archivo .csv o .txt con un código de bandita por línea (ej. el código único impreso en cada pulsera).
+              Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con un código de bandita por línea/fila (ej. el código único impreso en cada pulsera).
             </p>
             <div className="mb-4">
               <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
               <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
                 placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
             </div>
-            <input type="file" accept=".csv,.txt" disabled={!bulkLote.trim()}
+            <input type="file" accept=".csv,.txt,.xlsx,.xls" disabled={!bulkLote.trim()}
               className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full disabled:opacity-50"
               onChange={e => e.target.files?.[0] && parseBulkFile(e.target.files[0])}/>
             {bulkRows.length > 0 && (
