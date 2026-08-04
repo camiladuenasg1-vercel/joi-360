@@ -179,7 +179,10 @@ const NAV = [
     { to: "/admin/resumen", icon: "analytics", label: "Reportes y Auditoría" },
   ]},
   { group: "Público", items: [
-    { to: "/landing", icon: "language", label: "Landing" },
+    // Deshabilitada por el momento: hasta tener una UI más estética para
+    // construir web con render config, esta pantalla queda fuera del
+    // alcance activo — no se elimina el código, solo se saca del uso real.
+    { to: "/landing", icon: "language", label: "Landing", proximamente: true },
   ]},
 ];
 
@@ -207,6 +210,15 @@ export function Shell({ children, title, contextNav }) {
               <ul className="space-y-0.5">
                 {group.items.map(item => {
                   const active = loc.pathname === item.to;
+                  if (item.proximamente) return (
+                    <li key={item.to}>
+                      <div title="Próximamente" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-outline cursor-not-allowed">
+                        <Icon n={item.icon} className="text-[20px]" />
+                        {item.label}
+                        <span className="ml-auto font-mono text-[8px] uppercase bg-surface-container px-1.5 py-0.5 rounded">Próx.</span>
+                      </div>
+                    </li>
+                  );
                   return (
                     <li key={item.to}>
                       <Link to={item.to} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${active ? "text-primary font-bold bg-primary-fixed border-r-4 border-primary" : "text-on-surface-variant hover:text-primary hover:bg-surface-container"}`}>

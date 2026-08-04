@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore, useWalletBalances, useWalletLive } from "../hooks.js";
-import { useUser, logoutUser, setActiveMundo, setPreferencia } from "../userStore.js";
+import { useUser, logoutUser, setActiveMundo } from "../userStore.js";
 import { getSyntheticUserId, fetchMisDependientes, fetchDependienteBalance } from "../supabaseClient.js";
 import BottomNav from "../components/BottomNav.jsx";
 import { showToast } from "../components/Toast.jsx";
@@ -202,30 +202,6 @@ export default function ProfilePage() {
           {/* Settings */}
           <div className="glass-card rounded-3xl overflow-hidden mb-4">
             <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest px-5 pt-4 pb-2">Configuración</p>
-
-            <div className="flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30">
-              <span className="material-symbols-outlined text-[#777587]">notifications</span>
-              <span className="text-[#464555] text-sm flex-1">Notificaciones push</span>
-              <button
-                onClick={() => { const next = !u?.preferencias?.notificacionesPush; setPreferencia("notificacionesPush", next); showToast(next ? "Notificaciones activadas" : "Notificaciones desactivadas", "info"); }}
-                className={`w-11 h-6 rounded-full relative transition-colors tap-active flex-shrink-0 ${u?.preferencias?.notificacionesPush !== false ? "bg-[#3525cd]" : "bg-[#e4e1ee]"}`}>
-                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${u?.preferencias?.notificacionesPush !== false ? "translate-x-[22px]" : "translate-x-0.5"}`} />
-              </button>
-            </div>
-
-            <button onClick={() => showToast("Próximamente — requiere integración con la biometría del dispositivo.", "info")}
-              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#777587]">fingerprint</span>
-              <span className="text-[#464555] text-sm flex-1">Biometría / Face ID</span>
-              <span className="text-[9px] font-bold uppercase text-[#c7c4d8] bg-[#f0ecf9] px-2 py-0.5 rounded-full">Próximamente</span>
-            </button>
-
-            <button onClick={() => showToast("Por ahora JOI 360 solo está disponible en Español.", "info")}
-              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#777587]">language</span>
-              <span className="text-[#464555] text-sm flex-1">Idioma: Español</span>
-              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
-            </button>
 
             <button onClick={() => setModal("privacidad")}
               className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
