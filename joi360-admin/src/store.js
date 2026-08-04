@@ -633,6 +633,13 @@ function load() {
   ["comercios", "tickets", "anunciantes", "liquidaciones", "promos", "eventos"].forEach(key => {
     if (Array.isArray(state[key])) state[key] = state[key].filter(x => !IDS_DEMO.test(x.id));
   });
+  // mundo-promos-rp (#139): eliminado de Supabase y ya no lo crea seed(),
+  // pero una pestaña vieja con este mundo cacheado en localStorage lo
+  // reintroducía a Supabase en su próxima mutación (mismo mecanismo del
+  // incidente de mundo-raimondi/mundo-jockey-plaza) — se purga acá para que
+  // eso no pueda volver a pasar sin importar qué versión del bundle tenga
+  // abierta cada pestaña.
+  if (Array.isArray(state.mundos)) state.mundos = state.mundos.filter(m => m.id !== "mundo-promos-rp");
 
   // ── auto-cura: la cuenta admin demo (admin@redpontis.com / demo) ya
   // quedó persistida en browsers viejos — se reemplaza por la real, igual
