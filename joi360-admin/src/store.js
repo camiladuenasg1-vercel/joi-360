@@ -974,8 +974,10 @@ export async function refreshMundosLive() {
         if (ec) base.eventosConfig = ec;
         // El acuerdo no tiene UI de auto-edición (a propósito, ver TabAcuerdo)
         // así que no hay nada local que este merge pueda pisar — si Supabase
-        // ya tiene uno real y esta pestaña no, se adopta.
-        if (!base.acuerdo && w.acuerdo) base.acuerdo = w.acuerdo;
+        // ya tiene uno real y esta pestaña no, se adopta. `!base.acuerdo` no
+        // alcanza: acuerdo:{} es truthy (el mismo bug de siempre) y quedaba
+        // sin sanar en sesiones viejas que ya tenían ese objeto vacío.
+        if (!base.acuerdo?.tipo && w.acuerdo?.tipo) base.acuerdo = w.acuerdo;
       }
       else st.mundos.push({
         ...patch, fixed: false, redpontis: false, type: "standard",
