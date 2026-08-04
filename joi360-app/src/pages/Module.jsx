@@ -11,7 +11,7 @@ import {
   fetchMiPerfilExtendido, guardarPerfilExtendido,
   fetchMisDependientes, crearDependienteRemote, fetchDependienteBalance,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
-  transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
+  transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
 } from "../supabaseClient.js";
@@ -127,6 +127,7 @@ function WalletTemplate({ cfg, u }) {
   ];
   const [solicitudesNfc, setSolicitudesNfc] = useState({}); // { [beneficiarioId]: request | null | undefined }
   const [solicitandoNfcId, setSolicitandoNfcId] = useState(null);
+  const [vigenciasNfc, setVigenciasNfc] = useState({}); // { [beneficiarioId]: {vence_at, estado} | null }
   useEffect(() => {
     let vivo = true;
     Promise.all(beneficiarios.map(b =>
@@ -134,6 +135,18 @@ function WalletTemplate({ cfg, u }) {
     )).then(pares => { if (vivo) setSolicitudesNfc(Object.fromEntries(pares)); });
     return () => { vivo = false; };
   }, [mundoId, dependientes?.length]);
+  // Vigencia solo tiene sentido consultarla una vez que la solicitud está
+  // "entregada" — antes de eso no hay bandita real vinculada todavía.
+  useEffect(() => {
+    let vivo = true;
+    const entregadas = beneficiarios.filter(b => solicitudesNfc[b.id]?.status === "entregada");
+    if (!entregadas.length) return;
+    Promise.all(entregadas.map(b =>
+      fetchMiBanditaVigencia(mundoId, b.id).then(r => [b.id, r]).catch(() => [b.id, null])
+    )).then(pares => { if (vivo) setVigenciasNfc(prev => ({ ...prev, ...Object.fromEntries(pares) })); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mundoId, JSON.stringify(Object.fromEntries(beneficiarios.map(b => [b.id, solicitudesNfc[b.id]?.status])))]);
   const pedirBandita = async (beneficiarioId, beneficiarioNombre) => {
     setSolicitandoNfcId(beneficiarioId);
     try {
@@ -144,6 +157,23 @@ function WalletTemplate({ cfg, u }) {
     } catch (e) {
       showToast({ titulo: "No se pudo enviar la solicitud", mensaje: "Intenta de nuevo en unos minutos." }, "error");
     } finally { setSolicitandoNfcId(null); }
+  };
+  // Pérdida/robo: la pulsera vinculada se bloquea (no queda "disponible" para
+  // que cualquiera la reactive) y se abre una solicitud nueva — mismo camino
+  // que una solicitud normal, pero con un motivo real. La resuelve el
+  // operador del mundo re-vinculando una unidad nueva.
+  const [reportandoPerdidaId, setReportandoPerdidaId] = useState(null);
+  const reportarPerdida = async (beneficiarioId, beneficiarioNombre) => {
+    setReportandoPerdidaId(beneficiarioId);
+    try {
+      await reportarBanditaPerdidaRemote(mundoId, beneficiarioId, beneficiarioNombre || null);
+      const r = await fetchMiSolicitudNfc(mundoId, beneficiarioId);
+      setSolicitudesNfc(prev => ({ ...prev, [beneficiarioId]: r }));
+      setVigenciasNfc(prev => ({ ...prev, [beneficiarioId]: null }));
+      showToast({ titulo: "Reposición solicitada", mensaje: "Avisamos al mundo — te contactarán para entregarte una pulsera nueva." }, "success");
+    } catch (e) {
+      showToast({ titulo: "No se pudo enviar el reporte", mensaje: "Intenta de nuevo en unos minutos." }, "error");
+    } finally { setReportandoPerdidaId(null); }
   };
 
   const enviarP2P = async () => {
@@ -296,35 +326,67 @@ function WalletTemplate({ cfg, u }) {
               sin que eso reemplace la suya propia. */}
           {cfg.has("bandita") && cfg.config?.usaPulseraNfc !== false && beneficiarios.map(b => {
             const solicitud = solicitudesNfc[b.id];
+            const vigencia = vigenciasNfc[b.id];
+            const venceAt = vigencia?.vence_at ? new Date(vigencia.vence_at) : null;
+            const diasParaVencer = venceAt ? Math.ceil((venceAt - new Date()) / 86400000) : null;
+            const vencida = diasParaVencer != null && diasParaVencer <= 0;
+            const porVencer = diasParaVencer != null && diasParaVencer > 0 && diasParaVencer <= 30;
+            const nombreParaAcciones = b.esTitular ? (u?.auth?.nombre || null) : b.nombre;
             return (
-              <div key={b.id} className="rounded-2xl p-3.5 border border-[#e4e1ee] flex items-center gap-3"
+              <div key={b.id} className="rounded-2xl p-3.5 border border-[#e4e1ee]"
                 style={{background:"linear-gradient(135deg,rgba(237,231,246,0.4),white)"}}>
-                <div className="w-9 h-9 rounded-xl bg-[#ede7f6] flex items-center justify-center flex-shrink-0">
-                  <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? cfg.mundo.nombre : b.nombre}</p>
-                  {solicitud === undefined ? (
-                    <p className="text-[10px] text-[#777587]">Cargando…</p>
-                  ) : solicitud?.status === "entregada" ? (
-                    <p className="text-[10px] text-green-700 font-bold">Vinculada</p>
-                  ) : solicitud?.status === "pendiente" ? (
-                    <p className="text-[10px] text-orange-600 font-bold">Solicitud enviada · pendiente de entrega</p>
-                  ) : solicitud?.status === "rechazada" ? (
-                    <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
-                  ) : (
-                    <p className="text-[10px] text-[#777587]">Aún no vinculada</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#ede7f6] flex items-center justify-center flex-shrink-0">
+                    <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? cfg.mundo.nombre : b.nombre}</p>
+                    {solicitud === undefined ? (
+                      <p className="text-[10px] text-[#777587]">Cargando…</p>
+                    ) : solicitud?.status === "entregada" ? (
+                      vencida ? (
+                        <p className="text-[10px] text-red-600 font-bold">Vencida el {venceAt.toLocaleDateString("es-PE")}</p>
+                      ) : venceAt ? (
+                        <p className={`text-[10px] font-bold ${porVencer ? "text-orange-600" : "text-green-700"}`}>
+                          Vinculada · vence {venceAt.toLocaleDateString("es-PE")}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-green-700 font-bold">Vinculada · sin vencimiento</p>
+                      )
+                    ) : solicitud?.status === "pendiente" ? (
+                      <p className="text-[10px] text-orange-600 font-bold">
+                        {solicitud?.motivo === "perdida_robo" ? "Reposición en camino · pendiente de entrega" : "Solicitud enviada · pendiente de entrega"}
+                      </p>
+                    ) : solicitud?.status === "rechazada" ? (
+                      <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
+                    ) : (
+                      <p className="text-[10px] text-[#777587]">Aún no vinculada</p>
+                    )}
+                  </div>
+                  {(solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
+                    <button onClick={() => pedirBandita(b.id, nombreParaAcciones)} disabled={solicitandoNfcId === b.id}
+                      className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
+                      {solicitandoNfcId === b.id ? "Enviando…" : (solicitud?.status === "entregada" ? "Renovar" : "Solicitar")}
+                    </button>
                   )}
                 </div>
-                {(solicitud === null || solicitud?.status === "rechazada") && (
-                  <button onClick={() => pedirBandita(b.id, b.esTitular ? (u?.auth?.nombre || null) : b.nombre)} disabled={solicitandoNfcId === b.id}
-                    className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
-                    {solicitandoNfcId === b.id ? "Enviando…" : "Solicitar"}
+                {solicitud?.status === "entregada" && !vencida && (
+                  <button onClick={() => reportarPerdida(b.id, nombreParaAcciones)} disabled={reportandoPerdidaId === b.id}
+                    className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 w-full flex items-center gap-1.5 text-[11px] font-semibold text-red-600 disabled:opacity-50">
+                    <Icon name="report" size="text-sm" color="text-red-600" />
+                    {reportandoPerdidaId === b.id ? "Reportando…" : "Reportar pérdida o robo"}
                   </button>
                 )}
               </div>
             );
           })}
+          {cfg.has("bandita") && cfg.config?.usaPulseraNfc !== false && (
+            <button onClick={() => nav("/module/control?agregar=1")}
+              className="w-full rounded-2xl p-3.5 border border-dashed border-[#c7c4d8] flex items-center justify-center gap-2 text-[#3525cd] text-sm font-bold tap-active">
+              <Icon name="person_add" size="text-lg" color="text-[#3525cd]" />
+              Agregar familiar para pedirle su bandita
+            </button>
+          )}
         </div>
       </SectionCard>
 
@@ -664,8 +726,13 @@ function RestriccionesTemplate({ cfg, u }) {
   const perfilesSuscripcion = walletCfg?.config?.perfilesSuscripcion;
   const montoSuscripcion = walletCfg?.config?.montoSuscripcion;
 
+  // "Agregar familiar para pedirle su bandita" (Wallet) navega acá con
+  // ?agregar=1 — quien vino a pedir una bandita para un dependiente que
+  // todavía no existe entra directo al flujo de creación, sin tener que
+  // encontrar por su cuenta el módulo de Restricciones.
+  const location = useLocation();
   const [dependientes, setDependientes] = useState(null); // [{...dependent, balance, gastadoHoy}]
-  const [addingChild, setAddingChild] = useState(false);
+  const [addingChild, setAddingChild] = useState(() => new URLSearchParams(location.search).get("agregar") === "1");
   const [pasoSuscripcion, setPasoSuscripcion] = useState(false); // paso 2: confirmar cobro antes de crear
   const [nuevo, setNuevo] = useState({ nombre: "", dni: "", alergias: [] });
   const [creando, setCreando] = useState(false);

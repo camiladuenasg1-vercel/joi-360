@@ -1152,7 +1152,7 @@ export async function fetchNfcBandsRemote(worldId = null) {
 }
 export async function registerNfcBandsBulkRemote(rows) {
   if (!rows?.length) return [];
-  const body = rows.map(r => ({ codigo: r.codigo, lote: r.lote, estado: "disponible" }));
+  const body = rows.map(r => ({ codigo: r.codigo, lote: r.lote, estado: "disponible", precio_unitario: r.precio ?? null }));
   return rest("nfc_bands?on_conflict=codigo", {
     method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify(body),
@@ -1175,7 +1175,7 @@ export async function liberarNfcBandRemote(bandId) {
 // Esto asigna N unidades de UN lote específico — no siempre se manda el
 // lote completo a un mundo.
 export async function asignarLoteParcialRemote(lote, worldId, cantidad) {
-  const disponibles = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&estado=eq.disponible&select=id&limit=${cantidad}`);
+  const disponibles = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&estado=eq.disponible&select=id,precio_unitario&order=created_at.asc&limit=${cantidad}`);
   if (!disponibles || disponibles.length < cantidad) {
     throw new Error(`Solo hay ${disponibles?.length || 0} banditas disponibles en el lote "${lote}" — no alcanza para asignar ${cantidad}.`);
   }
@@ -1184,13 +1184,39 @@ export async function asignarLoteParcialRemote(lote, worldId, cantidad) {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ estado: "asignada", world_id: worldId }),
   });
-  return disponibles.length;
+  const costoTotal = disponibles.reduce((a, b) => a + (Number(b.precio_unitario) || 0), 0);
+  return { cantidad: disponibles.length, costoTotal };
 }
 export async function renombrarLoteNfcRemote(loteViejo, loteNuevo) {
   await rest(`nfc_bands?lote=eq.${encodeURIComponent(loteViejo)}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ lote: loteNuevo }),
   });
+}
+// Borrar un lote entero solo tiene sentido para deshacer una carga mala
+// (códigos mal tipeados, archivo equivocado) — si alguna bandita YA salió
+// del almacén (world_id asignado, sea "asignada" o "activa" en manos de un
+// usuario real) eso es historial real, no un error de carga, y no se borra.
+export async function eliminarLoteNfcRemote(lote) {
+  const enUso = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&world_id=not.is.null&select=id`);
+  if (enUso?.length) {
+    throw new Error(`No se puede eliminar: ${enUso.length} bandita(s) del lote ya están asignadas a un mundo o activas. Revierte esas asignaciones primero.`);
+  }
+  await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+// Deshace asignaciones a mundo que todavía NO llegaron a manos de un usuario
+// real (linked_user_id vacío) — las regresa al almacén para poder corregir o
+// eliminar el lote. Una bandita ya "activa" (vinculada a un usuario) nunca se
+// toca acá.
+export async function revertirAsignacionesLoteRemote(lote) {
+  const asignadas = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&estado=eq.asignada&linked_user_id=is.null&select=id`);
+  if (!asignadas?.length) return 0;
+  const ids = asignadas.map(b => `"${b.id}"`).join(",");
+  await rest(`nfc_bands?id=in.(${ids})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "disponible", world_id: null }),
+  });
+  return asignadas.length;
 }
 
 // ── Vinculación física de una bandita a un usuario (Task #118) ──────────────

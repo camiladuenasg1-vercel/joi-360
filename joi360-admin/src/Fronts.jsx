@@ -145,6 +145,7 @@ function SolicitudesNfcWidget({ worldId }) {
                 <p className="text-xs font-medium">
                   {r.nombre || (r.esDependiente ? "Dependiente" : "Titular")}
                   {r.esDependiente && <span className="ml-1.5 font-mono text-[9px] uppercase text-tertiary">dependiente</span>}
+                  {r.motivo === "perdida_robo" && <span className="ml-1.5 font-mono text-[9px] uppercase px-1.5 py-0.5 rounded border font-bold bg-amber-100 text-amber-700 border-amber-200">reposición</span>}
                 </p>
                 <p className="font-mono text-[10px] text-outline">{r.user_id.slice(0, 12)}… · {new Date(r.created_at).toLocaleDateString("es-PE")}</p>
               </div>

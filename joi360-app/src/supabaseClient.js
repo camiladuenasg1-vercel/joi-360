@@ -573,6 +573,32 @@ export async function fetchMiSolicitudNfc(worldId, userId) {
   const rows = await rest(`nfc_requests?world_id=eq.${worldId}&user_id=eq.${userId}&select=*&order=created_at.desc&limit=1`);
   return rows?.[0] || null;
 }
+// Vigencia real de la bandita ya vinculada — nfc_requests no la tiene (solo
+// dice "entregada"), vive en nfc_bands.vence_at, calculada desde la
+// ACTIVACIÓN real (vincularNfcBandRemote), no desde que se cargó al almacén.
+export async function fetchMiBanditaVigencia(worldId, userId) {
+  const rows = await rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=eq.${userId}&select=codigo,estado,activada_at,vence_at&order=activada_at.desc&limit=1`);
+  return rows?.[0] || null;
+}
+// Pérdida/robo: bloquea la bandita vinculada (nadie puede reactivarla — el
+// operador exige estado "asignada" para vincular) y abre una solicitud de
+// reposición nueva, con motivo real para que RedPontis y el operador de
+// mundo la distingan de un alta normal. La resuelve el mismo flujo de
+// siempre: el operador vincula una unidad nueva, lo que ya cierra la
+// solicitud pendiente automáticamente.
+export async function reportarBanditaPerdidaRemote(worldId, userId, nombre = null) {
+  const banda = await fetchMiBanditaVigencia(worldId, userId);
+  if (banda?.codigo) {
+    await rest(`nfc_bands?codigo=eq.${encodeURIComponent(banda.codigo)}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ estado: "bloqueada" }),
+    }).catch(() => {});
+  }
+  await rest("nfc_requests", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, user_id: userId, status: "pendiente", nombre, motivo: "perdida_robo" }),
+  });
+}
 
 // ── Catálogos + configuración por mundo (Fase 1+2, solo lectura) ──────────
 export async function fetchEmissionChannels() {

@@ -38,7 +38,9 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, asignarLoteParcialRemote, renombrarLoteNfcRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, asignarLoteParcialRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
+
+const fmtSoles = n => (n === null || n === undefined || n === "" || isNaN(n)) ? null : `S/ ${Number(n).toFixed(2)}`;
 
 const ESTADO_STYLE = {
   disponible:    "bg-green-100  text-green-700  border-green-200",
@@ -600,9 +602,10 @@ function PosDevicesTab() {
 
 /* ── Banditas NFC — stock real por lote, carga masiva vía CSV ────────────── */
 const ESTADO_STYLE_NFC = {
-  disponible: "bg-green-100 text-green-700 border-green-200",
-  asignada:   "bg-blue-100  text-blue-700  border-blue-200",
-  bloqueada:  "bg-red-100   text-red-700   border-red-200",
+  disponible: "bg-green-100  text-green-700  border-green-200",
+  asignada:   "bg-blue-100   text-blue-700   border-blue-200",
+  activa:     "bg-purple-100 text-purple-700 border-purple-200",
+  bloqueada:  "bg-red-100    text-red-700    border-red-200",
 };
 
 function BanditasNfcTab() {
@@ -621,6 +624,7 @@ function BanditasNfcTab() {
   const [assignWorldId, setAssignWorldId] = useState("");
   const [showBulk, setShowBulk] = useState(false);
   const [bulkLote, setBulkLote] = useState("");
+  const [bulkPrecio, setBulkPrecio] = useState("");
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -630,9 +634,13 @@ function BanditasNfcTab() {
   const [asignandoLoteBusy, setAsignandoLoteBusy] = useState(false);
   const [renombrandoLote, setRenombrandoLote] = useState(null); // nombre viejo del lote en edición
   const [nombreLoteNuevo, setNombreLoteNuevo] = useState("");
+  const [eliminandoLote, setEliminandoLote] = useState(null); // nombre del lote con confirmación de borrado abierta
+  const [eliminandoLoteBusy, setEliminandoLoteBusy] = useState(false);
+  const [eliminarLoteError, setEliminarLoteError] = useState(null); // { lote, mensaje } cuando el borrado se bloqueó
+  const [revirtiendoLoteBusy, setRevirtiendoLoteBusy] = useState(false);
 
   const load = () => fetchNfcBandsRemote()
-    .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id }))))
+    .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id, precio_unitario: r.precio_unitario }))))
     .catch(() => setBandas([]));
   const loadSolicitudes = () => fetchSolicitudesNfcTodas().then(setSolicitudes).catch(() => setSolicitudes([]));
   const loadSolicitudesLote = () => fetchSolicitudesLoteNfcTodas().then(setSolicitudesLote).catch(() => setSolicitudesLote([]));
@@ -679,16 +687,32 @@ function BanditasNfcTab() {
   );
 
   // Carga masiva: un lote se sube a la vez (nombre del lote se elige antes de
-  // adjuntar el archivo), CSV/Excel con un código de bandita por línea —
-  // mismo patrón que la carga masiva de POS de arriba.
+  // adjuntar el archivo), CSV/Excel con un código de bandita por fila — mismo
+  // patrón que la carga masiva de POS de arriba. Si el archivo trae fila de
+  // encabezado (columna "código"/"code"), se usa esa columna en vez de asumir
+  // siempre la primera; así funciona con exports reales que traen otras
+  // columnas (nombre, fecha de fabricación, etc.) en cualquier orden. Si
+  // además trae una columna de precio, ese precio por-fila gana sobre el
+  // precio único del lote que se puede tipear abajo.
   const parseBulkFile = (file) => {
     if (!bulkLote.trim()) { notify("Elige el nombre del lote antes de adjuntar el archivo.", "error"); return; }
     setBulkFileName(file.name);
     leerLineasDeArchivo(file, lines => {
-      const rows = lines.map(line => {
-        const primeraColumna = line.split(",")[0].trim();
-        const codigo = primeraColumna.toUpperCase();
-        return { codigo, lote: bulkLote.trim(), valido: !!codigo };
+      if (!lines.length) { setBulkRows([]); return; }
+      const primeraFila = lines[0].split(",").map(c => c.trim().toLowerCase());
+      const esEncabezado = primeraFila.some(c => ["codigo", "código", "code", "cod"].includes(c));
+      let idxCodigo = 0, idxPrecio = -1, filas = lines;
+      if (esEncabezado) {
+        idxCodigo = primeraFila.findIndex(c => ["codigo", "código", "code", "cod"].includes(c));
+        idxPrecio = primeraFila.findIndex(c => ["precio", "precio_unitario", "precio unitario"].includes(c));
+        filas = lines.slice(1);
+      }
+      const precioLote = bulkPrecio.trim() ? parseFloat(bulkPrecio) : null;
+      const rows = filas.map(line => {
+        const cols = line.split(",").map(s => s.trim());
+        const codigo = (cols[idxCodigo] || "").toUpperCase();
+        const precioFila = idxPrecio >= 0 ? parseFloat(cols[idxPrecio]) : NaN;
+        return { codigo, lote: bulkLote.trim(), precio: !isNaN(precioFila) ? precioFila : precioLote, valido: !!codigo };
       });
       setBulkRows(rows);
     });
@@ -701,7 +725,7 @@ function BanditasNfcTab() {
     try {
       await registerNfcBandsBulkRemote(validas);
       notify(`${validas.length} banditas del lote "${bulkLote}" registradas en stock.`);
-      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");
+      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(""); setBulkPrecio("");
       load();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
@@ -737,9 +761,9 @@ function BanditasNfcTab() {
     if (!asignarLoteWorldId || !asignarLoteCantidad) return;
     setAsignandoLoteBusy(true);
     try {
-      const n = await asignarLoteParcialRemote(lote, asignarLoteWorldId, asignarLoteCantidad);
+      const { cantidad: n, costoTotal } = await asignarLoteParcialRemote(lote, asignarLoteWorldId, asignarLoteCantidad);
       const mundo = mundos.find(m => m.id === asignarLoteWorldId);
-      notify(`${n} banditas del lote "${lote}" asignadas a ${mundo?.nombre || "mundo"}.`);
+      notify(`${n} banditas del lote "${lote}" asignadas a ${mundo?.nombre || "mundo"}.${costoTotal > 0 ? ` Costo: ${fmtSoles(costoTotal)}.` : ""}`);
       setAsignandoLote(null); setAsignarLoteWorldId(""); setAsignarLoteCantidad(1);
       load();
     } catch (e) {
@@ -763,13 +787,50 @@ function BanditasNfcTab() {
     }
   };
 
+  // Borrar un lote es para deshacer una carga mala. Si tiene banditas ya
+  // asignadas/activas, el backend lo rechaza — acá se ofrece "revertir" como
+  // salida (deja las asignadas-sin-usuario de vuelta en almacén) en vez de
+  // dejar a la usuaria sin ninguna acción posible.
+  const confirmarEliminarLote = async (lote) => {
+    setEliminandoLoteBusy(true);
+    setEliminarLoteError(null);
+    try {
+      await eliminarLoteNfcRemote(lote);
+      notify(`Lote "${lote}" eliminado.`);
+      setEliminandoLote(null);
+      if (filterLote === lote) setFilterLote("all");
+      load();
+    } catch (e) {
+      setEliminarLoteError({ lote, mensaje: e.message });
+    } finally { setEliminandoLoteBusy(false); }
+  };
+
+  const revertirYReintentar = async (lote) => {
+    setRevirtiendoLoteBusy(true);
+    try {
+      const n = await revertirAsignacionesLoteRemote(lote);
+      if (n > 0) notify(`${n} bandita(s) revertidas a almacén.`);
+      load();
+      setEliminarLoteError(null);
+    } catch (e) {
+      notify(e.message, "error");
+    } finally { setRevirtiendoLoteBusy(false); }
+  };
+
   const lotes = [...new Set((bandas || []).map(b => b.lote))];
-  const byLote = lotes.map(lote => ({
-    lote,
-    total: (bandas || []).filter(b => b.lote === lote).length,
-    disponible: (bandas || []).filter(b => b.lote === lote && b.estado === "disponible").length,
-    asignada: (bandas || []).filter(b => b.lote === lote && b.estado === "asignada").length,
-  }));
+  const byLote = lotes.map(lote => {
+    const bandasLote = (bandas || []).filter(b => b.lote === lote);
+    const precios = [...new Set(bandasLote.map(b => b.precio_unitario).filter(p => p !== null && p !== undefined))];
+    return {
+      lote,
+      total: bandasLote.length,
+      disponible: bandasLote.filter(b => b.estado === "disponible").length,
+      asignada: bandasLote.filter(b => b.estado === "asignada").length,
+      activa: bandasLote.filter(b => b.estado === "activa").length,
+      enUso: bandasLote.filter(b => b.world_id).length,
+      precioLabel: precios.length === 0 ? null : precios.length === 1 ? fmtSoles(precios[0]) : "precios mixtos",
+    };
+  });
 
   return (
     <div>
@@ -885,7 +946,10 @@ function BanditasNfcTab() {
                           {d.pendientes.map(r => (
                             <div key={r.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2 border border-outline-variant/60">
                               <div>
-                                <p className="text-xs font-medium">{r.nombre || <span className="font-mono text-outline">{r.user_id.slice(0, 20)}…</span>}</p>
+                                <p className="text-xs font-medium flex items-center gap-1.5">
+                                  {r.nombre || <span className="font-mono text-outline">{r.user_id.slice(0, 20)}…</span>}
+                                  {r.motivo === "perdida_robo" && <span className="font-mono text-[8px] uppercase px-1.5 py-0.5 rounded border font-bold bg-amber-100 text-amber-700 border-amber-200">Reposición</span>}
+                                </p>
                                 <p className="font-mono text-[10px] text-outline">{new Date(r.created_at).toLocaleDateString("es-PE")}</p>
                               </div>
                               <div className="flex gap-2">
@@ -928,9 +992,9 @@ function BanditasNfcTab() {
                   <span className="text-green-700 font-mono">{l.disponible} disp.</span>
                   <span className="text-blue-700 font-mono">{l.asignada} asig.</span>
                 </div>
-                <p className="font-mono text-[9px] text-outline mt-1">{l.total} total</p>
+                <p className="font-mono text-[9px] text-outline mt-1">{l.total} total{l.precioLabel ? ` · ${l.precioLabel} c/u` : ""}</p>
               </div>
-              <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/60">
+              <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/60 flex-wrap">
                 <button
                   onClick={(e)=>{ e.stopPropagation(); setAsignandoLote(asignandoLote===l.lote?null:l.lote); setAsignarLoteWorldId(""); setAsignarLoteCantidad(Math.min(1, l.disponible)); }}
                   disabled={l.disponible===0}
@@ -938,6 +1002,9 @@ function BanditasNfcTab() {
                 <button
                   onClick={(e)=>{ e.stopPropagation(); setRenombrandoLote(renombrandoLote===l.lote?null:l.lote); setNombreLoteNuevo(l.lote); }}
                   className="text-[10px] text-on-surface-variant hover:text-primary font-medium">Renombrar</button>
+                <button
+                  onClick={(e)=>{ e.stopPropagation(); setEliminandoLote(eliminandoLote===l.lote?null:l.lote); setEliminarLoteError(null); }}
+                  className="text-[10px] text-error hover:underline font-medium">Eliminar</button>
               </div>
             </div>
           ))}
@@ -953,6 +1020,42 @@ function BanditasNfcTab() {
             onKeyDown={e=>e.key==="Enter" && confirmarRenombrarLote(renombrandoLote)} autoFocus/>
           <BtnPrimary className="!py-1.5 !px-3 !text-xs" onClick={()=>confirmarRenombrarLote(renombrandoLote)}>Guardar</BtnPrimary>
           <button onClick={()=>setRenombrandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+        </div>
+      )}
+
+      {/* Eliminar lote — solo posible si ninguna bandita salió del almacén.
+          Si el backend lo bloquea, se ofrece revertir las asignaciones que
+          todavía no llegaron a un usuario real y reintentar. */}
+      {eliminandoLote && (
+        <div className="mb-8 p-4 bg-error-container/10 border border-error/30 rounded-xl">
+          {!eliminarLoteError ? (
+            <>
+              <p className="text-xs font-bold mb-1">¿Eliminar el lote "{eliminandoLote}"?</p>
+              <p className="text-xs text-on-surface-variant mb-3">Borra sus {byLote.find(l=>l.lote===eliminandoLote)?.total || 0} código(s) del stock. No se puede deshacer.</p>
+              <div className="flex items-center gap-2">
+                <BtnPrimary className="!py-1.5 !px-3 !text-xs !bg-error" disabled={eliminandoLoteBusy} onClick={()=>confirmarEliminarLote(eliminandoLote)}>
+                  {eliminandoLoteBusy ? "Eliminando…" : "Sí, eliminar"}
+                </BtnPrimary>
+                <button onClick={()=>setEliminandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-bold text-error mb-1">No se pudo eliminar</p>
+              <p className="text-xs text-on-surface-variant mb-3">{eliminarLoteError.mensaje}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {byLote.find(l=>l.lote===eliminandoLote)?.activa > 0 && (
+                  <span className="text-[10px] font-mono text-purple-700 bg-purple-100 border border-purple-200 rounded px-2 py-1">
+                    {byLote.find(l=>l.lote===eliminandoLote)?.activa} activa(s) en manos de un usuario — esas nunca se borran ni revierten.
+                  </span>
+                )}
+                <BtnOutline className="!py-1.5 !px-3 !text-xs" disabled={revirtiendoLoteBusy} onClick={()=>revertirYReintentar(eliminandoLote)}>
+                  {revirtiendoLoteBusy ? "Revirtiendo…" : "Revertir asignaciones sin usuario y reintentar"}
+                </BtnOutline>
+                <button onClick={()=>{ setEliminandoLote(null); setEliminarLoteError(null); }} className="text-xs text-on-surface-variant">Cerrar</button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -973,6 +1076,18 @@ function BanditasNfcTab() {
               value={asignarLoteCantidad} onChange={v=>setAsignarLoteCantidad(Math.max(1, Math.min(v, byLote.find(l=>l.lote===asignandoLote)?.disponible || 1)))}/>
             <button onClick={()=>{ const d=byLote.find(l=>l.lote===asignandoLote)?.disponible||0; setAsignarLoteCantidad(d); }}
               className="text-[10px] text-primary hover:underline">Todo el lote</button>
+            {(() => {
+              const bl = byLote.find(l=>l.lote===asignandoLote);
+              const precioUnico = bl && bl.precioLabel && bl.precioLabel !== "precios mixtos"
+                ? parseFloat(bl.precioLabel.replace("S/ ", "")) : null;
+              return precioUnico ? (
+                <span className="text-[10px] font-mono text-primary bg-primary-fixed/20 rounded px-2 py-1">
+                  Costo: {fmtSoles(precioUnico * asignarLoteCantidad)}
+                </span>
+              ) : bl?.precioLabel === "precios mixtos" ? (
+                <span className="text-[10px] font-mono text-on-surface-variant">costo exacto al confirmar (precios mixtos)</span>
+              ) : null;
+            })()}
             <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!asignarLoteWorldId || asignandoLoteBusy} onClick={()=>confirmarAsignarLote(asignandoLote)}>
               {asignandoLoteBusy ? "Asignando…" : "Confirmar asignación"}
             </BtnPrimary>
@@ -999,6 +1114,7 @@ function BanditasNfcTab() {
                 <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
                   <th className="px-4 py-3 text-left font-medium">Código</th>
                   <th className="px-4 py-3 text-left font-medium">Lote</th>
+                  <th className="px-4 py-3 text-left font-medium">Precio</th>
                   <th className="px-4 py-3 text-left font-medium">Estado</th>
                   <th className="px-4 py-3 text-left font-medium">Mundo asignado</th>
                   <th className="px-4 py-3 text-right font-medium">Acciones</th>
@@ -1006,7 +1122,7 @@ function BanditasNfcTab() {
               </thead>
               <tbody className="divide-y divide-outline-variant/60">
                 {filtered.length === 0 && (
-                  <tr><td colSpan="5" className="p-10 text-center text-on-surface-variant">Sin banditas con estos filtros.</td></tr>
+                  <tr><td colSpan="6" className="p-10 text-center text-on-surface-variant">Sin banditas con estos filtros.</td></tr>
                 )}
                 {filtered.map(b => {
                   const mundo = mundos.find(m => m.id === b.world_id);
@@ -1016,6 +1132,7 @@ function BanditasNfcTab() {
                       <tr className="hover:bg-surface-container-low transition-colors">
                         <td className="px-4 py-3 font-mono text-xs font-bold">{b.codigo}</td>
                         <td className="px-4 py-3 text-xs">{b.lote}</td>
+                        <td className="px-4 py-3 text-xs font-mono">{fmtSoles(b.precio_unitario) || <span className="text-outline">—</span>}</td>
                         <td className="px-4 py-3">
                           <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${ESTADO_STYLE_NFC[b.estado]||""}`}>{b.estado}</span>
                         </td>
@@ -1032,7 +1149,7 @@ function BanditasNfcTab() {
                       </tr>
                       {assigning && (
                         <tr className="bg-primary-fixed/10">
-                          <td colSpan="5" className="px-4 py-3">
+                          <td colSpan="6" className="px-4 py-3">
                             <div className="flex items-center gap-2 flex-wrap">
                               <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
                                 value={assignWorldId} onChange={e=>setAssignWorldId(e.target.value)}>
@@ -1062,12 +1179,20 @@ function BanditasNfcTab() {
           <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
             <h2 className="font-semibold text-lg mb-1">Cargar lote de banditas NFC</h2>
             <p className="text-xs text-on-surface-variant mb-4">
-              Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con un código de bandita por línea/fila (ej. el código único impreso en cada pulsera).
+              Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con un código de bandita por línea/fila (el código único impreso en cada pulsera).
+              Si el archivo trae fila de encabezado, reconoce la columna "código" (y "precio", si la trae) sin importar el orden; si no trae encabezado, usa la primera columna.
             </p>
-            <div className="mb-4">
-              <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
-              <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
-                placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
+                <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                  placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
+              </div>
+              <div>
+                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Precio unitario (S/, opcional)</label>
+                <input type="number" step="0.01" min="0" className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                  placeholder="Ej: 12.50" value={bulkPrecio} onChange={e=>setBulkPrecio(e.target.value)}/>
+              </div>
             </div>
             <input type="file" accept=".csv,.txt,.xlsx,.xls" disabled={!bulkLote.trim()}
               className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full disabled:opacity-50"
@@ -1076,13 +1201,14 @@ function BanditasNfcTab() {
               <div className="mt-4 max-h-64 overflow-y-auto border border-outline-variant rounded-lg">
                 <table className="w-full text-xs">
                   <thead><tr className="bg-surface-container-low font-mono text-[9px] uppercase text-outline">
-                    <th className="px-3 py-2 text-left">Código</th><th className="px-3 py-2 text-left">Lote</th><th className="px-3 py-2 text-left">Válido</th>
+                    <th className="px-3 py-2 text-left">Código</th><th className="px-3 py-2 text-left">Lote</th><th className="px-3 py-2 text-left">Precio</th><th className="px-3 py-2 text-left">Válido</th>
                   </tr></thead>
                   <tbody className="divide-y divide-outline-variant/60">
                     {bulkRows.map((r, i) => (
                       <tr key={i} className={r.valido ? "" : "bg-error-container/20"}>
                         <td className="px-3 py-1.5 font-mono">{r.codigo || "—"}</td>
                         <td className="px-3 py-1.5">{r.lote}</td>
+                        <td className="px-3 py-1.5 font-mono">{fmtSoles(r.precio) || "—"}</td>
                         <td className="px-3 py-1.5">{r.valido ? <Icon n="check_circle" className="text-ok text-[14px]"/> : <Icon n="error" className="text-error text-[14px]"/>}</td>
                       </tr>
                     ))}
@@ -1092,7 +1218,7 @@ function BanditasNfcTab() {
               </div>
             )}
             <div className="flex gap-3 mt-6">
-              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");}}>Cancelar</BtnOutline>
+              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(""); setBulkPrecio("");}}>Cancelar</BtnOutline>
               <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
                 <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} banditas`}
               </BtnPrimary>
