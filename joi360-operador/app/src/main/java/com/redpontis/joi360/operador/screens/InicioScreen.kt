@@ -9,8 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,7 @@ import com.redpontis.joi360.operador.ui.*
  * activó para este mundo. Si el mundo no tiene eventos, aquí no hay botón de
  * entradas — sin recompilar ni tocar el terminal.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InicioScreen(
     config: RenderConfig,
@@ -36,14 +39,22 @@ fun InicioScreen(
     onVincularBandita: () -> Unit,
     onCuadre: () -> Unit,
     onCerrarSesion: () -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     val c = config.capabilities
 
+    // Jalar hacia abajo para actualizar: si RedPontis activa o quita un
+    // módulo mientras el operador ya tiene la caja abierta, esto trae el
+    // RenderConfig de nuevo sin tener que cerrar sesión y volver a entrar.
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize().background(Joi.Bg).safeDrawingPadding(),
+    ) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Joi.Bg)
-            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(top = 16.dp, bottom = 24.dp),
@@ -166,5 +177,6 @@ fun InicioScreen(
                 NoticeTone.Info,
             )
         }
+    }
     }
 }

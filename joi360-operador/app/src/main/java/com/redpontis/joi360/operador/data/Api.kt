@@ -95,15 +95,8 @@ object Api {
         val cfg = request("GET", "/api/pos/v1/shops/${enc(shopId)}?pin=${enc(clave)}")
             .getOrElse { return Result.failure(it) }
 
-        val shop = cfg.optJSONObject("shop")
-        val world = cfg.optJSONObject("world")
-        val caps = cfg.optJSONObject("capabilities")
-        val restrictions = cfg.optJSONObject("restrictions")
-        val disp = cfg.optJSONObject("disponibilidad")
-
-        if (shop == null || world == null) {
-            return Result.failure(ApiException("Ese código de comercio no existe.", 404))
-        }
+        val render = renderConfigDeJson(cfg)
+            ?: return Result.failure(ApiException("Ese código de comercio no existe.", 404))
 
         // Abre (o reutiliza) el turno real de este comercio y se queda con su
         // id: toda venta del turno se etiqueta con él para que el cuadre de
@@ -117,27 +110,51 @@ object Api {
                 .put("deviceSerial", deviceSerial ?: JSONObject.NULL),
         ).getOrNull()?.optJSONObject("turno")?.optString("id")?.takeIf { it.isNotBlank() }
 
-        return Result.success(
-            RenderConfig(
-                shopId = shop.optString("id"),
-                shopName = shop.optString("name"),
-                worldId = world.optString("id"),
-                worldName = world.optString("name").ifBlank { "Mundo" },
-                capabilities = Capabilities(
-                    wallet = caps?.optBoolean("wallet") ?: false,
-                    chargeWallet = caps?.optBoolean("chargeWallet") ?: false,
-                    banditaNfc = caps?.optBoolean("banditaNfc") ?: false,
-                    restrictions = caps?.optBoolean("restrictions") ?: false,
-                    accesos = caps?.optBoolean("accesos") ?: false,
-                    eventos = caps?.optBoolean("eventos") ?: false,
-                    menu = caps?.optBoolean("menu") ?: false,
-                ),
-                worldDailyLimit = restrictions?.optDouble("worldDailyLimit")
-                    ?.takeIf { !it.isNaN() },
-                eventosValidables = disp?.optInt("eventosValidables") ?: 0,
-                eventosMotivo = disp?.optString("eventosMotivo")
-                    ?.takeIf { it.isNotBlank() && it != "null" },
-            ) to turnoId
+        return Result.success(render to turnoId)
+    }
+
+    /**
+     * Vuelve a pedir el RenderConfig del mismo comercio sin reabrir turno ni
+     * pedir la clave otra vez — el pin es opcional en este endpoint (el
+     * backend solo lo exige para abrir caja). Sirve para el "jalar hacia
+     * abajo para actualizar" de Inicio: si RedPontis activa o quita un
+     * módulo mientras el operador ya tiene la caja abierta, no hace falta
+     * cerrar sesión para verlo reflejado.
+     */
+    suspend fun refrescarConfig(shopId: String): Result<RenderConfig> {
+        val cfg = request("GET", "/api/pos/v1/shops/${enc(shopId)}")
+            .getOrElse { return Result.failure(it) }
+        return renderConfigDeJson(cfg)?.let { Result.success(it) }
+            ?: Result.failure(ApiException("Ese código de comercio no existe.", 404))
+    }
+
+    private fun renderConfigDeJson(cfg: JSONObject): RenderConfig? {
+        val shop = cfg.optJSONObject("shop")
+        val world = cfg.optJSONObject("world")
+        val caps = cfg.optJSONObject("capabilities")
+        val restrictions = cfg.optJSONObject("restrictions")
+        val disp = cfg.optJSONObject("disponibilidad")
+        if (shop == null || world == null) return null
+
+        return RenderConfig(
+            shopId = shop.optString("id"),
+            shopName = shop.optString("name"),
+            worldId = world.optString("id"),
+            worldName = world.optString("name").ifBlank { "Mundo" },
+            capabilities = Capabilities(
+                wallet = caps?.optBoolean("wallet") ?: false,
+                chargeWallet = caps?.optBoolean("chargeWallet") ?: false,
+                banditaNfc = caps?.optBoolean("banditaNfc") ?: false,
+                restrictions = caps?.optBoolean("restrictions") ?: false,
+                accesos = caps?.optBoolean("accesos") ?: false,
+                eventos = caps?.optBoolean("eventos") ?: false,
+                menu = caps?.optBoolean("menu") ?: false,
+            ),
+            worldDailyLimit = restrictions?.optDouble("worldDailyLimit")
+                ?.takeIf { !it.isNaN() },
+            eventosValidables = disp?.optInt("eventosValidables") ?: 0,
+            eventosMotivo = disp?.optString("eventosMotivo")
+                ?.takeIf { it.isNotBlank() && it != "null" },
         )
     }
 

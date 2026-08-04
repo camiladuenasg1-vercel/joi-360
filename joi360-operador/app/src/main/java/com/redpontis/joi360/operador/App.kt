@@ -2,10 +2,12 @@ package com.redpontis.joi360.operador
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
+import com.redpontis.joi360.operador.data.Api
 import com.redpontis.joi360.operador.data.RenderConfig
 import com.redpontis.joi360.operador.data.Titular
 import com.redpontis.joi360.operador.screens.*
 import com.redpontis.joi360.operador.ui.Joi360Theme
+import kotlinx.coroutines.launch
 
 /** Para qué se está identificando a la persona. Decide el paso siguiente. */
 enum class Proposito { Cobro, Acceso, Consulta, VincularBandita }
@@ -28,6 +30,8 @@ fun App() {
     var config by remember { mutableStateOf<RenderConfig?>(null) }
     var turnoId by remember { mutableStateOf<String?>(null) }
     var pila by remember { mutableStateOf<List<Pantalla>>(listOf(Pantalla.AbrirCaja)) }
+    var refrescandoInicio by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val actual = pila.last()
     fun ir(p: Pantalla) { pila = pila + p }
@@ -58,6 +62,16 @@ fun App() {
                     config = null
                     turnoId = null
                     pila = listOf(Pantalla.AbrirCaja)
+                },
+                isRefreshing = refrescandoInicio,
+                onRefresh = {
+                    config?.shopId?.let { shopId ->
+                        refrescandoInicio = true
+                        scope.launch {
+                            Api.refrescarConfig(shopId).onSuccess { config = it }
+                            refrescandoInicio = false
+                        }
+                    }
                 },
             )
 
