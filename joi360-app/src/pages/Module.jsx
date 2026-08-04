@@ -1256,7 +1256,7 @@ function MenuTemplate({ cfg, u }) {
   const [filtroComercio, setFiltroComercio] = useState("todos");
   const [dependientes, setDependientes] = useState(null);
   const [membresias, setMembresias] = useState(null);
-  const [beneficiarioId, setBeneficiarioId] = useState(userId);
+  const [beneficiarioId, setBeneficiarioId] = useState(null); // null = todavía no se eligió a propósito
   const [saldoBeneficiario, setSaldoBeneficiario] = useState(null);
   const [gestionAbierta, setGestionAbierta] = useState(false);
   const [actualizandoMembresia, setActualizandoMembresia] = useState(null);
@@ -1281,6 +1281,7 @@ function MenuTemplate({ cfg, u }) {
   }, [worldId, diaActivo.diaSemana]);
 
   const refrescarSaldoBeneficiario = () => {
+    if (beneficiarioId === null) return;
     if (beneficiarioId === userId) { setSaldoBeneficiario(saldoTitular); return; }
     fetchDependienteBalance(beneficiarioId, worldId).then(setSaldoBeneficiario).catch(() => setSaldoBeneficiario(null));
   };
@@ -1295,7 +1296,17 @@ function MenuTemplate({ cfg, u }) {
       .filter(d => (membresias || []).some(m => m.beneficiario_user_id === d.dependent_user_id && m.activo))
       .map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", alergias: d.alergias, alergiasArr: (d.alergias || "").split(",").map(a => a.trim()).filter(Boolean) })),
   ];
-  const beneficiario = beneficiarios.find(b => b.id === beneficiarioId) || beneficiarios[0];
+  // Sin fallback automático al titular: si hay dependientes elegibles, la
+  // usuaria SIEMPRE debe elegir a propósito para quién es el menú — pedido
+  // explícito para no reservar/cobrar por accidente al perfil equivocado.
+  // Solo se auto-selecciona cuando no hay ninguna elección real que hacer
+  // (titular sin dependientes con membresía de Menú activa).
+  const beneficiario = beneficiarios.find(b => b.id === beneficiarioId);
+  useEffect(() => {
+    if (beneficiarioId !== null) return;
+    if (dependientes === null || membresias === null) return;
+    if (beneficiarios.length <= 1) setBeneficiarioId(userId);
+  }, [dependientes, membresias]);
 
   const idsBeneficiarios = beneficiarios.map(b => b.id);
   useEffect(() => {
@@ -1546,57 +1557,67 @@ function MenuTemplate({ cfg, u }) {
         </SectionCard>
       )}
 
-      {comercios.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          <button onClick={() => setFiltroComercio("todos")} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === "todos" ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>Todos</button>
-          {comercios.map(c => (
-            <button key={c.id} onClick={() => setFiltroComercio(c.id)} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === c.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>{c.nombre}</button>
-          ))}
-        </div>
-      )}
-
-      {avisoMixto && (
-        <ConfigBanner icon="warning" color="amber"
-          message={`Tu reserva actual es de ${nombreDe(cartMerchant)}. Termina o vacía esa reserva antes de agregar platos de otro comercio.`}/>
-      )}
-
-      {menuDelDia === null ? (
-        <div className="py-8 flex flex-col items-center gap-2">
-          <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-          <p className="text-xs text-[#777587]">Cargando menú del día…</p>
-        </div>
-      ) : visibles.length === 0 ? (
-        <SectionCard><EmptyState icon="restaurant_menu" title="Sin menú programado" subtitle="Ningún comercio programó platos para este día todavía. Prueba con otro día del calendario."/></SectionCard>
+      {!beneficiario ? (
+        <SectionCard className="p-6 text-center">
+          <Icon name="family_restroom" size="text-3xl" color="text-[#3525cd]"/>
+          <p className="font-bold text-sm text-[#1b1b24] mt-2">Elige para quién es el menú</p>
+          <p className="text-xs text-[#777587] mt-1">Toca uno de los nombres de arriba en "Reservar para" antes de ver los platos disponibles.</p>
+        </SectionCard>
       ) : (
-        <div className="space-y-3">
-          {visibles.map(p => {
-            const enCart = cart.find(it => it.item.id === p.id);
-            const bloqueado = bloqueadoPorAlergia(p);
-            return (
-              <SectionCard key={p.id} className={`p-4 ${bloqueado ? "opacity-60" : ""}`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-[#fff3e0] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover"/> : <Icon name="lunch_dining" fill size="text-2xl" color="text-orange-500"/>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#1b1b24]">{p.nombre}</p>
-                    <p className="text-xs text-[#777587]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
-                    {p.descripcion && <p className="text-[10px] text-[#777587] mt-0.5">{p.descripcion}</p>}
-                    {p.alergenos?.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">Contiene: {p.alergenos.join(", ")}</p>}
-                    {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-black text-[#3525cd]">S/ {Number(p.precio).toFixed(2)}</p>
-                    <button onClick={() => agregar(p)} disabled={bloqueado}
-                      className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active disabled:opacity-40 disabled:bg-[#c7c4d8]">
-                      {bloqueado ? "Bloqueado" : enCart ? `Agregar (${enCart.qty})` : "Agregar"}
-                    </button>
-                  </div>
-                </div>
-              </SectionCard>
-            );
-          })}
-        </div>
+        <>
+          {comercios.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              <button onClick={() => setFiltroComercio("todos")} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === "todos" ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>Todos</button>
+              {comercios.map(c => (
+                <button key={c.id} onClick={() => setFiltroComercio(c.id)} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === c.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>{c.nombre}</button>
+              ))}
+            </div>
+          )}
+
+          {avisoMixto && (
+            <ConfigBanner icon="warning" color="amber"
+              message={`Tu reserva actual es de ${nombreDe(cartMerchant)}. Termina o vacía esa reserva antes de agregar platos de otro comercio.`}/>
+          )}
+
+          {menuDelDia === null ? (
+            <div className="py-8 flex flex-col items-center gap-2">
+              <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
+              <p className="text-xs text-[#777587]">Cargando menú del día…</p>
+            </div>
+          ) : visibles.length === 0 ? (
+            <SectionCard><EmptyState icon="restaurant_menu" title="Sin menú programado" subtitle="Ningún comercio programó platos para este día todavía. Prueba con otro día del calendario."/></SectionCard>
+          ) : (
+            <div className="space-y-3">
+              {visibles.map(p => {
+                const enCart = cart.find(it => it.item.id === p.id);
+                const bloqueado = bloqueadoPorAlergia(p);
+                return (
+                  <SectionCard key={p.id} className={`p-4 ${bloqueado ? "opacity-60" : ""}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-xl bg-[#fff3e0] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover"/> : <Icon name="lunch_dining" fill size="text-2xl" color="text-orange-500"/>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-[#1b1b24]">{p.nombre}</p>
+                        <p className="text-xs text-[#777587]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
+                        {p.descripcion && <p className="text-[10px] text-[#777587] mt-0.5">{p.descripcion}</p>}
+                        {p.alergenos?.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">Contiene: {p.alergenos.join(", ")}</p>}
+                        {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-black text-[#3525cd]">S/ {Number(p.precio).toFixed(2)}</p>
+                        <button onClick={() => agregar(p)} disabled={bloqueado}
+                          className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active disabled:opacity-40 disabled:bg-[#c7c4d8]">
+                          {bloqueado ? "Bloqueado" : enCart ? `Agregar (${enCart.qty})` : "Agregar"}
+                        </button>
+                      </div>
+                    </div>
+                  </SectionCard>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {cart.length > 0 && (
