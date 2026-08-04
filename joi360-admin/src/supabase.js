@@ -1430,22 +1430,29 @@ export async function crearSolicitudNfcRemote(worldId, userId) {
 }
 // El admin no podía saber QUIÉN pedía una bandita — nfc_requests solo guarda
 // user_id, y ese id es tan real para el titular como para un dependiente
-// suyo (misma tabla wallets, mismo synthetic uuid). Se resuelve nombre +
-// "es dependiente de quién" cruzando contra dependents (schema público,
-// accesible) — el titular sigue sin nombre resoluble acá (vive en
-// auth.users.user_metadata, fuera del REST público) pero al menos se
-// distingue de un dependiente real en vez de mostrar un id truncado para ambos.
+// suyo (misma tabla wallets, mismo synthetic uuid). Se resuelve cruzando
+// contra dependents (para dependientes) y contra la vista de solo lectura
+// usuarios_perfil (para titulares — ver fix-vista-perfiles-titular.sql,
+// expone nombres/apellidos de auth.users.user_metadata sin exponer la
+// tabla completa de Auth).
 export async function fetchSolicitudesNfcMundo(worldId) {
   const [reqs, deps] = await Promise.all([
     rest(`nfc_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`),
     rest(`dependents?world_id=eq.${worldId}&select=dependent_user_id,nombre,guardian_user_id`).catch(() => []),
   ]);
   const depPorUserId = new Map((deps || []).map(d => [d.dependent_user_id, d]));
+  const titularIds = (reqs || []).map(r => r.user_id).filter(id => !depPorUserId.has(id));
+  let perfilesPorUserId = new Map();
+  if (titularIds.length) {
+    const perfiles = await rest(`usuarios_perfil?user_id=in.(${titularIds.join(",")})&select=user_id,nombres,apellidos`).catch(() => []);
+    perfilesPorUserId = new Map((perfiles || []).map(p => [p.user_id, p]));
+  }
   return (reqs || []).map(r => {
     const dep = depPorUserId.get(r.user_id);
-    return dep
-      ? { ...r, nombre: dep.nombre, esDependiente: true }
-      : { ...r, esDependiente: false };
+    if (dep) return { ...r, nombre: dep.nombre, esDependiente: true };
+    const perfil = perfilesPorUserId.get(r.user_id);
+    const nombreTitular = perfil ? [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ") : null;
+    return { ...r, nombre: nombreTitular || null, esDependiente: false };
   });
 }
 // Cross-mundo, para que RedPontis mida cuántas banditas físicas necesita
