@@ -142,8 +142,11 @@ function SolicitudesNfcWidget({ worldId }) {
           {reqs.map(r => (
             <div key={r.id} className="px-5 py-3 flex justify-between items-center text-sm">
               <div>
-                <p className="text-xs font-medium">{r.nombre || <span className="font-mono text-outline">{r.user_id.slice(0, 16)}…</span>}</p>
-                <p className="font-mono text-[10px] text-outline">{new Date(r.created_at).toLocaleDateString("es-PE")}</p>
+                <p className="text-xs font-medium">
+                  {r.nombre || (r.esDependiente ? "Dependiente" : "Titular")}
+                  {r.esDependiente && <span className="ml-1.5 font-mono text-[9px] uppercase text-tertiary">dependiente</span>}
+                </p>
+                <p className="font-mono text-[10px] text-outline">{r.user_id.slice(0, 12)}… · {new Date(r.created_at).toLocaleDateString("es-PE")}</p>
               </div>
               {r.status === "pendiente" ? (
                 <div className="flex gap-2">

@@ -1428,8 +1428,25 @@ export async function crearSolicitudNfcRemote(worldId, userId) {
     body: JSON.stringify({ world_id: worldId, user_id: userId, status: "pendiente" }),
   });
 }
+// El admin no podía saber QUIÉN pedía una bandita — nfc_requests solo guarda
+// user_id, y ese id es tan real para el titular como para un dependiente
+// suyo (misma tabla wallets, mismo synthetic uuid). Se resuelve nombre +
+// "es dependiente de quién" cruzando contra dependents (schema público,
+// accesible) — el titular sigue sin nombre resoluble acá (vive en
+// auth.users.user_metadata, fuera del REST público) pero al menos se
+// distingue de un dependiente real en vez de mostrar un id truncado para ambos.
 export async function fetchSolicitudesNfcMundo(worldId) {
-  return rest(`nfc_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+  const [reqs, deps] = await Promise.all([
+    rest(`nfc_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`),
+    rest(`dependents?world_id=eq.${worldId}&select=dependent_user_id,nombre,guardian_user_id`).catch(() => []),
+  ]);
+  const depPorUserId = new Map((deps || []).map(d => [d.dependent_user_id, d]));
+  return (reqs || []).map(r => {
+    const dep = depPorUserId.get(r.user_id);
+    return dep
+      ? { ...r, nombre: dep.nombre, esDependiente: true }
+      : { ...r, esDependiente: false };
+  });
 }
 // Cross-mundo, para que RedPontis mida cuántas banditas físicas necesita
 // producir/asignar por mundo (Hardware → Banditas NFC → "Demanda por mundo").
