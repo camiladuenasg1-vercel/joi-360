@@ -114,6 +114,55 @@ export function MundoDetail() {
   );
 }
 
+/* ── OperadorMundoCard — clave del POS para "Soy Mundo" (Task #128). Un
+   operador de mundo (portero, punto de entrega de banditas, mesa de
+   ayuda) no representa a ningún comercio — por eso necesita su propia
+   clave, separada de la de cada comercio, para entrar al POS/T6 y ver
+   Vincular Pulsera / Validar Acceso / Validar Entrada / Consultar. ── */
+function OperadorMundoCard({ m }) {
+  const [pin, setPin] = useState(m.posPin || "");
+  const [ver, setVer] = useState(false);
+  const dirty = pin !== (m.posPin || "");
+
+  const guardar = () => {
+    update(s => {
+      const mu = (s.mundos||[]).find(x => x.id === m.id);
+      if (mu) mu.posPin = pin.trim() || null;
+    });
+    notify(pin.trim() ? "Clave de operador del mundo guardada." : "Clave de operador del mundo eliminada.");
+  };
+  const generar = () => {
+    const nueva = String(Math.floor(1000 + Math.random() * 9000));
+    setPin(nueva);
+  };
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-wrap items-end gap-4">
+      <div className="flex-1 min-w-[220px]">
+        <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
+          <Icon n="badge" className="text-[16px] text-secondary"/> Clave de operador del Mundo (POS)
+        </p>
+        <p className="text-[11px] text-on-surface-variant">
+          Código: <b className="font-mono">{m.codigo}</b> · para entrar al POS eligiendo "Soy Mundo" — vincular pulseras, validar accesos/entradas y consultar, sin cobrar saldo.
+        </p>
+      </div>
+      <div className="flex items-center gap-1">
+        <input className={`${inputCls} w-32 font-mono`} type={ver ? "text" : "password"} value={pin}
+          onChange={e => setPin(e.target.value)} placeholder="Sin clave"/>
+        <button type="button" onClick={() => setVer(v => !v)} className="p-2.5 text-on-surface-variant hover:text-primary" title={ver ? "Ocultar" : "Ver"}>
+          <Icon n={ver ? "visibility_off" : "visibility"} className="text-[18px]"/>
+        </button>
+      </div>
+      <BtnOutline onClick={generar}><Icon n="casino" className="text-[16px]"/> Generar</BtnOutline>
+      <BtnPrimary onClick={guardar} disabled={!dirty}><Icon n="save" className="text-[16px]"/> Guardar</BtnPrimary>
+      <a href={`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`} target="_blank" rel="noreferrer"
+        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary text-sm font-medium transition-colors">
+        <Icon n="open_in_new" className="text-[16px]"/> Abrir POS del Mundo
+      </a>
+    </div>
+  );
+}
+
 /* ── ContratoControl — el contrato PDF subido manualmente es la fuente de
    verdad cuando existe; el ContratoView autogenerado (a partir de acuerdo +
    módulos) queda como borrador de referencia, no como el contrato real. ── */
@@ -433,6 +482,10 @@ function TabResumen({ m, comercios, st, goto }) {
           </div>
         )}
       </div>
+
+      {/* OPERADOR DE MUNDO (POS) — clave para "Soy Mundo": bandita, accesos,
+          eventos, consultar. No cobra saldo — eso sigue siendo del comercio. */}
+      <OperadorMundoCard m={m} />
 
       {/* STATS ROW */}
       <div className="grid grid-cols-4 gap-4">

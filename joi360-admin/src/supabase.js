@@ -85,6 +85,10 @@ function worldRow(m) {
     // pisar un acuerdo real que ya haya llegado por otra vía (ej. el PATCH
     // directo de una corrección administrativa).
     acuerdo: m.acuerdo?.tipo ? m.acuerdo : null,
+    // Task #128: clave de operador del mundo para el login "Soy Mundo" del
+    // POS (bandita/accesos/eventos/consultar) — distinta de la de cada
+    // comercio, mismo patrón (código corto + PIN) que ya usa el terminal.
+    pos_pin: m.posPin || null,
     updated_at: new Date().toISOString(),
   };
 }

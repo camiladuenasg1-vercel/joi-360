@@ -8,6 +8,7 @@ import { MundoDetail } from "./MundoDetail";
 import { MundoFront, ComercioFront, Landing, AnuncianteFront } from "./Fronts";
 import { OrganizadorFront } from "./OrganizadorFront";
 import { OperadorApp } from "./OperadorApp";
+import { WorldOperadorApp } from "./WorldOperadorApp";
 import { Catalogo } from "./Catalogo";
 import { CatalogoProductos } from "./CatalogoProductos";
 import { CatalogosGlobales } from "./Catalogos";
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="/mundo/:id" element={<MundoFront />} />
         <Route path="/comercio/:id" element={<ComercioFront />} />
         <Route path="/operador/:comercioId" element={<OperadorApp />} />
+        <Route path="/operador-mundo/:worldId" element={<WorldOperadorApp />} />
         <Route path="/anunciante/:id" element={<AnuncianteFront />} />
         <Route path="/organizador/:id" element={<OrganizadorFront />} />
         <Route path="/landing" element={<Landing />} />

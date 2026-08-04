@@ -302,7 +302,7 @@ function SolicitudBNPLOperador({ comercio, m }) {
 
 // ── Control de Accesos, mobile — mismo mecanismo que TabAccesos
 // (MundoDetail.jsx), scoped al mundo de este comercio. ──────────────────
-function AccesosOperador({ comercio, m }) {
+export function AccesosOperador({ comercio, m }) {
   const zonas = (m?.modulos || []).find(x => x.id === "accesos")?.config?.zonas?.split(",").map(z => z.trim()).filter(Boolean) || ["Principal"];
   const [codigo, setCodigo] = useState("");
   const [tipo, setTipo] = useState("entrada");
@@ -385,7 +385,7 @@ function AccesosOperador({ comercio, m }) {
 // al operador del POS (que es quien tiene la pulsera y al usuario en frente)
 // un flujo real de 2 pasos: identificar al usuario por su código JOI, leer
 // el código de la pulsera física, confirmar. ────────────────────────────────
-function VincularBanditaOperador({ comercio, m }) {
+export function VincularBanditaOperador({ comercio, m }) {
   const vigenciaMeses = (m?.modulos || []).find(x => x.id === "wallet")?.config?.vigenciaBanditasMeses ?? null;
   const [codigoUsuario, setCodigoUsuario] = useState("");
   const [wallet, setWallet] = useState(null);

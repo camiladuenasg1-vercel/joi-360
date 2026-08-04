@@ -962,6 +962,7 @@ export async function refreshMundosLive() {
         id: w.id, nombre: w.name, codigo: w.code, vertical: w.vertical,
         color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
         estado: (w.status || "activo").toUpperCase(),
+        posPin: w.pos_pin || null,
       };
       const base = byId.get(w.id);
       if (base) {
@@ -1864,3 +1865,17 @@ export function merchantLogin(comercioId, usuario, password) {
   return false;
 }
 export function merchantLogout() { update(st => { st.merchantSession = null; }); }
+
+// --- Sesión de Operador de Mundo (Task #128) ---
+// Distinta de merchantLogin: un operador de mundo no representa a ningún
+// comercio (no cobra saldo, por diseño) — solo la clave del mundo, mismo
+// patrón que el POS nativo T6 usa con worlds.pos_pin.
+export function worldOperatorLogin(worldId, pin) {
+  const m = load().mundos.find(x => x.id === worldId);
+  if (m?.posPin && String(pin).trim() === String(m.posPin).trim()) {
+    update(st => { st.worldOperatorSession = { worldId }; });
+    return true;
+  }
+  return false;
+}
+export function worldOperatorLogout() { update(st => { st.worldOperatorSession = null; }); }
