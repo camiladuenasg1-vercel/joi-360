@@ -1,5 +1,5 @@
 import React from "react";
-import { resetDemo } from "./store";
+import { reiniciarCacheLocal } from "./store";
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -13,7 +13,7 @@ export class ErrorBoundary extends React.Component {
     console.error("JOI360 Admin Error:", error, info.componentStack);
   }
   reset() {
-    resetDemo();
+    reiniciarCacheLocal();
     // Hard reload so React remounts cleanly with fresh state
     window.location.href = window.location.pathname + "#/admin";
     window.location.reload();
@@ -37,13 +37,13 @@ export class ErrorBoundary extends React.Component {
             </div>
             <p className="text-sm text-on-surface-variant mb-4">
               Esto suele ocurrir cuando el estado guardado en el navegador es incompatible con la versión actual.
-              Reiniciar el demo restaura todos los datos de ejemplo.
+              Restablecer la caché local recarga todo en vivo desde Supabase.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => this.reset()}
                 className="flex-1 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors">
-                Reiniciar demo
+                Restablecer caché local
               </button>
               <button
                 onClick={() => { this.setState({ error: null }); window.history.back(); }}

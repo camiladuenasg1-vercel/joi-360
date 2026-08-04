@@ -523,7 +523,7 @@ export function modosDeMundo(m) {
 function seed() {
   const now = Date.now();
   return {
-    users: [{ email: "admin@redpontis.com", password: "demo", name: "Admin RedPontis" }],
+    users: [{ email: "camila.duenas@redpontis.com", password: "RedpontisAdmin2026", name: "Camila Dueñas" }],
     session: null,
     mundos: [
       {
@@ -653,6 +653,14 @@ function load() {
     if (Array.isArray(state[key])) state[key] = state[key].filter(x => !IDS_DEMO.test(x.id));
   });
 
+  // ── auto-cura: la cuenta admin demo (admin@redpontis.com / demo) ya
+  // quedó persistida en browsers viejos — se reemplaza por la real, igual
+  // que la purga de ids demo de arriba. No se toca si ya es la real o si
+  // el admin ya creó otras cuentas reales por su cuenta (signup).
+  if (Array.isArray(state.users) && state.users.length === 1 && state.users[0].email === "admin@redpontis.com") {
+    state.users = [{ email: "camila.duenas@redpontis.com", password: "RedpontisAdmin2026", name: "Camila Dueñas" }];
+  }
+
   // ── auto-cura: anunciantes con esquema viejo (nombre/estado) → esquema actual (razonSocial/credenciales) ──
   // Si no hacemos esto, el localStorage que ya quedó guardado en el navegador
   // sigue corrupto para siempre y solo se arregla con "Reiniciar demo" (perdiendo todo lo demás).
@@ -732,7 +740,11 @@ export function update(fn) {
   scheduleSync(() => (load().mundos || []));
 }
 
-export function resetDemo() {
+// Ya no hay "demo" que reiniciar (el pipeline es push+deploy a producción) —
+// esto queda solo como recuperación ante estado local corrupto (ver
+// ErrorBoundary): descarta la caché local y vuelve a poblarse en vivo desde
+// Supabase, no reintroduce data de ejemplo (seed() ya no la tiene).
+export function reiniciarCacheLocal() {
   state = seed();
   persist();
   scheduleSync(() => (load().mundos || []));
@@ -963,20 +975,15 @@ export function getPromos(mundoId) {
   return (st.promos || []).filter(p => !mundoId || p.mundoId === mundoId);
 }
 
-// --- Auth demo ---
+// --- Auth ---
+// Sin alta de cuenta propia: solo se ingresa con credenciales asignadas
+// por RedPontis (ver users en seed()).
 export function login(email, password) {
   const s = load();
   const u = s.users.find(u => u.email === email && u.password === password);
   if (!u) return null;
   update(st => { st.session = { email: u.email, name: u.name }; });
   return u;
-}
-export function signup(name, email, password) {
-  update(st => {
-    if (!st.users.find(u => u.email === email)) st.users.push({ name, email, password });
-    st.session = { email, name };
-  });
-  return { email, name };
 }
 export function logout() { update(st => { st.session = null; }); }
 export function session() { return load().session; }

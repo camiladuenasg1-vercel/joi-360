@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { logout, session, resetDemo } from "./store";
+import { logout, session } from "./store";
 import { getSyncStatus, onSyncStatus } from "./supabase.js";
 
 /* Badge de sincronización con Supabase (Render Engine en vivo):
@@ -221,9 +221,6 @@ export function Shell({ children, title, contextNav }) {
           ))}
         </div>
         <div className="px-4 pt-4 border-t border-outline-variant space-y-2">
-          <button onClick={() => { if (confirm("¿Resetear toda la data demo al seed inicial?")) resetDemo(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container text-sm">
-            <Icon n="restart_alt" className="text-[20px]" /> Reset demo
-          </button>
           <button onClick={() => { logout(); nav("/login"); }} className="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container text-sm">
             <Icon n="logout" className="text-[20px]" /> Salir
           </button>

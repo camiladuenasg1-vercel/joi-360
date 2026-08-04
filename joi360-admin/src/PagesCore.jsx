@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
-import { logout, session, MODULE_CATALOG, login as doLogin, signup as doSignup } from "./store";
+import { logout, session, MODULE_CATALOG, login as doLogin } from "./store";
 import { Icon, Pill } from "./ui";
 
 export function AdminDashboard() {
@@ -140,16 +140,14 @@ export function AdminDashboard() {
 
 export function Login() {
   const nav = useNavigate();
-  const [tab, setTab] = React.useState("login");
-  const [f, setF] = React.useState({ email: "", password: "", nombre: "" });
+  const [f, setF] = React.useState({ email: "", password: "" });
   const [err, setErr] = React.useState("");
-
 
   const submit = (e) => {
     e.preventDefault();
-    const ok = tab === "login" ? doLogin(f.email, f.password) : doSignup(f.nombre, f.email, f.password);
+    const ok = doLogin(f.email, f.password);
     if (ok) nav("/admin");
-    else setErr(tab === "login" ? "Credenciales inválidas. (admin@redpontis.com / demo)" : "Error al crear cuenta.");
+    else setErr("Credenciales inválidas.");
   };
 
   return (
@@ -163,20 +161,15 @@ export function Login() {
             <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">JOI 360 Ecosystem</p>
           </div>
         </div>
-        <div className="flex gap-1 mb-6 border-b border-outline-variant">
-          {["login", "signup"].map(t => (
-            <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm border-b-2 -mb-px transition-colors ${tab === t ? "text-primary border-primary font-semibold" : "text-on-surface-variant border-transparent"}`}>
-              {t === "login" ? "Ingresar" : "Crear cuenta"}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs text-on-surface-variant mb-6 pb-4 border-b border-outline-variant">
+          Acceso solo con credenciales asignadas por RedPontis. Sin alta de cuenta propia.
+        </p>
         <form onSubmit={submit} className="space-y-4">
-          {tab === "signup" && <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Nombre</label><input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} placeholder="Tu nombre" /></div>}
-          <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Email</label><input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} placeholder="admin@redpontis.com" /></div>
-          <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Password</label><input type="password" className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder="demo" /></div>
+          <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Email</label><input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} placeholder="tucorreo@redpontis.com" /></div>
+          <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Password</label><input type="password" className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder="••••••••" /></div>
           {err && <p className="text-xs text-error">{err}</p>}
           <button type="submit" className="w-full py-2.5 bg-primary text-white rounded-lg font-medium text-sm hover:bg-on-primary-fixed-variant transition-colors shadow-sm">
-            {tab === "login" ? "Ingresar al ecosistema" : "Crear cuenta"}
+            Ingresar al ecosistema
           </button>
         </form>
       </div>
