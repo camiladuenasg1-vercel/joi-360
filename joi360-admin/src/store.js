@@ -227,7 +227,13 @@ export const MODULE_CATALOG = [
 
   { id: "accesos", name: "Accesos", tier: "PREMIUM", category: "Emisión", e: true, a: true, icon: "door_open",
     desc: "Controla el ingreso y salida de personas mediante TAQ/QR, registrando eventos y restricciones por zona, horario y tipo de usuario.",
-    servicios: ["Identificación del usuario con TAQ o QR", "Consulta en POS", "Registro de accesos por tipo de usuario (sponsor)", "Registro de zonas o servicios por mundo", "Registro de horarios"],
+    servicios: [
+      { id: "identificacion",     nombre: "Identificación del usuario con TAQ o QR", desc: "Escaneo real de bandita NFC, QR o búsqueda por DNI en el POS." },
+      { id: "consulta_pos",       nombre: "Consulta en POS",                          desc: "Ficha del usuario (nombre, alergias, contacto de emergencia) al identificarlo." },
+      { id: "registro_tipo",      nombre: "Registro de accesos por tipo de usuario (sponsor)", desc: "Cada acceso queda en access_log con el usuario real que lo generó." },
+      { id: "registro_zonas",     nombre: "Registro de zonas o servicios por mundo",  desc: "El operador elige la zona al registrar, pero hoy no restringe el paso — solo queda como dato del registro." },
+      { id: "registro_horarios",  nombre: "Registro de horarios",                     desc: "Control de acceso por franja horaria." },
+    ],
     pricing: { modelo: "fijo", fijoMensual: 250, setup: 200, moneda: "PEN" },
     configFields: [
       { key: "zonas",           label: "Zonas de acceso habilitadas (separadas por coma)", type: "text", default: "Principal,Cafetería,Auditorio" },
@@ -357,7 +363,13 @@ export const MODULE_CATALOG = [
 
   { id: "menu", name: "Menú", tier: "OPCIONAL", category: "Datos", e: false, a: false, icon: "restaurant_menu",
     desc: "El padre/usuario programa el menú y el concesionario valida y entrega. Catálogo diario con cupos, restricciones alimentarias y pre-orden.",
-    servicios: ["Calendario semanal de menú", "Cupos por opción de menú", "Restricciones alimentarias (integra con Perfil extendido)", "Pre-orden desde la app", "Validación en POS / entrega"],
+    servicios: [
+      { id: "calendario",                nombre: "Calendario semanal de menú",   desc: "El comercio programa las opciones de cada día." },
+      { id: "cupos",                      nombre: "Cupos por opción de menú",     desc: "Límite de raciones por opción, en tiempo real." },
+      { id: "restricciones_alimentarias", nombre: "Restricciones alimentarias (integra con Perfil extendido)", desc: "Alerta de alergia al elegir una opción del menú." },
+      { id: "preorden",                   nombre: "Pre-orden desde la app",       desc: "El padre/usuario reserva y paga la opción con anticipación." },
+      { id: "validacion_pos",             nombre: "Validación en POS / entrega",  desc: "El concesionario confirma la entrega de la pre-orden desde el POS." },
+    ],
     pricing: { modelo: "mixto", fijoMensual: 280, porTx: 0.3, setup: 400, moneda: "PEN" },
     configFields: [
       { key: "diasAnticipacion", label: "Días de anticipación para reservar un menú", type: "number", default: 7 },
@@ -1139,6 +1151,41 @@ export const FLAG_DEV_MAP = {
   // ── Motor de Eventos (Caso Kermesse) ──
   "eventos:aforo":         { status: "ready",       api: "propio · tabla events/event_tickets (Supabase)" },
   "eventos:ticketing":     { status: "ready",       api: "propio · event_ticket_types (Supabase)" },
+  "eventos:crear":         { status: "ready",       api: "propio · wizard de creación (portada, mapa, merchants, preventa)" },
+  "eventos:entradas":      { status: "ready",       api: "propio · event_ticket_types (Supabase)" },
+  "eventos:monitoreo":     { status: "ready",       api: "propio · OrganizadorFront (polling 6s, aforo + asistencia)" },
+  "eventos:taq_qr":        { status: "ready",       api: "propio · EntradaScreen POS nativo" },
+  "eventos:preventa":      { status: "ready",       api: "propio · compra anticipada + pickup" },
+
+  // ── Auditoría #123 (04-ago): estos 4 módulos estaban activos en mundos
+  // reales pero sin ninguna entrada acá — sus toggles individuales quedaban
+  // deshabilitados por default (tier PREMIUM/OPCIONAL → "planned"), aunque
+  // la funcionalidad real ya existía. Cada línea de abajo se verificó contra
+  // el código real antes de marcarla "ready" — lo que no se pudo confirmar
+  // (aprobación de padre en tiempo real, bloqueo por horario, zonas que
+  // restringen paso, reportería de ventas por producto, validar entrega de
+  // menú en POS) se dejó fuera a propósito: son banners informativos o datos
+  // que se registran pero no se hacen cumplir todavía.
+  "inventario:subir_productos":  { status: "ready", api: "propio · upsertProductRemote" },
+  "inventario:subir_stock":      { status: "ready", api: "propio · products.stock, decrementado en cada venta" },
+  "inventario:venta_pos":        { status: "ready", api: "propio · POS Cobrar por producto" },
+  "inventario:detalle_consumos": { status: "ready", api: "propio · transactions.reference con detalle de ítems" },
+
+  "perfil_ext:tipo_sangre":         { status: "ready", api: "propio · user_profiles.tipo_sangre" },
+  "perfil_ext:alergias":            { status: "ready", api: "propio · user_profiles.alergias" },
+  "perfil_ext:clinica":             { status: "ready", api: "propio · user_profiles.clinica" },
+  "perfil_ext:contacto_emergencia": { status: "ready", api: "propio · user_profiles.contacto_emergencia_*" },
+
+  "accesos:identificacion": { status: "ready", api: "propio · bandita NFC / QR / DNI en el POS" },
+  "accesos:consulta_pos":   { status: "ready", api: "propio · ficha del titular en el POS" },
+  "accesos:registro_tipo":  { status: "ready", api: "propio · access_log" },
+
+  "control:perfiles_ctrl": { status: "ready", api: "propio · dependents + P2P a wallet del dependiente" },
+  "control:alertas":       { status: "ready", api: "propio · consumo_alertas (límite diario de Menú)" },
+
+  "menu:calendario": { status: "ready", api: "propio · menu_programacion" },
+  "menu:cupos":       { status: "ready", api: "propio · menu_programacion.cupos_max" },
+  "menu:preorden":    { status: "ready", api: "propio · crearReservaMenu" },
 };
 const FLAG_TIER_DEFAULT = { CORE: "in_progress", "MOTOR BASE": "in_progress", PREMIUM: "planned", OPCIONAL: "planned", FUTURO: "planned" };
 
