@@ -541,7 +541,9 @@ fun CuadreScreen(config: RenderConfig, onBack: () -> Unit, onCerrado: () -> Unit
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        Api.turnoActual(config.shopId)
+        // Cuadre solo se renderiza cuando chargeWallet es true (ver InicioScreen),
+        // y eso nunca ocurre en una sesión "Soy Mundo" — shopId siempre viene.
+        Api.turnoActual(config.shopId!!)
             .onSuccess { turno = it; cargando = false }
             .onFailure { error = it.message; cargando = false }
     }
@@ -555,7 +557,7 @@ fun CuadreScreen(config: RenderConfig, onBack: () -> Unit, onCerrado: () -> Unit
             .safeDrawingPadding().verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 24.dp),
     ) {
-        ScreenHeader("Cuadre de caja", config.shopName, onBack)
+        ScreenHeader("Cuadre de caja", config.shopName ?: "", onBack)
         Spacer(Modifier.height(24.dp))
 
         when {

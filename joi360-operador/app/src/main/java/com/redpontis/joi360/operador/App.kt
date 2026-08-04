@@ -13,7 +13,9 @@ import kotlinx.coroutines.launch
 enum class Proposito { Cobro, Acceso, Consulta, VincularBandita }
 
 sealed interface Pantalla {
+    data object ElegirTipo : Pantalla
     data object AbrirCaja : Pantalla
+    data object AbrirMundo : Pantalla
     data object Inicio : Pantalla
     data object Cobrar : Pantalla
     data class Identificar(val proposito: Proposito, val monto: Double = 0.0) : Pantalla
@@ -29,7 +31,7 @@ sealed interface Pantalla {
 fun App() {
     var config by remember { mutableStateOf<RenderConfig?>(null) }
     var turnoId by remember { mutableStateOf<String?>(null) }
-    var pila by remember { mutableStateOf<List<Pantalla>>(listOf(Pantalla.AbrirCaja)) }
+    var pila by remember { mutableStateOf<List<Pantalla>>(listOf(Pantalla.ElegirTipo)) }
     var refrescandoInicio by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -42,10 +44,24 @@ fun App() {
 
     Joi360Theme {
         when (val p = actual) {
+            is Pantalla.ElegirTipo -> ElegirTipoScreen(
+                onSoyComercio = { ir(Pantalla.AbrirCaja) },
+                onSoyMundo = { ir(Pantalla.AbrirMundo) },
+            )
+
             is Pantalla.AbrirCaja -> AbrirCajaScreen(
                 onListo = { cfg, tid ->
                     config = cfg
                     turnoId = tid
+                    pila = listOf(Pantalla.Inicio)
+                },
+            )
+
+            is Pantalla.AbrirMundo -> AbrirMundoScreen(
+                onBack = { volver() },
+                onListo = { cfg ->
+                    config = cfg
+                    turnoId = null
                     pila = listOf(Pantalla.Inicio)
                 },
             )
@@ -61,11 +77,18 @@ fun App() {
                 onCerrarSesion = {
                     config = null
                     turnoId = null
-                    pila = listOf(Pantalla.AbrirCaja)
+                    pila = listOf(Pantalla.ElegirTipo)
                 },
                 isRefreshing = refrescandoInicio,
                 onRefresh = {
-                    config?.shopId?.let { shopId ->
+                    val cfg = config
+                    if (cfg?.isWorldSession == true) {
+                        refrescandoInicio = true
+                        scope.launch {
+                            Api.refrescarMundo(cfg.worldId).onSuccess { config = it }
+                            refrescandoInicio = false
+                        }
+                    } else cfg?.shopId?.let { shopId ->
                         refrescandoInicio = true
                         scope.launch {
                             Api.refrescarConfig(shopId).onSuccess { config = it }

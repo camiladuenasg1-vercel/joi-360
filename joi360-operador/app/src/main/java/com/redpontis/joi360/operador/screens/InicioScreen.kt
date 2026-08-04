@@ -66,7 +66,7 @@ fun InicioScreen(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    config.shopName.ifBlank { "Comercio" },
+                    if (config.isWorldSession) config.worldName else config.shopName?.ifBlank { "Comercio" } ?: "Comercio",
                     style = MaterialTheme.typography.headlineLarge,
                     color = Joi.Ink,
                 )
@@ -75,7 +75,7 @@ fun InicioScreen(
                     Box(Modifier.size(8.dp).background(Joi.Ok, RoundedCornerShape(4.dp)))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Caja abierta · ${config.worldName}",
+                        if (config.isWorldSession) "Operador de mundo" else "Caja abierta · ${config.worldName}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Joi.InkMuted,
                     )

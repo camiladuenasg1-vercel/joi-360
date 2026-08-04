@@ -17,12 +17,16 @@ data class Capabilities(
  * mundo, el botón desaparece del POS sin recompilar nada.
  */
 data class RenderConfig(
-    val shopId: String,
-    val shopName: String,
+    // Null en una sesión "Soy Mundo" (Task #128): un operador de mundo no
+    // representa a ningún comercio — por diseño, ahí chargeWallet siempre
+    // viene false, así que nada intenta cobrar contra un shopId inexistente.
+    val shopId: String?,
+    val shopName: String?,
     val worldId: String,
     val worldName: String,
     val capabilities: Capabilities,
     val worldDailyLimit: Double?,
+    val isWorldSession: Boolean = false,
     /**
      * Una capacidad encendida no garantiza que haya algo real detrás. Esto
      * separa "el mundo tiene eventos activados" de "hay un evento aprobado

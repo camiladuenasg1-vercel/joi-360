@@ -128,19 +128,42 @@ object Api {
             ?: Result.failure(ApiException("Ese código de comercio no existe.", 404))
     }
 
+    /** Mismo refresco que refrescarConfig(), para una sesión "Soy Mundo". */
+    suspend fun refrescarMundo(worldId: String): Result<RenderConfig> {
+        val cfg = request("GET", "/api/pos/v1/worlds/${enc(worldId)}")
+            .getOrElse { return Result.failure(it) }
+        return renderConfigDeJson(cfg)?.let { Result.success(it) }
+            ?: Result.failure(ApiException("Ese mundo ya no existe.", 404))
+    }
+
+    /**
+     * Abrir sesión "Soy Mundo" (Task #128): código del mundo (ED-LIM-006) +
+     * clave propia (worlds.pos_pin), sin merchant ni turno de por medio — un
+     * operador de mundo no cobra saldo, por diseño (chargeWallet siempre
+     * viene false), así que no hay caja que abrir.
+     */
+    suspend fun abrirMundo(codigoMundo: String, clave: String): Result<RenderConfig> {
+        val cfg = request("GET", "/api/pos/v1/worlds/${enc(codigoMundo)}?pin=${enc(clave)}")
+            .getOrElse { return Result.failure(it) }
+        return renderConfigDeJson(cfg)?.let { Result.success(it) }
+            ?: Result.failure(ApiException("Ese código de mundo no existe.", 404))
+    }
+
     private fun renderConfigDeJson(cfg: JSONObject): RenderConfig? {
         val shop = cfg.optJSONObject("shop")
         val world = cfg.optJSONObject("world")
         val caps = cfg.optJSONObject("capabilities")
         val restrictions = cfg.optJSONObject("restrictions")
         val disp = cfg.optJSONObject("disponibilidad")
-        if (shop == null || world == null) return null
+        // shop es null en una sesión "Soy Mundo" — solo world es obligatorio.
+        if (world == null) return null
 
         return RenderConfig(
-            shopId = shop.optString("id"),
-            shopName = shop.optString("name"),
+            shopId = shop?.optString("id")?.takeIf { it.isNotBlank() },
+            shopName = shop?.optString("name")?.takeIf { it.isNotBlank() },
             worldId = world.optString("id"),
             worldName = world.optString("name").ifBlank { "Mundo" },
+            isWorldSession = shop == null,
             capabilities = Capabilities(
                 wallet = caps?.optBoolean("wallet") ?: false,
                 chargeWallet = caps?.optBoolean("chargeWallet") ?: false,

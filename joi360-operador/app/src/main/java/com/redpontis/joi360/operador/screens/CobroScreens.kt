@@ -41,7 +41,7 @@ fun CobrarMontoScreen(
         Modifier.fillMaxSize().background(Joi.Bg)
             .safeDrawingPadding().padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 16.dp),
     ) {
-        ScreenHeader("Cobrar", config.shopName, onBack)
+        ScreenHeader("Cobrar", config.shopName ?: "", onBack)
 
         Spacer(Modifier.weight(1f))
 
@@ -113,7 +113,8 @@ fun ConfirmarCobroScreen(
         cobrando = true
         error = null
         scope.launch {
-            Api.cobrar(config.shopId, titular.userId, monto, turnoId)
+            // Cobrar solo se llega con chargeWallet true — nunca en sesión de mundo.
+            Api.cobrar(config.shopId!!, titular.userId, monto, turnoId)
                 .onSuccess { cobrando = false; resultado = it }
                 .onFailure { cobrando = false; error = it.message }
         }
