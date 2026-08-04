@@ -74,6 +74,12 @@ function worldRow(m) {
     status: (m.estado || "ACTIVO").toLowerCase(),
     color_primary: m.color || "#0035b9",
     currency: m.moneda || "PEN",
+    // Gap real (auditoría #122): el acuerdo comercial vivía SOLO en el
+    // localStorage de la sesión que creó el mundo — otra pestaña, otro
+    // navegador o un "reset demo" lo perdían para siempre, y Liquidación
+    // caía en su default silencioso (5% transaccional) sin que nadie lo
+    // hubiera pactado. Ahora viaja con el resto del mundo.
+    acuerdo: m.acuerdo || null,
     updated_at: new Date().toISOString(),
   };
 }

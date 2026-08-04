@@ -972,6 +972,10 @@ export async function refreshMundosLive() {
         // La base manda sobre lo que tuviera esta pestaña en memoria.
         const ec = eventosConfigDe(w.id);
         if (ec) base.eventosConfig = ec;
+        // El acuerdo no tiene UI de auto-edición (a propósito, ver TabAcuerdo)
+        // así que no hay nada local que este merge pueda pisar — si Supabase
+        // ya tiene uno real y esta pestaña no, se adopta.
+        if (!base.acuerdo && w.acuerdo) base.acuerdo = w.acuerdo;
       }
       else st.mundos.push({
         ...patch, fixed: false, redpontis: false, type: "standard",
@@ -985,7 +989,7 @@ export async function refreshMundosLive() {
         // es truthy, así que el fallback no aplicaba y `acuerdo.tipo` quedaba
         // undefined. Ninguna rama del cálculo coincidía y la comisión salía 0
         // en silencio para todo mundo llegado por reconciliación.
-        acuerdo: null,
+        acuerdo: w.acuerdo || null,
         createdAt: Date.parse(w.created_at) || Date.now(),
       });
     }
