@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { useStore } from "./hooks";
-import { Icon, BtnPrimary, BtnOutline, notify } from "./ui";
+import { Icon, BtnPrimary, BtnOutline, notify, NumInput } from "./ui";
 import { HARDWARE_CATALOG, hardwareModelById } from "./store";
 
 // Carga masiva de hardware/banditas: antes solo leía .csv/.txt como texto
@@ -38,7 +38,7 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, asignarLoteParcialRemote, renombrarLoteNfcRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
 
 const ESTADO_STYLE = {
   disponible:    "bg-green-100  text-green-700  border-green-200",
@@ -624,6 +624,12 @@ function BanditasNfcTab() {
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [asignandoLote, setAsignandoLote] = useState(null); // nombre del lote con el form de asignación abierto
+  const [asignarLoteWorldId, setAsignarLoteWorldId] = useState("");
+  const [asignarLoteCantidad, setAsignarLoteCantidad] = useState(1);
+  const [asignandoLoteBusy, setAsignandoLoteBusy] = useState(false);
+  const [renombrandoLote, setRenombrandoLote] = useState(null); // nombre viejo del lote en edición
+  const [nombreLoteNuevo, setNombreLoteNuevo] = useState("");
 
   const load = () => fetchNfcBandsRemote()
     .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id }))))
@@ -723,6 +729,38 @@ function BanditasNfcTab() {
     await liberarNfcBandRemote(b.id);
     notify(`${b.codigo} liberada — estado: disponible.`);
     load();
+  };
+
+  // No siempre se manda el lote completo a un mundo — se puede elegir
+  // cuántas de las disponibles de ESE lote asignar.
+  const confirmarAsignarLote = async (lote) => {
+    if (!asignarLoteWorldId || !asignarLoteCantidad) return;
+    setAsignandoLoteBusy(true);
+    try {
+      const n = await asignarLoteParcialRemote(lote, asignarLoteWorldId, asignarLoteCantidad);
+      const mundo = mundos.find(m => m.id === asignarLoteWorldId);
+      notify(`${n} banditas del lote "${lote}" asignadas a ${mundo?.nombre || "mundo"}.`);
+      setAsignandoLote(null); setAsignarLoteWorldId(""); setAsignarLoteCantidad(1);
+      load();
+    } catch (e) {
+      notify(e.message, "error");
+    } finally { setAsignandoLoteBusy(false); }
+  };
+
+  const confirmarRenombrarLote = async (loteViejo) => {
+    const nuevo = nombreLoteNuevo.trim();
+    if (!nuevo || nuevo === loteViejo) { setRenombrandoLote(null); return; }
+    try {
+      await renombrarLoteNfcRemote(loteViejo, nuevo);
+      notify(`Lote renombrado a "${nuevo}".`);
+      if (filterLote === loteViejo) setFilterLote(nuevo);
+      setRenombrandoLote(null); setNombreLoteNuevo("");
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "nfc-lote-renombrar", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
   };
 
   const lotes = [...new Set((bandas || []).map(b => b.lote))];
@@ -877,21 +915,69 @@ function BanditasNfcTab() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {byLote.map(l => (
-            <button key={l.lote} onClick={()=>setFilterLote(filterLote===l.lote?"all":l.lote)}
-              className={`p-3 rounded-xl border text-left transition-all ${filterLote===l.lote?"border-primary bg-primary-fixed/20":"border-outline-variant hover:border-primary/40"}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Icon n="contactless" className="text-[16px] text-primary"/>
-                <span className="text-xs font-bold leading-tight">Lote {l.lote}</span>
+            <div key={l.lote}
+              className={`p-3 rounded-xl border transition-all ${filterLote===l.lote?"border-primary bg-primary-fixed/20":"border-outline-variant hover:border-primary/40"}`}>
+              <div onClick={()=>setFilterLote(filterLote===l.lote?"all":l.lote)} className="cursor-pointer">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon n="contactless" className="text-[16px] text-primary"/>
+                  <span className="text-xs font-bold leading-tight">Lote {l.lote}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-green-700 font-mono">{l.disponible} disp.</span>
+                  <span className="text-blue-700 font-mono">{l.asignada} asig.</span>
+                </div>
+                <p className="font-mono text-[9px] text-outline mt-1">{l.total} total</p>
               </div>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-green-700 font-mono">{l.disponible} disp.</span>
-                <span className="text-blue-700 font-mono">{l.asignada} asig.</span>
+              <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/60">
+                <button
+                  onClick={(e)=>{ e.stopPropagation(); setAsignandoLote(asignandoLote===l.lote?null:l.lote); setAsignarLoteWorldId(""); setAsignarLoteCantidad(Math.min(1, l.disponible)); }}
+                  disabled={l.disponible===0}
+                  className="text-[10px] text-primary hover:underline font-medium disabled:opacity-30 disabled:no-underline">Asignar</button>
+                <button
+                  onClick={(e)=>{ e.stopPropagation(); setRenombrandoLote(renombrandoLote===l.lote?null:l.lote); setNombreLoteNuevo(l.lote); }}
+                  className="text-[10px] text-on-surface-variant hover:text-primary font-medium">Renombrar</button>
               </div>
-              <p className="font-mono text-[9px] text-outline mt-1">{l.total} total</p>
-            </button>
+            </div>
           ))}
+        </div>
+      )}
+
+      {/* Renombrar lote — inline, un lote a la vez */}
+      {renombrandoLote && (
+        <div className="mb-4 p-3 bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-on-surface-variant">Renombrar lote "{renombrandoLote}" a</span>
+          <input className="h-8 px-2 bg-surface border border-outline-variant rounded-lg text-xs flex-1 min-w-[140px]"
+            value={nombreLoteNuevo} onChange={e=>setNombreLoteNuevo(e.target.value)}
+            onKeyDown={e=>e.key==="Enter" && confirmarRenombrarLote(renombrandoLote)} autoFocus/>
+          <BtnPrimary className="!py-1.5 !px-3 !text-xs" onClick={()=>confirmarRenombrarLote(renombrandoLote)}>Guardar</BtnPrimary>
+          <button onClick={()=>setRenombrandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+        </div>
+      )}
+
+      {/* Asignar N banditas de un lote específico a un mundo — no siempre se
+          manda el lote completo. */}
+      {asignandoLote && (
+        <div className="mb-8 p-4 bg-surface-container-lowest border border-outline-variant rounded-xl">
+          <p className="text-xs font-bold mb-3">Asignar del lote "{asignandoLote}" ({byLote.find(l=>l.lote===asignandoLote)?.disponible || 0} disponibles)</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+              value={asignarLoteWorldId} onChange={e=>setAsignarLoteWorldId(e.target.value)}>
+              <option value="">Elegir mundo…</option>
+              {mundos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+            </select>
+            <span className="text-xs text-on-surface-variant">Cantidad</span>
+            <NumInput className="h-9 w-20 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+              min="1" max={byLote.find(l=>l.lote===asignandoLote)?.disponible || 1}
+              value={asignarLoteCantidad} onChange={v=>setAsignarLoteCantidad(Math.max(1, Math.min(v, byLote.find(l=>l.lote===asignandoLote)?.disponible || 1)))}/>
+            <button onClick={()=>{ const d=byLote.find(l=>l.lote===asignandoLote)?.disponible||0; setAsignarLoteCantidad(d); }}
+              className="text-[10px] text-primary hover:underline">Todo el lote</button>
+            <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!asignarLoteWorldId || asignandoLoteBusy} onClick={()=>confirmarAsignarLote(asignandoLote)}>
+              {asignandoLoteBusy ? "Asignando…" : "Confirmar asignación"}
+            </BtnPrimary>
+            <button onClick={()=>setAsignandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+          </div>
         </div>
       )}
 

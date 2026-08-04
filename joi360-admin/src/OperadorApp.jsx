@@ -419,7 +419,7 @@ export function VincularBanditaOperador({ comercio, m }) {
         return;
       }
       if (band.estado !== "asignada") { setResultado({ ok: false, mensaje: `Esta pulsera está en estado "${band.estado}", no está lista para vincular.` }); return; }
-      await vincularNfcBandRemote(band.id, wallet.user_id, vigenciaMeses);
+      await vincularNfcBandRemote(band.id, wallet.user_id, vigenciaMeses, m.id);
       setResultado({ ok: true, mensaje: `Pulsera ${band.codigo} vinculada correctamente.` });
       setCodigoBandita("");
     } catch {

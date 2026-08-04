@@ -1165,6 +1165,28 @@ export async function liberarNfcBandRemote(bandId) {
     body: JSON.stringify({ estado: "disponible", world_id: null }),
   });
 }
+// Antes solo se podía asignar una bandita a la vez o cumplir una solicitud
+// de lote genérica (tomaba del almacén completo, sin importar el lote real).
+// Esto asigna N unidades de UN lote específico — no siempre se manda el
+// lote completo a un mundo.
+export async function asignarLoteParcialRemote(lote, worldId, cantidad) {
+  const disponibles = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&estado=eq.disponible&select=id&limit=${cantidad}`);
+  if (!disponibles || disponibles.length < cantidad) {
+    throw new Error(`Solo hay ${disponibles?.length || 0} banditas disponibles en el lote "${lote}" — no alcanza para asignar ${cantidad}.`);
+  }
+  const ids = disponibles.map(b => `"${b.id}"`).join(",");
+  await rest(`nfc_bands?id=in.(${ids})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "asignada", world_id: worldId }),
+  });
+  return disponibles.length;
+}
+export async function renombrarLoteNfcRemote(loteViejo, loteNuevo) {
+  await rest(`nfc_bands?lote=eq.${encodeURIComponent(loteViejo)}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ lote: loteNuevo }),
+  });
+}
 
 // ── Vinculación física de una bandita a un usuario (Task #118) ──────────────
 // `linked_user_id`/`activada_at`/`vence_at` ya existían en el esquema de
@@ -1178,13 +1200,28 @@ export async function buscarNfcBandPorCodigo(codigo, worldId) {
   const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=*`);
   return rows?.[0] || null;
 }
-export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null) {
+// worldId es opcional por compatibilidad, pero sin él no se puede cerrar la
+// solicitud pendiente automáticamente (queda igual que antes: solo vincula
+// la bandita). Con worldId, vincular de verdad ES lo que marca "entregada" —
+// antes ese estado dependía de que alguien lo marcara a mano en el admin,
+// pudiendo quedar "entregada" sin que la pulsera se hubiera vinculado nunca,
+// o viceversa.
+export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null, worldId = null) {
   const now = new Date();
   const vence = vigenciaMeses ? new Date(now.setMonth(now.getMonth() + Number(vigenciaMeses))).toISOString() : null;
   await rest(`nfc_bands?id=eq.${bandId}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ estado: "activa", linked_user_id: userId, activada_at: new Date().toISOString(), vence_at: vence }),
   });
+  if (worldId) {
+    const pendientes = await rest(`nfc_requests?world_id=eq.${worldId}&user_id=eq.${userId}&status=eq.pendiente&select=id&order=created_at.asc&limit=1`).catch(() => []);
+    if (pendientes?.[0]?.id) {
+      await rest(`nfc_requests?id=eq.${pendientes[0].id}`, {
+        method: "PATCH", headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ status: "entregada" }),
+      }).catch(() => {});
+    }
+  }
 }
 
 // ── Solicitud de LOTE de banditas NFC — el mundo pide más stock a RedPontis
