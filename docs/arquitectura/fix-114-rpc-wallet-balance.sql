@@ -32,7 +32,7 @@ returns table (nuevo_saldo numeric, ok boolean, motivo text)
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $func$
 declare
   v_saldo_actual numeric;
   v_nuevo_saldo numeric;
@@ -60,7 +60,7 @@ begin
 
   return query select v_nuevo_saldo, true, null::text;
 end;
-$$;
+$func$;
 
 create or replace function public.transferir_p2p_wallet(
   p_origen_wallet_id uuid,
@@ -73,7 +73,7 @@ returns table (nuevo_saldo_origen numeric, ok boolean, motivo text)
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $func$
 declare
   v_saldo_origen numeric;
   v_saldo_destino numeric;
@@ -116,7 +116,17 @@ begin
 
   return query select v_saldo_origen - p_monto, true, null::text;
 end;
-$$;
+$func$;
 
 grant execute on function public.mover_saldo_wallet(uuid, numeric, text, text, uuid, text, text, uuid) to anon, authenticated;
 grant execute on function public.transferir_p2p_wallet(uuid, uuid, numeric, text, text) to anon, authenticated;
+
+notify pgrst, 'reload config';
+notify pgrst, 'reload schema';
+
+-- Verificación: esto debe devolver 2 filas (una por función). Si devuelve
+-- 0 filas, el CREATE FUNCTION de arriba no corrió de verdad — algo en el
+-- paste/ejecución se cortó antes de llegar aquí, no un problema de caché.
+select proname, pronargs
+from pg_proc
+where proname in ('mover_saldo_wallet', 'transferir_p2p_wallet');
