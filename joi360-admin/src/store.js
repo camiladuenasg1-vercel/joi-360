@@ -1649,7 +1649,11 @@ async function procesarLiquidacionMundo(m, today) {
   // Monto mínimo de liquidación: si el neto a acreditar no lo alcanza, el
   // lote se genera igual (para no perder el volumen del período) pero
   // queda marcado RETENIDO en vez de PENDIENTE — no se libera hasta acumular.
-  const retenido = liqCfg.montoMinimo != null && neto < liqCfg.montoMinimo;
+  // Un neto negativo (comisión fija > volumen real del período, típico en
+  // acuerdos "mixto"/"fijo" con poco tráfico) SIEMPRE queda RETENIDO,
+  // exista o no un monto mínimo configurado — nunca es correcto ofrecer
+  // como "pendiente de pago" un lote donde el mundo le debería a RedPontis.
+  const retenido = neto < 0 || (liqCfg.montoMinimo != null && neto < liqCfg.montoMinimo);
 
   const lote = {
     world_id: m.id, fecha: today, entidad_legal: m.entidadLegal || null,
@@ -1723,6 +1727,14 @@ export async function reconciliarLiquidacionesRemoto() {
 }
 
 export async function marcarLiquidacion(id, estado, extra = {}) {
+  const actual = (load().liquidaciones || []).find(x => x.id === id);
+  // Nunca se puede "procesar" (dar por pagado) un lote con neto negativo —
+  // significaría depositarle al mundo una comisión que no cubrió con su
+  // volumen real del período. Bug real #115: esto llegó a pasar sin ningún
+  // guard y dejó lotes negativos marcados PROCESADA en producción.
+  if (estado === "PROCESADA" && actual && Number(actual.neto) < 0) {
+    throw new Error("No se puede procesar un lote con neto negativo — queda RETENIDO hasta que el volumen del período cubra la comisión.");
+  }
   update(st => {
     const l = (st.liquidaciones||[]).find(x => x.id === id);
     if (l) {

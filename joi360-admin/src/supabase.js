@@ -1132,6 +1132,27 @@ export async function liberarNfcBandRemote(bandId) {
   });
 }
 
+// ── Vinculación física de una bandita a un usuario (Task #118) ──────────────
+// `linked_user_id`/`activada_at`/`vence_at` ya existían en el esquema de
+// nfc_bands pero ningún código los escribía — la única forma de "vincular"
+// era editando Supabase a mano. Este es el paso que faltaba: el operador del
+// POS escanea (o tipea) el código físico de la pulsera y el código JOI del
+// usuario, y esto los une de verdad. Vigencia (vence_at) sale de la config
+// real del mundo (Wallet → "vigencia de la pulsera NFC en meses"); si el
+// mundo no la configuró, la pulsera queda sin vencimiento.
+export async function buscarNfcBandPorCodigo(codigo, worldId) {
+  const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=*`);
+  return rows?.[0] || null;
+}
+export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null) {
+  const now = new Date();
+  const vence = vigenciaMeses ? new Date(now.setMonth(now.getMonth() + Number(vigenciaMeses))).toISOString() : null;
+  await rest(`nfc_bands?id=eq.${bandId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "activa", linked_user_id: userId, activada_at: new Date().toISOString(), vence_at: vence }),
+  });
+}
+
 // ── Solicitud de LOTE de banditas NFC — el mundo pide más stock a RedPontis
 // (distinto de nfc_requests, que es un usuario final pidiendo SU pulsera).
 // entregarLoteNfcRemote() asigna banditas reales del almacén (world_id IS

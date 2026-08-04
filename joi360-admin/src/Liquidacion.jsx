@@ -127,8 +127,9 @@ Sin lotes aún para este período. {tab === "hoy" && "Para generar los lotes del
                   {l.observacion && <p className="text-[10px] text-on-surface-variant mt-1 max-w-[160px]" title={l.observacion}>{l.observacion}</p>}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {l.estado === "PENDIENTE" && <button onClick={() => setProcesando(l)} className="text-primary text-xs font-medium hover:underline">Procesar</button>}
-                  {l.estado === "RETENIDO" && <span className="text-[10px] text-outline">bajo el mínimo</span>}
+                  {l.estado === "PENDIENTE" && Number(l.neto) >= 0 && <button onClick={() => setProcesando(l)} className="text-primary text-xs font-medium hover:underline">Procesar</button>}
+                  {l.estado === "PENDIENTE" && Number(l.neto) < 0 && <span className="text-[10px] text-error" title="Neto negativo: no se puede procesar hasta que el volumen del período cubra la comisión">neto negativo</span>}
+                  {l.estado === "RETENIDO" && <span className="text-[10px] text-outline">{Number(l.neto) < 0 ? "neto negativo" : "bajo el mínimo"}</span>}
                 </td>
               </tr>
             ))}

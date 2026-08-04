@@ -15,6 +15,7 @@ import {
   fetchAccesosMundo, registrarAccesoRemote, buscarWalletPorCodigo,
   errorControlado, logErrorControlado, fetchProgramaBNPL, fetchProductsRemote,
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
+  buscarNfcBandPorCodigo, vincularNfcBandRemote,
 } from "./supabase.js";
 
 export function OperadorApp() {
@@ -33,16 +34,19 @@ const MODOS = [
   { id: "bnpl", nombre: "Solicitud BNPL", icon: "calendar_clock", desc: "Financiar una compra en el punto de venta." },
   { id: "accesos", nombre: "Control de Accesos", icon: "door_open", desc: "Registrar entrada o salida por código." },
   { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
+  { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "Asociar una pulsera física a la cuenta de un usuario." },
 ];
 
 function OperadorShell({ comercio, m }) {
   const [modo, setModo] = useState(null);
   const bnplOn = !!bnplLimitesDelMundo(m);
   const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
+  const walletOn = (m?.modulos || []).some(x => x.id === "wallet" && x.enabled);
 
   const disponibles = MODOS.filter(md => {
     if (md.id === "bnpl") return bnplOn;
     if (md.id === "accesos") return accesosOn;
+    if (md.id === "bandita") return walletOn;
     return true;
   });
 
@@ -86,6 +90,7 @@ function OperadorShell({ comercio, m }) {
         {modo === "qr" && <CobrarPanel comercio={comercio} m={m} />}
         {modo === "bnpl" && <SolicitudBNPLOperador comercio={comercio} m={m} />}
         {modo === "accesos" && <AccesosOperador comercio={comercio} m={m} />}
+        {modo === "bandita" && <VincularBanditaOperador comercio={comercio} m={m} />}
         {modo === "reserva" && <ReservaProximamente />}
       </div>
     </div>
@@ -368,6 +373,89 @@ function AccesosOperador({ comercio, m }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Vincular Pulsera NFC (Task #118) — hasta ahora la única forma de atar
+// una bandita física a un usuario era editando Supabase a mano; esto le da
+// al operador del POS (que es quien tiene la pulsera y al usuario en frente)
+// un flujo real de 2 pasos: identificar al usuario por su código JOI, leer
+// el código de la pulsera física, confirmar. ────────────────────────────────
+function VincularBanditaOperador({ comercio, m }) {
+  const vigenciaMeses = (m?.modulos || []).find(x => x.id === "wallet")?.config?.vigenciaBanditasMeses ?? null;
+  const [codigoUsuario, setCodigoUsuario] = useState("");
+  const [wallet, setWallet] = useState(null);
+  const [codigoBandita, setCodigoBandita] = useState("");
+  const [buscando, setBuscando] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resultado, setResultado] = useState(null);
+
+  const identificar = async () => {
+    const code = codigoUsuario.trim();
+    if (!code) return;
+    setBuscando(true); setResultado(null);
+    try {
+      const w = await buscarWalletPorCodigo(code, m.id);
+      if (!w) { setResultado({ ok: false, mensaje: "No se encontró ningún usuario con ese código JOI en este mundo." }); return; }
+      setWallet(w);
+    } catch {
+      setResultado({ ok: false, mensaje: "No se pudo buscar el código. Intenta de nuevo." });
+    } finally { setBuscando(false); }
+  };
+
+  const vincular = async () => {
+    const code = codigoBandita.trim();
+    if (!code || !wallet) return;
+    setBusy(true); setResultado(null);
+    try {
+      const band = await buscarNfcBandPorCodigo(code, m.id);
+      if (!band) { setResultado({ ok: false, mensaje: "Esa pulsera no existe o no está asignada a este mundo." }); return; }
+      if (band.linked_user_id) {
+        setResultado({ ok: false, mensaje: band.linked_user_id === wallet.user_id ? "Esta pulsera ya está vinculada a este mismo usuario." : "Esta pulsera ya está vinculada a otro usuario." });
+        return;
+      }
+      if (band.estado !== "asignada") { setResultado({ ok: false, mensaje: `Esta pulsera está en estado "${band.estado}", no está lista para vincular.` }); return; }
+      await vincularNfcBandRemote(band.id, wallet.user_id, vigenciaMeses);
+      setResultado({ ok: true, mensaje: `Pulsera ${band.codigo} vinculada correctamente.` });
+      setCodigoBandita("");
+    } catch {
+      setResultado({ ok: false, mensaje: "No se pudo vincular la pulsera. Intenta de nuevo." });
+    } finally { setBusy(false); }
+  };
+
+  const reiniciar = () => { setWallet(null); setCodigoUsuario(""); setCodigoBandita(""); setResultado(null); };
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
+      <div>
+        <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar al usuario</p>
+        <div className="flex gap-2">
+          <input className={`${inputCls} font-mono`} placeholder="Código JOI del usuario" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} disabled={!!wallet} onKeyDown={e => e.key === "Enter" && identificar()} />
+          {!wallet ? (
+            <BtnPrimary disabled={!codigoUsuario.trim() || buscando} onClick={identificar}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+          ) : (
+            <BtnOutline onClick={reiniciar}><Icon n="close" className="text-[16px]" /></BtnOutline>
+          )}
+        </div>
+      </div>
+      {wallet && (
+        <div>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 2 · Código de la pulsera</p>
+          <div className="flex gap-2">
+            <input className={`${inputCls} font-mono`} placeholder="Código impreso o escaneado (NFC-...)" value={codigoBandita} onChange={e => setCodigoBandita(e.target.value)} onKeyDown={e => e.key === "Enter" && vincular()} autoFocus />
+          </div>
+          <p className="text-[10px] text-outline mt-1.5">O escanea con el lector NFC del POS — el código se completa solo.</p>
+          <BtnPrimary onClick={vincular} disabled={!codigoBandita.trim() || busy} className="w-full mt-3">
+            <Icon n="sensors" className="text-[18px]" /> {busy ? "Vinculando…" : "Vincular pulsera"}
+          </BtnPrimary>
+        </div>
+      )}
+      {resultado && (
+        <p className={`text-sm flex items-center gap-1.5 ${resultado.ok ? "text-ok" : "text-error"}`}>
+          <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
+        </p>
+      )}
     </div>
   );
 }
