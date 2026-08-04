@@ -6,7 +6,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
 import { Icon, BtnPrimary, notify, InfoTip } from "./ui";
-import { MODULE_CATALOG, HARDWARE_CATALOG, REDES_PAGO, CANALES_EMISION, PSP_PROVIDERS, listPosStock, FLAG_UX_MAP, getModuloCatalogo } from "./store";
+import { MODULE_CATALOG, MODULOS_PROXIMAMENTE, HARDWARE_CATALOG, REDES_PAGO, CANALES_EMISION, PSP_PROVIDERS, listPosStock, FLAG_UX_MAP, getModuloCatalogo } from "./store";
 import { syncCatalogRemote, errorControlado, logErrorControlado } from "./supabase.js";
 
 export function CatalogosGlobales() {
@@ -43,7 +43,8 @@ export function CatalogosGlobales() {
   const SECTIONS = [
     { id:"capacidades", route:"/admin/catalogo",    icon:"extension",
       label:"Capacidades",           badge:"Catálogo maestro",
-      count: MODULE_CATALOG.length,  color:"bg-primary-fixed text-primary",
+      count: MODULE_CATALOG.filter(m => !MODULOS_PROXIMAMENTE.has(m.id)).length,
+      color:"bg-primary-fixed text-primary",
       desc:"Módulos reutilizables que los mundos activan. Definen qué puede hacer cada mundo." },
     { id:"adquirencia", route:"/admin/adquirencia", icon:"payments",
       label:"Medios de Aceptación",  badge:"Redes de pago",
