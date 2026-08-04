@@ -319,7 +319,7 @@ export const MODULE_CATALOG = [
     ],
   },
 
-  { id: "asistencia", name: "Asistencia", tier: "OPCIONAL", category: "Próximamente", e: false, a: false, icon: "health_and_safety",
+  { id: "asistencia", name: "Asistencia", tier: "OPCIONAL", category: "Mixto", e: false, a: false, icon: "health_and_safety",
     desc: "Próximamente: registro y consulta de presencia de usuarios en actividades, clases o instalaciones. Reporte a padres, justificaciones y reportería por mundo. Aún no construido en la app — sin parámetros configurables todavía.",
     servicios: ["Marcaciones de entrada y salida", "Reporte automático a padres/tutores", "Justificaciones de inasistencia", "Reportería de asistencia por mundo", "Identificación TAQ o QR"],
     pricing: { modelo: "fijo", fijoMensual: 600, setup: 1000, moneda: "PEN" },
