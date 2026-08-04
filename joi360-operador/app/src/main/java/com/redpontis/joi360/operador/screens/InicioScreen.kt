@@ -33,6 +33,7 @@ fun InicioScreen(
     onAcceso: () -> Unit,
     onEntrada: () -> Unit,
     onConsulta: () -> Unit,
+    onVincularBandita: () -> Unit,
     onCuadre: () -> Unit,
     onCerrarSesion: () -> Unit,
 ) {
@@ -104,12 +105,14 @@ fun InicioScreen(
                 )
             )
             if (c.wallet) add(Accion("Consultar", "Saldo, alergias y perfil", true, onConsulta))
+            if (c.banditaNfc) add(Accion("Vincular pulsera", "Atar una pulsera nueva a una cuenta", true, onVincularBandita))
         }
         val icons = mapOf(
             "Cobrar" to Icons.Default.PointOfSale,
             "Validar acceso" to Icons.Default.MeetingRoom,
             "Validar entrada" to Icons.Default.ConfirmationNumber,
             "Consultar" to Icons.Default.Badge,
+            "Vincular pulsera" to Icons.Default.Sensors,
         )
 
         if (tiles.isEmpty()) {

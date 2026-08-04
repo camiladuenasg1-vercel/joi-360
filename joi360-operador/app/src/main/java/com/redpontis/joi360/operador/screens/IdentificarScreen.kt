@@ -68,6 +68,7 @@ fun IdentificarScreen(
         Proposito.Cobro -> "¿Quién paga?"
         Proposito.Acceso -> "¿Quién ingresa?"
         Proposito.Consulta -> "¿A quién consultamos?"
+        Proposito.VincularBandita -> "¿A quién le entregas la pulsera?"
     }
 
     Column(

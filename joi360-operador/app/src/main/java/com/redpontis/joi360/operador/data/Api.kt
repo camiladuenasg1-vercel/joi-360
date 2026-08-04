@@ -196,6 +196,29 @@ object Api {
                 )
             }
 
+    // ── Banditas NFC ──────────────────────────────────────────────────────
+
+    /**
+     * Vincula físicamente una pulsera NFC recién tapada al lector con una
+     * persona ya identificada. bands-link ya existía en el backend (toma la
+     * banda del inventario real, marca linked_user_id/activada_at/vence_at,
+     * calcula la vigencia real desde la config de Wallet del mundo) — lo que
+     * faltaba era que el terminal lo llamara.
+     */
+    suspend fun vincularBandita(
+        worldId: String,
+        bandCode: String,
+        userId: String,
+    ): Result<Unit> =
+        request(
+            "POST",
+            "/api/pos/v1/bands/link",
+            JSONObject()
+                .put("bandCode", bandCode)
+                .put("worldId", worldId)
+                .put("userId", userId),
+        ).map { }
+
     // ── Cobro ─────────────────────────────────────────────────────────────
 
     suspend fun cobrar(

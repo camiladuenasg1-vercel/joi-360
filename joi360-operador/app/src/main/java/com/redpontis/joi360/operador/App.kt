@@ -8,7 +8,7 @@ import com.redpontis.joi360.operador.screens.*
 import com.redpontis.joi360.operador.ui.Joi360Theme
 
 /** Para qué se está identificando a la persona. Decide el paso siguiente. */
-enum class Proposito { Cobro, Acceso, Consulta }
+enum class Proposito { Cobro, Acceso, Consulta, VincularBandita }
 
 sealed interface Pantalla {
     data object AbrirCaja : Pantalla
@@ -17,6 +17,7 @@ sealed interface Pantalla {
     data class Identificar(val proposito: Proposito, val monto: Double = 0.0) : Pantalla
     data class ResultadoCobro(val titular: Titular, val monto: Double) : Pantalla
     data class Ficha(val titular: Titular) : Pantalla
+    data class VincularBandita(val titular: Titular) : Pantalla
     data object Acceso : Pantalla
     data object Entrada : Pantalla
     data object Cuadre : Pantalla
@@ -51,6 +52,7 @@ fun App() {
                 onAcceso = { ir(Pantalla.Acceso) },
                 onEntrada = { ir(Pantalla.Entrada) },
                 onConsulta = { ir(Pantalla.Identificar(Proposito.Consulta)) },
+                onVincularBandita = { ir(Pantalla.Identificar(Proposito.VincularBandita)) },
                 onCuadre = { ir(Pantalla.Cuadre) },
                 onCerrarSesion = {
                     config = null
@@ -75,6 +77,7 @@ fun App() {
                         Proposito.Cobro -> ir(Pantalla.ResultadoCobro(titular, p.monto))
                         Proposito.Consulta -> ir(Pantalla.Ficha(titular))
                         Proposito.Acceso -> ir(Pantalla.Ficha(titular))
+                        Proposito.VincularBandita -> ir(Pantalla.VincularBandita(titular))
                     }
                 },
             )
@@ -89,6 +92,13 @@ fun App() {
             )
 
             is Pantalla.Ficha -> FichaTitularScreen(
+                titular = p.titular,
+                onBack = { volver() },
+                onListo = { inicio() },
+            )
+
+            is Pantalla.VincularBandita -> VincularBanditaScreen(
+                config = config!!,
                 titular = p.titular,
                 onBack = { volver() },
                 onListo = { inicio() },
