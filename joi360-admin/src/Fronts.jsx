@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG } from "./store";
-import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
+import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
 
@@ -303,9 +303,9 @@ function MiCatalogoPanel({ comercio }) {
           </label>
           <div className="grid md:grid-cols-4 gap-3 flex-1">
             <input className={inputCls} placeholder="Nombre (ej. Sandwich mixto)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <input className={inputCls} type="number" step="0.10" placeholder="Precio S/" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
+            <NumInput className={inputCls} step="0.10" placeholder="Precio S/" value={form.price} onChange={v => setForm({ ...form, price: v })} />
             <input className={inputCls} placeholder="Categoría (opcional)" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
-            <input className={inputCls} type="number" placeholder="Stock (opcional)" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
+            <NumInput className={inputCls} placeholder="Stock (opcional)" value={form.stock} onChange={v => setForm({ ...form, stock: v })} />
           </div>
         </div>
         <div className="flex justify-end mt-3">
@@ -440,7 +440,7 @@ function MenuCatalogoPanel({ comercio }) {
         <p className="font-semibold text-sm mb-3">Nuevo plato</p>
         <div className="grid md:grid-cols-4 gap-3 mb-3">
           <input className={inputCls} placeholder="Nombre (ej. Milanesa con puré)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
-          <input className={inputCls} type="number" step="0.10" placeholder="Precio S/" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} />
+          <NumInput className={inputCls} step="0.10" placeholder="Precio S/" value={form.precio} onChange={v => setForm({ ...form, precio: v })} />
           <input className={inputCls} placeholder="Categoría (ej. Plato de fondo)" value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} />
           <input className={inputCls} placeholder="URL de imagen (opcional)" value={form.imagen_url} onChange={e => setForm({ ...form, imagen_url: e.target.value })} />
         </div>
@@ -505,7 +505,7 @@ function MenuCatalogoPanel({ comercio }) {
                   </div>
                   <div className="flex items-end gap-3">
                     <Field label="Cupos por día (vacío = ilimitado)">
-                      <input className={`${inputCls} !w-40`} type="number" min="0" value={progDraft.cupos} onChange={e => setProgDraft({ ...progDraft, cupos: e.target.value })} />
+                      <NumInput className={`${inputCls} !w-40`} min="0" value={progDraft.cupos} onChange={v => setProgDraft({ ...progDraft, cupos: v })} />
                     </Field>
                     <BtnPrimary disabled={savingProg} onClick={() => guardarProgramacion(item)}>{savingProg ? "Guardando…" : "Guardar programación"}</BtnPrimary>
                   </div>
@@ -757,8 +757,8 @@ export function CobrarPanel({ comercio, m }) {
             )}
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-on-surface-variant">S/</span>
-              <input className="text-2xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" type="number" step="0.10"
-                value={monto} onChange={e => { setMonto(e.target.value); setProductoSel(null); }} placeholder="0.00" />
+              <NumInput className="text-2xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" step="0.10"
+                value={monto} onChange={v => { setMonto(v); setProductoSel(null); }} placeholder="0.00" />
             </div>
             {productoSel && financiable(productoSel) && (
               <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
@@ -788,8 +788,8 @@ export function CobrarPanel({ comercio, m }) {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-on-surface-variant">S/</span>
-              <input className="text-2xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" type="number" step="0.10"
-                value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" disabled={!canalRecarga} />
+              <NumInput className="text-2xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" step="0.10"
+                value={monto} onChange={v => setMonto(v)} placeholder="0.00" disabled={!canalRecarga} />
             </div>
             {canalRecarga && <p className="text-[10px] text-on-surface-variant mt-2">Recarga presencial — confirma solo después de recibir el {canalRecarga.nombre.toLowerCase()} del alumno. Se acredita a su billetera al instante.</p>}
           </div>
@@ -1062,10 +1062,10 @@ function ProgramaBNPLPanel({ comercio, m }) {
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Comisión sobre venta financiada (%)">
-              <input className={inputCls} type="number" step="0.5" value={prog.comision} onChange={e => setProg(p => ({ ...p, comision: +e.target.value }))} />
+              <NumInput className={inputCls} step="0.5" value={prog.comision} onChange={v => setProg(p => ({ ...p, comision: v }))} />
             </Field>
             <Field label="Revenue share al mundo (%)">
-              <input className={inputCls} type="number" step="1" value={prog.revShare} onChange={e => setProg(p => ({ ...p, revShare: +e.target.value }))} />
+              <NumInput className={inputCls} step="1" value={prog.revShare} onChange={v => setProg(p => ({ ...p, revShare: v }))} />
             </Field>
           </div>
           <Field label="Gestión de mora">
@@ -1078,8 +1078,8 @@ function ProgramaBNPLPanel({ comercio, m }) {
               {prog.mora === "con_cargo" && (
                 <div className="pl-3">
                   <Field label={`% de mora aplicado (techo del mundo: ${limites.moraMaxPct}%)`}>
-                    <input className={inputCls} type="number" step="0.5" min="0" max={limites.moraMaxPct}
-                      value={prog.moraPct} onChange={e => setProg(p => ({ ...p, moraPct: Math.min(+e.target.value, limites.moraMaxPct) }))} />
+                    <NumInput className={inputCls} step="0.5" min="0" max={limites.moraMaxPct}
+                      value={prog.moraPct} onChange={v => setProg(p => ({ ...p, moraPct: Math.min(v, limites.moraMaxPct) }))} />
                   </Field>
                 </div>
               )}
@@ -1099,19 +1099,19 @@ function ProgramaBNPLPanel({ comercio, m }) {
               {prog.frecuencia === "personalizada" ? (
                 <div>
                   <label className="text-xs text-on-surface-variant block mb-1">Días entre cuotas</label>
-                  <input className={inputCls} type="number" min="1" value={prog.diasPersonalizados} onChange={e => setProg(p => ({ ...p, diasPersonalizados: +e.target.value }))} />
+                  <NumInput className={inputCls} min="1" value={prog.diasPersonalizados} onChange={v => setProg(p => ({ ...p, diasPersonalizados: v }))} />
                 </div>
               ) : (
                 <div>
                   <label className="text-xs text-on-surface-variant block mb-1">Días de gracia (techo: {limites.diasGracia})</label>
-                  <input className={inputCls} type="number" min="0" max={limites.diasGracia} value={prog.diasGracia} onChange={e => setProg(p => ({ ...p, diasGracia: Math.min(+e.target.value, limites.diasGracia) }))} />
+                  <NumInput className={inputCls} min="0" max={limites.diasGracia} value={prog.diasGracia} onChange={v => setProg(p => ({ ...p, diasGracia: Math.min(v, limites.diasGracia) }))} />
                 </div>
               )}
             </div>
             {prog.frecuencia === "personalizada" && (
               <div className="mt-2">
                 <label className="text-xs text-on-surface-variant block mb-1">Días de gracia (techo: {limites.diasGracia})</label>
-                <input className={inputCls} type="number" min="0" max={limites.diasGracia} value={prog.diasGracia} onChange={e => setProg(p => ({ ...p, diasGracia: Math.min(+e.target.value, limites.diasGracia) }))} />
+                <NumInput className={inputCls} min="0" max={limites.diasGracia} value={prog.diasGracia} onChange={v => setProg(p => ({ ...p, diasGracia: Math.min(v, limites.diasGracia) }))} />
               </div>
             )}
             <p className="text-xs text-outline mt-1.5">Define cómo se espacia el cronograma de cuotas de las próximas ventas financiadas de este comercio.</p>
@@ -1176,7 +1176,7 @@ function ProgramaBNPLPanel({ comercio, m }) {
               </div>
               <div className="flex gap-2">
                 <input className={inputCls} placeholder="Ej. Garantía extendida TV 55''" value={prodDraft.nombre} onChange={e => setProdDraft(d => ({ ...d, nombre: e.target.value }))} />
-                <input className={`${inputCls} !w-28`} type="number" placeholder="S/" value={prodDraft.precio} onChange={e => setProdDraft(d => ({ ...d, precio: e.target.value }))} />
+                <NumInput className={`${inputCls} !w-28`} placeholder="S/" value={prodDraft.precio} onChange={v => setProdDraft(d => ({ ...d, precio: v }))} />
                 <BtnOutline onClick={addProducto}><Icon n="add" className="text-[18px]" /></BtnOutline>
               </div>
               {prog.productos.some(p => p.precio > limites.montoMax) && (
@@ -1187,7 +1187,7 @@ function ProgramaBNPLPanel({ comercio, m }) {
 
           <div className="mt-4 pt-4 border-t border-outline-variant/50">
             <Field label="Cuota inicial (opcional)" hint="Monto que el cliente paga al firmar, antes del cronograma de cuotas restantes.">
-              <input className={`${inputCls} !w-32`} type="number" min="0" step="0.5" value={prog.cuotaInicial} onChange={e => setProg(p => ({ ...p, cuotaInicial: +e.target.value }))} />
+              <NumInput className={`${inputCls} !w-32`} min="0" step="0.5" value={prog.cuotaInicial} onChange={v => setProg(p => ({ ...p, cuotaInicial: v }))} />
             </Field>
           </div>
         </div>
@@ -1572,16 +1572,16 @@ function BnplContratoDrawer({ contrato, onClose, onChanged }) {
 
       {accion === "reprogramar" && (
         <div className="p-4 bg-surface-container-low border border-outline-variant rounded-xl mb-4 space-y-3">
-          <Field label="Nuevas cuotas"><input className={inputCls} type="number" min="1" value={nCuotas} onChange={e => setNCuotas(+e.target.value)} /></Field>
+          <Field label="Nuevas cuotas"><NumInput className={inputCls} min="1" value={nCuotas} onChange={v => setNCuotas(v)} /></Field>
           <Field label="Primer vencimiento"><input className={inputCls} type="date" value={primerVenc} onChange={e => setPrimerVenc(e.target.value)} /></Field>
           <BtnPrimary disabled={busy} onClick={() => ejecutar(reprogramarCuotasBNPL, nCuotas, primerVenc)}>{busy ? "Aplicando…" : "Reprogramar"}</BtnPrimary>
         </div>
       )}
       {accion === "refinanciar" && (
         <div className="p-4 bg-surface-container-low border border-outline-variant rounded-xl mb-4 space-y-3">
-          <Field label="Nuevas cuotas"><input className={inputCls} type="number" min="1" value={nCuotas} onChange={e => setNCuotas(+e.target.value)} /></Field>
+          <Field label="Nuevas cuotas"><NumInput className={inputCls} min="1" value={nCuotas} onChange={v => setNCuotas(v)} /></Field>
           <Field label="Primer vencimiento"><input className={inputCls} type="date" value={primerVenc} onChange={e => setPrimerVenc(e.target.value)} /></Field>
-          <Field label="Nueva tasa de interés (%, opcional)"><input className={inputCls} type="number" step="0.5" value={interesNuevo} onChange={e => setInteresNuevo(+e.target.value)} /></Field>
+          <Field label="Nueva tasa de interés (%, opcional)"><NumInput className={inputCls} step="0.5" value={interesNuevo} onChange={v => setInteresNuevo(v)} /></Field>
           <BtnPrimary disabled={busy} onClick={() => ejecutar(refinanciarBNPL, nCuotas, primerVenc, interesNuevo)}>{busy ? "Aplicando…" : "Refinanciar"}</BtnPrimary>
         </div>
       )}
@@ -1599,7 +1599,7 @@ function BnplContratoDrawer({ contrato, onClose, onChanged }) {
       )}
       {accion === "descuento" && (
         <div className="p-4 bg-surface-container-low border border-outline-variant rounded-xl mb-4 space-y-3">
-          <Field label={`Monto del descuento (saldo actual: S/ ${saldo.toFixed(2)})`}><input className={inputCls} type="number" step="0.5" value={montoDescuento} onChange={e => setMontoDescuento(+e.target.value)} /></Field>
+          <Field label={`Monto del descuento (saldo actual: S/ ${saldo.toFixed(2)})`}><NumInput className={inputCls} step="0.5" value={montoDescuento} onChange={v => setMontoDescuento(v)} /></Field>
           <BtnPrimary disabled={busy || montoDescuento <= 0} onClick={() => ejecutar(aplicarDescuentoBNPL, montoDescuento)}>{busy ? "Aplicando…" : "Aplicar descuento"}</BtnPrimary>
         </div>
       )}
@@ -1681,7 +1681,7 @@ function SolicitarLoteNfcWidget({ worldId }) {
       <div className="p-5">
         <p className="text-xs text-on-surface-variant mb-3">Cuando se estén acabando las banditas disponibles para tus usuarios, pide más aquí — RedPontis las asigna desde su stock.</p>
         <div className="flex gap-2">
-          <input className={`${inputCls} font-mono`} type="number" min="1" placeholder="Cantidad" value={cantidad} onChange={e => setCantidad(e.target.value)} />
+          <NumInput className={`${inputCls} font-mono`} min="1" placeholder="Cantidad" value={cantidad} onChange={v => setCantidad(v)} />
           <BtnPrimary disabled={!cantidad || +cantidad <= 0 || enviando} onClick={solicitar}>
             {enviando ? "Enviando…" : "Solicitar"}
           </BtnPrimary>
@@ -1770,8 +1770,8 @@ function RequerirHardwareWidget({ worldId }) {
           </select>
           {modelo && <p className="text-[11px] text-on-surface-variant px-1">{modelo.desc}</p>}
           <div className="flex gap-2">
-            <input className={`${inputCls} font-mono`} type="number" min="1" placeholder="Cantidad"
-              value={cantidad} onChange={e => setCantidad(e.target.value)} />
+            <NumInput className={`${inputCls} font-mono`} min="1" placeholder="Cantidad"
+              value={cantidad} onChange={v => setCantidad(v)} />
             <BtnPrimary disabled={!cantidad || +cantidad <= 0 || enviando} onClick={pedir}>
               {enviando ? "Enviando…" : "Requerir"}
             </BtnPrimary>
@@ -2706,8 +2706,8 @@ function SolicitarAltaComercio({ m }) {
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Tarifa MDR sugerida (%)"><input className={inputCls} type="number" step="0.1" value={f.tarifa} onChange={e => setF({...f, tarifa:e.target.value})}/></Field>
-            <Field label="POS solicitados"><input className={inputCls} type="number" min="0" value={f.pos} onChange={e => setF({...f, pos:e.target.value})}/></Field>
+            <Field label="Tarifa MDR sugerida (%)"><NumInput className={inputCls} step="0.1" value={f.tarifa} onChange={v => setF({...f, tarifa:v})}/></Field>
+            <Field label="POS solicitados"><NumInput className={inputCls} min="0" value={f.pos} onChange={v => setF({...f, pos:v})}/></Field>
           </div>
 
           <div className="pt-3 border-t border-outline-variant/50">

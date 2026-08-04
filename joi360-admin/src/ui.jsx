@@ -94,6 +94,36 @@ export const Field = ({ label, hint, children }) => (
 
 export const inputCls = "w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
+// Input numérico controlado que SÍ deja reescribir: el patrón viejo
+// (`value={f.x||0}` + `onChange={e=>setF({...f,x:+e.target.value})}`)
+// coacciona a número en cada tecla, así que borrar el campo o escribir un
+// decimal ("2.") rebota de inmediato al número redondeado y el usuario
+// nunca puede terminar de escribir. Este componente guarda el string crudo
+// mientras el input tiene foco y solo emite el número parseado al perder
+// el foco (o Enter), igual que cualquier campo numérico nativo esperaría.
+export function NumInput({ value, onChange, className = inputCls, ...props }) {
+  const [raw, setRaw] = useState(() => (value === null || value === undefined ? "" : String(value)));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => { if (!focused) setRaw(value === null || value === undefined ? "" : String(value)); }, [value, focused]);
+  const commit = (str) => {
+    if (str === "" || str === "-" || str === "." || str === "-.") { onChange(0); return; }
+    const n = Number(str);
+    if (!Number.isNaN(n)) onChange(n);
+  };
+  return (
+    <input
+      {...props}
+      type="number"
+      className={className}
+      value={raw}
+      onFocus={() => setFocused(true)}
+      onChange={e => setRaw(e.target.value)}
+      onBlur={e => { setFocused(false); commit(e.target.value); }}
+      onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); props.onKeyDown?.(e); }}
+    />
+  );
+}
+
 export const Drawer = ({ open, onClose, title, subtitle, icon, children, footer, width = "w-[480px]" }) => {
   if (!open) return null;
   return (

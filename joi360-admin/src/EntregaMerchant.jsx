@@ -21,6 +21,11 @@ export function EntregaMerchantDrawer({ comercio, m, open, onClose }) {
   if (!cred) return null;
 
   const url = `${window.location.origin}${window.location.pathname}#/comercio/${comercio.id}`;
+  // App Operador (=Tap2Phone: el celular del comercio como POS) reusa la
+  // misma sesión de merchant, no es un usuario aparte — pero es la ruta que
+  // de verdad usa el operador de caja día a día, así que se entrega también
+  // como link propio, no solo el dashboard completo.
+  const urlOperador = `${window.location.origin}${window.location.pathname}#/operador/${comercio.id}`;
   const yaEntregado = !!comercio.entregado;
 
   const mensajeEntrega = `Hola ${comercio.contactoNombre || comercio.nombre},
@@ -29,7 +34,8 @@ Tu panel de operaciones JOI 360 ya está listo para ${comercio.nombre} en el mun
 
 Accede con las siguientes credenciales:
 
-🔗 URL del panel: ${url}
+🔗 URL del panel (dashboard completo): ${url}
+📱 URL del POS Operador (App Operador / Tap2Phone, cobro día a día): ${urlOperador}
 👤 Usuario: ${cred.usuario}
 🔑 Contraseña: ${cred.password}
 

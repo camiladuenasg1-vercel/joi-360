@@ -906,14 +906,14 @@ function SelectorModoEventos({ m, compacto = false }) {
               <div className="grid grid-cols-2 gap-3">
                 {(cfg.modeloComisionEventos || "transaccional") !== "revenue" && (
                   <Field label="Comisión por entrada (%)">
-                    <input className={inputCls} type="number" value={cfg.comisionEntrada || 0}
-                      onChange={e => setCfg({ comisionEntrada: +e.target.value })} />
+                    <NumInput className={inputCls} value={cfg.comisionEntrada || 0}
+                      onChange={v => setCfg({ comisionEntrada: v })} />
                   </Field>
                 )}
                 {(cfg.modeloComisionEventos === "mixto" || cfg.modeloComisionEventos === "revenue") && (
                   <Field label={`Cuota fija mensual (${m.moneda})`}>
-                    <input className={inputCls} type="number" value={cfg.comisionFijaMensual || 0}
-                      onChange={e => setCfg({ comisionFijaMensual: +e.target.value })} />
+                    <NumInput className={inputCls} value={cfg.comisionFijaMensual || 0}
+                      onChange={v => setCfg({ comisionFijaMensual: v })} />
                   </Field>
                 )}
               </div>
@@ -1151,16 +1151,16 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
               </div>
               {(f.acuerdo?.modelo==="fijo"||f.acuerdo?.modelo==="mixto") && (
                 <Field label={`Cuota fija mensual (${m.moneda})`}>
-                  <input className={inputCls} type="number" value={f.acuerdo?.fijoMensual||0} onChange={e=>setF({...f,acuerdo:{...f.acuerdo,fijoMensual:+e.target.value}})}/>
+                  <NumInput className={inputCls} value={f.acuerdo?.fijoMensual||0} onChange={v=>setF({...f,acuerdo:{...f.acuerdo,fijoMensual:v}})}/>
                 </Field>
               )}
               {(f.acuerdo?.modelo==="transaccional"||f.acuerdo?.modelo==="mixto") && (
                 <Field label="% por transacción">
-                  <input className={inputCls} type="number" step="0.1" value={f.acuerdo?.porTx||0} onChange={e=>setF({...f,acuerdo:{...f.acuerdo,porTx:+e.target.value}})}/>
+                  <NumInput className={inputCls} step="0.1" value={f.acuerdo?.porTx||0} onChange={v=>setF({...f,acuerdo:{...f.acuerdo,porTx:v}})}/>
                 </Field>
               )}
               <Field label={`Setup (${m.moneda})`}>
-                <input className={inputCls} type="number" value={f.acuerdo?.setup||0} onChange={e=>setF({...f,acuerdo:{...f.acuerdo,setup:+e.target.value}})}/>
+                <NumInput className={inputCls} value={f.acuerdo?.setup||0} onChange={v=>setF({...f,acuerdo:{...f.acuerdo,setup:v}})}/>
               </Field>
               {f.acuerdo?.modelo && (
                 <div className="p-3 bg-surface-container rounded-lg text-xs font-mono text-on-surface-variant">

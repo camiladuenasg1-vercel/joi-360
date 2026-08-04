@@ -591,61 +591,13 @@ function seed() {
         acuerdo: { tipo: "mixto", revShare: 10, fijoMensual: 0, setup: 0, vigencia: "indefinida" },
         createdAt: now,
       },
-      {
-        id: "mundo-jockey-plaza",
-        fixed: false, redpontis: false, type: "standard",
-        nombre: "Jockey Plaza",
-        codigo: "CC-JP-01",
-        vertical: "Retail",
-        giro: "Centro comercial",
-        entidadLegal: "Jockey Plaza SAC",
-        ruc: "20123456789",
-        moneda: "PEN",
-        estado: "ACTIVO",
-        color: "#00897b",
-        descripcion: "Centro Comercial Jockey Plaza. Motor de Eventos activado para conciertos, ferias y activaciones de marca dentro del mall.",
-        // Mundo regular → B2B por defecto (ver modosDeMundo). Embebido activo:
-        // el propio sponsor también puede publicar eventos desde su panel.
-        eventosConfig: {
-          embebidoActivo: true,
-          monetizacion: true,
-          comisionEntrada: 2,   // 2% rev-share vs 1% en JOI Eventos
-        },
-        modulos: (() => {
-          const mods = ["wallet", "consumos", "comercios", "eventos", "loyalty", "promociones"].map(defaultModuleState);
-          const evMod = mods.find(m => m.id === "eventos");
-          if (evMod) {
-            evMod.config.allowB2C = false;
-            evMod.config.comisionEntrada = 2;
-            evMod.config.ventanaPickup = 45;
-          }
-          return mods;
-        })(),
-        acuerdo: { tipo: "mixto", revShare: 2, fijoMensual: 800, setup: 2000, vigencia: "24 meses" },
-        createdAt: now - 86400000 * 2,
-      },
-      {
-        id: "mundo-raimondi",
-        fixed: false,
-        type: "standard",
-        nombre: "Colegio Raimondi",
-        codigo: "ED-LIM-001",
-        vertical: "Educación",
-        entidadLegal: "Asociación Educacional A. Raimondi",
-        ruc: "20100055219",
-        moneda: "PEN",
-        estado: "ACTIVO",
-        color: "#0035b9",
-        descripcion: "Mundo demo de vertical Educación: wallets de alumnos, POS de cafetería y programación de menú.",
-        // "eventos" activo (Gantt #58): la Kermesse Raimondi ya existe real en
-        // Supabase (sembrada vía preparar-demo.ps1) — este seed estaba
-        // desincronizado y por eso una sesión nueva no veía el Motor de
-        // Eventos ni la Cola de aprobación para este mundo.
-        modulos: ["wallet", "comercios", "consumos", "inventario", "control", "menu", "perfil_ext", "accesos", "eventos"].map(defaultModuleState),
-        eventosConfig: { embebidoActivo: true, comisionEntrada: 5 },
-        acuerdo: { tipo: "mixto", revShare: 8, fijoMensual: 1500, setup: 5000, vigencia: "12 meses" },
-        createdAt: now - 86400000 * 20,
-      },
+      // Antes había 2 mundos demo horneados aquí (Jockey Plaza, Colegio
+      // Raimondi con ids fijos mundo-jockey-plaza/mundo-raimondi) — el mismo
+      // problema que comercios/tickets/liquidaciones: si state.mundos se
+      // reseedeaba por CUALQUIER motivo (origen nuevo, guard de state vacío),
+      // el siguiente update() los empujaba a Supabase vía scheduleSync,
+      // reintroduciendo mundos fantasma en producción. seed() ya no crea
+      // mundos que no sean plataforma real (JOI Eventos/JOI Promos, fixed).
     ],
     // Sin data mock horneada: liquidación, eventos, promos, comercios,
     // tickets y anunciantes arrancan reales en 0 y se llenan solo con lo
@@ -1434,6 +1386,18 @@ export const CANALES_ADQUIRENCIA = [
     proveedor:"JOI 360", costoUnitario:0, modoArrendamiento:"Sticker impreso",
     requiereConexion:false, aceptaNFC:false,
     desc:"QR impreso en vinilo. Un código fijo por comercio. Sin conexión a internet requerida." },
+  // Tap2Phone real (cobrar tarjetas físicas — Visa/Mastercard contactless —
+  // tocando el celular del operador, sin terminal aparte) todavía no existe
+  // como funcionalidad: requiere una integración de adquirencia certificada
+  // (Visa/Mastercard Tap to Phone) que no está construida. Queda listado y
+  // configurable — mismo patrón que "Transferencia bancaria" — pero
+  // "Próximamente" hasta tener ese convenio. No confundir con "App Operador":
+  // ese canal ya es real hoy (el celular del comercio como POS vía JOI 360
+  // App, cobrando a la wallet JOI, no tarjetas físicas).
+  { id:"tap2phone",     nombre:"Tap2Phone (tarjetas)", tipo:"App POS",    icon:"contactless",      disponible:false,
+    proveedor:"Por definir (Visa/Mastercard Tap to Phone)", costoUnitario:0, modoArrendamiento:"App gratuita",
+    requiereConexion:true, aceptaNFC:true, aceptaChip:false, aceptaBanda:false,
+    desc:"Cobrar tarjetas físicas contactless tocando el celular del operador, sin terminal aparte. Requiere convenio de adquirencia certificado — pendiente de integración." },
 ];
 
 // ============ CATÁLOGO GLOBAL DE REDES DE PAGO ============
