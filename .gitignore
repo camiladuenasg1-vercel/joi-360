@@ -38,3 +38,5 @@ desktop.ini
 
 # Documento Maestro: capturas y scripts de trabajo, no es codigo de la app
 docs/maestro/
+
+.vercel

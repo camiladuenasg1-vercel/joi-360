@@ -725,25 +725,36 @@ function BanditasNfcTab() {
   // encabezado ni por posición — funciona sin importar cómo se llame la
   // columna o en qué orden venga.
   const UID_PATTERN = /^([0-9A-Fa-f]{2}:){2,9}[0-9A-Fa-f]{2}$/;
+  // El UID no siempre llega ya separado por dos puntos — el mismo dato puede
+  // venir como hex corrido (04D6015A681994) o con otro separador (guiones,
+  // espacios) según cómo lo haya exportado el lector/proveedor. Se normaliza
+  // siempre al formato canónico en vez de exigir que el archivo ya venga así.
+  const normalizarUid = (raw) => {
+    const limpio = String(raw || "").trim().toUpperCase();
+    if (UID_PATTERN.test(limpio)) return limpio;
+    const soloHex = limpio.replace(/[:\-\s.]/g, "");
+    if (!/^[0-9A-F]+$/.test(soloHex) || soloHex.length < 8 || soloHex.length % 2 !== 0) return null;
+    return soloHex.match(/.{2}/g).join(":");
+  };
   const parseBulkFile = (file) => {
     if (!bulkLote.trim()) { notify("Elige el nombre del lote antes de adjuntar el archivo.", "error"); return; }
     setBulkFileName(file.name);
     leerLineasDeArchivo(file, lines => {
       if (!lines.length) { setBulkRows([]); return; }
       const primeraFila = lines[0].split(",").map(c => c.trim());
-      const esEncabezado = !primeraFila.some(c => UID_PATTERN.test(c));
+      const esEncabezado = !primeraFila.some(c => normalizarUid(c));
       const filas = esEncabezado ? lines.slice(1) : lines;
       const muestra = filas.slice(0, 20).map(l => l.split(",").map(s => s.trim()));
       const numCols = Math.max(0, ...muestra.map(r => r.length));
       let idxUid = 0;
       for (let c = 0; c < numCols; c++) {
         const valores = muestra.map(r => r[c]).filter(Boolean);
-        if (valores.length && valores.every(v => UID_PATTERN.test(v))) { idxUid = c; break; }
+        if (valores.length && valores.every(v => normalizarUid(v))) { idxUid = c; break; }
       }
       const rows = filas.map(line => {
         const cols = line.split(",").map(s => s.trim());
-        const codigo = (cols[idxUid] || "").toUpperCase();
-        return { codigo, lote: bulkLote.trim(), valido: UID_PATTERN.test(codigo) };
+        const normalizado = normalizarUid(cols[idxUid]);
+        return { codigo: normalizado || (cols[idxUid] || "").toUpperCase(), lote: bulkLote.trim(), valido: !!normalizado };
       });
       setBulkRows(rows);
     });
@@ -1336,7 +1347,7 @@ function BanditasNfcTab() {
             <h2 className="font-semibold text-lg mb-1">Cargar lote de banditas NFC</h2>
             <p className="text-xs text-on-surface-variant mb-4">
               Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con el UID de cada bandita (formato tipo 04:D6:01:5A:68:19:94).
-              La columna se detecta por ese formato, sin importar en qué posición venga ni cómo se llame su encabezado. El precio se estipula al asignar el lote a un mundo, no acá.
+              La columna se detecta por ese formato, sin importar en qué posición venga ni cómo se llame su encabezado. Si la celda trae el UID sin los dos puntos (ej. 04D6015A681994) se convierte solo. El precio se estipula al asignar el lote a un mundo, no acá.
             </p>
             <div className="mb-4">
               <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>

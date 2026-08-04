@@ -390,10 +390,20 @@ export function AccesosOperador({ comercio, m }) {
 // al operador del POS (que es quien tiene la pulsera y al usuario en frente)
 // un flujo real de 2 pasos: identificar al usuario por su código JOI, leer
 // el código de la pulsera física, confirmar. ────────────────────────────────
+// Base del backend nativo (bands-link, titular-dni, etc.) — el mismo dominio
+// estable que usa el POS T6 (Api.kt: baseUrl). El panel web nunca lo había
+// llamado antes; la búsqueda por DNI necesita el pepper del servidor (el
+// número de documento no se guarda legible en ninguna tabla que la llave
+// anónima pueda leer), así que no hay forma de resolverlo desde el navegador.
+const POS_BACKEND_URL = "https://joi-pos-backend.vercel.app";
+
 export function VincularBanditaOperador({ comercio, m }) {
   const vigenciaMeses = (m?.modulos || []).find(x => x.id === "wallet")?.config?.vigenciaBanditasMeses ?? null;
+  const [modoIdent, setModoIdent] = useState("codigo"); // "codigo" | "dni"
   const [codigoUsuario, setCodigoUsuario] = useState("");
+  const [dniInput, setDniInput] = useState("");
   const [wallet, setWallet] = useState(null);
+  const [candidatos, setCandidatos] = useState(null); // familia completa cuando el DNI trae más de 1 cuenta
   const [codigoBandita, setCodigoBandita] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -410,6 +420,39 @@ export function VincularBanditaOperador({ comercio, m }) {
     } catch {
       setResultado({ ok: false, mensaje: "No se pudo buscar el código. Intenta de nuevo." });
     } finally { setBuscando(false); }
+  };
+
+  // Un DNI puede ser el del titular o el de un dependiente — cualquiera de
+  // los dos casos debe mostrar a TODA la familia (titular + hermanos) para
+  // elegir a propósito a quién se está vinculando, en vez de asumir que el
+  // documento tecleado identifica a una sola persona.
+  const identificarPorDni = async () => {
+    const dni = dniInput.trim();
+    if (!dni) return;
+    setBuscando(true); setResultado(null); setCandidatos(null);
+    try {
+      const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/titular-dni/${encodeURIComponent(dni)}?world_id=${encodeURIComponent(m.id)}`);
+      if (!res.ok) {
+        setResultado({ ok: false, mensaje: res.status === 404 ? "No encontramos a nadie con ese DNI en este mundo." : "No se pudo buscar el documento. Intenta de nuevo." });
+        return;
+      }
+      const data = await res.json();
+      const principal = { userId: data.userId, nombre: data.nombre, esDependiente: data.esDependiente, balance: data.balance, alergias: data.restricciones?.alergias };
+      const relacionados = (data.relacionados || []).map(r => ({ userId: r.userId, nombre: r.nombre, esDependiente: r.esDependiente, balance: r.balance, alergias: r.restricciones?.alergias }));
+      const todos = [principal, ...relacionados];
+      if (todos.length === 1) {
+        setWallet({ user_id: principal.userId });
+      } else {
+        setCandidatos(todos);
+      }
+    } catch {
+      setResultado({ ok: false, mensaje: "No se pudo buscar el documento. Intenta de nuevo." });
+    } finally { setBuscando(false); }
+  };
+
+  const elegirCandidato = (c) => {
+    setWallet({ user_id: c.userId });
+    setCandidatos(null);
   };
 
   const vincular = async () => {
@@ -432,20 +475,55 @@ export function VincularBanditaOperador({ comercio, m }) {
     } finally { setBusy(false); }
   };
 
-  const reiniciar = () => { setWallet(null); setCodigoUsuario(""); setCodigoBandita(""); setResultado(null); };
+  const reiniciar = () => { setWallet(null); setCodigoUsuario(""); setDniInput(""); setCandidatos(null); setCodigoBandita(""); setResultado(null); };
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
       <div>
-        <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar al usuario</p>
-        <div className="flex gap-2">
-          <input className={`${inputCls} font-mono`} placeholder="Código JOI del usuario" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} disabled={!!wallet} onKeyDown={e => e.key === "Enter" && identificar()} />
-          {!wallet ? (
+        <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar a la persona</p>
+        {!wallet && !candidatos && (
+          <div className="flex gap-1.5 mb-2">
+            <button onClick={() => setModoIdent("codigo")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "codigo" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>Código JOI</button>
+            <button onClick={() => setModoIdent("dni")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "dni" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>DNI</button>
+          </div>
+        )}
+        {!wallet && !candidatos && modoIdent === "codigo" && (
+          <div className="flex gap-2">
+            <input className={`${inputCls} font-mono`} placeholder="Código JOI del usuario" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} onKeyDown={e => e.key === "Enter" && identificar()} />
             <BtnPrimary disabled={!codigoUsuario.trim() || buscando} onClick={identificar}><Icon n="search" className="text-[16px]" /></BtnPrimary>
-          ) : (
+          </div>
+        )}
+        {!wallet && !candidatos && modoIdent === "dni" && (
+          <div>
+            <div className="flex gap-2">
+              <input className={`${inputCls} font-mono`} placeholder="DNI del titular o del dependiente" value={dniInput} onChange={e => setDniInput(e.target.value)} onKeyDown={e => e.key === "Enter" && identificarPorDni()} />
+              <BtnPrimary disabled={!dniInput.trim() || buscando} onClick={identificarPorDni}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+            </div>
+            <p className="text-[10px] text-outline mt-1.5">Cualquier DNI de la familia funciona — si hay más de una cuenta asociada, se puede elegir cuál.</p>
+          </div>
+        )}
+        {candidatos && (
+          <div className="space-y-2">
+            <p className="text-xs text-on-surface-variant">Este DNI trae {candidatos.length} cuentas asociadas — elige a quién identificas:</p>
+            {candidatos.map(c => (
+              <button key={c.userId} onClick={() => elegirCandidato(c)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-outline-variant hover:border-primary/50 bg-surface text-left tap-active">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{c.nombre || "Sin nombre"} {c.esDependiente ? <span className="font-mono text-[9px] uppercase text-tertiary ml-1">dependiente</span> : <span className="font-mono text-[9px] uppercase text-primary ml-1">titular</span>}</p>
+                  {c.alergias && <p className="text-[10px] text-amber-700">Alergias: {c.alergias}</p>}
+                </div>
+                {c.balance != null && <span className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(c.balance).toFixed(2)}</span>}
+              </button>
+            ))}
+            <button onClick={reiniciar} className="text-xs text-on-surface-variant">Cancelar</button>
+          </div>
+        )}
+        {wallet && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-ok flex items-center gap-1.5"><Icon n="check_circle" className="text-[16px]"/> Persona identificada.</p>
             <BtnOutline onClick={reiniciar}><Icon n="close" className="text-[16px]" /></BtnOutline>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       {wallet && (
         <div>
