@@ -70,7 +70,9 @@ export function MundoDetail() {
         <div className="flex items-center gap-3">
           <Pill color={m.estado === "ACTIVO" ? "bg-ok" : "bg-outline"}>{m.estado}</Pill>
           <Pill color={ws.color}>{ws.label}</Pill>
-          {m.entrega?.entregado && <Pill color="bg-secondary-container">ENTREGADO</Pill>}
+          {m.entrega?.entregado
+            ? <Pill color="bg-secondary-container">ENTREGADO</Pill>
+            : !m.redpontis && <Pill color="bg-tertiary">PENDIENTE</Pill>}
           {(m.modulos||[]).find(x => x.id === "eventos" && x.enabled) &&
            modosDeMundo(m).includes("b2b") && (
             <BtnOutline onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/organizador/${m.id}`, "_blank")}>

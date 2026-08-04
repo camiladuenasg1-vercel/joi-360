@@ -66,6 +66,7 @@ export function AdminDashboard() {
             {(st.mundos||[]).map(m => {
               const nMod = (m.modulos||[]).filter(x => x.enabled).length;
               const ac = m.acuerdo;
+              const pendienteActivacion = !m.redpontis && !m.entrega?.entregado;
               return (
                 <div key={m.id} onClick={() => nav(`/admin/mundos/${m.id}`)} className="px-5 py-4 flex items-center gap-3 hover:bg-surface-container-low cursor-pointer transition-colors">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: m.color }}>{m.nombre[0]}</div>
@@ -73,7 +74,9 @@ export function AdminDashboard() {
                     <p className="font-semibold text-sm">{m.nombre}</p>
                     <p className="font-mono text-[10px] text-on-surface-variant uppercase truncate">{m.vertical} · {nMod} módulos{ac ? ` · ${ac.tipo}` : ""}</p>
                   </div>
-                  <Pill color={m.estado === "ACTIVO" ? "bg-ok" : "bg-outline"}>{m.estado}</Pill>
+                  {pendienteActivacion
+                    ? <Pill color="bg-tertiary">PENDIENTE</Pill>
+                    : <Pill color={m.estado === "ACTIVO" ? "bg-ok" : "bg-outline"}>{m.estado}</Pill>}
                 </div>
               );
             })}

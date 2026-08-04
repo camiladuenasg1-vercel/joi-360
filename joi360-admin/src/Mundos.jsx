@@ -77,6 +77,11 @@ export function Mundos() {
           const nMod = (m.modulos||[]).filter(x => x.enabled).length;
           const nCom = (st.comercios||[]).filter(c => c.mundoId === m.id).length;
           const ac = m.acuerdo;
+          // Un mundo cuyo dashboard nunca se entregó al sponsor no está
+          // operativo de verdad, aunque su estado interno diga ACTIVO — sin
+          // esto RedPontis no podía distinguir de un vistazo cuáles mundos
+          // todavía no arrancan. No aplica a los mundos de plataforma (RP).
+          const pendienteActivacion = !m.redpontis && !m.entrega?.entregado;
           return (
             <div key={m.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm hover:border-primary/40 transition-colors flex flex-col relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full" style={{ background: m.color }}></div>
@@ -93,7 +98,9 @@ export function Mundos() {
                   <div className="flex items-center gap-2">
                     {m.redpontis && <span className="font-mono text-[9px] bg-primary-fixed text-primary px-1.5 py-0.5 rounded uppercase font-bold">REDPONTIS</span>}
                     {m.fixed && !m.redpontis && <span className="font-mono text-[9px] bg-surface-container px-1.5 py-0.5 rounded uppercase text-on-surface-variant">FIJO</span>}
-                    <Pill color={m.estado === "ACTIVO" ? "bg-ok" : "bg-outline"}>{m.estado}</Pill>
+                    {pendienteActivacion
+                      ? <Pill color="bg-tertiary">PENDIENTE</Pill>
+                      : <Pill color={m.estado === "ACTIVO" ? "bg-ok" : "bg-outline"}>{m.estado}</Pill>}
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold mb-1">{m.nombre}</h3>
