@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MODULE_CATALOG, update, actualizarModuloCatalogo, getModuloCatalogo, getFlagDev, setFlagDev, DEV_STATUS_META, getFlagUx, MODULOS_PROXIMAMENTE } from "./store";
-import { Icon, BtnPrimary, BtnOutline, Pill, Toggle, notify } from "./ui";
+import { Icon, BtnPrimary, BtnOutline, Pill, Toggle, notify, InfoTip } from "./ui";
 
 const inputCls = "w-full px-3 py-2.5 rounded-lg border border-outline-variant text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30";
 const inputLabel = "block text-[10px] font-mono uppercase tracking-wider text-on-surface-variant mb-1.5";
@@ -200,22 +200,15 @@ function EditDrawer({ modId, onClose }) {
             <Icon n={m.icon} />
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold text-lg">{m.name}</h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="font-semibold text-lg">{m.name}</h2>
+              <InfoTip title="Sobre este catálogo" text="Define los feature flags y config fields de esta capacidad, que cada mundo elige y configura al activarla. El pricing se define en el mundo, no aquí." />
+            </div>
             <p className="font-mono text-[10px] text-outline uppercase">{m.category} · {m.tier}</p>
           </div>
           <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-1">
             <Icon n="close" />
           </button>
-        </div>
-
-        {/* Info banner */}
-        <div className="px-5 pt-4 pb-2">
-          <div className="p-3 rounded-lg bg-primary-fixed/30 border border-primary/20 text-xs text-on-surface-variant leading-relaxed">
-            <Icon n="info" className="inline text-primary mr-1 text-[14px] align-text-top" />
-            Define los <b>feature flags</b> (servicios) y <b>config fields</b> de esta capacidad.
-            Cuando un mundo la active, elegirá cuáles servicios incluir y configurará los parámetros.
-            <span className="text-primary font-semibold"> El pricing se define en el mundo, no aquí.</span>
-          </div>
         </div>
 
         {/* Tabs */}

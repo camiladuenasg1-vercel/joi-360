@@ -32,9 +32,6 @@ export function HardwarePOS() {
       <div className="mb-6">
         <p className="font-mono text-[10px] text-outline uppercase tracking-widest mb-1">Plataforma › Catálogos › Hardware</p>
         <h1 className="text-3xl font-bold mb-2">Inventario de Hardware</h1>
-        <p className="text-sm text-on-surface-variant max-w-3xl">
-          Stock físico real de RedPontis: dispositivos POS/Tótem por número de serie y banditas NFC por lote.
-        </p>
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-outline-variant">

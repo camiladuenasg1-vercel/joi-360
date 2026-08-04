@@ -292,7 +292,7 @@ function MiCatalogoPanel({ comercio }) {
   return (
     <>
       <h2 className="text-2xl font-bold mb-2">Mi catálogo</h2>
-      <p className="text-on-surface-variant mb-6">Registra los productos que vendes. Aparecen al cobrar en el POS y en tu reportería.</p>
+      <p className="text-on-surface-variant mb-6">Aparecen al cobrar en el POS y en tu reportería.</p>
 
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 mb-6">
         <p className="font-semibold text-sm mb-3">Nuevo producto</p>
@@ -697,11 +697,7 @@ export function CobrarPanel({ comercio, m }) {
 
   return (
     <>
-      <h2 className="text-2xl font-bold mb-2">{modo === "cobrar" ? "Cobrar" : "Recargar billetera"}</h2>
-      <p className="text-on-surface-variant mb-4">
-        {modo === "cobrar" ? "Identifica al alumno por su código JOI (QR o pulsera) antes de cobrar — igual que un POS real."
-          : "Identifica al alumno y acredita a su billetera el efectivo o pago con tarjeta que recibiste en el mostrador."}
-      </p>
+      <h2 className="text-2xl font-bold mb-4">{modo === "cobrar" ? "Cobrar" : "Recargar billetera"}</h2>
       <div className="flex gap-2 mb-6">
         <button onClick={() => cambiarModo("cobrar")} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors ${modo === "cobrar" ? "bg-secondary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container"}`}>
           <Icon n="point_of_sale" className="text-[16px]" /> Cobrar
@@ -3306,10 +3302,7 @@ function MerchantDashboard({ comercio, m, st }) {
           {tab === "soporte" && (
             <>
               <div className="flex justify-between items-end mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold">Soporte</h2>
-                  <p className="text-on-surface-variant mt-1">Solicitudes al administrador del mundo. Caen en cascada al equipo RedPontis.</p>
-                </div>
+                <h2 className="text-2xl font-bold">Soporte</h2>
                 <BtnPrimary onClick={() => setTicketOpen(true)}><Icon n="add" className="text-[18px]" /> Nueva solicitud</BtnPrimary>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant/60">
@@ -3505,21 +3498,28 @@ export function Landing() {
           <h2 className="text-4xl font-black mb-4">Comunidades habilitadas</h2>
           <p className="text-on-surface-variant text-lg">Cada mundo es una comunidad con su propio ecosistema de pagos, beneficios y servicios.</p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mundosPublicos.map(m => (
-            <div key={m.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm hover:border-primary/50 transition-colors">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white mb-4" style={{ background: m.color }}>
-                <Icon n="public" className="text-[24px]" />
+        {mundosPublicos.length === 0 ? (
+          <div className="text-center py-16 text-on-surface-variant">
+            <Icon n="public_off" className="text-[40px] mb-3 opacity-60" />
+            <p className="text-sm">Todavía no hay comunidades activas.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mundosPublicos.map(m => (
+              <div key={m.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm hover:border-primary/50 transition-colors">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white mb-4" style={{ background: m.color }}>
+                  <Icon n="public" className="text-[24px]" />
+                </div>
+                <h3 className="text-lg font-bold mb-1">{m.nombre}</h3>
+                <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-3">{m.vertical}</p>
+                <p className="text-sm text-on-surface-variant mb-4">{m.descripcion}</p>
+                <a href={`#/mundo/${m.id}`} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
+                  <Icon n="open_in_new" className="text-[16px]" /> Ver mundo →
+                </a>
               </div>
-              <h3 className="text-lg font-bold mb-1">{m.nombre}</h3>
-              <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-3">{m.vertical}</p>
-              <p className="text-sm text-on-surface-variant mb-4">{m.descripcion}</p>
-              <a href={`#/mundo/${m.id}`} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
-                <Icon n="open_in_new" className="text-[16px]" /> Ver mundo →
-              </a>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

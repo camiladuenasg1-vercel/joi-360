@@ -38,7 +38,6 @@ export function Liquidacion() {
             <span>Operación</span><Icon n="chevron_right" className="text-[14px]" /><span className="text-primary">Liquidación</span>
           </div>
           <h1 className="text-3xl font-bold">Liquidación</h1>
-          <p className="text-on-surface-variant mt-1 max-w-2xl">Motor que lee el <b>acuerdo comercial</b> y la <b>Configuración de Liquidación</b> reales de cada mundo (modelo de recaudación, frecuencia, hora de corte, monto mínimo) — cada mundo corta según su propia política, no una regla única. El volumen de cada lote se calcula sobre <b>transacciones reales</b> del período desde el último corte, no simulado.</p>
         </div>
         <div className="flex gap-3">
           <BtnOutline onClick={correrCorte} disabled={corriendo}><Icon n="schedule" className="text-[18px]" /> {corriendo ? "Procesando…" : "Forzar corte ahora"}</BtnOutline>

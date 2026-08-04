@@ -69,7 +69,7 @@ export function Adquirencia() {
             <span>Operación</span><Icon n="chevron_right" className="text-[14px]" /><span className="text-primary">Adquirencia</span>
           </div>
           <h1 className="text-3xl font-bold">Adquirencia Global</h1>
-          <p className="text-on-surface-variant mt-1 max-w-2xl">Gestiona los canales de cobro disponibles en el ecosistema, las tasas base y el catálogo de hardware físico. La configuración por mundo vive en <b>Módulos → Comercios</b> de cada mundo.</p>
+          <p className="text-on-surface-variant mt-1 max-w-2xl">La configuración por mundo vive en <b>Módulos → Comercios</b> de cada mundo.</p>
         </div>
         <div className="flex gap-3">
           <BtnOutline onClick={() => setHwTab(!hwTab)}>

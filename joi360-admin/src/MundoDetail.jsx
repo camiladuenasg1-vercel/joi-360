@@ -635,14 +635,6 @@ function TabModulos({ m }) {
 
   return (
     <div>
-      <div className="mb-6 p-4 bg-surface-container-low border border-outline-variant/60 rounded-xl flex items-start gap-3">
-        <Icon n="info" className="text-primary text-[18px] mt-0.5 flex-shrink-0"/>
-        <p className="text-xs text-on-surface-variant">
-          Activa capacidades del catálogo global en este mundo. Al configurar cada una defines canales, pricing y parámetros operativos.
-          Los cambios se propagan a la Super App en tiempo real.
-        </p>
-      </div>
-
       {tiers.map(tier => {
         const mods = (m.modulos||[]).filter(x => moduleCat(x.id)?.tier === tier);
         if (!mods.length) return null;

@@ -86,22 +86,6 @@ export function ConfigHint({ icon, label }) {
   );
 }
 
-/** Empty state */
-export function EmptyState({ icon, title, sub, action, onAction }) {
-  return (
-    <div className="text-center py-10 glass-card rounded-3xl">
-      <span className="material-symbols-outlined text-4xl text-[#c7c4d8] block mb-2">{icon}</span>
-      <p className="text-[#464555] text-sm font-bold">{title}</p>
-      {sub && <p className="text-[#777587] text-xs mt-1">{sub}</p>}
-      {action && (
-        <button onClick={onAction} className="mt-3 bg-[#3525cd] text-white px-4 py-2 rounded-xl text-xs font-bold tap-active">
-          {action}
-        </button>
-      )}
-    </div>
-  );
-}
-
 /** Module not enabled fallback */
 export function ModuleDisabled({ name, mundo }) {
   return (
