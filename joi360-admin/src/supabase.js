@@ -706,6 +706,16 @@ export async function guardarProgramacionItem(worldId, merchantId, menuItemId, d
 export async function fetchReservasMenuMerchant(merchantId, fecha) {
   return rest(`menu_reservas?merchant_id=eq.${merchantId}&fecha=eq.${fecha}&select=*&order=created_at.desc`);
 }
+// El cobro ya ocurre en la app (crearReservaMenu -> mover_saldo_wallet) — esto
+// es la acción que faltaba en el POS/operador: cerrar el círculo marcando la
+// reserva YA PAGADA como entregada/retirada, mismo patrón que la validación
+// de entrada de Eventos (algo pagado se consume/confirma, no se vuelve a cobrar).
+export async function marcarMenuReservaEntregadaRemote(id) {
+  await rest(`menu_reservas?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "ENTREGADA", entregado_at: new Date().toISOString() }),
+  });
+}
 
 // ── Promociones — cupón QR (Gantt #38-#41, Backlog Capítulo 2) ─────────────
 // Alcance mínimo viable confirmado por la usuaria 28-jul: antes TabPromos

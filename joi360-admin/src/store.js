@@ -1059,6 +1059,7 @@ export const FLAG_DEV_MAP = {
   "menu:calendario": { status: "ready", api: "propio · menu_programacion" },
   "menu:cupos":       { status: "ready", api: "propio · menu_programacion.cupos_max" },
   "menu:preorden":    { status: "ready", api: "propio · crearReservaMenu" },
+  "menu:validacion_pos": { status: "ready", api: "propio · marcarMenuReservaEntregadaRemote (POS Operador → Entregar Menú)" },
 };
 const FLAG_TIER_DEFAULT = { CORE: "in_progress", "MOTOR BASE": "in_progress", PREMIUM: "planned", OPCIONAL: "planned", FUTURO: "planned" };
 

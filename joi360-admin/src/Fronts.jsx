@@ -1939,19 +1939,24 @@ function MenuMundoTab({ m }) {
   useEffect(() => { fetchMenuReservasMundo(m.id).then(setReservas).catch(() => setReservas([])); }, [m.id]);
   if (reservas === null) return <p className="text-on-surface-variant py-8">Cargando…</p>;
   const monto = reservas.reduce((a, r) => a + (+r.monto || 0), 0);
+  const pendientes = reservas.filter(r => r.estado !== "ENTREGADA").length;
   return (
     <>
       <div className="mb-6"><h2 className="text-2xl font-bold">Menú de {m.nombre}</h2>
-        <p className="text-on-surface-variant mt-1 text-sm">Reservas reales confirmadas en el módulo Menú.</p></div>
+        <p className="text-on-surface-variant mt-1 text-sm">Reservas reales confirmadas en el módulo Menú. La entrega la marca el concesionario desde su POS Operador.</p></div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <KpiCard label="Reservas confirmadas" value={reservas.length} icon="restaurant_menu" />
+        <KpiCard label="Pendientes de entrega" value={pendientes} icon="pending_actions" />
         <KpiCard label="Monto total" value={`S/ ${monto.toFixed(2)}`} icon="payments" />
       </div>
       {reservas.length === 0 ? <ModuloVacio icon="restaurant_menu" texto="Sin reservas de Menú todavía." /> : (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
           {reservas.slice(0, 20).map(r => (
             <div key={r.id} className="px-5 py-2.5 flex justify-between items-center text-sm border-b border-outline-variant/40 last:border-0">
-              <span>{r.beneficiario_nombre} · {r.merchant_nombre}</span>
+              <span className="flex items-center gap-1.5">
+                {r.beneficiario_nombre} · {r.merchant_nombre}
+                <span className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded border font-bold ${r.estado === "ENTREGADA" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>{r.estado === "ENTREGADA" ? "entregado" : "pendiente"}</span>
+              </span>
               <span className="font-mono text-xs text-on-surface-variant">{r.fecha} · S/ {(+r.monto || 0).toFixed(2)}</span>
             </div>
           ))}

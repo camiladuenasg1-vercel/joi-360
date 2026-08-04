@@ -16,6 +16,7 @@ import {
   errorControlado, logErrorControlado, fetchProgramaBNPL, fetchProductsRemote,
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
   buscarNfcBandPorCodigo, vincularNfcBandRemote,
+  fetchReservasMenuMerchant, marcarMenuReservaEntregadaRemote,
 } from "./supabase.js";
 
 export function OperadorApp() {
@@ -34,6 +35,7 @@ const MODOS = [
   { id: "bnpl", nombre: "Solicitud BNPL", icon: "calendar_clock", desc: "Financiar una compra en el punto de venta." },
   { id: "accesos", nombre: "Control de Accesos", icon: "door_open", desc: "Registrar entrada o salida por código." },
   { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
+  { id: "menu", nombre: "Entregar Menú", icon: "restaurant", desc: "Marcar como entregadas las reservas de menú de hoy, ya pagadas." },
   { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "Asociar una pulsera física a la cuenta de un usuario." },
 ];
 
@@ -41,6 +43,7 @@ function OperadorShell({ comercio, m }) {
   const [modo, setModo] = useState(null);
   const bnplOn = !!bnplLimitesDelMundo(m);
   const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
+  const menuOn = (m?.modulos || []).some(x => x.id === "menu" && x.enabled);
   const walletMod = (m?.modulos || []).find(x => x.id === "wallet" && x.enabled);
   // usaPulseraNfc por defecto true: mundos configurados antes de este campo
   // siguen viendo el tile, igual que ya asumía el backend del POS nativo.
@@ -49,6 +52,7 @@ function OperadorShell({ comercio, m }) {
   const disponibles = MODOS.filter(md => {
     if (md.id === "bnpl") return bnplOn;
     if (md.id === "accesos") return accesosOn;
+    if (md.id === "menu") return menuOn;
     if (md.id === "bandita") return banditaOn;
     return true;
   });
@@ -94,6 +98,7 @@ function OperadorShell({ comercio, m }) {
         {modo === "bnpl" && <SolicitudBNPLOperador comercio={comercio} m={m} />}
         {modo === "accesos" && <AccesosOperador comercio={comercio} m={m} />}
         {modo === "bandita" && <VincularBanditaOperador comercio={comercio} m={m} />}
+        {modo === "menu" && <EntregarMenuOperador comercio={comercio} m={m} />}
         {modo === "reserva" && <ReservaProximamente />}
       </div>
     </div>
@@ -458,6 +463,82 @@ export function VincularBanditaOperador({ comercio, m }) {
         <p className={`text-sm flex items-center gap-1.5 ${resultado.ok ? "text-ok" : "text-error"}`}>
           <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
         </p>
+      )}
+    </div>
+  );
+}
+
+// ── Entregar Menú — el cobro de una reserva de menú YA ocurre en la app
+// (crearReservaMenu debita la wallet al confirmar), lo que faltaba era la
+// acción física en el POS que cierra el círculo: el concesionario marca la
+// reserva pagada como entregada al momento de dar el plato, mismo patrón que
+// "Validar entrada" en Eventos (algo ya pagado se consume, no se vuelve a
+// cobrar). No valida turno de caja porque acá no se mueve dinero.
+export function EntregarMenuOperador({ comercio, m }) {
+  const merchantId = comercio.supabaseId || comercio.id;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [reservas, setReservas] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const cargar = () => fetchReservasMenuMerchant(merchantId, hoy).then(setReservas).catch(() => setReservas([]));
+  React.useEffect(() => { cargar(); }, [merchantId]);
+
+  const entregar = async (r) => {
+    setBusyId(r.id);
+    try {
+      await marcarMenuReservaEntregadaRemote(r.id);
+      notify(`Reserva de ${r.beneficiario_nombre || "usuario"} marcada como entregada.`);
+      cargar();
+    } catch {
+      notify("No se pudo marcar como entregada. Intenta de nuevo.", "error");
+    } finally { setBusyId(null); }
+  };
+
+  if (reservas === null) return <p className="text-sm text-on-surface-variant py-8 text-center">Cargando reservas de hoy…</p>;
+
+  const pendientes = reservas.filter(r => r.estado === "CONFIRMADA");
+  const entregadas = reservas.filter(r => r.estado === "ENTREGADA");
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="font-mono text-[10px] uppercase text-outline mb-2">Por entregar hoy ({pendientes.length})</p>
+        {pendientes.length === 0 ? (
+          <div className="text-center py-10 border-2 border-dashed border-outline-variant rounded-xl">
+            <Icon n="restaurant" className="text-[36px] text-outline mb-2 block mx-auto" />
+            <p className="text-sm text-on-surface-variant">Sin reservas pendientes de entrega hoy.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pendientes.map(r => (
+              <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm truncate">{r.beneficiario_nombre || "Usuario"}</p>
+                    <p className="text-xs text-on-surface-variant">{(r.items || []).map(it => `${it.cantidad}× ${it.nombre}`).join(", ")}</p>
+                  </div>
+                  <p className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(r.monto).toFixed(2)}</p>
+                </div>
+                <BtnPrimary onClick={() => entregar(r)} disabled={busyId === r.id} className="w-full mt-2 !py-1.5 !text-xs">
+                  <Icon n="check_circle" className="text-[16px]" /> {busyId === r.id ? "Marcando…" : "Marcar entregado"}
+                </BtnPrimary>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {entregadas.length > 0 && (
+        <div>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Ya entregadas hoy ({entregadas.length})</p>
+          <div className="space-y-1.5">
+            {entregadas.map(r => (
+              <div key={r.id} className="flex justify-between items-center px-3 py-2 bg-surface-container-lowest/60 rounded-lg text-xs">
+                <span className="truncate">{r.beneficiario_nombre || "Usuario"}</span>
+                <span className="text-ok font-bold flex items-center gap-1"><Icon n="check_circle" className="text-[14px]" /> Entregado</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
