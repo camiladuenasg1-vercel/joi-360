@@ -391,13 +391,13 @@ export async function sincronizarCicloBNPL(contratos) {
 export async function fetchMisDependientes(guardianUserId, worldId) {
   return rest(`dependents?guardian_user_id=eq.${guardianUserId}&world_id=eq.${worldId}&select=*&order=created_at`);
 }
-export async function crearDependienteRemote(worldId, guardianUserId, nombre, alergias, cuotaSuscripcion = 0) {
+export async function crearDependienteRemote(worldId, guardianUserId, nombre, dni, alergias, cuotaSuscripcion = 0) {
   // wallets.user_id es tipo uuid — el id del dependiente debe ser un UUID puro,
   // igual que getSyntheticUserId(), para poder tener su propia fila en wallets.
   const dependentUserId = crypto.randomUUID();
   const rows = await rest("dependents", {
     method: "POST", headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, alergias: alergias || null }),
+    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, dni: dni || null, alergias: alergias || null }),
   });
   await rest("wallets?on_conflict=user_id,world_id", {
     method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },

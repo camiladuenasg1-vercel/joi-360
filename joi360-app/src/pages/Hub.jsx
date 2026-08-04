@@ -40,7 +40,13 @@ export default function HubPage() {
   const hasControl = wc.activo("control");
   const hasLoyalty = wc.activo("loyalty");
   const puedeRecargar = wc.flag("wallet", "recarga");
-  const tieneBandita  = wc.flag("wallet", "bandita");
+  // Dos toggles de admin controlaban lo mismo sin depender uno del otro:
+  // el feature flag "bandita" (Feature Flags) decidía si esta tile aparece
+  // acá, pero el config "usaPulseraNfc" (Parámetros, lo que de verdad usa
+  // el POS para vincular pulseras) podía estar apagado — el usuario veía
+  // "Bandita NFC" en su Hub aunque el mundo no usara pulseras físicas.
+  // Ahora la tile exige ambos: el flag Y que el mundo realmente use NFC.
+  const tieneBandita  = wc.flag("wallet", "bandita") && wc.cfg("wallet")?.usaPulseraNfc !== false;
   const verSaldo      = wc.flag("wallet", "balance");
 
   // ── Acciones rápidas: UNA entrada por acción, solo si el mundo la tiene.

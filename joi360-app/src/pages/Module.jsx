@@ -287,11 +287,14 @@ function WalletTemplate({ cfg, u }) {
               <Icon name="chevron_right" size="text-lg" color="text-[#c7c4d8]" />
             </div>
           ))}
-          {/* Bandita NFC — only if feature flag enabled. Estado real desde
-              nfc_requests, una fila por beneficiario (titular + cada
-              dependiente) — un padre puede pedir la pulsera de un hijo sin
-              que eso reemplace la suya propia. */}
-          {cfg.has("bandita") && beneficiarios.map(b => {
+          {/* Bandita NFC — requiere el feature flag Y que el mundo de verdad
+              use pulseras físicas (config.usaPulseraNfc, lo mismo que ya
+              exige el POS para ofrecer "Vincular pulsera") — mismo criterio
+              en todos los frentes, no solo el feature flag suelto. Estado
+              real desde nfc_requests, una fila por beneficiario (titular +
+              cada dependiente) — un padre puede pedir la pulsera de un hijo
+              sin que eso reemplace la suya propia. */}
+          {cfg.has("bandita") && cfg.config?.usaPulseraNfc !== false && beneficiarios.map(b => {
             const solicitud = solicitudesNfc[b.id];
             return (
               <div key={b.id} className="rounded-2xl p-3.5 border border-[#e4e1ee] flex items-center gap-3"
@@ -650,6 +653,7 @@ function AlertasConsumoBanner({ guardianId, worldId, reload, onLeida }) {
 }
 
 function RestriccionesTemplate({ cfg, u }) {
+  const nav = useNavigate();
   const worldId = cfg.mundo.id;
   const guardianId = getSyntheticUserId();
   const { maxPerfilesControlados, registroAlergias,
@@ -662,8 +666,10 @@ function RestriccionesTemplate({ cfg, u }) {
 
   const [dependientes, setDependientes] = useState(null); // [{...dependent, balance, gastadoHoy}]
   const [addingChild, setAddingChild] = useState(false);
-  const [nuevo, setNuevo] = useState({ nombre: "", alergias: [] });
+  const [pasoSuscripcion, setPasoSuscripcion] = useState(false); // paso 2: confirmar cobro antes de crear
+  const [nuevo, setNuevo] = useState({ nombre: "", dni: "", alergias: [] });
   const [creando, setCreando] = useState(false);
+  const [saldoGuardian, setSaldoGuardian] = useState(null);
   const [rechargeFor, setRechargeFor] = useState(null); // dependent_user_id
   const [rechargeMonto, setRechargeMonto] = useState("");
   const [rechargeError, setRechargeError] = useState(null);
@@ -697,21 +703,33 @@ function RestriccionesTemplate({ cfg, u }) {
   }, [guardianId, worldId, reload]);
 
   const toggleAlergia = (a) => setNuevo(n => ({ ...n, alergias: n.alergias.includes(a) ? n.alergias.filter(x => x !== a) : [...n.alergias, a] }));
+  const cuotaSuscripcion = perfilesSuscripcion ? (+montoSuscripcion || 5) : 0;
 
-  const registrar = async () => {
-    if (!nuevo.nombre.trim()) return;
+  const crear = async () => {
     setCreando(true); setDependienteError(null);
     try {
-      const cuota = perfilesSuscripcion ? (+montoSuscripcion || 5) : 0;
-      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.alergias.join(", "), cuota);
-      setNuevo({ nombre: "", alergias: [] });
-      setAddingChild(false);
+      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.dni.trim(), nuevo.alergias.join(", "), cuotaSuscripcion);
+      setNuevo({ nombre: "", dni: "", alergias: [] });
+      setAddingChild(false); setPasoSuscripcion(false);
       setReload(k => k + 1);
     } catch (e) {
       const err = await errorControlado("transferencia_no_valida");
       logErrorControlado("transferencia_no_valida", "dependiente-crear", worldId);
       setDependienteError([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setCreando(false); }
+  };
+
+  // Sin suscripción: se crea directo. Con suscripción: pasa a la pantalla de
+  // confirmación de cobro (paso 2), donde se ve el saldo real del tutor antes
+  // de descontar — el débito en sí lo hace crear()→crearDependienteRemote,
+  // que ya cobra vía pagarSupabase (RPC real, rechaza si el saldo no alcanza).
+  const continuar = async () => {
+    if (!nuevo.nombre.trim()) return;
+    if (!cuotaSuscripcion) { crear(); return; }
+    setDependienteError(null);
+    const saldo = await fetchDependienteBalance(guardianId, worldId).catch(() => 0);
+    setSaldoGuardian(saldo);
+    setPasoSuscripcion(true);
   };
 
   const recargar = async (dep) => {
@@ -736,18 +754,63 @@ function RestriccionesTemplate({ cfg, u }) {
     } finally { setRecharging(false); }
   };
 
+  // Paso 2: confirmar el cobro de suscripción antes de crear — se ve el
+  // saldo real del tutor (fetchDependienteBalance reusado, funciona para
+  // cualquier user_id) para que no descubra el rechazo recién al confirmar.
+  if (addingChild && pasoSuscripcion) {
+    const saldoInsuficiente = saldoGuardian != null && saldoGuardian < cuotaSuscripcion;
+    return (
+      <div className="px-5 pb-8">
+        <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
+          <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
+        </button>
+        <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Confirmar suscripción</h3>
+        <p className="text-sm text-[#777587] mb-5">{cfg.mundo.nombre} cobra una cuota única al vincular a {nuevo.nombre.trim()}.</p>
+        <div className="rounded-2xl p-4 border border-[#e4e1ee] space-y-3 mb-5">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-[#777587]">Cuota de vinculación</span>
+            <span className="font-black text-[#1b1b24]">S/ {cuotaSuscripcion.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center pt-3 border-t border-[#e4e1ee]">
+            <span className="text-sm text-[#777587]">Tu saldo actual</span>
+            <span className={`font-black ${saldoInsuficiente ? "text-red-600" : "text-[#1b1b24]"}`}>
+              {saldoGuardian == null ? "Cargando…" : `S/ ${saldoGuardian.toFixed(2)}`}
+            </span>
+          </div>
+        </div>
+        {saldoInsuficiente ? (
+          <>
+            <p className="text-xs text-red-600 mb-4">Saldo insuficiente. Recarga tu billetera antes de vincular a {nuevo.nombre.trim()}.</p>
+            <PrimaryBtn label="Recargar billetera" icon="add_card" onClick={() => nav ? nav("/pay?tab=recargar") : null} />
+          </>
+        ) : (
+          <>
+            {dependienteError && <p className="text-xs text-red-600 mb-3">{dependienteError}</p>}
+            <PrimaryBtn label={creando ? "Cobrando y registrando…" : `Pagar S/ ${cuotaSuscripcion.toFixed(2)} y registrar`}
+              icon="task_alt" disabled={creando || saldoGuardian == null} onClick={crear} />
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (addingChild) return (
     <div className="px-5 pb-8">
       <button onClick={()=>setAddingChild(false)} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
         <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
       </button>
       <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Agregar dependiente</h3>
-      <p className="text-sm text-[#777587] mb-5">Registra un menor para controlar su consumo.{perfilesSuscripcion && ` Este mundo cobra S/ ${Number(montoSuscripcion || 5).toFixed(2)} por vinculación.`}</p>
+      <p className="text-sm text-[#777587] mb-5">Registra un menor para controlar su consumo.{perfilesSuscripcion && ` Este mundo cobra S/ ${cuotaSuscripcion.toFixed(2)} por vinculación.`}</p>
       <div className="space-y-4">
         <div>
           <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Nombre completo</label>
           <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
             placeholder="Ej. Ana García" value={nuevo.nombre} onChange={e=>setNuevo(n=>({...n, nombre: e.target.value}))}/>
+        </div>
+        <div>
+          <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">DNI</label>
+          <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+            placeholder="8 dígitos" inputMode="numeric" value={nuevo.dni} onChange={e=>setNuevo(n=>({...n, dni: e.target.value.replace(/\D/g,"")}))}/>
         </div>
         {registroAlergias && (
           <div>
@@ -761,7 +824,8 @@ function RestriccionesTemplate({ cfg, u }) {
           </div>
         )}
         {dependienteError && <p className="text-xs text-red-600">{dependienteError}</p>}
-        <PrimaryBtn label={creando ? "Registrando…" : "Registrar dependiente"} icon="person_add" disabled={!nuevo.nombre.trim() || creando} onClick={registrar} />
+        <PrimaryBtn label={creando ? "Registrando…" : cuotaSuscripcion ? "Continuar" : "Registrar dependiente"}
+          icon={cuotaSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando} onClick={continuar} />
       </div>
     </div>
   );
