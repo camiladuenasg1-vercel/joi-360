@@ -2830,7 +2830,11 @@ function PromocionesTemplate({ cfg, u }) {
     return () => { vivo = false; };
   }, [cfg.mundo.id]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  // Bug real de QA (hallado hoy): toISOString() convierte a UTC antes de
+  // formatear — en Lima (UTC-5), después de ~19:00 ya devuelve el día
+  // siguiente, marcando cupones "vencidos" horas antes de su vencimiento real.
+  const hoyDatePromos = new Date();
+  const hoy = `${hoyDatePromos.getFullYear()}-${String(hoyDatePromos.getMonth() + 1).padStart(2, "0")}-${String(hoyDatePromos.getDate()).padStart(2, "0")}`;
   const PROMOS = (promos || []).map(p => {
     const vencida = p.vigencia_hasta && p.vigencia_hasta < hoy;
     const agotada = p.usos_max != null && p.usos_actuales >= p.usos_max;
@@ -3024,7 +3028,11 @@ function cronogramaDe(monto, cuotas, diasGracia, frecuencia = "mensual", diasPer
   return Array.from({ length: cuotas }, (_, i) => {
     const f = new Date(base);
     if (pasoDias) f.setDate(f.getDate() + pasoDias * (i + 1)); else f.setMonth(f.getMonth() + i + 1);
-    return { n: i + 1, fecha: f.toISOString().slice(0, 10), monto: cuotaMonto, estado: "pendiente" };
+    // Bug real de QA: toISOString() convierte a UTC antes de formatear — la
+    // hora del día en que se firma el contrato podía adelantar la fecha de
+    // cada cuota del cronograma en un día.
+    const fechaLocalCuota = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+    return { n: i + 1, fecha: fechaLocalCuota, monto: cuotaMonto, estado: "pendiente" };
   });
 }
 
@@ -3083,7 +3091,10 @@ function BNPLTemplate({ cfg, u }) {
     } else {
       base = prog.productos_financiables || [];
     }
-    const hoy = new Date().toISOString().slice(0, 10);
+    // Bug real de QA: toISOString() adelanta "hoy" en la tarde/noche (Lima
+    // es UTC-5) — una campaña BNPL vigente podía leerse como vencida horas antes.
+    const hoyDateFin = new Date();
+    const hoy = `${hoyDateFin.getFullYear()}-${String(hoyDateFin.getMonth() + 1).padStart(2, "0")}-${String(hoyDateFin.getDate()).padStart(2, "0")}`;
     const campanasVigentes = (campanas || []).filter(c =>
       c.merchant_id === prog.merchant_id && (!c.fecha_inicio || c.fecha_inicio <= hoy) && (!c.fecha_fin || c.fecha_fin >= hoy));
     const extra = campanasVigentes.flatMap(c => {

@@ -300,13 +300,20 @@ export function evaluarCicloContrato(c) {
   // de pago (Gantt #31) — no tienen cuota 1 cobrada, evaluarlas por fecha de
   // vencimiento las marcaría "vencida"/"suspendido" antes de siquiera existir.
   if (c.estado === "pendiente_aprobacion" || c.estado === "rechazado") return { contrato: c, patch: null, nuevaSuspension: false };
-  const hoy = new Date().toISOString().slice(0, 10);
+  // Bug real de QA (hallado hoy): toISOString() convierte a UTC antes de
+  // formatear — en Lima (UTC-5), esto adelantaba "hoy" en la tarde/noche y
+  // podía marcar "vencida" una cuota horas antes de su vencimiento real,
+  // suspendiendo el contrato antes de tiempo. Mismo fix que ya se aplicó en
+  // el calendario de Menú y el límite diario de Restricciones.
+  const hoyDate = new Date();
+  const hoy = `${hoyDate.getFullYear()}-${String(hoyDate.getMonth() + 1).padStart(2, "0")}-${String(hoyDate.getDate()).padStart(2, "0")}`;
   let cronogramaTocado = false;
   const cronograma = (c.cronograma || []).map(q => {
     if (q.estado !== "pendiente") return q;
     const limite = new Date(q.fecha);
     limite.setDate(limite.getDate() + (c.dias_gracia || 0));
-    if (limite.toISOString().slice(0, 10) < hoy) { cronogramaTocado = true; return { ...q, estado: "vencida" }; }
+    const limiteLocal = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, "0")}-${String(limite.getDate()).padStart(2, "0")}`;
+    if (limiteLocal < hoy) { cronogramaTocado = true; return { ...q, estado: "vencida" }; }
     return q;
   });
   const hayVencida = cronograma.some(q => q.estado === "vencida");
@@ -669,6 +676,12 @@ export async function recargarSupabase(userId, worldId, monto, channelId, channe
       p_world_id: worldId, p_channel_id: channelId, p_reference: `${channelNombre}-${Date.now()}`,
     }),
   }))?.[0];
+  // Bug real de QA (hallado hoy): esta función devolvía +r.nuevo_saldo sin
+  // chequear r.ok, a diferencia de pagarSupabase/pagarCuotaBNPLUsuario/etc.
+  // Si el RPC alguna vez rechaza sin lanzar HTTP error, el llamador veía
+  // "acreditado" sobre una recarga que no ocurrió, y nuevo_saldo=null caía a
+  // NaN/0 pisando el saldo real en pantalla.
+  if (!r?.ok) throw new Error(r?.motivo || "No se pudo acreditar la recarga.");
   return +r.nuevo_saldo;
 }
 

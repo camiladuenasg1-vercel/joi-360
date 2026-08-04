@@ -697,7 +697,7 @@ export async function actualizarPromocionRemote(id, patch) {
 export async function canjearCuponRemote(codigoQr, worldId, userId) {
   const codigo = (codigoQr || "").trim().toUpperCase();
   if (!codigo) return { ok: false, motivo: "codigo_vacio" };
-  const rows = await rest(`promociones?codigo_qr=eq.${codigo}&world_id=eq.${worldId}&select=*`);
+  const rows = await rest(`promociones?codigo_qr=eq.${encodeURIComponent(codigo)}&world_id=eq.${worldId}&select=*`);
   const promo = rows?.[0];
   if (!promo) return { ok: false, motivo: "no_encontrado" };
   if (promo.estado !== "VIGENTE") return { ok: false, motivo: "pausada" };
@@ -1327,7 +1327,10 @@ export async function recargarPOSRemote(userId, worldId, merchantId, monto, cana
       p_world_id: worldId, p_merchant_id: merchantId, p_channel_id: canalId, p_reference: referencia,
     }),
   }))?.[0];
-  if (!r?.ok) return { ok: false, motivo: "sin_wallet" };
+  // Bug real de QA (hallado hoy): esto siempre reportaba "sin_wallet" ante
+  // cualquier rechazo del RPC, aunque el motivo real fuera otro — engañoso
+  // para el operador. Ahora se propaga el motivo real cuando existe.
+  if (!r?.ok) return { ok: false, motivo: r?.motivo || "sin_wallet" };
   return { ok: true, balance: +r.nuevo_saldo };
 }
 export async function fetchVentasComercio(merchantId, limit = 300) {
