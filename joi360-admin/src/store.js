@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -647,132 +647,18 @@ function seed() {
         createdAt: now - 86400000 * 20,
       },
     ],
-    // ── MOCK EVENTOS ────────────────────────────────────────────────────────
-    eventos: [
-      // B2C — creados por usuarios en JOI Eventos
-      {
-        id: "ev-001", mundoId: "mundo-eventos-rp",
-        tipo: "b2c", modo: "b2c",
-        titulo: "Festival Cultura Viva",
-        descripcion: "Feria de arte, música y gastronomía en el Parque Kennedy. Entrada libre.",
-        organizador: { nombre: "Colectivo Arte Lima", rucOEntidad: "20601234567", tipo: "entidad_existente" },
-        categoria: "Arte y Cultura",
-        fecha: "2026-07-20", hora: "15:00", duracion: 240,
-        lugar: "Parque Kennedy, Miraflores, Lima",
-        aforo: 800, vendidas: 312,
-        precio: 0, gratis: true,
-        estado: "PUBLICADO", aprobadoRP: true,
-        createdBy: "usuario_b2c_01", createdAt: Date.now() - 86400000 * 5,
-      },
-      {
-        id: "ev-002", mundoId: "mundo-eventos-rp",
-        tipo: "b2c", modo: "b2c",
-        titulo: "Tech Startup Meetup #12",
-        descripcion: "Networking para fundadores y entusiastas de startups. Formato mixto: pitches + speed networking.",
-        organizador: { nombre: "Lima Startups Hub", rucOEntidad: "20589876543", tipo: "entidad_existente" },
-        categoria: "Tecnología y Negocios",
-        fecha: "2026-07-10", hora: "19:00", duracion: 180,
-        lugar: "WeWork San Isidro, Lima",
-        aforo: 120, vendidas: 98,
-        precio: 25, gratis: false,
-        estado: "PUBLICADO", aprobadoRP: true,
-        createdBy: "usuario_b2c_02", createdAt: Date.now() - 86400000 * 3,
-      },
-      {
-        id: "ev-003", mundoId: "mundo-eventos-rp",
-        tipo: "b2c", modo: "b2c",
-        titulo: "Concierto acústico: Noche de Jazz",
-        descripcion: "Sesión íntima de jazz en vivo. Cupos muy limitados.",
-        organizador: { nombre: "Jazz Garage Lima", rucOEntidad: null, tipo: "nueva_entidad", datosNuevaEntidad: { razonSocial: "Jazz Garage Lima S.R.L.", ruc: "pendiente" } },
-        categoria: "Música",
-        fecha: "2026-07-05", hora: "20:30", duracion: 120,
-        lugar: "Jazz Garage · Barranco, Lima",
-        aforo: 60, vendidas: 44,
-        precio: 50, gratis: false,
-        estado: "PENDIENTE_APROBACION", aprobadoRP: false,
-        createdBy: "usuario_b2c_03", createdAt: Date.now() - 86400000 * 1,
-      },
-      // Embebido — creado por RedPontis directamente
-      {
-        id: "ev-004", mundoId: "mundo-eventos-rp",
-        tipo: "embebido", modo: "embebido",
-        titulo: "JOI Summit 2026",
-        descripcion: "Primer evento anual del ecosistema JOI. Charlas, demos en vivo y networking entre sponsors, merchants y early adopters.",
-        organizador: { nombre: "RedPontis S.A.C.", rucOEntidad: "20612345678", tipo: "redpontis" },
-        categoria: "Ecosistema JOI",
-        fecha: "2026-08-15", hora: "09:00", duracion: 480,
-        lugar: "Centro de Convenciones Lima · San Isidro",
-        aforo: 2000, vendidas: 876,
-        precio: 0, gratis: true,
-        estado: "PUBLICADO", aprobadoRP: true,
-        createdBy: "admin_rp", createdAt: Date.now() - 86400000 * 10,
-      },
-    ],
-
-    // ── MOCK PROMOS ─────────────────────────────────────────────────────────
-    promos: [
-      {
-        id: "promo-001", mundoId: "mundo-promos-rp",
-        titulo: "20% en toda Bembos",
-        anunciante: "Bembos S.A.C.", anuncianteRuc: "20100012345",
-        descripcion: "Descuento del 20% en cualquier combo para usuarios JOI. Válido en todas las sedes.",
-        tipo: "descuento_porcentaje", valor: 20, codigoQR: "BEMBOS20JOI",
-        vigenciaDesde: "2026-07-01", vigenciaHasta: "2026-07-31",
-        categoria: "F&B", estado: "ACTIVO",
-        usosMax: 5000, usosActuales: 1243,
-        createdAt: Date.now() - 86400000 * 7,
-      },
-      {
-        id: "promo-002", mundoId: "mundo-promos-rp",
-        titulo: "S/ 30 off tu primera recarga",
-        anunciante: "BCP Yape", anuncianteRuc: "20100047218",
-        descripcion: "Nuevo usuario JOI: recarga S/ 100+ y recibe S/ 30 de cashback en tu wallet Yape.",
-        tipo: "cashback_fijo", valor: 30, codigoQR: "YPEJOI30",
-        vigenciaDesde: "2026-07-01", vigenciaHasta: "2026-09-30",
-        categoria: "Fintech", estado: "ACTIVO",
-        usosMax: 10000, usosActuales: 3421,
-        createdAt: Date.now() - 86400000 * 14,
-      },
-      {
-        id: "promo-003", mundoId: "mundo-promos-rp",
-        titulo: "Entrada gratis al Gym por 1 semana",
-        anunciante: "Smart Fit Perú", anuncianteRuc: "20601112233",
-        descripcion: "1 semana de acceso libre a cualquier sede Smart Fit para nuevos usuarios JOI. Presenta tu QR en recepción.",
-        tipo: "acceso_gratuito", valor: null, codigoQR: "SFITJOI7D",
-        vigenciaDesde: "2026-07-15", vigenciaHasta: "2026-08-15",
-        categoria: "Fitness", estado: "PROGRAMADA",
-        usosMax: 2000, usosActuales: 0,
-        createdAt: Date.now() - 86400000 * 2,
-      },
-    ],
-
-    comercios: [
-      { id: "com-1", mundoId: "mundo-raimondi", nombre: "Cafetería Central", rubro: "F&B / Concesionario", tarifa: 1.5, fijoTx: 0.10, pos: 2, posSolicitados: 1, estado: "ACTIVO", createdAt: now - 86400000 * 10 },
-      { id: "com-2", mundoId: "mundo-raimondi", nombre: "Librería Campus", rubro: "Retail", tarifa: 1.8, fijoTx: 0.10, pos: 1, posSolicitados: 0, estado: "ACTIVO", createdAt: now - 86400000 * 8 },
-    ],
-    tickets: [
-      { id: "tk-1", mundoId: "mundo-raimondi", tipo: "soporte", asunto: "POS sin conectividad en Cafetería", detalle: "El POS de la Cafetería Central no conecta desde las 9am.", prioridad: "ALTA", estado: "ABIERTO", creadoPor: "sponsor@raimondi.edu.pe", createdAt: Date.now() - 3600000 * 4 },
-      { id: "tk-2", mundoId: "mundo-raimondi", tipo: "consulta", asunto: "Cómo exportar reporte de liquidación", detalle: "Necesito el reporte del mes de junio.", prioridad: "MEDIA", estado: "EN_PROGRESO", creadoPor: "sponsor@raimondi.edu.pe", createdAt: Date.now() - 86400000 * 2 },
-      { id: "tk-3", mundoId: "mundo-raimondi", tipo: "incidencia", asunto: "Error al recargar saldo usuario", detalle: "El usuario 'pgarcia' no puede recargar por Yape.", prioridad: "ALTA", estado: "RESUELTO", creadoPor: "sponsor@raimondi.edu.pe", createdAt: Date.now() - 86400000 * 5 },
-    ],
-    anunciantes: [
-      { id: "anu-1", razonSocial: "Bembos S.A.C.", ruc: "20100012345", contacto: "marketing@bembos.com.pe", credenciales: { usuario: "bembossac@promos.joi360.pe", password: generarPassword() }, createdAt: Date.now() - 86400000 * 30 },
-      { id: "anu-2", razonSocial: "BCP Yape", ruc: "20100047218", contacto: "alianzas@yape.com.pe", credenciales: { usuario: "bcpyape@promos.joi360.pe", password: generarPassword() }, createdAt: Date.now() - 86400000 * 20 },
-    ],
-    liquidaciones: [
-      { id: "liq-1", mundoId: "mundo-raimondi", mundoNombre: "Colegio Raimondi",
-        tipoAcuerdo: "mixto", revShare: 8, volumen: 2840.50, comision: 42.61, neto: 2797.89,
-        moneda: "PEN", cortes: "01-15 Jun 2026", fecha: "2026-06-15", estado: "PROCESADA", createdAt: Date.now() - 86400000 * 3 },
-      { id: "liq-2", mundoId: "mundo-raimondi", mundoNombre: "Colegio Raimondi",
-        tipoAcuerdo: "mixto", revShare: 8, volumen: 890.00, comision: 13.35, neto: 876.65,
-        moneda: "PEN", cortes: "16-30 Jun 2026", fecha: "2026-06-30", estado: "PENDIENTE", createdAt: Date.now() - 86400000 * 1 },
-      { id: "liq-3", mundoId: "mundo-jockey-plaza", mundoNombre: "Jockey Plaza",
-        tipoAcuerdo: "mixto", revShare: 2, volumen: 15200.00, comision: 304.00, neto: 14896.00,
-        moneda: "PEN", cortes: "01-15 Jun 2026", fecha: "2026-06-15", estado: "PROCESADA", createdAt: Date.now() - 86400000 * 5 },
-      { id: "liq-4", mundoId: "mundo-eventos-rp", mundoNombre: "JOI Eventos",
-        tipoAcuerdo: "transaccional", revShare: 1, volumen: 3200.00, comision: 32.00, neto: 3168.00,
-        moneda: "PEN", cortes: "Jun 2026", fecha: "2026-06-10", estado: "PENDIENTE", createdAt: Date.now() - 86400000 * 2 },
-    ],
+    // Sin data mock horneada: liquidación, eventos, promos, comercios,
+    // tickets y anunciantes arrancan reales en 0 y se llenan solo con lo
+    // que sincroniza Supabase o crea el admin — mismo mandato del borrado
+    // total (#125). Antes había filas demo (com-1, tk-1, liq-1...) que la
+    // reconciliación remota solo AGREGABA encima, nunca reemplazaba, así
+    // que contaminaban los KPIs del Dashboard para siempre.
+    eventos: [],
+    promos: [],
+    comercios: [],
+    tickets: [],
+    anunciantes: [],
+    liquidaciones: [],
     sponsorSession: null,
     anuncianteSession: null,
   };
@@ -803,6 +689,17 @@ function load() {
   if (!state.perfilesControlados) state.perfilesControlados = [];
   if (!state.posStock)  state.posStock  = POS_STOCK_SEED.map(d=>({...d}));
   if (!state.anuncianteSession) state.anuncianteSession = null;
+
+  // ── purga de filas demo ya persistidas en localStorage de sesiones viejas
+  // (com-1, tk-1, liq-1, anu-1, promo-001, ev-001...) — el seed() ya no las
+  // crea, pero un browser que las cargó antes de este fix las sigue
+  // arrastrando para siempre porque la reconciliación remota solo agrega,
+  // nunca reemplaza. Corre en cada load(), es barato e idempotente: los ids
+  // reales vienen de Supabase (uuid) y jamás chocan con estos literales.
+  const IDS_DEMO = /^(com-\d+|tk-\d+|anu-\d+|liq-\d+|promo-\d+|ev-00[1-4])$/;
+  ["comercios", "tickets", "anunciantes", "liquidaciones", "promos", "eventos"].forEach(key => {
+    if (Array.isArray(state[key])) state[key] = state[key].filter(x => !IDS_DEMO.test(x.id));
+  });
 
   // ── auto-cura: anunciantes con esquema viejo (nombre/estado) → esquema actual (razonSocial/credenciales) ──
   // Si no hacemos esto, el localStorage que ya quedó guardado en el navegador
@@ -1053,6 +950,20 @@ export function promoVigente(p) {
 }
 
 export function moduleCat(id) { return MODULE_CATALOG.find(m => m.id === id); }
+
+// Antes solo se reconciliaban comercios al abrir el detalle de un mundo
+// (reconciliarComerciosMundo, en MundoDetail.jsx) — así el KPI "Comercios en
+// ecosistema" del Dashboard solo contaba lo que ese browser ya había
+// visitado. Recorre TODOS los mundos reales al abrir la app, mismo patrón
+// que refreshMundosLive/reconciliarLiquidacionesRemoto.
+export async function reconciliarComerciosGlobal() {
+  const mundos = (load().mundos || []).filter(m => !m.redpontis);
+  for (const m of mundos) {
+    let nuevos;
+    try { nuevos = await reconciliarComerciosMundo(m.id, load().comercios); } catch { continue; }
+    if (nuevos && nuevos.length) update(st => { st.comercios = [...(st.comercios || []), ...nuevos]; });
+  }
+}
 
 // ── Dependency Map between capacidades ────────────────────────────────────────
 // key: module ID, value: array of module IDs that MUST be active first

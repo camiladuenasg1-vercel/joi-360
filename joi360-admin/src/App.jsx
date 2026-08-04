@@ -25,7 +25,7 @@ import { Adquirencia } from "./Adquirencia";
 import { Emision } from "./Emision";
 import { Resumen } from "./Resumen";
 import { ModulosMundo } from "./ModulosMundo";
-import { refreshMundosLive, reconciliarLiquidacionesRemoto, reconciliarTicketsRemoto } from "./store.js";
+import { refreshMundosLive, reconciliarLiquidacionesRemoto, reconciliarTicketsRemoto, reconciliarComerciosGlobal } from "./store.js";
 
 const A = ({ title, children }) => <Shell title={title}>{children}</Shell>;
 
@@ -43,7 +43,7 @@ export default function App() {
   // así "Mundo no encontrado" deja de bloquear paneles que sí existen remoto.
   // Encadenado: reconciliarLiquidacionesRemoto necesita st.mundos poblado
   // para resolver mundoNombre de cada lote real.
-  React.useEffect(() => { refreshMundosLive().then(() => reconciliarLiquidacionesRemoto()); reconciliarTicketsRemoto(); }, []);
+  React.useEffect(() => { refreshMundosLive().then(() => { reconciliarLiquidacionesRemoto(); reconciliarComerciosGlobal(); }); reconciliarTicketsRemoto(); }, []);
   return (
     <HashRouter>
       <Toaster />
