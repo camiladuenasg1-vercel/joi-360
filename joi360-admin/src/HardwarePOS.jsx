@@ -38,7 +38,7 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, asignarNfcBandRemote, liberarNfcBandRemote, asignarLoteParcialRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
 
 const fmtSoles = n => (n === null || n === undefined || n === "" || isNaN(n)) ? null : `S/ ${Number(n).toFixed(2)}`;
 
@@ -607,6 +607,11 @@ const ESTADO_STYLE_NFC = {
   activa:     "bg-purple-100 text-purple-700 border-purple-200",
   bloqueada:  "bg-red-100    text-red-700    border-red-200",
 };
+const FORMA_COBRO_LABEL = {
+  contraentrega: "Contraentrega",
+  anticipado: "Pago anticipado",
+  descuento_ventas: "Descuento de ventas",
+};
 
 function BanditasNfcTab() {
   const st = useStore();
@@ -620,18 +625,11 @@ function BanditasNfcTab() {
   const [entregandoLoteId, setEntregandoLoteId] = useState(null);
   const [filterLote, setFilterLote] = useState("all");
   const [filterEstado, setFilterEstado] = useState("all");
-  const [assigningId, setAssigningId] = useState(null);
-  const [assignWorldId, setAssignWorldId] = useState("");
   const [showBulk, setShowBulk] = useState(false);
   const [bulkLote, setBulkLote] = useState("");
-  const [bulkPrecio, setBulkPrecio] = useState("");
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [asignandoLote, setAsignandoLote] = useState(null); // nombre del lote con el form de asignación abierto
-  const [asignarLoteWorldId, setAsignarLoteWorldId] = useState("");
-  const [asignarLoteCantidad, setAsignarLoteCantidad] = useState(1);
-  const [asignandoLoteBusy, setAsignandoLoteBusy] = useState(false);
   const [renombrandoLote, setRenombrandoLote] = useState(null); // nombre viejo del lote en edición
   const [nombreLoteNuevo, setNombreLoteNuevo] = useState("");
   const [eliminandoLote, setEliminandoLote] = useState(null); // nombre del lote con confirmación de borrado abierta
@@ -639,13 +637,42 @@ function BanditasNfcTab() {
   const [eliminarLoteError, setEliminarLoteError] = useState(null); // { lote, mensaje } cuando el borrado se bloqueó
   const [revirtiendoLoteBusy, setRevirtiendoLoteBusy] = useState(false);
 
+  // Asignación: el precio/modelo se estipula ACÁ, no al cargar el lote — cada
+  // asignación es su propio lote comercial. Selección multi-banda vía
+  // checkbox (no solo un número): tipear una cantidad premarca las N más
+  // antiguas disponibles, pero se puede ajustar código por código.
+  const [asignandoLote, setAsignandoLote] = useState(null);
+  const [asignarLoteWorldId, setAsignarLoteWorldId] = useState("");
+  const [seleccionLote, setSeleccionLote] = useState(new Set());
+  const [asignarModelo, setAsignarModelo] = useState("gratuita");
+  const [asignarPrecio, setAsignarPrecio] = useState("");
+  const [asignarFormaCobro, setAsignarFormaCobro] = useState("contraentrega");
+  const [asignandoLoteBusy, setAsignandoLoteBusy] = useState(false);
+
+  // Cobro pendiente (contraentrega/anticipado) + historial de acciones.
+  const [pendientesCobro, setPendientesCobro] = useState(null);
+  const [pagandoAsignacionId, setPagandoAsignacionId] = useState(null);
+  const [comprobanteUrl, setComprobanteUrl] = useState("");
+  const [comprobanteNombre, setComprobanteNombre] = useState("");
+  const [subiendoComprobante, setSubiendoComprobante] = useState(false);
+  const [descripcionPago, setDescripcionPago] = useState("");
+  const [pagandoBusy, setPagandoBusy] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [historial, setHistorial] = useState(null);
+
   const load = () => fetchNfcBandsRemote()
-    .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id, precio_unitario: r.precio_unitario }))))
+    .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id, precio_unitario: r.precio_unitario, created_at: r.created_at }))))
     .catch(() => setBandas([]));
   const loadSolicitudes = () => fetchSolicitudesNfcTodas().then(setSolicitudes).catch(() => setSolicitudes([]));
   const loadSolicitudesLote = () => fetchSolicitudesLoteNfcTodas().then(setSolicitudesLote).catch(() => setSolicitudesLote([]));
   const loadStockAlmacen = () => fetchStockAlmacenNfc().then(setStockAlmacen).catch(() => setStockAlmacen(0));
-  useEffect(() => { load(); loadSolicitudes(); loadSolicitudesLote(); loadStockAlmacen(); }, []);
+  const loadPendientesCobro = () => fetchAsignacionesPendientesCobro().then(setPendientesCobro).catch(() => setPendientesCobro([]));
+  useEffect(() => { load(); loadSolicitudes(); loadSolicitudesLote(); loadStockAlmacen(); loadPendientesCobro(); }, []);
+
+  const abrirHistorial = () => {
+    setMostrarHistorial(true);
+    if (historial === null) fetchHistorialAsignacionesNfc().then(setHistorial).catch(() => setHistorial([]));
+  };
 
   const entregarLote = async (req) => {
     setEntregandoLoteId(req.id);
@@ -686,33 +713,37 @@ function BanditasNfcTab() {
     (filterEstado === "all" || b.estado === filterEstado)
   );
 
-  // Carga masiva: un lote se sube a la vez (nombre del lote se elige antes de
-  // adjuntar el archivo), CSV/Excel con un código de bandita por fila — mismo
-  // patrón que la carga masiva de POS de arriba. Si el archivo trae fila de
-  // encabezado (columna "código"/"code"), se usa esa columna en vez de asumir
-  // siempre la primera; así funciona con exports reales que traen otras
-  // columnas (nombre, fecha de fabricación, etc.) en cualquier orden. Si
-  // además trae una columna de precio, ese precio por-fila gana sobre el
-  // precio único del lote que se puede tipear abajo.
+  // El UID real de una bandita SIEMPRE viene en formato de bytes hex separados
+  // por dos puntos (ej. 04:D6:01:5A:68:19:94 — 7 bytes, típico de tags NFC
+  // como MIFARE Ultralight). Bug real encontrado: exports reales traen una
+  // columna "No." de numeración (1, 2, 3…) antes de la columna del UID: si se
+  // asume "primera columna = código" o solo se detecta por NOMBRE de
+  // encabezado, se termina guardando el número de fila como si fuera el
+  // código de la bandita — nunca vuelve a coincidir con el UID real que lee
+  // el lector NFC al vincular. Por eso la columna del UID se detecta por su
+  // FORMATO real (probando cada columna contra el patrón), no por nombre de
+  // encabezado ni por posición — funciona sin importar cómo se llame la
+  // columna o en qué orden venga.
+  const UID_PATTERN = /^([0-9A-Fa-f]{2}:){2,9}[0-9A-Fa-f]{2}$/;
   const parseBulkFile = (file) => {
     if (!bulkLote.trim()) { notify("Elige el nombre del lote antes de adjuntar el archivo.", "error"); return; }
     setBulkFileName(file.name);
     leerLineasDeArchivo(file, lines => {
       if (!lines.length) { setBulkRows([]); return; }
-      const primeraFila = lines[0].split(",").map(c => c.trim().toLowerCase());
-      const esEncabezado = primeraFila.some(c => ["codigo", "código", "code", "cod"].includes(c));
-      let idxCodigo = 0, idxPrecio = -1, filas = lines;
-      if (esEncabezado) {
-        idxCodigo = primeraFila.findIndex(c => ["codigo", "código", "code", "cod"].includes(c));
-        idxPrecio = primeraFila.findIndex(c => ["precio", "precio_unitario", "precio unitario"].includes(c));
-        filas = lines.slice(1);
+      const primeraFila = lines[0].split(",").map(c => c.trim());
+      const esEncabezado = !primeraFila.some(c => UID_PATTERN.test(c));
+      const filas = esEncabezado ? lines.slice(1) : lines;
+      const muestra = filas.slice(0, 20).map(l => l.split(",").map(s => s.trim()));
+      const numCols = Math.max(0, ...muestra.map(r => r.length));
+      let idxUid = 0;
+      for (let c = 0; c < numCols; c++) {
+        const valores = muestra.map(r => r[c]).filter(Boolean);
+        if (valores.length && valores.every(v => UID_PATTERN.test(v))) { idxUid = c; break; }
       }
-      const precioLote = bulkPrecio.trim() ? parseFloat(bulkPrecio) : null;
       const rows = filas.map(line => {
         const cols = line.split(",").map(s => s.trim());
-        const codigo = (cols[idxCodigo] || "").toUpperCase();
-        const precioFila = idxPrecio >= 0 ? parseFloat(cols[idxPrecio]) : NaN;
-        return { codigo, lote: bulkLote.trim(), precio: !isNaN(precioFila) ? precioFila : precioLote, valido: !!codigo };
+        const codigo = (cols[idxUid] || "").toUpperCase();
+        return { codigo, lote: bulkLote.trim(), valido: UID_PATTERN.test(codigo) };
       });
       setBulkRows(rows);
     });
@@ -725,7 +756,7 @@ function BanditasNfcTab() {
     try {
       await registerNfcBandsBulkRemote(validas);
       notify(`${validas.length} banditas del lote "${bulkLote}" registradas en stock.`);
-      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(""); setBulkPrecio("");
+      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");
       load();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
@@ -734,41 +765,88 @@ function BanditasNfcTab() {
     } finally { setBulkBusy(false); }
   };
 
-  const confirmAssign = async (b) => {
-    if (!assignWorldId) return;
-    try {
-      await asignarNfcBandRemote(b.id, assignWorldId);
-      const mundo = mundos.find(m => m.id === assignWorldId);
-      notify(`Bandita ${b.codigo} asignada a ${mundo?.nombre || "mundo"}.`);
-      setAssigningId(null); setAssignWorldId("");
-      load();
-    } catch (e) {
-      const err = await errorControlado("operacion_admin_fallida");
-      logErrorControlado("operacion_admin_fallida", "nfc-asignar", assignWorldId || null);
-      notify(`${err.mensaje} ${err.accion}`, "error");
-    }
-  };
-
   const liberar = async (b) => {
     await liberarNfcBandRemote(b.id);
     notify(`${b.codigo} liberada — estado: disponible.`);
     load();
   };
 
-  // No siempre se manda el lote completo a un mundo — se puede elegir
-  // cuántas de las disponibles de ESE lote asignar.
+  // Disponibles de un lote, ordenadas de más antigua a más nueva — el orden
+  // que usa el premarcado por cantidad (FIFO: se sugiere primero lo que
+  // lleva más tiempo en almacén).
+  const disponiblesDelLote = (lote) => (bandas || [])
+    .filter(b => b.lote === lote && b.estado === "disponible")
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  const abrirAsignarLote = (lote) => {
+    if (asignandoLote === lote) { setAsignandoLote(null); return; }
+    setAsignandoLote(lote);
+    setAsignarLoteWorldId(""); setAsignarModelo("gratuita"); setAsignarPrecio(""); setAsignarFormaCobro("contraentrega");
+    setSeleccionLote(new Set(disponiblesDelLote(lote).map(b => b.id))); // por defecto: todo el lote premarcado
+  };
+
+  const premarcarCantidad = (lote, n) => {
+    const ids = disponiblesDelLote(lote).slice(0, Math.max(0, n)).map(b => b.id);
+    setSeleccionLote(new Set(ids));
+  };
+
+  const toggleBanda = (id) => {
+    setSeleccionLote(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   const confirmarAsignarLote = async (lote) => {
-    if (!asignarLoteWorldId || !asignarLoteCantidad) return;
+    if (!asignarLoteWorldId || seleccionLote.size === 0) return;
+    if (asignarModelo === "pagada" && (!asignarPrecio || Number(asignarPrecio) <= 0)) {
+      notify("Ingresa un precio unitario válido.", "error"); return;
+    }
     setAsignandoLoteBusy(true);
     try {
-      const { cantidad: n, costoTotal } = await asignarLoteParcialRemote(lote, asignarLoteWorldId, asignarLoteCantidad);
+      const asig = await crearAsignacionNfcRemote({
+        lote, worldId: asignarLoteWorldId, bandIds: [...seleccionLote],
+        modelo: asignarModelo,
+        precioUnitario: asignarModelo === "pagada" ? asignarPrecio : null,
+        formaCobro: asignarModelo === "pagada" ? asignarFormaCobro : null,
+      });
       const mundo = mundos.find(m => m.id === asignarLoteWorldId);
-      notify(`${n} banditas del lote "${lote}" asignadas a ${mundo?.nombre || "mundo"}.${costoTotal > 0 ? ` Costo: ${fmtSoles(costoTotal)}.` : ""}`);
-      setAsignandoLote(null); setAsignarLoteWorldId(""); setAsignarLoteCantidad(1);
-      load();
+      const montoTxt = asig.monto_total ? ` · ${fmtSoles(asig.monto_total)} (${FORMA_COBRO_LABEL[asig.forma_cobro]})` : " · gratuita";
+      notify(`${seleccionLote.size} banditas del lote "${lote}" asignadas a ${mundo?.nombre || "mundo"}${montoTxt}.`);
+      setAsignandoLote(null); setAsignarLoteWorldId(""); setSeleccionLote(new Set());
+      load(); loadPendientesCobro();
     } catch (e) {
       notify(e.message, "error");
     } finally { setAsignandoLoteBusy(false); }
+  };
+
+  // Marcar pagada: sirve tanto para "anticipado" (se paga antes de entregar)
+  // como "contraentrega" (entregar y pagar es la misma acción en la UI,
+  // aunque el PATCH es idéntico). Siempre con comprobante + descripción
+  // opcional para trazabilidad comercial.
+  const subirComprobantePago = async (file) => {
+    if (!file) return;
+    setSubiendoComprobante(true);
+    try {
+      const path = `nfc-asignaciones/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const url = await uploadArchivo("joi360-media", path, file);
+      setComprobanteUrl(url); setComprobanteNombre(file.name);
+    } catch (e) {
+      notify("No se pudo subir el comprobante: " + e.message, "error");
+    } finally { setSubiendoComprobante(false); }
+  };
+
+  const confirmarPagoAsignacion = async (asig) => {
+    setPagandoBusy(true);
+    try {
+      await marcarAsignacionPagadaRemote(asig.id, { comprobanteUrl, comprobanteNombre, descripcion: descripcionPago.trim() || null });
+      notify(`Asignación de ${asig.cantidad} banditas (${mundos.find(m => m.id === asig.world_id)?.nombre || asig.world_id}) marcada como pagada.`);
+      setPagandoAsignacionId(null); setComprobanteUrl(""); setComprobanteNombre(""); setDescripcionPago("");
+      loadPendientesCobro(); load();
+    } catch (e) {
+      notify("No se pudo marcar como pagada: " + e.message, "error");
+    } finally { setPagandoBusy(false); }
   };
 
   const confirmarRenombrarLote = async (loteViejo) => {
@@ -820,7 +898,6 @@ function BanditasNfcTab() {
   const lotes = [...new Set((bandas || []).map(b => b.lote))];
   const byLote = lotes.map(lote => {
     const bandasLote = (bandas || []).filter(b => b.lote === lote);
-    const precios = [...new Set(bandasLote.map(b => b.precio_unitario).filter(p => p !== null && p !== undefined))];
     return {
       lote,
       total: bandasLote.length,
@@ -828,7 +905,6 @@ function BanditasNfcTab() {
       asignada: bandasLote.filter(b => b.estado === "asignada").length,
       activa: bandasLote.filter(b => b.estado === "activa").length,
       enUso: bandasLote.filter(b => b.world_id).length,
-      precioLabel: precios.length === 0 ? null : precios.length === 1 ? fmtSoles(precios[0]) : "precios mixtos",
     };
   });
 
@@ -836,13 +912,77 @@ function BanditasNfcTab() {
     <div>
       <div className="mb-6 flex items-end justify-between">
         <p className="text-sm text-on-surface-variant max-w-3xl">
-          Stock real de pulseras NFC (tabla <code>nfc_bands</code> en vivo). Cada bandita tiene un código único, agrupada por lote de carga.
+          Stock real de pulseras NFC (tabla <code>nfc_bands</code> en vivo). Cada bandita tiene un código único (UID), agrupada por lote de carga.
+          El precio y la forma de cobro se estipulan al asignar el lote a un mundo, no al cargarlo.
           {stockAlmacen !== null && <span className="block mt-1 font-mono text-xs text-primary">{stockAlmacen} sin asignar en almacén</span>}
         </p>
-        <BtnPrimary className="flex-shrink-0" onClick={()=>setShowBulk(true)}>
-          <Icon n="upload_file" className="text-[16px]"/> Cargar lote (CSV)
-        </BtnPrimary>
+        <div className="flex gap-2 flex-shrink-0">
+          <BtnOutline onClick={abrirHistorial}>
+            <Icon n="history" className="text-[16px]"/> Historial
+          </BtnOutline>
+          <BtnPrimary onClick={()=>setShowBulk(true)}>
+            <Icon n="upload_file" className="text-[16px]"/> Cargar lote (CSV)
+          </BtnPrimary>
+        </div>
       </div>
+
+      {/* Cobro pendiente — asignaciones "pagada" (anticipado/contraentrega)
+          que todavía no se marcaron pagadas. Descuento de ventas NO aparece
+          acá: se resuelve solo, restándose del neto de la liquidación. */}
+      {pendientesCobro !== null && pendientesCobro.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl overflow-hidden mb-8">
+          <div className="px-5 py-4 border-b border-amber-300 flex items-center gap-2">
+            <Icon n="payments" className="text-amber-700 text-[20px]"/>
+            <h3 className="font-semibold text-amber-900">Cobro pendiente antes de entregar ({pendientesCobro.length})</h3>
+          </div>
+          <div className="divide-y divide-amber-200">
+            {pendientesCobro.map(asig => {
+              const mundo = mundos.find(m => m.id === asig.world_id);
+              const esContraentrega = asig.forma_cobro === "contraentrega";
+              return (
+                <div key={asig.id} className="p-4">
+                  <div className="flex justify-between items-start gap-4 flex-wrap">
+                    <div>
+                      <p className="font-semibold">{asig.cantidad} banditas · {mundo?.nombre || asig.world_id}</p>
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        Lote {asig.lote} · {fmtSoles(asig.monto_total)} · {FORMA_COBRO_LABEL[asig.forma_cobro]} · {new Date(asig.created_at).toLocaleDateString("es-PE")}
+                      </p>
+                    </div>
+                    {pagandoAsignacionId !== asig.id && (
+                      <BtnPrimary className="!py-1.5 !px-3 !text-xs" onClick={()=>{ setPagandoAsignacionId(asig.id); setComprobanteUrl(""); setComprobanteNombre(""); setDescripcionPago(""); }}>
+                        {esContraentrega ? "Entregar y marcar pagado" : "Marcar banditas pagadas"}
+                      </BtnPrimary>
+                    )}
+                  </div>
+                  {pagandoAsignacionId === asig.id && (
+                    <div className="mt-3 p-3 bg-surface rounded-lg border border-outline-variant space-y-3">
+                      <div>
+                        <label className="block text-xs font-mono uppercase text-outline mb-1.5">Comprobante de pago (boleta/voucher del mundo)</label>
+                        <input type="file" accept="image/*,.pdf" disabled={subiendoComprobante}
+                          className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer"
+                          onChange={e => e.target.files?.[0] && subirComprobantePago(e.target.files[0])}/>
+                        {subiendoComprobante && <p className="text-[10px] text-on-surface-variant mt-1">Subiendo…</p>}
+                        {comprobanteNombre && <p className="text-[10px] text-ok mt-1 flex items-center gap-1"><Icon n="check_circle" className="text-[12px]"/> {comprobanteNombre}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono uppercase text-outline mb-1.5">Detalle comercial (opcional)</label>
+                        <input className="w-full h-9 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                          placeholder="Ej: transferencia BCP, referencia #123" value={descripcionPago} onChange={e=>setDescripcionPago(e.target.value)}/>
+                      </div>
+                      <div className="flex gap-2">
+                        <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={pagandoBusy} onClick={()=>confirmarPagoAsignacion(asig)}>
+                          {pagandoBusy ? "Guardando…" : esContraentrega ? "Confirmar entrega y pago" : "Confirmar pago"}
+                        </BtnPrimary>
+                        <button onClick={()=>setPagandoAsignacionId(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Solicitudes de LOTE — el mundo pidió más stock (nfc_band_requests),
           distinto de las solicitudes individuales de usuarios de abajo. Entregar
@@ -992,11 +1132,11 @@ function BanditasNfcTab() {
                   <span className="text-green-700 font-mono">{l.disponible} disp.</span>
                   <span className="text-blue-700 font-mono">{l.asignada} asig.</span>
                 </div>
-                <p className="font-mono text-[9px] text-outline mt-1">{l.total} total{l.precioLabel ? ` · ${l.precioLabel} c/u` : ""}</p>
+                <p className="font-mono text-[9px] text-outline mt-1">{l.total} total</p>
               </div>
               <div className="flex gap-2 mt-2 pt-2 border-t border-outline-variant/60 flex-wrap">
                 <button
-                  onClick={(e)=>{ e.stopPropagation(); setAsignandoLote(asignandoLote===l.lote?null:l.lote); setAsignarLoteWorldId(""); setAsignarLoteCantidad(Math.min(1, l.disponible)); }}
+                  onClick={(e)=>{ e.stopPropagation(); abrirAsignarLote(l.lote); }}
                   disabled={l.disponible===0}
                   className="text-[10px] text-primary hover:underline font-medium disabled:opacity-30 disabled:no-underline">Asignar</button>
                 <button
@@ -1059,42 +1199,79 @@ function BanditasNfcTab() {
         </div>
       )}
 
-      {/* Asignar N banditas de un lote específico a un mundo — no siempre se
-          manda el lote completo. */}
-      {asignandoLote && (
-        <div className="mb-8 p-4 bg-surface-container-lowest border border-outline-variant rounded-xl">
-          <p className="text-xs font-bold mb-3">Asignar del lote "{asignandoLote}" ({byLote.find(l=>l.lote===asignandoLote)?.disponible || 0} disponibles)</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
-              value={asignarLoteWorldId} onChange={e=>setAsignarLoteWorldId(e.target.value)}>
-              <option value="">Elegir mundo…</option>
-              {mundos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
-            <span className="text-xs text-on-surface-variant">Cantidad</span>
-            <NumInput className="h-9 w-20 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
-              min="1" max={byLote.find(l=>l.lote===asignandoLote)?.disponible || 1}
-              value={asignarLoteCantidad} onChange={v=>setAsignarLoteCantidad(Math.max(1, Math.min(v, byLote.find(l=>l.lote===asignandoLote)?.disponible || 1)))}/>
-            <button onClick={()=>{ const d=byLote.find(l=>l.lote===asignandoLote)?.disponible||0; setAsignarLoteCantidad(d); }}
-              className="text-[10px] text-primary hover:underline">Todo el lote</button>
-            {(() => {
-              const bl = byLote.find(l=>l.lote===asignandoLote);
-              const precioUnico = bl && bl.precioLabel && bl.precioLabel !== "precios mixtos"
-                ? parseFloat(bl.precioLabel.replace("S/ ", "")) : null;
-              return precioUnico ? (
-                <span className="text-[10px] font-mono text-primary bg-primary-fixed/20 rounded px-2 py-1">
-                  Costo: {fmtSoles(precioUnico * asignarLoteCantidad)}
-                </span>
-              ) : bl?.precioLabel === "precios mixtos" ? (
-                <span className="text-[10px] font-mono text-on-surface-variant">costo exacto al confirmar (precios mixtos)</span>
-              ) : null;
-            })()}
-            <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!asignarLoteWorldId || asignandoLoteBusy} onClick={()=>confirmarAsignarLote(asignandoLote)}>
-              {asignandoLoteBusy ? "Asignando…" : "Confirmar asignación"}
-            </BtnPrimary>
-            <button onClick={()=>setAsignandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+      {/* Asignar banditas de un lote específico a un mundo — selección
+          múltiple por checkbox (no solo un número): tipear una cantidad
+          premarca las N más antiguas disponibles, pero se puede ajustar
+          código por código. Precio/modelo/forma de cobro se deciden ACÁ. */}
+      {asignandoLote && (() => {
+        const disp = disponiblesDelLote(asignandoLote);
+        const n = seleccionLote.size;
+        const montoTotal = asignarModelo === "pagada" && asignarPrecio ? Number(asignarPrecio) * n : 0;
+        return (
+          <div className="mb-8 p-4 bg-surface-container-lowest border border-outline-variant rounded-xl">
+            <p className="text-xs font-bold mb-3">Asignar del lote "{asignandoLote}" ({disp.length} disponibles)</p>
+
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                value={asignarLoteWorldId} onChange={e=>setAsignarLoteWorldId(e.target.value)}>
+                <option value="">Elegir mundo…</option>
+                {mundos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+              </select>
+              <span className="text-xs text-on-surface-variant">Cantidad</span>
+              <NumInput className="h-9 w-20 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                min="0" max={disp.length}
+                value={n} onChange={v=>premarcarCantidad(asignandoLote, v)}/>
+              <button onClick={()=>premarcarCantidad(asignandoLote, disp.length)}
+                className="text-[10px] text-primary hover:underline">Todo el lote</button>
+              <button onClick={()=>setSeleccionLote(new Set())}
+                className="text-[10px] text-on-surface-variant hover:underline">Ninguna</button>
+            </div>
+
+            {/* Lista de códigos — checkbox individual, premarcados por la cantidad de arriba */}
+            <div className="max-h-40 overflow-y-auto border border-outline-variant rounded-lg mb-3 bg-surface">
+              {disp.map(b => (
+                <label key={b.id} className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono hover:bg-surface-container-low cursor-pointer border-b border-outline-variant/40 last:border-0">
+                  <input type="checkbox" checked={seleccionLote.has(b.id)} onChange={()=>toggleBanda(b.id)} className="accent-primary"/>
+                  {b.codigo}
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="text-xs text-on-surface-variant">Modelo</span>
+              <button onClick={()=>setAsignarModelo("gratuita")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${asignarModelo==="gratuita"?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>Gratuita</button>
+              <button onClick={()=>setAsignarModelo("pagada")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${asignarModelo==="pagada"?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>Pagada</button>
+            </div>
+
+            {asignarModelo === "pagada" && (
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className="text-xs text-on-surface-variant">Precio unitario S/</span>
+                <input type="number" step="0.01" min="0" className="h-9 w-24 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                  value={asignarPrecio} onChange={e=>setAsignarPrecio(e.target.value)}/>
+                <span className="text-xs text-on-surface-variant ml-2">Forma de cobro</span>
+                {Object.entries(FORMA_COBRO_LABEL).map(([k, label]) => (
+                  <button key={k} onClick={()=>setAsignarFormaCobro(k)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${asignarFormaCobro===k?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>{label}</button>
+                ))}
+                {montoTotal > 0 && (
+                  <span className="text-[10px] font-mono text-primary bg-primary-fixed/20 rounded px-2 py-1">
+                    Total: {fmtSoles(montoTotal)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!asignarLoteWorldId || n===0 || asignandoLoteBusy} onClick={()=>confirmarAsignarLote(asignandoLote)}>
+                {asignandoLoteBusy ? "Asignando…" : `Asignar (${n} banditas seleccionadas)`}
+              </BtnPrimary>
+              <button onClick={()=>setAsignandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {byLote.length > 0 && (
         <>
@@ -1126,45 +1303,24 @@ function BanditasNfcTab() {
                 )}
                 {filtered.map(b => {
                   const mundo = mundos.find(m => m.id === b.world_id);
-                  const assigning = assigningId === b.id;
                   return (
-                    <React.Fragment key={b.id}>
-                      <tr className="hover:bg-surface-container-low transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs font-bold">{b.codigo}</td>
-                        <td className="px-4 py-3 text-xs">{b.lote}</td>
-                        <td className="px-4 py-3 text-xs font-mono">{fmtSoles(b.precio_unitario) || <span className="text-outline">—</span>}</td>
-                        <td className="px-4 py-3">
-                          <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${ESTADO_STYLE_NFC[b.estado]||""}`}>{b.estado}</span>
-                        </td>
-                        <td className="px-4 py-3 text-xs">{mundo?.nombre || <span className="text-outline">—</span>}</td>
-                        <td className="px-4 py-3 text-right">
-                          {b.estado==="disponible" && !assigning && (
-                            <button onClick={()=>{ setAssigningId(b.id); setAssignWorldId(""); }}
-                              className="text-xs text-primary hover:underline font-medium">Asignar</button>
-                          )}
-                          {b.estado==="asignada" && (
-                            <button onClick={()=>liberar(b)} className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
-                          )}
-                        </td>
-                      </tr>
-                      {assigning && (
-                        <tr className="bg-primary-fixed/10">
-                          <td colSpan="6" className="px-4 py-3">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <select className="h-9 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
-                                value={assignWorldId} onChange={e=>setAssignWorldId(e.target.value)}>
-                                <option value="">Elegir mundo…</option>
-                                {mundos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                              </select>
-                              <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!assignWorldId} onClick={()=>confirmAssign(b)}>
-                                Confirmar asignación
-                              </BtnPrimary>
-                              <button onClick={()=>setAssigningId(null)} className="text-xs text-on-surface-variant">Cancelar</button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
+                    <tr key={b.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs font-bold">{b.codigo}</td>
+                      <td className="px-4 py-3 text-xs">{b.lote}</td>
+                      <td className="px-4 py-3 text-xs font-mono">{fmtSoles(b.precio_unitario) || <span className="text-outline">—</span>}</td>
+                      <td className="px-4 py-3">
+                        <span className={`font-mono text-[8px] uppercase px-2 py-0.5 rounded border font-bold ${ESTADO_STYLE_NFC[b.estado]||""}`}>{b.estado}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs">{mundo?.nombre || <span className="text-outline">—</span>}</td>
+                      <td className="px-4 py-3 text-right">
+                        {b.estado==="disponible" && (
+                          <button onClick={()=>abrirAsignarLote(b.lote)} className="text-xs text-primary hover:underline font-medium">Asignar lote</button>
+                        )}
+                        {b.estado==="asignada" && (
+                          <button onClick={()=>liberar(b)} className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -1179,20 +1335,13 @@ function BanditasNfcTab() {
           <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-lg z-10">
             <h2 className="font-semibold text-lg mb-1">Cargar lote de banditas NFC</h2>
             <p className="text-xs text-on-surface-variant mb-4">
-              Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con un código de bandita por línea/fila (el código único impreso en cada pulsera).
-              Si el archivo trae fila de encabezado, reconoce la columna "código" (y "precio", si la trae) sin importar el orden; si no trae encabezado, usa la primera columna.
+              Elige el nombre del lote y adjunta un archivo .csv, .txt o .xlsx con el UID de cada bandita (formato tipo 04:D6:01:5A:68:19:94).
+              La columna se detecta por ese formato, sin importar en qué posición venga ni cómo se llame su encabezado. El precio se estipula al asignar el lote a un mundo, no acá.
             </p>
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
-                <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
-                  placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
-              </div>
-              <div>
-                <label className="block text-xs font-mono uppercase text-outline mb-1.5">Precio unitario (S/, opcional)</label>
-                <input type="number" step="0.01" min="0" className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
-                  placeholder="Ej: 12.50" value={bulkPrecio} onChange={e=>setBulkPrecio(e.target.value)}/>
-              </div>
+            <div className="mb-4">
+              <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
+              <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
+                placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
             </div>
             <input type="file" accept=".csv,.txt,.xlsx,.xls" disabled={!bulkLote.trim()}
               className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full disabled:opacity-50"
@@ -1201,14 +1350,13 @@ function BanditasNfcTab() {
               <div className="mt-4 max-h-64 overflow-y-auto border border-outline-variant rounded-lg">
                 <table className="w-full text-xs">
                   <thead><tr className="bg-surface-container-low font-mono text-[9px] uppercase text-outline">
-                    <th className="px-3 py-2 text-left">Código</th><th className="px-3 py-2 text-left">Lote</th><th className="px-3 py-2 text-left">Precio</th><th className="px-3 py-2 text-left">Válido</th>
+                    <th className="px-3 py-2 text-left">UID</th><th className="px-3 py-2 text-left">Lote</th><th className="px-3 py-2 text-left">Válido</th>
                   </tr></thead>
                   <tbody className="divide-y divide-outline-variant/60">
                     {bulkRows.map((r, i) => (
                       <tr key={i} className={r.valido ? "" : "bg-error-container/20"}>
                         <td className="px-3 py-1.5 font-mono">{r.codigo || "—"}</td>
                         <td className="px-3 py-1.5">{r.lote}</td>
-                        <td className="px-3 py-1.5 font-mono">{fmtSoles(r.precio) || "—"}</td>
                         <td className="px-3 py-1.5">{r.valido ? <Icon n="check_circle" className="text-ok text-[14px]"/> : <Icon n="error" className="text-error text-[14px]"/>}</td>
                       </tr>
                     ))}
@@ -1218,10 +1366,70 @@ function BanditasNfcTab() {
               </div>
             )}
             <div className="flex gap-3 mt-6">
-              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(""); setBulkPrecio("");}}>Cancelar</BtnOutline>
+              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");}}>Cancelar</BtnOutline>
               <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
                 <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} banditas`}
               </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historial de acciones — todas las asignaciones (precio, modelo, forma
+          de cobro, estado de pago, comprobante) para trazabilidad comercial. */}
+      {mostrarHistorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget&&setMostrarHistorial(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setMostrarHistorial(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-3xl z-10 max-h-[80vh] flex flex-col">
+            <h2 className="font-semibold text-lg mb-4 flex-shrink-0">Historial de asignaciones de banditas NFC</h2>
+            <div className="overflow-y-auto flex-1">
+              {historial === null ? (
+                <p className="text-sm text-on-surface-variant py-8 text-center">Cargando…</p>
+              ) : historial.length === 0 ? (
+                <p className="text-sm text-on-surface-variant py-8 text-center">Sin asignaciones todavía.</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-surface-container-low font-mono text-[9px] uppercase text-outline sticky top-0">
+                      <th className="px-3 py-2 text-left">Fecha</th>
+                      <th className="px-3 py-2 text-left">Mundo</th>
+                      <th className="px-3 py-2 text-left">Lote</th>
+                      <th className="px-3 py-2 text-right">Cant.</th>
+                      <th className="px-3 py-2 text-left">Modelo</th>
+                      <th className="px-3 py-2 text-right">Monto</th>
+                      <th className="px-3 py-2 text-left">Estado</th>
+                      <th className="px-3 py-2 text-left">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/60">
+                    {historial.map(h => {
+                      const mundo = mundos.find(m => m.id === h.world_id);
+                      return (
+                        <tr key={h.id} className="hover:bg-surface-container-low">
+                          <td className="px-3 py-2 whitespace-nowrap">{new Date(h.created_at).toLocaleDateString("es-PE")}</td>
+                          <td className="px-3 py-2">{mundo?.nombre || h.world_id}</td>
+                          <td className="px-3 py-2">{h.lote}</td>
+                          <td className="px-3 py-2 text-right font-bold">{h.cantidad}</td>
+                          <td className="px-3 py-2">{h.modelo === "gratuita" ? "Gratuita" : FORMA_COBRO_LABEL[h.forma_cobro] || "Pagada"}</td>
+                          <td className="px-3 py-2 text-right">{fmtSoles(h.monto_total) || "—"}</td>
+                          <td className="px-3 py-2">
+                            <span className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded border font-bold ${
+                              h.estado_pago === "pagado" || h.estado_pago === "gratuita" || h.estado_pago === "descontado" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
+                            }`}>{h.estado_pago}</span>
+                          </td>
+                          <td className="px-3 py-2 max-w-[200px]">
+                            {h.comprobante_url && <a href={h.comprobante_url} target="_blank" rel="noreferrer" className="text-primary hover:underline block">Ver comprobante</a>}
+                            {h.descripcion && <span className="text-on-surface-variant block truncate" title={h.descripcion}>{h.descripcion}</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="flex-shrink-0 pt-4">
+              <BtnOutline onClick={()=>setMostrarHistorial(false)}>Cerrar</BtnOutline>
             </div>
           </div>
         </div>

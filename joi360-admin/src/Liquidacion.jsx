@@ -115,7 +115,10 @@ Sin lotes aún para este período. {tab === "hoy" && "Para generar los lotes del
                 </td>
                 <td className="px-6 py-4 text-right font-mono text-sm">{l.moneda} {Number(l.volumen||0).toLocaleString()}</td>
                 <td className="px-6 py-4 text-right font-mono text-sm font-bold text-primary">{l.moneda} {Number(l.comision||0).toLocaleString()}</td>
-                <td className="px-6 py-4 text-right font-mono text-sm text-on-surface-variant">{l.moneda} {Number(l.neto||0).toLocaleString()}</td>
+                <td className="px-6 py-4 text-right font-mono text-sm text-on-surface-variant">
+                  {l.moneda} {Number(l.neto||0).toLocaleString()}
+                  {l.descuentoHardware > 0 && <span className="block text-[9px] text-amber-700 font-sans">− {l.moneda} {l.descuentoHardware.toLocaleString()} descuento por hardware</span>}
+                </td>
                 <td className="px-6 py-4">
                   <Pill color={l.estado === "PROCESADA" ? "bg-ok" : l.estado === "PENDIENTE" ? "bg-tertiary-container" : l.estado === "RETENIDO" ? "bg-error-container" : "bg-outline"}>{l.estado}</Pill>
                   {l.voucherUrl && (

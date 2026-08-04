@@ -1162,16 +1162,10 @@ export async function fetchNfcBandsRemote(worldId = null) {
 }
 export async function registerNfcBandsBulkRemote(rows) {
   if (!rows?.length) return [];
-  const body = rows.map(r => ({ codigo: r.codigo, lote: r.lote, estado: "disponible", precio_unitario: r.precio ?? null }));
+  const body = rows.map(r => ({ codigo: r.codigo, lote: r.lote, estado: "disponible" }));
   return rest("nfc_bands?on_conflict=codigo", {
     method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify(body),
-  });
-}
-export async function asignarNfcBandRemote(bandId, worldId) {
-  await rest(`nfc_bands?id=eq.${bandId}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ estado: "asignada", world_id: worldId }),
   });
 }
 export async function liberarNfcBandRemote(bandId) {
@@ -1180,22 +1174,71 @@ export async function liberarNfcBandRemote(bandId) {
     body: JSON.stringify({ estado: "disponible", world_id: null }),
   });
 }
-// Antes solo se podía asignar una bandita a la vez o cumplir una solicitud
-// de lote genérica (tomaba del almacén completo, sin importar el lote real).
-// Esto asigna N unidades de UN lote específico — no siempre se manda el
-// lote completo a un mundo.
-export async function asignarLoteParcialRemote(lote, worldId, cantidad) {
-  const disponibles = await rest(`nfc_bands?lote=eq.${encodeURIComponent(lote)}&estado=eq.disponible&select=id,precio_unitario&order=created_at.asc&limit=${cantidad}`);
-  if (!disponibles || disponibles.length < cantidad) {
-    throw new Error(`Solo hay ${disponibles?.length || 0} banditas disponibles en el lote "${lote}" — no alcanza para asignar ${cantidad}.`);
-  }
-  const ids = disponibles.map(b => `"${b.id}"`).join(",");
+// ── Asignación de banditas a un mundo, con precio/forma de cobro (corrección
+// de modelo confirmada por la usuaria: el precio y el modelo comercial se
+// estipulan al ASIGNAR, no al cargar el lote al almacén — ahí todavía no se
+// sabe a qué mundo va ni bajo qué condición). Cada llamada es su propio lote
+// comercial (nfc_asignaciones); las banditas elegidas quedan trazadas a esa
+// asignación vía asignacion_id, con el precio denormalizado para verlo por
+// código individual sin tener que cruzar tablas.
+export async function crearAsignacionNfcRemote({ lote, worldId, bandIds, modelo, precioUnitario, formaCobro }) {
+  if (!bandIds?.length) throw new Error("No hay banditas seleccionadas para asignar.");
+  const esGratuita = modelo === "gratuita";
+  const precio = esGratuita ? null : (Number(precioUnitario) || 0);
+  const monto = esGratuita ? null : Math.round(precio * bandIds.length * 100) / 100;
+  const formaCobroFinal = esGratuita ? null : formaCobro;
+  const estadoPago = esGratuita ? "gratuita" : (formaCobroFinal === "descuento_ventas" ? "pendiente_descuento" : "pendiente");
+  const [asig] = await rest("nfc_asignaciones", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      world_id: worldId, lote, cantidad: bandIds.length, modelo,
+      precio_unitario: precio, monto_total: monto, forma_cobro: formaCobroFinal,
+      estado_pago: estadoPago,
+    }),
+  });
+  const ids = bandIds.map(id => `"${id}"`).join(",");
   await rest(`nfc_bands?id=in.(${ids})`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ estado: "asignada", world_id: worldId }),
+    body: JSON.stringify({ estado: "asignada", world_id: worldId, asignacion_id: asig.id, precio_unitario: precio }),
   });
-  const costoTotal = disponibles.reduce((a, b) => a + (Number(b.precio_unitario) || 0), 0);
-  return { cantidad: disponibles.length, costoTotal };
+  return asig;
+}
+// Marca una asignación como pagada. Sirve para los dos modelos que requieren
+// cobro: "anticipado" (se paga antes de entregar) y "contraentrega" (se paga
+// AL entregar — ahí "pagar" y "entregar" son la misma acción en la UI,
+// aunque en la base es el mismo PATCH que anticipado).
+export async function marcarAsignacionPagadaRemote(id, { comprobanteUrl, comprobanteNombre, descripcion } = {}) {
+  await rest(`nfc_asignaciones?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      estado_pago: "pagado",
+      comprobante_url: comprobanteUrl || null, comprobante_nombre: comprobanteNombre || null,
+      descripcion: descripcion || null, pagado_at: new Date().toISOString(),
+    }),
+  });
+}
+// Cobro pendiente real que bloquea entrega (anticipado/contraentrega, no
+// descuento de ventas — ese se resuelve solo, vía liquidación).
+export async function fetchAsignacionesPendientesCobro() {
+  return rest(`nfc_asignaciones?estado_pago=eq.pendiente&select=*&order=created_at.asc`);
+}
+export async function fetchHistorialAsignacionesNfc() {
+  return rest(`nfc_asignaciones?select=*&order=created_at.desc&limit=200`);
+}
+// ── Integración con Liquidación: forma_cobro "descuento_ventas" no se cobra
+// aparte, se resta del neto del próximo corte del mundo como "descuento por
+// hardware". marcarAsignacionesDescontadasRemote se llama después de que el
+// corte se guarda con éxito, para no descontar dos veces el mismo lote.
+export async function fetchAsignacionesPendientesDescuentoMundo(worldId) {
+  return rest(`nfc_asignaciones?world_id=eq.${worldId}&estado_pago=eq.pendiente_descuento&select=id,monto_total`);
+}
+export async function marcarAsignacionesDescontadasRemote(ids) {
+  if (!ids?.length) return;
+  const list = ids.map(id => `"${id}"`).join(",");
+  await rest(`nfc_asignaciones?id=in.(${list})`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado_pago: "descontado" }),
+  });
 }
 export async function renombrarLoteNfcRemote(loteViejo, loteNuevo) {
   await rest(`nfc_bands?lote=eq.${encodeURIComponent(loteViejo)}`, {
@@ -1238,7 +1281,10 @@ export async function revertirAsignacionesLoteRemote(lote) {
 // real del mundo (Wallet → "vigencia de la pulsera NFC en meses"); si el
 // mundo no la configuró, la pulsera queda sin vencimiento.
 export async function buscarNfcBandPorCodigo(codigo, worldId) {
-  const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=*`);
+  // Los códigos siempre se guardan en MAYÚSCULAS (registerNfcBandsBulkRemote)
+  // — si el lector NFC entrega el UID en minúsculas, un match sensible a
+  // mayúsculas nunca encontraba la bandita aunque estuviera bien asignada.
+  const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(codigo.trim().toUpperCase())}&world_id=eq.${worldId}&select=*`);
   return rows?.[0] || null;
 }
 // worldId es opcional por compatibilidad, pero sin él no se puede cerrar la

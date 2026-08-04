@@ -405,9 +405,13 @@ export async function crearDependienteRemote(worldId, guardianUserId, nombre, dn
     body: JSON.stringify({ user_id: dependentUserId, world_id: worldId, balance: 0, currency: moneda }),
   });
   // "Cobro por vinculación de perfil" (configField perfiles_suscripcion): si el
-  // mundo lo exige, se cobra al tutor al vincular un dependiente nuevo.
+  // mundo lo exige, se cobra al tutor al vincular un dependiente nuevo. Va
+  // neto a la recaudación de RedPontis, no al mundo — por eso el tipo es
+  // "suscripcion", no "compra": fetchVolumenPeriodoMundo (liquidación) solo
+  // suma type=compra, así que esto queda fuera del cálculo de comisión del
+  // mundo, y sin merchant_id tampoco lo ve ningún comercio.
   if (cuotaSuscripcion > 0) {
-    await pagarSupabase(guardianUserId, worldId, cuotaSuscripcion, `Vinculación de perfil · ${nombre}`);
+    await pagarSupabase(guardianUserId, worldId, cuotaSuscripcion, `Vinculación de perfil · ${nombre}`, "suscripcion");
   }
   return rows?.[0] || null;
 }
@@ -775,12 +779,12 @@ export async function fetchRecargasHoyCount(userId, worldId) {
   return (rows || []).length;
 }
 
-export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Comercio") {
+export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Comercio", tipo = "compra") {
   const wallet = await getOrCreateWallet(userId, worldId);
   const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
     body: JSON.stringify({
-      p_wallet_id: wallet.id, p_delta: -Math.abs(monto), p_tipo: "compra",
+      p_wallet_id: wallet.id, p_delta: -Math.abs(monto), p_tipo: tipo,
       p_world_id: worldId, p_reference: `pago-${comercioNombre}-${Date.now()}`,
     }),
   }))?.[0];

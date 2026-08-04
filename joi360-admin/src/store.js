@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -1536,6 +1536,7 @@ function loteRemotoALocal(row, mundoNombre) {
     voucherUrl: row.voucher_url || null,
     voucherNombre: row.voucher_nombre || null,
     observacion: row.observacion || null,
+    descuentoHardware: +row.descuento_hardware || 0,
   };
 }
 
@@ -1580,7 +1581,18 @@ async function procesarLiquidacionMundo(m, today) {
   else if (acuerdo.tipo === "mixto") comision = volumen * (acuerdo.revShare / 100) + (acuerdo.fijoMensual / 30);
   else if (acuerdo.tipo === "revenue") comision = acuerdo.fijoMensual / 30;
   else if (acuerdo.tipo === "fijo") comision = acuerdo.fijoMensual / 30;
-  const neto = volumen - comision;
+
+  // Descuento por hardware: banditas asignadas al mundo bajo forma de cobro
+  // "descuento de ventas" que todavía no se descontaron de ningún corte —
+  // no se cobran aparte, se restan acá. Se marcan como descontadas recién
+  // si el corte se guarda con éxito, para no descontar el mismo lote dos veces.
+  let descuentoHardware = 0, asignacionesADescontar = [];
+  try {
+    asignacionesADescontar = await fetchAsignacionesPendientesDescuentoMundo(m.id);
+    descuentoHardware = (asignacionesADescontar || []).reduce((a, r) => a + (Number(r.monto_total) || 0), 0);
+  } catch { descuentoHardware = 0; asignacionesADescontar = []; }
+
+  const neto = volumen - comision - descuentoHardware;
   // Monto mínimo de liquidación: si el neto a acreditar no lo alcanza, el
   // lote se genera igual (para no perder el volumen del período) pero
   // queda marcado RETENIDO en vez de PENDIENTE — no se libera hasta acumular.
@@ -1595,6 +1607,7 @@ async function procesarLiquidacionMundo(m, today) {
     volumen: Math.round(volumen * 100) / 100, tx_count: txCount,
     tipo_acuerdo: acuerdo.tipo, rev_share: acuerdo.revShare ?? null,
     comision: Math.round(comision * 100) / 100, neto: Math.round(neto * 100) / 100,
+    descuento_hardware: Math.round(descuentoHardware * 100) / 100,
     estado: retenido ? "RETENIDO" : "PENDIENTE", moneda: m.moneda,
     hora_corte: liqCfg.horaCorte, modelo_recaudacion: liqCfg.modeloRecaudacion,
     frecuencia: liqCfg.frecuencia, monto_minimo: liqCfg.montoMinimo,
@@ -1602,6 +1615,9 @@ async function procesarLiquidacionMundo(m, today) {
   };
   try {
     const saved = await upsertLoteLiquidacionRemote(lote);
+    if (saved && asignacionesADescontar.length) {
+      await marcarAsignacionesDescontadasRemote(asignacionesADescontar.map(a => a.id)).catch(() => {});
+    }
     return saved ? loteRemotoALocal(saved, m.nombre) : null;
   } catch (e) { console.warn("[liquidacion]", m.id, e); return null; }
 }

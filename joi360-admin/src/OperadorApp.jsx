@@ -418,7 +418,7 @@ export function VincularBanditaOperador({ comercio, m }) {
     setBusy(true); setResultado(null);
     try {
       const band = await buscarNfcBandPorCodigo(code, m.id);
-      if (!band) { setResultado({ ok: false, mensaje: "Esa pulsera no existe o no está asignada a este mundo." }); return; }
+      if (!band) { setResultado({ ok: false, mensaje: `No se encontró la pulsera con UID "${code.toUpperCase()}" asignada a este mundo. Verifica que ese UID exista en el inventario de Banditas NFC.` }); return; }
       if (band.linked_user_id) {
         setResultado({ ok: false, mensaje: band.linked_user_id === wallet.user_id ? "Esta pulsera ya está vinculada a este mismo usuario." : "Esta pulsera ya está vinculada a otro usuario." });
         return;
