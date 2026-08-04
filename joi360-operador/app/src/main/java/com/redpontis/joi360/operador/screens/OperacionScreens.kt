@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,10 +48,13 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
-    // Accesos hoy es entrar y salir del recinto: no hay zonas ni áreas
-    // internas, así que no se le pide al operador una zona que el sistema no
-    // sabe interpretar. Lo único que decide es la dirección del movimiento.
+    // Zonas reales configuradas por el admin (RenderConfig.accesosZonas) —
+    // antes esta pantalla asumía que no existían y nunca las mandaba, aunque
+    // el panel web y la superapp sí las usan para el mismo mundo. Con una
+    // sola zona configurada no hay elección real que mostrar.
+    val zonas = config.accesosZonas
     var tipo by remember { mutableStateOf("ingreso") }
+    var zona by remember { mutableStateOf(zonas.firstOrNull() ?: "Principal") }
     var veredicto by remember { mutableStateOf<AccesoResult?>(null) }
     var procesando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -68,7 +72,7 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
         procesando = true
         error = null
         scope.launch {
-            Api.validarAcceso(config.worldId, codigo, tipo, origen)
+            Api.validarAcceso(config.worldId, codigo, tipo, origen, zona)
                 .onSuccess { procesando = false; veredicto = it; version++ }
                 .onFailure { procesando = false; error = it.message }
         }
@@ -125,6 +129,34 @@ fun AccesoScreen(config: RenderConfig, onBack: () -> Unit) {
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 17.sp,
                     )
+                }
+            }
+        }
+
+        if (zonas.size > 1) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "ZONA",
+                style = MaterialTheme.typography.labelMedium,
+                color = Joi.InkMuted,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                zonas.forEach { z ->
+                    val sel = zona == z
+                    Box(
+                        Modifier
+                            .height(40.dp)
+                            .background(if (sel) Joi.Primary else Joi.Surface, RoundedCornerShape(20.dp))
+                            .clickable { zona = z }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(z, color = if (sel) Color.White else Joi.InkMuted, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    }
                 }
             }
         }

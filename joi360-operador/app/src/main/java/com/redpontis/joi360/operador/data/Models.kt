@@ -35,6 +35,11 @@ data class RenderConfig(
      */
     val eventosValidables: Int = 0,
     val eventosMotivo: String? = null,
+    // Zonas reales configuradas por el admin para Accesos (configField
+    // "zonas", ej. "Principal,Cafetería,Auditorio") — antes el terminal
+    // asumía que no existían y nunca las ofrecía, aunque el panel web y la
+    // superapp sí las usan para el mismo mundo.
+    val accesosZonas: List<String> = listOf("Principal"),
 )
 
 /** Persona resuelta a partir de una bandita, un QR o un DNI. */

@@ -178,6 +178,9 @@ object Api {
             eventosValidables = disp?.optInt("eventosValidables") ?: 0,
             eventosMotivo = disp?.optString("eventosMotivo")
                 ?.takeIf { it.isNotBlank() && it != "null" },
+            accesosZonas = cfg.optJSONArray("accesosZonas")?.let { arr ->
+                (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { z -> z.isNotBlank() } }
+            }?.takeIf { it.isNotEmpty() } ?: listOf("Principal"),
         )
     }
 
@@ -285,14 +288,16 @@ object Api {
 
     // ── Accesos ───────────────────────────────────────────────────────────
 
-    // El alcance es entrar y salir del recinto: no hay zonas ni áreas internas,
-    // así que no se envía ninguna. Lo que vuelve, cuando la persona es un
-    // dependiente, es a quién se le avisó.
+    // zona es opcional (RenderConfig.accesosZonas trae las que configuró el
+    // admin) — null cuando el mundo no tiene ninguna real, mismo criterio
+    // que el panel web y la superapp. Lo que siempre vuelve, cuando la
+    // persona es un dependiente, es a quién se le avisó.
     suspend fun validarAcceso(
         worldId: String,
         codigo: String,
         tipo: String,
         origen: String = "nfc",
+        zona: String? = null,
     ): Result<AccesoResult> =
         request(
             "POST",
@@ -301,7 +306,8 @@ object Api {
                 .put("worldId", worldId)
                 .put("bandCode", codigo)
                 .put("tipo", tipo)
-                .put("origen", origen),
+                .put("origen", origen)
+                .apply { zona?.let { put("zona", it) } },
         ).mapCatching { j ->
             AccesoResult(
                 ok = j.optBoolean("ok"),
