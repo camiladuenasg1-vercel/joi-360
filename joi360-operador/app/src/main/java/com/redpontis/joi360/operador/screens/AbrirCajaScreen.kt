@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
  * 64dp, porque se opera de pie y con prisa.
  */
 @Composable
-fun AbrirCajaScreen(onListo: (RenderConfig, String?) -> Unit) {
+fun AbrirCajaScreen(onBack: () -> Unit, onListo: (RenderConfig, String?) -> Unit) {
     var comercio by remember { mutableStateOf("") }
     var clave by remember { mutableStateOf("") }
     var verClave by remember { mutableStateOf(false) }
@@ -59,16 +59,10 @@ fun AbrirCajaScreen(onListo: (RenderConfig, String?) -> Unit) {
             .padding(horizontal = 24.dp)
             .padding(top = 20.dp, bottom = 24.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(5.dp).height(38.dp).background(Joi.Primary, RoundedCornerShape(3.dp)))
-            Spacer(Modifier.width(14.dp))
-            Text("Abrir caja", style = MaterialTheme.typography.headlineLarge, color = Joi.Ink)
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "Escribe el código del comercio y su clave para empezar el turno.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Joi.InkMuted,
+        ScreenHeader(
+            title = "Soy Comercio",
+            subtitle = "Escribe el código del comercio y su clave para empezar el turno.",
+            onBack = onBack,
         )
 
         Spacer(Modifier.height(36.dp))

@@ -50,6 +50,7 @@ fun App() {
             )
 
             is Pantalla.AbrirCaja -> AbrirCajaScreen(
+                onBack = { volver() },
                 onListo = { cfg, tid ->
                     config = cfg
                     turnoId = tid
