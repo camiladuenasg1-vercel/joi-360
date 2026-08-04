@@ -267,20 +267,22 @@ export async function pagarCuotaBNPLUsuario(userId, contrato, n) {
   const cuota = (contrato.cronograma || []).find(q => q.n === n);
   if (!cuota || cuota.estado === "pagada") return { ok: false, motivo: "cuota_invalida" };
   const wallet = await getOrCreateWallet(userId, contrato.world_id);
-  if (+wallet.balance < +cuota.monto) return { ok: false, motivo: "saldo", balance: +wallet.balance };
-  const nuevoSaldo = +wallet.balance - +cuota.monto;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
+  // Bug real #114: el balance se leía y se volvía a escribir con un PATCH
+  // directo (ver mover_saldo_wallet() en supabase.js del admin para el
+  // detalle completo) — cualquiera con la anon key podía escribirle
+  // cualquier número a cualquier billetera. mover_saldo_wallet es una
+  // función de Postgres que hace el lock de fila + validación + escritura +
+  // transacción en un solo paso atómico.
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
     body: JSON.stringify({
-      wallet_id: wallet.id, world_id: contrato.world_id, merchant_id: contrato.merchant_id,
-      amount: +cuota.monto, type: "bnpl_cuota", status: "completada",
-      reference: `Cuota ${n}/${contrato.cuotas} · ${contrato.producto}`.slice(0, 120),
+      p_wallet_id: wallet.id, p_delta: -Math.abs(+cuota.monto), p_tipo: "bnpl_cuota",
+      p_world_id: contrato.world_id, p_merchant_id: contrato.merchant_id,
+      p_reference: `Cuota ${n}/${contrato.cuotas} · ${contrato.producto}`.slice(0, 120),
     }),
-  });
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  const nuevoSaldo = +r.nuevo_saldo;
   const cronograma = contrato.cronograma.map(q => (q.n === n ? { ...q, estado: "pagada" } : q));
   const quedanVencidas = cronograma.some(q => q.estado === "vencida");
   const estado = !quedanVencidas && (contrato.estado === "en_mora" || contrato.estado === "suspendido") ? "firmado" : contrato.estado;
@@ -490,26 +492,23 @@ export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) 
   if (fromUserId === toUserId) return { ok: false, motivo: "destino" };
 
   const origen = await getOrCreateWallet(fromUserId, worldId);
-  if (+origen.balance < importe) return { ok: false, motivo: "saldo", balance: +origen.balance };
   const destino = await getOrCreateWallet(toUserId, worldId);
-  await rest(`wallets?id=eq.${origen.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: +origen.balance - importe }),
-  });
-  await rest(`wallets?id=eq.${destino.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: +destino.balance + importe }),
-  });
-  const ref = `transferencia-${Date.now()}`;
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: origen.id, world_id: worldId, amount: importe, type: "transferencia_p2p", status: "completada", reference: `${ref}-envio` }),
-  });
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: destino.id, world_id: worldId, amount: importe, type: "transferencia_p2p", status: "completada", reference: `${ref}-recibo` }),
-  });
-  return { ok: true, balance: +origen.balance - importe };
+  // Bug real #114: las 2 escrituras de arriba (débito + crédito) eran 2
+  // PATCH separados y no atómicos — si el segundo fallaba después del
+  // primero, el dinero desaparecía sin llegar a nadie. Y cualquiera con la
+  // anon key podía saltarse esta función entera y escribir el balance
+  // directo. transferir_p2p_wallet() hace las 2 escrituras + los 2 registros
+  // de transacción en una sola función de Postgres (SECURITY DEFINER), con
+  // lock de ambas filas — o se mueve todo o no se mueve nada.
+  const r = (await rest("rpc/transferir_p2p_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_origen_wallet_id: origen.id, p_destino_wallet_id: destino.id,
+      p_monto: importe, p_world_id: worldId,
+    }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "monto", balance: r?.nuevo_saldo_origen != null ? +r.nuevo_saldo_origen : +origen.balance };
+  return { ok: true, balance: +r.nuevo_saldo_origen };
 }
 
 // ── Solicitud de pulsera NFC (antes: botones decorativos sin backend) ─────
@@ -658,24 +657,19 @@ export async function getOrCreateWallet(userId, worldId) {
   return rows[0];
 }
 
+// Bug real #114: balance movido con PATCH directo, sin lock de fila ni
+// control de quién puede escribirlo (ver mover_saldo_wallet() y el comentario
+// largo en pagarCuotaBNPLUsuario más arriba para el detalle completo).
 export async function recargarSupabase(userId, worldId, monto, channelId, channelNombre) {
   const wallet = await getOrCreateWallet(userId, worldId);
-  const nuevoSaldo = +(wallet.balance) + monto;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
-  await rest("transactions", {
+  const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
-    headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
-      wallet_id: wallet.id, world_id: worldId, channel_id: channelId,
-      amount: monto, type: "recarga", status: "completada",
-      reference: `${channelNombre}-${Date.now()}`,
+      p_wallet_id: wallet.id, p_delta: Math.abs(monto), p_tipo: "recarga",
+      p_world_id: worldId, p_channel_id: channelId, p_reference: `${channelNombre}-${Date.now()}`,
     }),
-  });
-  return nuevoSaldo;
+  }))?.[0];
+  return +r.nuevo_saldo;
 }
 
 // maxRecargasDiarias (world_capacity_configs de wallet) nunca se hacía cumplir en
@@ -692,22 +686,15 @@ export async function fetchRecargasHoyCount(userId, worldId) {
 
 export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Comercio") {
   const wallet = await getOrCreateWallet(userId, worldId);
-  if (+wallet.balance < monto) return { ok: false, balance: +wallet.balance };
-  const nuevoSaldo = +wallet.balance - monto;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
-  await rest("transactions", {
+  const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
-    headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
-      wallet_id: wallet.id, world_id: worldId,
-      amount: monto, type: "compra", status: "completada",
-      reference: `pago-${comercioNombre}-${Date.now()}`,
+      p_wallet_id: wallet.id, p_delta: -Math.abs(monto), p_tipo: "compra",
+      p_world_id: worldId, p_reference: `pago-${comercioNombre}-${Date.now()}`,
     }),
-  });
+  }))?.[0];
+  if (!r?.ok) return { ok: false, balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  const nuevoSaldo = +r.nuevo_saldo;
   return { ok: true, balance: nuevoSaldo };
 }
 
@@ -747,7 +734,6 @@ export async function fetchProductosMundoLive(worldId) {
 export async function comprarProductosLive(userId, worldId, merchantId, items) {
   const total = items.reduce((a, it) => a + (+it.product.price) * it.qty, 0);
   const wallet = await getOrCreateWallet(userId, worldId);
-  if (+wallet.balance < total) return { ok: false, motivo: "saldo", balance: +wallet.balance };
 
   const idsConStock = items.filter(it => it.product.id).map(it => it.product.id);
   let stockPorId = new Map();
@@ -762,20 +748,16 @@ export async function comprarProductosLive(userId, worldId, merchantId, items) {
     }
   }
 
-  const nuevoSaldo = +wallet.balance - total;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
   const detalle = items.map(it => `${it.product.name} x${it.qty}`).join(", ");
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
     body: JSON.stringify({
-      wallet_id: wallet.id, world_id: worldId, merchant_id: merchantId,
-      amount: total, type: "compra", status: "completada",
-      reference: `Compra app · ${detalle}`.slice(0, 120),
+      p_wallet_id: wallet.id, p_delta: -Math.abs(total), p_tipo: "compra",
+      p_world_id: worldId, p_merchant_id: merchantId, p_reference: `Compra app · ${detalle}`.slice(0, 120),
     }),
-  });
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  const nuevoSaldo = +r.nuevo_saldo;
 
   for (const it of items) {
     const disponible = stockPorId.get(it.product.id);

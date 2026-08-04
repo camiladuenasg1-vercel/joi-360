@@ -1293,36 +1293,42 @@ export async function buscarWalletPorCodigo(codigo, worldId) {
   const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=id,user_id,balance`);
   return rows?.[0] || null;
 }
+// Bug real #114: hasta acá el balance se leía y se volvía a escribir con un
+// PATCH plano — dos cobros a la misma wallet casi al mismo tiempo podían
+// leer el mismo saldo viejo y pisarse uno al otro, y cualquiera con la anon
+// key del bundle podía escribirle cualquier número a cualquier billetera
+// directo por REST, sin pasar por esta función. mover_saldo_wallet() es una
+// función de Postgres (SECURITY DEFINER) que hace el lock de fila + validación
+// + escritura + registro de transacción en un solo paso atómico — anon puede
+// ejecutarla (GRANT EXECUTE) pero ya no puede tocar wallets.balance directo
+// (REVOKE UPDATE), así que este es ahora el único camino real para mover saldo.
 export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia) {
-  const wallet = (await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`))?.[0];
+  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
-  if (+wallet.balance < monto) return { ok: false, motivo: "saldo", balance: +wallet.balance };
-  const nuevoSaldo = +wallet.balance - monto;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: wallet.id, world_id: worldId, merchant_id: merchantId, amount: monto, type: "compra", status: "completada", reference: referencia }),
-  });
-  return { ok: true, balance: nuevoSaldo };
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_wallet_id: wallet.id, p_delta: -Math.abs(monto), p_tipo: "compra",
+      p_world_id: worldId, p_merchant_id: merchantId, p_reference: referencia,
+    }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : undefined };
+  return { ok: true, balance: +r.nuevo_saldo };
 }
 // Recarga presencial en POS (efectivo / tarjeta presente) — el operador recibe
 // el pago físico y acredita el monto a la billetera del cliente ya identificado.
 export async function recargarPOSRemote(userId, worldId, merchantId, monto, canalId, referencia) {
-  const wallet = (await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`))?.[0];
+  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
-  const nuevoSaldo = +wallet.balance + monto;
-  await rest(`wallets?id=eq.${wallet.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ balance: nuevoSaldo }),
-  });
-  await rest("transactions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ wallet_id: wallet.id, world_id: worldId, merchant_id: merchantId, amount: monto, type: "recarga", status: "completada", reference: referencia, channel_id: canalId }),
-  });
-  return { ok: true, balance: nuevoSaldo };
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_wallet_id: wallet.id, p_delta: Math.abs(monto), p_tipo: "recarga",
+      p_world_id: worldId, p_merchant_id: merchantId, p_channel_id: canalId, p_reference: referencia,
+    }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: "sin_wallet" };
+  return { ok: true, balance: +r.nuevo_saldo };
 }
 export async function fetchVentasComercio(merchantId, limit = 300) {
   return rest(`transactions?merchant_id=eq.${merchantId}&type=eq.compra&select=id,amount,reference,status,created_at&order=created_at.desc&limit=${limit}`);
