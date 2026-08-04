@@ -857,6 +857,14 @@ export async function refreshMundosLive() {
         createdAt: Date.parse(w.created_at) || Date.now(),
       });
     }
+    // Poda: un mundo borrado de verdad en Supabase (por otra pestaña, u otro
+    // admin) se quedaba fantasma para siempre en este browser — mismo defecto
+    // que ya causó que 2 mundos demo reaparecieran hoy tras un borrado. Solo
+    // se llega aquí con `rows` ya confirmado no-vacío (guard de arriba), así
+    // que nunca se poda por un fetch fallido; `fixed` (plataforma RP) nunca
+    // se poda de todas formas, por las dudas.
+    const idsRemotos = new Set(rows.map(w => w.id));
+    st.mundos = st.mundos.filter(m => m.fixed || idsRemotos.has(m.id));
   });
 }
 
