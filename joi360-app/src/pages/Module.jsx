@@ -100,6 +100,15 @@ function WalletTemplate({ cfg, u }) {
   const currency = cfg.config.monedaPermitida || "S/";
   const myCode = getSyntheticUserId();
 
+  // Dependientes reales del titular — para poder pedir la bandita NFC (o
+  // cualquier otra acción del módulo) A NOMBRE de un hijo, no solo del padre.
+  const [dependientes, setDependientes] = useState([]);
+  useEffect(() => {
+    let vivo = true;
+    fetchMisDependientes(myCode, mundoId).then(r => { if (vivo) setDependientes(r || []); }).catch(() => { if (vivo) setDependientes([]); });
+    return () => { vivo = false; };
+  }, [mundoId]);
+
   // P2P real: transferir a otro usuario del mismo mundo por su código JOI.
   const [p2pOpen, setP2pOpen] = useState(false);
   const [p2pCodigo, setP2pCodigo] = useState("");
@@ -108,26 +117,33 @@ function WalletTemplate({ cfg, u }) {
   const [p2pResult, setP2pResult] = useState(null);
 
   // Solicitud real de bandita NFC — antes esta tarjeta mostraba "Vinculada"
-  // fijo sin importar el estado real. Ahora refleja nfc_requests: sin
-  // solicitud → botón para pedirla; pendiente → esperando a RedPontis;
-  // entregada → vinculada; rechazada → puede volver a solicitar.
-  const [solicitudNfc, setSolicitudNfc] = useState(undefined); // undefined=cargando, null=sin solicitud
-  const [solicitandoNfc, setSolicitandoNfc] = useState(false);
+  // fijo sin importar el estado real, y solo para el titular: un padre con
+  // hijos registrados no tenía forma de pedir la pulsera DE UN HIJO, solo la
+  // suya propia. Ahora es una fila por beneficiario (titular + cada
+  // dependiente), cada una con su propio estado real en nfc_requests.
+  const beneficiarios = [
+    { id: myCode, nombre: u?.auth?.nombre || "Tú", esTitular: true },
+    ...(dependientes || []).map(d => ({ id: d.dependent_user_id, nombre: d.nombre, esTitular: false })),
+  ];
+  const [solicitudesNfc, setSolicitudesNfc] = useState({}); // { [beneficiarioId]: request | null | undefined }
+  const [solicitandoNfcId, setSolicitandoNfcId] = useState(null);
   useEffect(() => {
     let vivo = true;
-    fetchMiSolicitudNfc(mundoId, myCode).then(r => { if (vivo) setSolicitudNfc(r); }).catch(() => { if (vivo) setSolicitudNfc(null); });
+    Promise.all(beneficiarios.map(b =>
+      fetchMiSolicitudNfc(mundoId, b.id).then(r => [b.id, r]).catch(() => [b.id, null])
+    )).then(pares => { if (vivo) setSolicitudesNfc(Object.fromEntries(pares)); });
     return () => { vivo = false; };
-  }, [mundoId]);
-  const pedirBandita = async () => {
-    setSolicitandoNfc(true);
+  }, [mundoId, dependientes?.length]);
+  const pedirBandita = async (beneficiarioId, beneficiarioNombre) => {
+    setSolicitandoNfcId(beneficiarioId);
     try {
-      await solicitarBanditaNfc(mundoId, myCode, u?.auth?.nombre || null);
-      const r = await fetchMiSolicitudNfc(mundoId, myCode);
-      setSolicitudNfc(r);
-      showToast({ titulo: "Solicitud enviada", mensaje: "RedPontis te avisará cuando tu pulsera esté lista para recoger." }, "success");
+      await solicitarBanditaNfc(mundoId, beneficiarioId, beneficiarioNombre || null);
+      const r = await fetchMiSolicitudNfc(mundoId, beneficiarioId);
+      setSolicitudesNfc(prev => ({ ...prev, [beneficiarioId]: r }));
+      showToast({ titulo: "Solicitud enviada", mensaje: "RedPontis te avisará cuando la pulsera esté lista para recoger." }, "success");
     } catch (e) {
       showToast({ titulo: "No se pudo enviar la solicitud", mensaje: "Intenta de nuevo en unos minutos." }, "error");
-    } finally { setSolicitandoNfc(false); }
+    } finally { setSolicitandoNfcId(null); }
   };
 
   const enviarP2P = async () => {
@@ -272,35 +288,40 @@ function WalletTemplate({ cfg, u }) {
             </div>
           ))}
           {/* Bandita NFC — only if feature flag enabled. Estado real desde
-              nfc_requests, no un badge fijo. */}
-          {cfg.has("bandita") && (
-            <div className="rounded-2xl p-3.5 border border-[#e4e1ee] flex items-center gap-3"
-              style={{background:"linear-gradient(135deg,rgba(237,231,246,0.4),white)"}}>
-              <div className="w-9 h-9 rounded-xl bg-[#ede7f6] flex items-center justify-center flex-shrink-0">
-                <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {cfg.mundo.nombre}</p>
-                {solicitudNfc === undefined ? (
-                  <p className="text-[10px] text-[#777587]">Cargando…</p>
-                ) : solicitudNfc?.status === "entregada" ? (
-                  <p className="text-[10px] text-green-700 font-bold">Vinculada</p>
-                ) : solicitudNfc?.status === "pendiente" ? (
-                  <p className="text-[10px] text-orange-600 font-bold">Solicitud enviada · pendiente de entrega</p>
-                ) : solicitudNfc?.status === "rechazada" ? (
-                  <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
-                ) : (
-                  <p className="text-[10px] text-[#777587]">Aún no vinculada</p>
+              nfc_requests, una fila por beneficiario (titular + cada
+              dependiente) — un padre puede pedir la pulsera de un hijo sin
+              que eso reemplace la suya propia. */}
+          {cfg.has("bandita") && beneficiarios.map(b => {
+            const solicitud = solicitudesNfc[b.id];
+            return (
+              <div key={b.id} className="rounded-2xl p-3.5 border border-[#e4e1ee] flex items-center gap-3"
+                style={{background:"linear-gradient(135deg,rgba(237,231,246,0.4),white)"}}>
+                <div className="w-9 h-9 rounded-xl bg-[#ede7f6] flex items-center justify-center flex-shrink-0">
+                  <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? cfg.mundo.nombre : b.nombre}</p>
+                  {solicitud === undefined ? (
+                    <p className="text-[10px] text-[#777587]">Cargando…</p>
+                  ) : solicitud?.status === "entregada" ? (
+                    <p className="text-[10px] text-green-700 font-bold">Vinculada</p>
+                  ) : solicitud?.status === "pendiente" ? (
+                    <p className="text-[10px] text-orange-600 font-bold">Solicitud enviada · pendiente de entrega</p>
+                  ) : solicitud?.status === "rechazada" ? (
+                    <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
+                  ) : (
+                    <p className="text-[10px] text-[#777587]">Aún no vinculada</p>
+                  )}
+                </div>
+                {(solicitud === null || solicitud?.status === "rechazada") && (
+                  <button onClick={() => pedirBandita(b.id, b.esTitular ? (u?.auth?.nombre || null) : b.nombre)} disabled={solicitandoNfcId === b.id}
+                    className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
+                    {solicitandoNfcId === b.id ? "Enviando…" : "Solicitar"}
+                  </button>
                 )}
               </div>
-              {(solicitudNfc === null || solicitudNfc?.status === "rechazada") && (
-                <button onClick={pedirBandita} disabled={solicitandoNfc}
-                  className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
-                  {solicitandoNfc ? "Enviando…" : "Solicitar"}
-                </button>
-              )}
-            </div>
-          )}
+            );
+          })}
         </div>
       </SectionCard>
 
