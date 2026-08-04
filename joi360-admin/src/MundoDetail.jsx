@@ -958,6 +958,16 @@ function EventosActivadoPopup({ m, onClose }) {
   );
 }
 
+// e/a en MODULE_CATALOG clasifican la capacidad en la matriz Emisión/Adquirencia
+// del Catálogo Maestro (¿tiene lado app? ¿tiene lado POS/admin?) — un uso
+// distinto a "administra canales reales de pago/recarga". Usar e/a también
+// para decidir el tab Canales hacía que 15 capacidades (Accesos, Reservas,
+// Loyalty, Eventos, BNPL...) mostraran los mismos toggles globales de
+// Wallet/Comercios sin usarlos de verdad — "repite canales y no estandariza".
+// Solo Wallet (emisión/recargas) y Comercios (adquirencia/cobro) son dueños
+// reales de esa configuración.
+const CAPACIDADES_CON_CANALES = new Set(["wallet", "comercios"]);
+
 /* ── ModuleConfigDrawer ───────────────────────────────────────────── */
 function ModuleConfigDrawer({ mundoId, modId, onClose }) {
   const st = useStore();
@@ -973,6 +983,7 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
   }, [modId]);
 
   if (!mod || !c || !m) return null;
+  const tieneCanales = CAPACIDADES_CON_CANALES.has(modId);
 
   const save = () => {
     // Canales que el admin nunca tocó muestran un default visual (ch.disponible)
@@ -980,11 +991,11 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
     // una vez — sin este backfill, "Guardar" sin tocar nada deja el mundo sin
     // ningún canal real en world_channel_configs pese a que la UI los muestra ON.
     const configConCanales = { ...f.config };
-    if (c?.e) for (const ch of CANALES_EMISION) {
+    if (tieneCanales && c?.e) for (const ch of CANALES_EMISION) {
       const key = `emision_${ch.id}`;
       if (configConCanales[key] === undefined) configConCanales[key] = { enabled: ch.disponible, montoMinOverride: null, montoMaxOverride: null };
     }
-    if (c?.a) for (const ch of CANALES_ADQUIRENCIA) {
+    if (tieneCanales && c?.a) for (const ch of CANALES_ADQUIRENCIA) {
       const key = `adq_${ch.id}`;
       if (configConCanales[key] === undefined) configConCanales[key] = ch.disponible;
     }
@@ -1004,9 +1015,9 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
   const TABS = [
     { k:"config",    l:"Parámetros",    i:"tune" },
     ...(c?.microservicios ? [{ k:"microservicios", l:"Microservicios", i:"account_tree" }] : []),
-    // Canales solo aplica a módulos con configuración real de canales de
-    // emisión o adquirencia atada a consumo/pago — el resto no la necesita.
-    ...((c?.e || c?.a) ? [{ k:"canales", l:"Canales", i:"settings_input_antenna" }] : []),
+    // Canales solo aplica a Wallet/Comercios — los únicos dueños reales de
+    // configuración de canales de emisión/adquirencia (ver CAPACIDADES_CON_CANALES).
+    ...(tieneCanales ? [{ k:"canales", l:"Canales", i:"settings_input_antenna" }] : []),
     { k:"pricing",   l:"Pricing",       i:"payments" },
     { k:"servicios", l:"Feature Flags", i:"toggle_on" },
     { k:"app",       l:"Vista App",     i:"smartphone" },
