@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { loginUser } from "../userStore.js";
-import { setUserId } from "../supabaseClient.js";
+import { setUserId, setSession } from "../supabaseClient.js";
 import {
   TIPOS_DOCUMENTO, tipoDocumento, REGLAS_PASSWORD, passwordValida,
   registrarUsuario, iniciarSesion, correoConfirmado, reenviarConfirmacion,
@@ -87,6 +87,7 @@ export default function AuthPage() {
 
   function entrar(u) {
     setUserId(u.id);
+    setSession(u.accessToken, u.expiresIn);
     loginUser(u.nombre, u.email);
     nav(next || "/landing");
   }

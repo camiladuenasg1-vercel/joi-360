@@ -1302,29 +1302,49 @@ export async function buscarWalletPorCodigo(codigo, worldId) {
 // + escritura + registro de transacción en un solo paso atómico — anon puede
 // ejecutarla (GRANT EXECUTE) pero ya no puede tocar wallets.balance directo
 // (REVOKE UPDATE), así que este es ahora el único camino real para mover saldo.
-export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia) {
+// Gap real (auditoría post-#114): mover_saldo_wallet ahora exige, para
+// cualquier llamada con p_merchant_id, un p_turno_id que sea un turno real y
+// abierto de ESE merchant en pos_turnos — si no, lo rechaza con
+// TURNO_INVALIDO. El Operador web nunca tuvo turno (a diferencia del POS
+// nativo T6, que sí valida contra pos_turnos en joi-pos-backend) — esto abre
+// uno real al entrar a Cobrar/Recargar, reutilizando el turno abierto si ya
+// hay uno para no duplicar el cuadre de caja.
+export async function abrirTurnoRemote(merchantId, worldId) {
+  const abiertos = await rest(
+    `pos_turnos?merchant_id=eq.${merchantId}&estado=eq.abierto&select=id&order=abierto_at.desc&limit=1`
+  ).catch(() => []);
+  if (abiertos?.[0]?.id) return abiertos[0].id;
+  const creado = await rest("pos_turnos", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, merchant_id: merchantId, device_serial: "web-operador" }),
+  }).catch(() => []);
+  return creado?.[0]?.id || null;
+}
+
+export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia, turnoId) {
   const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
   const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
     body: JSON.stringify({
       p_wallet_id: wallet.id, p_delta: -Math.abs(monto), p_tipo: "compra",
-      p_world_id: worldId, p_merchant_id: merchantId, p_reference: referencia,
+      p_world_id: worldId, p_merchant_id: merchantId, p_reference: referencia, p_turno_id: turnoId || null,
     }),
   }))?.[0];
-  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : undefined };
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : (r?.motivo || "sin_wallet"), balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : undefined };
   return { ok: true, balance: +r.nuevo_saldo };
 }
 // Recarga presencial en POS (efectivo / tarjeta presente) — el operador recibe
 // el pago físico y acredita el monto a la billetera del cliente ya identificado.
-export async function recargarPOSRemote(userId, worldId, merchantId, monto, canalId, referencia) {
+export async function recargarPOSRemote(userId, worldId, merchantId, monto, canalId, referencia, turnoId) {
   const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
   const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
     body: JSON.stringify({
       p_wallet_id: wallet.id, p_delta: Math.abs(monto), p_tipo: "recarga",
-      p_world_id: worldId, p_merchant_id: merchantId, p_channel_id: canalId, p_reference: referencia,
+      p_world_id: worldId, p_merchant_id: merchantId, p_channel_id: canalId, p_reference: referencia, p_turno_id: turnoId || null,
     }),
   }))?.[0];
   // Bug real de QA (hallado hoy): esto siempre reportaba "sin_wallet" ante

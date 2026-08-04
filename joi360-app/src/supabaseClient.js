@@ -10,17 +10,56 @@ import { CANALES_ADQUIRENCIA } from "./store.js";
 const SUPA_URL = "https://kobtxrhycaloyjkeyspv.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvYnR4cmh5Y2Fsb3lqa2V5c3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzAwMjksImV4cCI6MjA5NzkwNjAyOX0.MlyyXGnsyMeVXaRfRbmFqwVhsh4FUFNztQoBaECd_i0";
 
-const headers = {
+const baseHeaders = {
   apikey: ANON_KEY,
-  Authorization: `Bearer ${ANON_KEY}`,
   "Content-Type": "application/json",
 };
 
+// ── Sesión real de Supabase Auth ──────────────────────────────────────────
+// Hasta aquí toda request salía con la anon key en Authorization, incluso ya
+// logueado — auth.uid() quedaba null del lado del servidor pase lo que pase,
+// que es justo lo que mover_saldo_wallet/transferir_p2p_wallet necesitan para
+// confirmar que quien pide mover el saldo es el dueño de esa wallet. Sin
+// mandar el JWT real no hay nada que verificar del lado de Postgres.
+const SESSION_KEY = "joi360_session";
+export function setSession(accessToken, expiresIn) {
+  if (!accessToken) return;
+  const expiresAt = Date.now() + (Number(expiresIn) || 3600) * 1000;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ accessToken, expiresAt }));
+}
+export function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+function sessionToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!s?.accessToken || Date.now() >= s.expiresAt) return null;
+    return s.accessToken;
+  } catch { return null; }
+}
+
 async function rest(path, opts = {}) {
+  const authToken = sessionToken() || ANON_KEY;
+  const headers = { ...baseHeaders, Authorization: `Bearer ${authToken}` };
   const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   if (!res.ok) throw new Error(`Supabase ${path} → HTTP ${res.status}: ${await res.text()}`);
   const text = await res.text();
   return text ? JSON.parse(text) : null;
+}
+
+// Motivos que la RPC de wallet devuelve cuando el JWT no prueba dueño de la
+// billetera — sesión vencida (por eso no llevaba token) o simplemente no es
+// suya. En ambos casos la única salida real es volver a iniciar sesión, no
+// reintentar la misma llamada.
+const MOTIVOS_SESION_INVALIDA = new Set(["NO_AUTENTICADO", "NO_AUTORIZADO"]);
+function exigirAutorizacionWallet(r) {
+  if (r?.ok === false && MOTIVOS_SESION_INVALIDA.has(r.motivo)) {
+    clearSession();
+    const e = new Error("Tu sesión expiró. Vuelve a iniciar sesión para continuar.");
+    e.codigo = "sesion_invalida";
+    throw e;
+  }
+  return r;
 }
 
 // ── Identidad del usuario ─────────────────────────────────────────────────
@@ -45,6 +84,7 @@ export function getSyntheticUserId() {
 // SYNTH_KEY vivía fuera de joi360_user_v3 y nunca se limpiaba.
 export function resetSyntheticUserId() {
   localStorage.removeItem(SYNTH_KEY);
+  clearSession();
 }
 
 // ── Mundos en vivo (Fase 0 — alta en admin → render automático aquí) ─────
@@ -281,6 +321,7 @@ export async function pagarCuotaBNPLUsuario(userId, contrato, n) {
       p_reference: `Cuota ${n}/${contrato.cuotas} · ${contrato.producto}`.slice(0, 120),
     }),
   }))?.[0];
+  exigirAutorizacionWallet(r);
   if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
   const nuevoSaldo = +r.nuevo_saldo;
   const cronograma = contrato.cronograma.map(q => (q.n === n ? { ...q, estado: "pagada" } : q));
@@ -514,6 +555,7 @@ export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) 
       p_monto: importe, p_world_id: worldId,
     }),
   }))?.[0];
+  exigirAutorizacionWallet(r);
   if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "monto", balance: r?.nuevo_saldo_origen != null ? +r.nuevo_saldo_origen : +origen.balance };
   return { ok: true, balance: +r.nuevo_saldo_origen };
 }
@@ -676,6 +718,7 @@ export async function recargarSupabase(userId, worldId, monto, channelId, channe
       p_world_id: worldId, p_channel_id: channelId, p_reference: `${channelNombre}-${Date.now()}`,
     }),
   }))?.[0];
+  exigirAutorizacionWallet(r);
   // Bug real de QA (hallado hoy): esta función devolvía +r.nuevo_saldo sin
   // chequear r.ok, a diferencia de pagarSupabase/pagarCuotaBNPLUsuario/etc.
   // Si el RPC alguna vez rechaza sin lanzar HTTP error, el llamador veía
@@ -706,6 +749,7 @@ export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Co
       p_world_id: worldId, p_reference: `pago-${comercioNombre}-${Date.now()}`,
     }),
   }))?.[0];
+  exigirAutorizacionWallet(r);
   if (!r?.ok) return { ok: false, balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
   const nuevoSaldo = +r.nuevo_saldo;
   return { ok: true, balance: nuevoSaldo };
@@ -769,6 +813,7 @@ export async function comprarProductosLive(userId, worldId, merchantId, items) {
       p_world_id: worldId, p_merchant_id: merchantId, p_reference: `Compra app · ${detalle}`.slice(0, 120),
     }),
   }))?.[0];
+  exigirAutorizacionWallet(r);
   if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
   const nuevoSaldo = +r.nuevo_saldo;
 

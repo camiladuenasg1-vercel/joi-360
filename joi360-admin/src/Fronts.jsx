@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -613,8 +613,13 @@ export function CobrarPanel({ comercio, m }) {
   const [cobrando, setCobrando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [bnplProg, setBnplProg] = useState(null); // programa BNPL del comercio (null = sin programa activo)
+  // La RPC de wallet ahora exige un turno real y abierto en pos_turnos para
+  // cualquier cobro/recarga con merchant_id (gap real cerrado post-#114) —
+  // sin esto, cobrar()/recargar() de abajo se rechazan con TURNO_INVALIDO.
+  const [turnoId, setTurnoId] = useState(null);
 
   useEffect(() => { fetchProductsRemote(merchantId).then(rows => setProductos((rows || []).filter(p => p.active))).catch(() => {}); }, [merchantId]);
+  useEffect(() => { abrirTurnoRemote(merchantId, m.id).then(setTurnoId).catch(() => setTurnoId(null)); }, [merchantId, m.id]);
 
   // Identificar SKU financiable + mostrar cuotas en el POS (Gantt #33)
   const bnplHabilitado = !!bnplLimitesDelMundo(m);
@@ -655,7 +660,7 @@ export function CobrarPanel({ comercio, m }) {
     setCobrando(true);
     try {
       const referencia = `${comercio.nombre}${productoSel ? " · " + productoSel.name : ""}`;
-      const r = await cobrarPOSRemote(cliente.user_id, m.id, merchantId, m2, referencia);
+      const r = await cobrarPOSRemote(cliente.user_id, m.id, merchantId, m2, referencia, turnoId);
       if (!r.ok) {
         const code = r.motivo === "saldo" ? "saldo_insuficiente" : "wallet_no_encontrada";
         const err = await errorControlado(code);
@@ -676,7 +681,7 @@ export function CobrarPanel({ comercio, m }) {
     setCobrando(true);
     try {
       const referencia = `Recarga presencial · ${canalRecarga.nombre} · ${comercio.nombre}`;
-      const r = await recargarPOSRemote(cliente.user_id, m.id, merchantId, m2, canalRecarga.id, referencia);
+      const r = await recargarPOSRemote(cliente.user_id, m.id, merchantId, m2, canalRecarga.id, referencia, turnoId);
       if (!r.ok) {
         const err = await errorControlado("wallet_no_encontrada");
         logErrorControlado("wallet_no_encontrada", `pos-recargar:${merchantId}`, m.id);

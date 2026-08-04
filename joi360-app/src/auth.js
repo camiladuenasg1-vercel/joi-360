@@ -179,6 +179,7 @@ export async function iniciarSesion(email, password) {
     apellidos: meta.apellidos || "",
     nombre: [meta.nombres, meta.apellidos].filter(Boolean).join(" ") || (u.email || "").split("@")[0],
     accessToken: r.access_token,
+    expiresIn: r.expires_in,
   };
 }
 
