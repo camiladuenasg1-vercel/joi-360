@@ -41,12 +41,15 @@ function OperadorShell({ comercio, m }) {
   const [modo, setModo] = useState(null);
   const bnplOn = !!bnplLimitesDelMundo(m);
   const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
-  const walletOn = (m?.modulos || []).some(x => x.id === "wallet" && x.enabled);
+  const walletMod = (m?.modulos || []).find(x => x.id === "wallet" && x.enabled);
+  // usaPulseraNfc por defecto true: mundos configurados antes de este campo
+  // siguen viendo el tile, igual que ya asumía el backend del POS nativo.
+  const banditaOn = !!walletMod && walletMod.config?.usaPulseraNfc !== false;
 
   const disponibles = MODOS.filter(md => {
     if (md.id === "bnpl") return bnplOn;
     if (md.id === "accesos") return accesosOn;
-    if (md.id === "bandita") return walletOn;
+    if (md.id === "bandita") return banditaOn;
     return true;
   });
 

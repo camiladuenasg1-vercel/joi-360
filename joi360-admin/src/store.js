@@ -32,6 +32,8 @@ export const MODULE_CATALOG = [
       { key: "maxRecargasDiarias", label: "Cantidad máxima de recargas por usuario por día", type: "number", default: 3, nullable: true, nullLabel: "Sin límite" },
       { key: "maxPorRecarga", label: "Máximo por recarga", type: "currency", default: 500, nullable: true, nullLabel: "Sin tope por recarga" },
       { key: "p2pEnabled", label: "Habilitar transferencias entre usuarios del mismo mundo", type: "switch", default: true },
+      { key: "usaPulseraNfc", label: "Este mundo usa pulseras NFC físicas", type: "switch", default: true,
+        hint: "Antes esto quedaba encendido automáticamente con solo activar Wallet, sin poder apagarlo — un mundo que solo cobra por QR/app, sin banditas físicas, no tenía forma de reflejarlo. Apagado, el POS deja de ofrecer 'Vincular pulsera' y de aceptar identificación por NFC." },
       { key: "vigenciaBanditasMeses", label: "Vigencia de la pulsera NFC (meses)", type: "number", default: 12, nullable: true, nullLabel: "Sin vencimiento",
         hint: "El plazo empieza a correr cuando la pulsera se vincula a la persona, no cuando se carga el lote al almacén. Vencida, el POS la rechaza." },
       { key: "perfilesSuscripcion", label: "Cobrar suscripción por perfil vinculado", type: "switch", default: false, hint: "Cobra al padre/tutor una cuota única al vincular cada nuevo dependiente." },
