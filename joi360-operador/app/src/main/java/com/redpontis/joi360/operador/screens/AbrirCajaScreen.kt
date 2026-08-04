@@ -26,16 +26,14 @@ import kotlinx.coroutines.launch
  * Abrir caja — puerta de entrada del terminal.
  *
  * Mantiene la estructura que el operador ya conoce del equipo en uso (código
- * de comercio, clave, cambiar servidor) pero con alturas de POS: campos de
- * 62dp y acción de 64dp, porque se opera de pie y con prisa.
+ * de comercio, clave) pero con alturas de POS: campos de 62dp y acción de
+ * 64dp, porque se opera de pie y con prisa.
  */
 @Composable
 fun AbrirCajaScreen(onListo: (RenderConfig, String?) -> Unit) {
     var comercio by remember { mutableStateOf("") }
     var clave by remember { mutableStateOf("") }
     var verClave by remember { mutableStateOf(false) }
-    var servidorVisible by remember { mutableStateOf(false) }
-    var servidor by remember { mutableStateOf(Api.baseUrl) }
     var cargando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -44,7 +42,6 @@ fun AbrirCajaScreen(onListo: (RenderConfig, String?) -> Unit) {
         if (comercio.isBlank() || clave.isBlank() || cargando) return
         error = null
         cargando = true
-        Api.baseUrl = servidor.trim().trimEnd('/')
         scope.launch {
             val serial = runCatching { Build.SERIAL }.getOrNull()
             Api.abrirCaja(comercio.trim(), clave.trim(), serial)
@@ -114,28 +111,6 @@ fun AbrirCajaScreen(onListo: (RenderConfig, String?) -> Unit) {
                 placeholder = "••••••",
                 isPassword = !verClave,
                 keyboardType = KeyboardType.NumberPassword,
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        Text(
-            if (servidorVisible) "Ocultar servidor" else "Cambiar servidor",
-            color = Joi.InkMuted,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .clickable { servidorVisible = !servidorVisible }
-                .padding(vertical = 6.dp),
-        )
-
-        if (servidorVisible) {
-            Spacer(Modifier.height(12.dp))
-            Field(
-                label = "Servidor",
-                value = servidor,
-                onValueChange = { servidor = it },
-                placeholder = "https://…",
             )
         }
 
