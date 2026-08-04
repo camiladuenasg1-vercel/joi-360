@@ -79,7 +79,12 @@ function worldRow(m) {
     // navegador o un "reset demo" lo perdían para siempre, y Liquidación
     // caía en su default silencioso (5% transaccional) sin que nadie lo
     // hubiera pactado. Ahora viaja con el resto del mundo.
-    acuerdo: m.acuerdo || null,
+    // OJO: {} (sin tipo) es el bug histórico documentado más abajo en
+    // store.js — es "vacío" pero truthy. Si esta sesión todavía lo
+    // arrastra, NUNCA se manda como si fuera real: se manda null, para no
+    // pisar un acuerdo real que ya haya llegado por otra vía (ej. el PATCH
+    // directo de una corrección administrativa).
+    acuerdo: m.acuerdo?.tipo ? m.acuerdo : null,
     updated_at: new Date().toISOString(),
   };
 }
