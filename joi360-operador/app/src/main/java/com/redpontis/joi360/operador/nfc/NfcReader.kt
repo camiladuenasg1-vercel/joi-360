@@ -39,12 +39,17 @@ class NfcController(private val activity: Activity) {
     }
 
     /**
-     * El código impreso/registrado de la pulsera es el UID del tag en
-     * hexadecimal mayúsculas — mismo formato con el que RedPontis carga el
-     * lote por CSV a nfc_bands.codigo.
+     * El código de la pulsera es el UID del tag en hex mayúsculas, bytes
+     * separados por ":" — mismo formato canónico con el que se carga el lote
+     * a nfc_bands.codigo (04:D6:01:5A:68:19:94). Antes se armaba sin
+     * separador (joinToString("")): nunca coincidía con el código real
+     * guardado en la base, así que el T6 jamás reconocía una bandita
+     * cargada de verdad. El backend también normaliza por su cuenta
+     * (uidNormalize.js) como segunda red de seguridad, pero acá se arma bien
+     * desde el origen.
      */
     private fun codigoDeTag(tag: Tag): String =
-        tag.id.joinToString("") { "%02X".format(it) }
+        tag.id.joinToString(":") { "%02X".format(it) }
 }
 
 /**

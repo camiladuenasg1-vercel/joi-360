@@ -1280,11 +1280,21 @@ export async function revertirAsignacionesLoteRemote(lote) {
 // usuario, y esto los une de verdad. Vigencia (vence_at) sale de la config
 // real del mundo (Wallet → "vigencia de la pulsera NFC en meses"); si el
 // mundo no la configuró, la pulsera queda sin vencimiento.
+// El UID real de una bandita siempre se guarda como bytes hex en MAYÚSCULAS
+// separados por ":" (04:D6:01:5A:68:19:94) — pero puede llegar sin separador
+// (el lector nativo del T6 lo entrega así) o en minúsculas. Se normaliza acá
+// para que un match exacto encuentre la bandita sin importar el formato de
+// entrada.
+export function normalizarUidBandita(raw) {
+  const limpio = String(raw || "").trim().toUpperCase();
+  if (!limpio) return null;
+  const soloHex = limpio.replace(/[:\-\s.]/g, "");
+  if (!/^[0-9A-F]+$/.test(soloHex) || soloHex.length < 8 || soloHex.length % 2 !== 0) return null;
+  return soloHex.match(/.{2}/g).join(":");
+}
 export async function buscarNfcBandPorCodigo(codigo, worldId) {
-  // Los códigos siempre se guardan en MAYÚSCULAS (registerNfcBandsBulkRemote)
-  // — si el lector NFC entrega el UID en minúsculas, un match sensible a
-  // mayúsculas nunca encontraba la bandita aunque estuviera bien asignada.
-  const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(codigo.trim().toUpperCase())}&world_id=eq.${worldId}&select=*`);
+  const normalizado = normalizarUidBandita(codigo) || codigo.trim().toUpperCase();
+  const rows = await rest(`nfc_bands?codigo=eq.${encodeURIComponent(normalizado)}&world_id=eq.${worldId}&select=*`);
   return rows?.[0] || null;
 }
 // worldId es opcional por compatibilidad, pero sin él no se puede cerrar la
