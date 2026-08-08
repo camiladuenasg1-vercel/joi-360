@@ -89,6 +89,10 @@ function worldRow(m) {
     // POS (bandita/accesos/eventos/consultar) — distinta de la de cada
     // comercio, mismo patrón (código corto + PIN) que ya usa el terminal.
     pos_pin: m.posPin || null,
+    // Logo/imagen del mundo (Task #166) — antes se guardaba como base64 en
+    // memoria local y nunca viajaba a Supabase; sin esta columna el thumbnail
+    // del card de comunidad en el superapp no tenía de dónde leer.
+    logo_url: m.logoUrl || null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -331,6 +335,16 @@ export async function deleteWorldRemote(worldId) {
   try {
     await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
   } catch (e) { console.warn("[supabase-sync] delete world", e); }
+}
+
+// Cambiar el logo de un mundo YA creado (Task #166) — PATCH directo en vez
+// de esperar el sync debounced completo, mismo patrón que cambiarImagen()
+// de un producto de comercio.
+export async function actualizarLogoMundoRemote(worldId, logoUrl) {
+  await rest(`worlds?id=eq.${worldId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ logo_url: logoUrl || null, updated_at: new Date().toISOString() }),
+  });
 }
 
 // ── Errores controlados — catálogo en tabla, no mensajes genéricos ──────────

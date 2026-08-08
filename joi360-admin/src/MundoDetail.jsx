@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, uploadArchivo } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, uploadArchivo, actualizarLogoMundoRemote } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -38,6 +38,7 @@ export function MundoDetail() {
   const readyForDelivery = ws.k === "LISTO" || ws.k === "ENTREGADO";
   const tabs = [
     { k: "resumen",   label: "Resumen",            icon: "dashboard" },
+    { k: "perfil",    label: "Perfil",              icon: "photo_camera" },
     { k: "modulos",   label: "Capacidades",         icon: "extension" },
     { k: "comercios", label: "Actores",             icon: "groups" },
     { k: "acuerdo",   label: "Acuerdo Comercial",  icon: "handshake" },
@@ -105,6 +106,7 @@ export function MundoDetail() {
       </div>
 
       {tab === "resumen" && <TabResumen m={m} comercios={comercios} st={st} goto={setTab} />}
+      {tab === "perfil" && <PerfilMundoPanel m={m} />}
       {tab === "modulos" && <TabModulos m={m} />}
       {tab === "comercios" && <TabComercios m={m} comercios={comercios} st={st} />}
       {tab === "acuerdo" && <TabAcuerdo m={m} />}
@@ -425,6 +427,62 @@ Equipo RedPontis · JOI 360`;
         )}
       </div>
     </Drawer>
+  );
+}
+
+/* ---------------- Perfil (Task #166) — mismo patrón que PerfilComercioPanel
+   (Fronts.jsx): la imagen que se ve como thumbnail en el card de comunidad
+   del superapp. Antes esto no existía como módulo editable — el logo solo
+   se podía fijar al crear el mundo (y encima solo quedaba en localStorage,
+   base64, nunca sincronizado a Supabase). ---------------- */
+function PerfilMundoPanel({ m }) {
+  const [subiendo, setSubiendo] = useState(false);
+
+  const subirLogo = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { notify("El logo debe ser un archivo de imagen (PNG/JPG).", "error"); return; }
+    setSubiendo(true);
+    try {
+      const path = `mundos/${m.id}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const url = await uploadArchivo("joi360-media", path, file);
+      await actualizarLogoMundoRemote(m.id, url);
+      update(s => { const w = (s.mundos || []).find(x => x.id === m.id); if (w) w.logoUrl = url; });
+      notify("Logo actualizado — ya se verá en el card de comunidad del app.");
+    } catch (e) {
+      notify("No se pudo subir el logo: " + e.message, "error");
+    } finally { setSubiendo(false); }
+  };
+
+  return (
+    <>
+      <h2 className="text-2xl font-bold mb-2">Perfil</h2>
+      <p className="text-on-surface-variant mb-6">La imagen que elijas aquí es la que distingue a {m.nombre} en el card de comunidad de la Super App.</p>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 max-w-lg">
+        <div className="flex items-center gap-5">
+          <label className="w-24 h-24 rounded-2xl border border-dashed border-outline-variant flex items-center justify-center text-outline cursor-pointer overflow-hidden hover:border-primary/50 flex-shrink-0">
+            {m.logoUrl ? (
+              <img src={m.logoUrl} alt="" className="w-full h-full object-cover" />
+            ) : subiendo ? (
+              <Icon n="hourglass_empty" className="text-[28px]" />
+            ) : (
+              <div className="text-center">
+                <Icon n="add_a_photo" className="text-[24px] block mx-auto" />
+                <span className="text-[9px] font-mono uppercase">Subir logo</span>
+              </div>
+            )}
+            <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={e => subirLogo(e.target.files?.[0])} />
+          </label>
+          <div className="flex-1">
+            <p className="font-semibold">{m.nombre}</p>
+            <p className="text-xs text-on-surface-variant mt-0.5">{m.vertical} · {m.codigo}</p>
+            <label className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-primary cursor-pointer hover:underline">
+              <Icon n="upload_file" className="text-[14px]" /> {m.logoUrl ? (subiendo ? "Subiendo…" : "Cambiar logo") : (subiendo ? "Subiendo…" : "Elegir logo")}
+              <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={e => subirLogo(e.target.files?.[0])} />
+            </label>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -233,6 +233,7 @@ export async function refreshWorldsLive() {
           id: w.id, nombre: w.name, codigo: w.code, vertical: w.vertical,
           color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
           estado: (w.status || "activo").toUpperCase(),
+          logoUrl: w.logo_url || null,
         };
         const base = byId.get(w.id);
         if (base) Object.assign(base, patch);

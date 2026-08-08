@@ -812,6 +812,7 @@ export async function refreshMundosLive() {
         color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
         estado: (w.status || "activo").toUpperCase(),
         posPin: w.pos_pin || null,
+        logoUrl: w.logo_url || null,
       };
       const base = byId.get(w.id);
       if (base) {

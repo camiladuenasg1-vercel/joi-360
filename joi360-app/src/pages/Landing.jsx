@@ -140,11 +140,15 @@ export default function LandingPage() {
                       style={{background:"linear-gradient(135deg,rgba(114,44,227,0.04) 0%,rgba(255,255,255,0.95) 100%)"}}>
                       <div className="px-5 pt-5 pb-4">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white flex-shrink-0"
+                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white flex-shrink-0 overflow-hidden"
                             style={{background:m.color}}>
-                            <span className="material-symbols-outlined fill text-xl">
-                              {m.type==="eventos_rp"?"confirmation_number":"campaign"}
-                            </span>
+                            {m.logoUrl ? (
+                              <img src={m.logoUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="material-symbols-outlined fill text-xl">
+                                {m.type==="eventos_rp"?"confirmation_number":"campaign"}
+                              </span>
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -242,8 +246,12 @@ export default function LandingPage() {
                 <div className={`${vc.bg} px-5 pt-5 pb-4`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-2xl ${vc.badge} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                        <span className="text-white font-black text-xl">{m.nombre[0]}</span>
+                      <div className={`w-12 h-12 rounded-2xl ${vc.badge} flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden`}>
+                        {m.logoUrl ? (
+                          <img src={m.logoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white font-black text-xl">{m.nombre[0]}</span>
+                        )}
                       </div>
                       <div>
                         <h3 className="text-[#1b1b24] font-black text-base leading-tight">{m.nombre}</h3>

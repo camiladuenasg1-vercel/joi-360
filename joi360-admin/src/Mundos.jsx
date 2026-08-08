@@ -87,8 +87,12 @@ export function Mundos() {
               <div className="absolute top-0 left-0 w-1 h-full" style={{ background: m.color }}></div>
               <div className="p-6 flex-1">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white relative" style={{ background: m.color }}>
-                    <Icon n={m.type === "eventos_rp" ? "confirmation_number" : m.type === "promos_rp" ? "campaign" : m.type === "eventos" ? "confirmation_number" : "public"} />
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white relative overflow-hidden" style={{ background: m.color }}>
+                    {m.logoUrl ? (
+                      <img src={m.logoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Icon n={m.type === "eventos_rp" ? "confirmation_number" : m.type === "promos_rp" ? "campaign" : m.type === "eventos" ? "confirmation_number" : "public"} />
+                    )}
                     {m.redpontis && (
                       <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary border-2 border-white flex items-center justify-center">
                         <span className="text-white font-black text-[7px]">RP</span>
@@ -291,6 +295,24 @@ export function MundoWizard({ open, onClose }) {
 }
 
 function Step1Contexto({ f, set }) {
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  // Antes esto guardaba el logo como base64 en memoria local (FileReader.
+  // readAsDataURL) y nunca se subía a ningún lado real ni se sincronizaba a
+  // Supabase (worldRow() no mandaba logoUrl) — el mundo nunca tenía imagen
+  // de verdad, ni en su card del admin ni en el card de comunidad del app.
+  // Mismo patrón de Storage que ya usa "Mi catálogo" del comercio.
+  const subirLogo = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { notify("El logo debe ser una imagen (PNG/JPG).", "error"); return; }
+    setSubiendoLogo(true);
+    try {
+      const path = `mundos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const url = await uploadArchivo("joi360-media", path, file);
+      set({ logoUrl: url });
+    } catch (e) {
+      notify("No se pudo subir el logo: " + e.message, "error");
+    } finally { setSubiendoLogo(false); }
+  };
   return (
     <div className="space-y-5">
       <div className="bg-surface-container-low border border-primary/20 rounded-lg p-3 flex gap-2 text-xs text-on-surface-variant">
@@ -323,23 +345,17 @@ function Step1Contexto({ f, set }) {
       <Field label="Descripción / propósito del mundo">
         <textarea className={`${inputCls} h-20 py-2`} value={f.descripcion} onChange={e => set({ descripcion: e.target.value })} placeholder="Qué verá el usuario en el app, qué problema resuelve…" />
       </Field>
-      <Field label="Logo / banner" hint="Opcional — PNG/JPG, se usa como identidad visual del mundo en su dashboard y superapp">
+      <Field label="Logo / banner" hint="Opcional — PNG/JPG, se usa como identidad visual del mundo en su dashboard y superapp (thumbnail del card de comunidad)">
         <div className="flex items-center gap-3">
           {f.logoUrl ? (
             <img src={f.logoUrl} alt="Logo" className="w-12 h-12 rounded-lg object-cover border border-outline-variant" />
           ) : (
             <div className="w-12 h-12 rounded-lg border border-dashed border-outline-variant flex items-center justify-center text-outline">
-              <Icon n="image" className="text-[20px]" />
+              {subiendoLogo ? <Icon n="hourglass_empty" className="text-[20px]" /> : <Icon n="image" className="text-[20px]" />}
             </div>
           )}
-          <input type="file" accept="image/*" className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer"
-            onChange={e => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => set({ logoUrl: reader.result });
-              reader.readAsDataURL(file);
-            }} />
+          <input type="file" accept="image/*" disabled={subiendoLogo} className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer disabled:opacity-50"
+            onChange={e => subirLogo(e.target.files?.[0])} />
           {f.logoUrl && <button onClick={() => set({ logoUrl: "" })} className="text-xs text-error hover:underline">Quitar</button>}
         </div>
       </Field>
