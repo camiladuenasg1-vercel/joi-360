@@ -1265,6 +1265,33 @@ export async function crearAsignacionNfcRemote({ lote, worldId, bandIds, modelo,
   });
   return asig;
 }
+// Editar el modelo/precio de una asignación YA creada (Task #171) — mismo
+// "espejo" que crearAsignacionNfcRemote: gratuita -> pagada, pagada ->
+// gratuita, o solo cambiar precio/forma de cobro. Aplica a TODA la
+// asignación (el lote comercial completo, no bandita por bandita —
+// dividirlo requeriría reasignar unidades individuales a una asignación
+// nueva, que es un caso aparte). Bloqueada una vez que ya se cobró o se
+// descontó: eso es un hecho contable consumado, no se reescribe.
+export async function actualizarAsignacionNfcRemote(id, { modelo, precioUnitario, formaCobro }) {
+  const actual = (await rest(`nfc_asignaciones?id=eq.${id}&select=cantidad,estado_pago`))?.[0];
+  if (!actual) throw new Error("Asignación no encontrada.");
+  if (!["gratuita", "pendiente", "pendiente_descuento"].includes(actual.estado_pago)) {
+    throw new Error("Esta asignación ya fue cobrada o descontada — no se puede editar.");
+  }
+  const esGratuita = modelo === "gratuita";
+  const precio = esGratuita ? null : (Number(precioUnitario) || 0);
+  const monto = esGratuita ? null : Math.round(precio * actual.cantidad * 100) / 100;
+  const formaCobroFinal = esGratuita ? null : formaCobro;
+  const estadoPago = esGratuita ? "gratuita" : (formaCobroFinal === "descuento_ventas" ? "pendiente_descuento" : "pendiente");
+  await rest(`nfc_asignaciones?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ modelo, precio_unitario: precio, monto_total: monto, forma_cobro: formaCobroFinal, estado_pago: estadoPago }),
+  });
+  await rest(`nfc_bands?asignacion_id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ precio_unitario: precio }),
+  });
+}
 // Marca una asignación como pagada. Sirve para los dos modelos que requieren
 // cobro: "anticipado" (se paga antes de entregar) y "contraentrega" (se paga
 // AL entregar — ahí "pagar" y "entregar" son la misma acción en la UI,

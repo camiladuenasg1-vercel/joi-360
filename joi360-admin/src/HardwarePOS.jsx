@@ -38,7 +38,7 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware, fetchHardwareModelosCustom, crearHardwareModeloCustom, desactivarHardwareModeloCustom } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, actualizarAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware, fetchHardwareModelosCustom, crearHardwareModeloCustom, desactivarHardwareModeloCustom } from "./supabase.js";
 
 // Íconos Material Symbols razonables para un modelo de hardware nuevo —
 // evita un input de texto libre que rompería el ícono en el resto de la UI.
@@ -803,6 +803,13 @@ function BanditasNfcTab() {
   const [pagandoBusy, setPagandoBusy] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [historial, setHistorial] = useState(null);
+  // Editar una asignación ya creada (Task #171) — gratuita <-> pagada,
+  // "espejo" de crearAsignacionNfcRemote, mismo formulario reusado.
+  const [editandoAsigId, setEditandoAsigId] = useState(null);
+  const [editModelo, setEditModelo] = useState("gratuita");
+  const [editPrecio, setEditPrecio] = useState("");
+  const [editFormaCobro, setEditFormaCobro] = useState("contraentrega");
+  const [editandoBusy, setEditandoBusy] = useState(false);
 
   const load = () => fetchNfcBandsRemote()
     .then(rows => setBandas((rows || []).map(r => ({ id: r.id, codigo: r.codigo, lote: r.lote, estado: r.estado, world_id: r.world_id, precio_unitario: r.precio_unitario, created_at: r.created_at }))))
@@ -1002,6 +1009,33 @@ function BanditasNfcTab() {
     } catch (e) {
       notify("No se pudo marcar como pagada: " + e.message, "error");
     } finally { setPagandoBusy(false); }
+  };
+
+  const abrirEditarAsignacion = (h) => {
+    setEditandoAsigId(h.id);
+    setEditModelo(h.modelo || "gratuita");
+    setEditPrecio(h.precio_unitario != null ? String(h.precio_unitario) : "");
+    setEditFormaCobro(h.forma_cobro || "contraentrega");
+  };
+
+  const guardarEdicionAsignacion = async (h) => {
+    if (editModelo === "pagada" && (!editPrecio || Number(editPrecio) <= 0)) {
+      notify("Ingresa un precio unitario válido.", "error"); return;
+    }
+    setEditandoBusy(true);
+    try {
+      await actualizarAsignacionNfcRemote(h.id, {
+        modelo: editModelo,
+        precioUnitario: editModelo === "pagada" ? editPrecio : null,
+        formaCobro: editModelo === "pagada" ? editFormaCobro : null,
+      });
+      notify(`Asignación actualizada — ${editModelo === "gratuita" ? "ahora es gratuita" : `${fmtSoles(editPrecio)} c/u, ${FORMA_COBRO_LABEL[editFormaCobro]}`}.`);
+      setEditandoAsigId(null);
+      loadPendientesCobro(); load();
+      if (historial !== null) fetchHistorialAsignacionesNfc().then(setHistorial).catch(() => {});
+    } catch (e) {
+      notify("No se pudo actualizar: " + e.message, "error");
+    } finally { setEditandoBusy(false); }
   };
 
   const confirmarRenombrarLote = async (loteViejo) => {
@@ -1554,29 +1588,74 @@ function BanditasNfcTab() {
                       <th className="px-3 py-2 text-right">Monto</th>
                       <th className="px-3 py-2 text-left">Estado</th>
                       <th className="px-3 py-2 text-left">Detalle</th>
+                      <th className="px-3 py-2 text-left"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/60">
                     {historial.map(h => {
                       const mundo = mundos.find(m => m.id === h.world_id);
+                      const editable = ["gratuita", "pendiente", "pendiente_descuento"].includes(h.estado_pago);
+                      const enEdicion = editandoAsigId === h.id;
                       return (
-                        <tr key={h.id} className="hover:bg-surface-container-low">
-                          <td className="px-3 py-2 whitespace-nowrap">{new Date(h.created_at).toLocaleDateString("es-PE")}</td>
-                          <td className="px-3 py-2">{mundo?.nombre || h.world_id}</td>
-                          <td className="px-3 py-2">{h.lote}</td>
-                          <td className="px-3 py-2 text-right font-bold">{h.cantidad}</td>
-                          <td className="px-3 py-2">{h.modelo === "gratuita" ? "Gratuita" : FORMA_COBRO_LABEL[h.forma_cobro] || "Pagada"}</td>
-                          <td className="px-3 py-2 text-right">{fmtSoles(h.monto_total) || "—"}</td>
-                          <td className="px-3 py-2">
-                            <span className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded border font-bold ${
-                              h.estado_pago === "pagado" || h.estado_pago === "gratuita" || h.estado_pago === "descontado" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
-                            }`}>{h.estado_pago}</span>
-                          </td>
-                          <td className="px-3 py-2 max-w-[200px]">
-                            {h.comprobante_url && <a href={h.comprobante_url} target="_blank" rel="noreferrer" className="text-primary hover:underline block">Ver comprobante</a>}
-                            {h.descripcion && <span className="text-on-surface-variant block truncate" title={h.descripcion}>{h.descripcion}</span>}
-                          </td>
-                        </tr>
+                        <React.Fragment key={h.id}>
+                          <tr className="hover:bg-surface-container-low">
+                            <td className="px-3 py-2 whitespace-nowrap">{new Date(h.created_at).toLocaleDateString("es-PE")}</td>
+                            <td className="px-3 py-2">{mundo?.nombre || h.world_id}</td>
+                            <td className="px-3 py-2">{h.lote}</td>
+                            <td className="px-3 py-2 text-right font-bold">{h.cantidad}</td>
+                            <td className="px-3 py-2">{h.modelo === "gratuita" ? "Gratuita" : FORMA_COBRO_LABEL[h.forma_cobro] || "Pagada"}</td>
+                            <td className="px-3 py-2 text-right">{fmtSoles(h.monto_total) || "—"}</td>
+                            <td className="px-3 py-2">
+                              <span className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded border font-bold ${
+                                h.estado_pago === "pagado" || h.estado_pago === "gratuita" || h.estado_pago === "descontado" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
+                              }`}>{h.estado_pago}</span>
+                            </td>
+                            <td className="px-3 py-2 max-w-[200px]">
+                              {h.comprobante_url && <a href={h.comprobante_url} target="_blank" rel="noreferrer" className="text-primary hover:underline block">Ver comprobante</a>}
+                              {h.descripcion && <span className="text-on-surface-variant block truncate" title={h.descripcion}>{h.descripcion}</span>}
+                            </td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                              {editable && (
+                                enEdicion
+                                  ? <button onClick={()=>setEditandoAsigId(null)} className="text-[10px] text-on-surface-variant hover:underline">Cerrar</button>
+                                  : <button onClick={()=>abrirEditarAsignacion(h)} className="text-[10px] text-primary hover:underline">Editar</button>
+                              )}
+                            </td>
+                          </tr>
+                          {enEdicion && (
+                            <tr className="bg-surface-container-lowest">
+                              <td colSpan={9} className="px-3 py-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-on-surface-variant">Modelo</span>
+                                  <button onClick={()=>setEditModelo("gratuita")}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${editModelo==="gratuita"?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>Gratuita</button>
+                                  <button onClick={()=>setEditModelo("pagada")}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${editModelo==="pagada"?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>Pagada</button>
+                                  {editModelo === "pagada" && (
+                                    <>
+                                      <span className="text-xs text-on-surface-variant ml-2">Precio unitario S/</span>
+                                      <input type="number" step="0.01" min="0" className="h-9 w-24 px-2 bg-surface border border-outline-variant rounded-lg text-xs"
+                                        value={editPrecio} onChange={e=>setEditPrecio(e.target.value)}/>
+                                      <span className="text-xs text-on-surface-variant ml-2">Forma de cobro</span>
+                                      {Object.entries(FORMA_COBRO_LABEL).map(([k, label]) => (
+                                        <button key={k} onClick={()=>setEditFormaCobro(k)}
+                                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${editFormaCobro===k?"bg-primary text-white border-primary":"border-outline-variant text-on-surface-variant"}`}>{label}</button>
+                                      ))}
+                                      {editPrecio > 0 && (
+                                        <span className="text-[10px] font-mono text-primary bg-primary-fixed/20 rounded px-2 py-1">
+                                          Total: {fmtSoles(Number(editPrecio) * h.cantidad)}
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                  <BtnPrimary className="!py-1.5 !px-3 !text-xs ml-2" disabled={editandoBusy} onClick={()=>guardarEdicionAsignacion(h)}>
+                                    {editandoBusy ? "Guardando…" : "Guardar cambios"}
+                                  </BtnPrimary>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
