@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { useStore } from "./hooks";
 import { Icon, BtnPrimary, BtnOutline, notify, NumInput } from "./ui";
-import { HARDWARE_CATALOG, hardwareModelById } from "./store";
+import { HARDWARE_CATALOG } from "./store";
 
 // Carga masiva de hardware/banditas: antes solo leía .csv/.txt como texto
 // plano (readAsText), así que un .xlsx real (formato binario zip, no texto)
@@ -38,7 +38,11 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware, fetchHardwareModelosCustom, crearHardwareModeloCustom, desactivarHardwareModeloCustom } from "./supabase.js";
+
+// Íconos Material Symbols razonables para un modelo de hardware nuevo —
+// evita un input de texto libre que rompería el ícono en el resto de la UI.
+const ICONOS_MODELO_HW = ["point_of_sale", "tablet", "qr_code_scanner", "qr_code", "tap_and_play", "devices_other"];
 
 const fmtSoles = n => (n === null || n === undefined || n === "" || isNaN(n)) ? null : `S/ ${Number(n).toFixed(2)}`;
 
@@ -270,15 +274,56 @@ function PosDevicesTab() {
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Catálogo de MODELOS editable por RedPontis (Task #172) — registrar un
+  // modelo nuevo (marca/nombre/specs) es su propio paso, separado tanto de
+  // registrar unidades con serie como de asignar una unidad a un mundo.
+  const [modelosCustom, setModelosCustom] = useState([]);
+  const [showModelos, setShowModelos] = useState(false);
+  const [nuevoModelo, setNuevoModelo] = useState({ marca:"", modelo:"", tipo:"POS Físico", icon:ICONOS_MODELO_HW[0], conexion:"", nfc:false, precio:"" });
+  const [guardandoModelo, setGuardandoModelo] = useState(false);
 
   const mundos  = st.mundos || [];
   const comercios = st.comercios || [];
   const eventos = st.eventos || [];
+  // Catálogo efectivo para registrar/filtrar unidades: los de fábrica
+  // (con integración de backend real) + los que RedPontis fue sumando.
+  const catalogoCompleto = [...HARDWARE_CATALOG, ...modelosCustom];
+  const modeloDe = id => catalogoCompleto.find(m => m.id === id);
 
   const load = () => fetchPosDevicesRemote()
     .then(rows => setStock((rows || []).map(r => ({ id:r.id, modelo_id:r.modelo, serial:r.serial, estado:r.estado, world_id:r.world_id, merchant_id:r.merchant_id, event_id:r.event_id, tipo_ingreso:r.tipo_ingreso || "venta" }))))
     .catch(() => setStock([]));
-  useEffect(() => { load(); }, []);
+  const loadModelos = () => fetchHardwareModelosCustom()
+    .then(rows => setModelosCustom((rows || []).map(m => ({ id: m.id, marca: m.marca, modelo: m.modelo, tipo: m.tipo, icon: m.icon, desc: m.descripcion, conexion: m.conexion, nfc: m.nfc, precio: m.precio, moneda: m.moneda, esCustom: true }))))
+    .catch(() => setModelosCustom([]));
+  useEffect(() => { load(); loadModelos(); }, []);
+
+  const crearModelo = async () => {
+    if (!nuevoModelo.marca.trim() || !nuevoModelo.modelo.trim()) return;
+    setGuardandoModelo(true);
+    try {
+      await crearHardwareModeloCustom({
+        marca: nuevoModelo.marca.trim(), modelo: nuevoModelo.modelo.trim(), tipo: nuevoModelo.tipo,
+        icon: nuevoModelo.icon, conexion: nuevoModelo.conexion.trim() || null, nfc: nuevoModelo.nfc,
+        precio: nuevoModelo.precio ? +nuevoModelo.precio : null,
+      });
+      notify(`Modelo "${nuevoModelo.marca} ${nuevoModelo.modelo}" agregado al catálogo.`);
+      setNuevoModelo({ marca:"", modelo:"", tipo:"POS Físico", icon:ICONOS_MODELO_HW[0], conexion:"", nfc:false, precio:"" });
+      loadModelos();
+    } catch (e) {
+      notify("No se pudo agregar el modelo: " + e.message, "error");
+    } finally { setGuardandoModelo(false); }
+  };
+
+  const quitarModelo = async (m) => {
+    if ((stock || []).some(d => d.modelo_id === m.id)) {
+      notify("Este modelo tiene unidades registradas — no se puede quitar del catálogo.", "error");
+      return;
+    }
+    await desactivarHardwareModeloCustom(m.id);
+    notify(`Modelo "${m.marca} ${m.modelo}" quitado del catálogo.`);
+    loadModelos();
+  };
 
   const filtered = (stock || []).filter(d=>
     (filterModelo==="all" || d.modelo_id===filterModelo) &&
@@ -305,11 +350,11 @@ function PosDevicesTab() {
   const parseBulkFile = (file) => {
     setBulkFileName(file.name);
     leerLineasDeArchivo(file, lines => {
-      const modeloIds = new Set(HARDWARE_CATALOG.map(m => m.id));
+      const modeloIds = new Set(catalogoCompleto.map(m => m.id));
       const rows = lines.map(line => {
         const [modelo, serial, tipo] = line.split(",").map(s => (s || "").trim());
         return {
-          modelo: modeloIds.has(modelo) ? modelo : HARDWARE_CATALOG[0].id,
+          modelo: modeloIds.has(modelo) ? modelo : catalogoCompleto[0]?.id,
           serial: (serial || "").toUpperCase(),
           tipoIngreso: ["gratis", "alquiler", "venta"].includes(tipo) ? tipo : "venta",
           valido: modeloIds.has(modelo) && !!serial,
@@ -363,7 +408,7 @@ function PosDevicesTab() {
   };
 
   // Stats por modelo
-  const byModelo = HARDWARE_CATALOG.map(m=>({
+  const byModelo = catalogoCompleto.map(m=>({
     ...m,
     total:     (stock||[]).filter(d=>d.modelo_id===m.id).length,
     disponible:(stock||[]).filter(d=>d.modelo_id===m.id&&d.estado==="disponible").length,
@@ -375,9 +420,13 @@ function PosDevicesTab() {
       <div className="mb-6 flex items-end justify-between">
         <p className="text-sm text-on-surface-variant max-w-3xl">
           Unidades físicas en stock de RedPontis (tabla <code>pos_devices</code> en vivo). Cada dispositivo tiene número de serie único,
-          modelo e historial de asignación real a un mundo y comercio.
+          modelo e historial de asignación real a un mundo y comercio. Registrar un <b>modelo</b> nuevo y registrar <b>unidades</b> de ese
+          modelo son dos pasos separados — la asignación a un mundo sigue siendo un tercer paso aparte, en la tabla de abajo.
         </p>
         <div className="flex gap-2 flex-shrink-0">
+          <BtnOutline onClick={()=>setShowModelos(true)}>
+            <Icon n="category" className="text-[16px]"/> Gestionar modelos
+          </BtnOutline>
           <BtnOutline onClick={()=>setShowBulk(true)}>
             <Icon n="upload_file" className="text-[16px]"/> Carga masiva
           </BtnOutline>
@@ -439,7 +488,7 @@ function PosDevicesTab() {
               </td></tr>
             )}
             {filtered.map(d=>{
-              const modelo   = hardwareModelById(d.modelo_id);
+              const modelo   = modeloDe(d.modelo_id);
               const mundo    = mundos.find(m=>m.id===d.world_id);
               const merchant = comercios.find(c=>(c.supabaseId||c.id)===d.merchant_id);
               const evento   = eventos.find(e=>e.id===d.event_id);
@@ -526,8 +575,20 @@ function PosDevicesTab() {
                 <label className="block text-xs font-mono uppercase text-outline mb-1.5">Modelo</label>
                 <select className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
                   value={newUnit.modelo_id} onChange={e=>setNewUnit({...newUnit,modelo_id:e.target.value})}>
-                  {HARDWARE_CATALOG.map(m=><option key={m.id} value={m.id}>{m.marca} {m.modelo}</option>)}
+                  <optgroup label="De fábrica">
+                    {HARDWARE_CATALOG.map(m=><option key={m.id} value={m.id}>{m.marca} {m.modelo}</option>)}
+                  </optgroup>
+                  {modelosCustom.length > 0 && (
+                    <optgroup label="Agregados por RedPontis">
+                      {modelosCustom.map(m=><option key={m.id} value={m.id}>{m.marca} {m.modelo}</option>)}
+                    </optgroup>
+                  )}
                 </select>
+                {modelosCustom.length === 0 && (
+                  <button type="button" onClick={()=>{ setShowAddUnit(false); setShowModelos(true); }} className="text-[11px] text-primary hover:underline mt-1.5">
+                    ¿No está tu modelo? Agrégalo al catálogo primero
+                  </button>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-mono uppercase text-outline mb-1.5">Número de serie</label>
@@ -563,7 +624,7 @@ function PosDevicesTab() {
             <h2 className="font-semibold text-lg mb-1">Carga masiva de unidades</h2>
             <p className="text-xs text-on-surface-variant mb-4">
               Archivo .csv, .txt o .xlsx, una unidad por línea/fila: <code className="font-mono bg-surface-container-low px-1 rounded">modelo_id,serial,tipo_ingreso</code>.
-              Modelos válidos: {HARDWARE_CATALOG.map(m=>m.id).join(", ")}. Tipo de ingreso: gratis / alquiler / venta (default venta).
+              Modelos válidos: {catalogoCompleto.map(m=>m.id).join(", ")}. Tipo de ingreso: gratis / alquiler / venta (default venta).
             </p>
             <input type="file" accept=".csv,.txt,.xlsx,.xls" className="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-outline-variant file:bg-surface-container-low file:text-xs file:cursor-pointer w-full"
               onChange={e => e.target.files?.[0] && parseBulkFile(e.target.files[0])}/>
@@ -592,6 +653,89 @@ function PosDevicesTab() {
               <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
                 <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} unidades`}
               </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gestionar modelos (Task #172) — registrar un modelo es su propio paso,
+          separado de registrar unidades (arriba) y de asignar a un mundo (en
+          la tabla). Los de fábrica (con integración de backend real) se ven
+          pero no se editan acá; solo los que RedPontis fue sumando. */}
+      {showModelos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget&&setShowModelos(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setShowModelos(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-2xl z-10 max-h-[85vh] flex flex-col">
+            <h2 className="font-semibold text-lg mb-1 flex-shrink-0">Gestionar modelos de hardware</h2>
+            <p className="text-xs text-on-surface-variant mb-4 flex-shrink-0">
+              Agrega un modelo nuevo (marca, características) antes de registrar unidades de él. Cuántas unidades hay y a qué mundo se
+              asignan son pasos aparte.
+            </p>
+            <div className="overflow-y-auto flex-1 space-y-5">
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+                <p className="text-xs font-bold mb-3">Nuevo modelo</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <input className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm" placeholder="Marca (ej. Sunmi)"
+                    value={nuevoModelo.marca} onChange={e=>setNuevoModelo({...nuevoModelo, marca:e.target.value})}/>
+                  <input className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm" placeholder="Modelo (ej. P2 Pro)"
+                    value={nuevoModelo.modelo} onChange={e=>setNuevoModelo({...nuevoModelo, modelo:e.target.value})}/>
+                  <select className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm"
+                    value={nuevoModelo.tipo} onChange={e=>setNuevoModelo({...nuevoModelo, tipo:e.target.value})}>
+                    {["POS Físico","Tótem","QR Dinámico","QR Estático","Lector NFC","Accesorio"].map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <select className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm"
+                    value={nuevoModelo.icon} onChange={e=>setNuevoModelo({...nuevoModelo, icon:e.target.value})}>
+                    {ICONOS_MODELO_HW.map(i=><option key={i} value={i}>{i}</option>)}
+                  </select>
+                  <input className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm" placeholder="Conexión (ej. 4G/WiFi)"
+                    value={nuevoModelo.conexion} onChange={e=>setNuevoModelo({...nuevoModelo, conexion:e.target.value})}/>
+                  <input type="number" step="0.01" min="0" className="h-10 px-3 bg-surface border border-outline-variant rounded-lg text-sm" placeholder="Precio referencial S/ (opcional)"
+                    value={nuevoModelo.precio} onChange={e=>setNuevoModelo({...nuevoModelo, precio:e.target.value})}/>
+                </div>
+                <label className="flex items-center gap-2 text-xs mb-3">
+                  <input type="checkbox" checked={nuevoModelo.nfc} onChange={e=>setNuevoModelo({...nuevoModelo, nfc:e.target.checked})} className="accent-primary"/>
+                  Tiene lector NFC
+                </label>
+                <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!nuevoModelo.marca.trim() || !nuevoModelo.modelo.trim() || guardandoModelo} onClick={crearModelo}>
+                  <Icon n="add" className="text-[16px]"/> {guardandoModelo ? "Guardando…" : "Agregar al catálogo"}
+                </BtnPrimary>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase text-outline mb-2">Agregados por RedPontis ({modelosCustom.length})</p>
+                {modelosCustom.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant">Todavía no agregaste ningún modelo propio.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {modelosCustom.map(m => (
+                      <div key={m.id} className="flex items-center justify-between px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Icon n={m.icon} className="text-[16px] text-primary"/>
+                          <span className="text-xs font-semibold">{m.marca} {m.modelo}</span>
+                          <span className="font-mono text-[9px] text-outline uppercase">{m.tipo}</span>
+                        </div>
+                        <button onClick={()=>quitarModelo(m)} className="text-error hover:bg-error-container/20 p-1 rounded"><Icon n="delete" className="text-[16px]"/></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase text-outline mb-2">De fábrica ({HARDWARE_CATALOG.length}) — no editables</p>
+                <div className="space-y-1.5 opacity-70">
+                  {HARDWARE_CATALOG.map(m => (
+                    <div key={m.id} className="flex items-center gap-2 px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg">
+                      <Icon n={m.icon} className="text-[16px] text-outline"/>
+                      <span className="text-xs">{m.marca} {m.modelo}</span>
+                      <span className="font-mono text-[9px] text-outline uppercase ml-auto">{m.tipo}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0 pt-4">
+              <BtnOutline onClick={()=>setShowModelos(false)}>Cerrar</BtnOutline>
             </div>
           </div>
         </div>

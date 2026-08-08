@@ -1159,6 +1159,29 @@ export async function fetchPosDevicesDeMundo(worldId) {
 export async function fetchVolumenPorComercioMundo(worldId) {
   return rest(`transactions?world_id=eq.${worldId}&type=eq.compra&select=merchant_id,amount`);
 }
+// ── Catálogo de modelos de hardware, editable por RedPontis (Task #172) ────
+// Distinto de HARDWARE_CATALOG (store.js): esos son los modelos "de fábrica"
+// con integración de backend real (api_integration) y no se inventan desde
+// la UI. Este es para modelos que RedPontis suma ad-hoc — registrar el
+// MODELO es su propio paso, separado de registrar unidades/serie (abajo) y
+// separado de asignar una unidad a un mundo (ya existía, sin tocar).
+export async function fetchHardwareModelosCustom() {
+  return rest("hardware_modelos_custom?activo=eq.true&select=*&order=created_at.desc");
+}
+export async function crearHardwareModeloCustom(payload) {
+  const rows = await rest("hardware_modelos_custom", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload),
+  });
+  return rows?.[0] || null;
+}
+export async function desactivarHardwareModeloCustom(id) {
+  await rest(`hardware_modelos_custom?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ activo: false }),
+  });
+}
+
 export async function registerPosDeviceRemote(modelo, serial, tipoIngreso = "venta") {
   const rows = await rest("pos_devices", {
     method: "POST", headers: { Prefer: "return=representation" },
