@@ -1702,9 +1702,14 @@ export async function fetchUsuariosDeMundo(worldId) {
   const wallets = await rest(`wallets?world_id=eq.${worldId}&select=id,user_id,balance,status`);
   if (!wallets?.length) return [];
   const ids = [...new Set(wallets.map(w => w.user_id))];
-  const [perfiles, dependientes] = await Promise.all([
+  const idsEnLista = ids.map(i => `"${i}"`).join(",");
+  const [perfiles, dependientes, bandas, solicitudes] = await Promise.all([
     fetchPerfilesUsuarios(ids).catch(() => []),
     rest(`dependents?world_id=eq.${worldId}&select=guardian_user_id,dependent_user_id,nombre`).catch(() => []),
+    // Bandita por persona: para que la tabla de usuarios muestre de un vistazo
+    // si tiene pulsera activa (y su vigencia) sin tener que ir a otra pestaña.
+    rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=in.(${idsEnLista})&select=linked_user_id,codigo,vence_at`).catch(() => []),
+    rest(`nfc_requests?world_id=eq.${worldId}&status=eq.pendiente&user_id=in.(${idsEnLista})&select=user_id`).catch(() => []),
   ]);
   const porId = Object.fromEntries((perfiles || []).map(p => [p.id, p]));
   const aCargo = {};
@@ -1713,9 +1718,13 @@ export async function fetchUsuariosDeMundo(worldId) {
   });
   const esDependiente = new Set((dependientes || []).map(d => d.dependent_user_id));
   const nombreDependiente = Object.fromEntries((dependientes || []).map(d => [d.dependent_user_id, d.nombre]));
+  const guardianDeDependiente = Object.fromEntries((dependientes || []).map(d => [d.dependent_user_id, d.guardian_user_id]));
+  const bandaPorUsuario = Object.fromEntries((bandas || []).map(b => [b.linked_user_id, b]));
+  const solicitudPendientePorUsuario = new Set((solicitudes || []).map(s => s.user_id));
 
   return wallets.map(w => {
     const p = porId[w.user_id];
+    const banda = bandaPorUsuario[w.user_id];
     return {
       userId: w.user_id,
       walletId: w.id,
@@ -1730,6 +1739,8 @@ export async function fetchUsuariosDeMundo(worldId) {
       emailMask: p?.email_mask || null,
       creado: p?.created_at || null,
       dependientesACargo: aCargo[w.user_id] || 0,
+      guardianUserId: guardianDeDependiente[w.user_id] || null,
+      bandita: banda ? { estado: "activa", codigo: banda.codigo, venceAt: banda.vence_at } : solicitudPendientePorUsuario.has(w.user_id) ? { estado: "solicitada" } : null,
     };
   });
 }

@@ -87,7 +87,7 @@ export default function AuthPage() {
 
   function entrar(u) {
     setUserId(u.id);
-    setSession(u.accessToken, u.expiresIn);
+    setSession(u.accessToken, u.expiresIn, u.refreshToken);
     loginUser(u.nombre, u.email);
     nav(next || "/landing");
   }

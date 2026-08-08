@@ -180,6 +180,7 @@ export async function iniciarSesion(email, password) {
     nombre: [meta.nombres, meta.apellidos].filter(Boolean).join(" ") || (u.email || "").split("@")[0],
     accessToken: r.access_token,
     expiresIn: r.expires_in,
+    refreshToken: r.refresh_token,
   };
 }
 

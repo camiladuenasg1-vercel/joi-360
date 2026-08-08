@@ -22,24 +22,58 @@ const baseHeaders = {
 // confirmar que quien pide mover el saldo es el dueño de esa wallet. Sin
 // mandar el JWT real no hay nada que verificar del lado de Postgres.
 const SESSION_KEY = "joi360_session";
-export function setSession(accessToken, expiresIn) {
+export function setSession(accessToken, expiresIn, refreshToken) {
   if (!accessToken) return;
   const expiresAt = Date.now() + (Number(expiresIn) || 3600) * 1000;
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ accessToken, expiresAt }));
+  // El refresh_token es de un solo uso pero se preserva entre llamadas si esta
+  // en particular no trajo uno nuevo (no debería pasar, pero no hay razón de
+  // tirar el que ya teníamos guardado).
+  let anterior = null;
+  try { anterior = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { /* noop */ }
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ accessToken, expiresAt, refreshToken: refreshToken || anterior?.refreshToken || null }));
 }
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
-function sessionToken() {
+
+// Bug real (05/08-ago): Supabase entrega un refresh_token en cada login, pero
+// nunca se guardaba ni se usaba — el access_token vencía a la hora
+// (expires_in por defecto de Supabase) y ahí se quedaba: cualquier operación
+// que mueve saldo (recargar, pagar, P2P, checkout de menú/marketplace, BNPL)
+// le devolvía NO_AUTENTICADO al RPC de wallet, y el mensaje que veía la
+// usuaria encima no tenía nada que ver con lo que pasó de verdad. Con el
+// refresh_token guardado, un token vencido se renueva solo antes de mandar
+// la siguiente request — la sesión dura hasta que el refresh_token mismo
+// expire (semanas), no una hora.
+let _refrescando = null;
+async function refrescarSesion(refreshToken) {
+  if (!refreshToken) return null;
   try {
-    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    if (!s?.accessToken || Date.now() >= s.expiresAt) return null;
-    return s.accessToken;
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: { apikey: ANON_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) return null;
+    const r = await res.json();
+    if (!r.access_token) return null;
+    setSession(r.access_token, r.expires_in, r.refresh_token);
+    return r.access_token;
   } catch { return null; }
+}
+async function sessionToken() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { return null; }
+  if (!s?.accessToken) return null;
+  if (Date.now() < s.expiresAt - 30_000) return s.accessToken; // 30s de margen
+  // Vencido o por vencer — un solo refresh en vuelo aunque varias llamadas lo
+  // disparen al mismo tiempo, para no quemar el refresh_token dos veces.
+  if (!_refrescando) _refrescando = refrescarSesion(s.refreshToken).finally(() => { _refrescando = null; });
+  return await _refrescando;
 }
 
 async function rest(path, opts = {}) {
-  const authToken = sessionToken() || ANON_KEY;
+  const authToken = (await sessionToken()) || ANON_KEY;
   const headers = { ...baseHeaders, Authorization: `Bearer ${authToken}` };
   const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   if (!res.ok) throw new Error(`Supabase ${path} → HTTP ${res.status}: ${await res.text()}`);
@@ -518,6 +552,22 @@ export function logErrorControlado(code, contexto = null, worldId = null) {
     method: "POST", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ code, contexto, world_id: worldId, origen: "app" }),
   }).catch(() => {});
+}
+
+// Bug real: cada catch(e) de un flujo de dinero (recarga, pago, checkout de
+// menú/marketplace, P2P, BNPL) ignoraba por completo e.message y siempre
+// mostraba el mensaje genérico del catálogo — así que cuando la causa real
+// era la sesión vencida (exigirAutorizacionWallet ya arma un mensaje claro:
+// "Tu sesión expiró..."), la usuaria veía en su lugar el texto del código
+// de error genérico (a veces literalmente el de "transferir una entrada"),
+// sin ninguna pista de qué pasó ni qué hacer. Este helper deja pasar el
+// mensaje real cuando ya es accionable, y solo cae al catálogo para errores
+// que de verdad no tienen un mensaje mejor.
+export async function mensajeDeError(e, codigoFallback) {
+  if (e?.codigo === "sesion_invalida") {
+    return { titulo: "Sesión expirada", mensaje: e.message, accion: "Vuelve a iniciar sesión.", severidad: "error" };
+  }
+  return errorControlado(codigoFallback);
 }
 
 // ── Transferencia P2P genérica (entre cualquier par de wallets del mundo) ──

@@ -2,15 +2,18 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "./hooks";
 import { fetchUsuariosDeMundo, fetchDetalleUsuario } from "./supabase.js";
 import { Icon, Pill, Drawer, BtnOutline, inputCls } from "./ui";
+import { nomenclaturaFamiliar } from "./store";
 
 const soles = n => `S/ ${(Number(n) || 0).toFixed(2)}`;
 const fecha = s => (s ? new Date(s).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
-const ETIQUETA_TIPO = {
-  titular: { texto: "Titular", color: "bg-primary" },
-  dependiente: { texto: "Dependiente", color: "bg-tertiary" },
+// Nomenclatura por tipo respeta el rubro del mundo (Tutor/Alumno en colegios,
+// Cuenta principal/dependiente en el resto) — ver nomenclaturaFamiliar en store.js.
+const etiquetaTipo = (tipo, nom) => ({
+  titular: { texto: nom.principal, color: "bg-primary" },
+  dependiente: { texto: nom.dependiente, color: "bg-tertiary" },
   sin_perfil: { texto: "Sin perfil", color: "bg-outline" },
-};
+}[tipo]);
 
 /**
  * Usuarios por mundo.
@@ -53,21 +56,38 @@ export function Usuarios() {
     return () => { vivo = false; };
   }, [mundoId]);
 
-  const visibles = useMemo(() => {
+  const mundo = mundos.find(m => m.id === mundoId);
+  const nom = nomenclaturaFamiliar(mundo?.vertical);
+
+  // Filas macro = titulares (o sin_perfil); cada dependiente cuelga de su
+  // titular por guardianUserId, en vez de vivir como fila plana al mismo
+  // nivel — la jerarquía real de la cuenta se ve de un vistazo.
+  const grupos = useMemo(() => {
+    const titularesFilas = filas.filter(f => f.tipo !== "dependiente");
+    const porGuardian = {};
+    filas.filter(f => f.tipo === "dependiente").forEach(d => {
+      (porGuardian[d.guardianUserId] = porGuardian[d.guardianUserId] || []).push(d);
+    });
+    return titularesFilas.map(t => ({ titular: t, dependientes: porGuardian[t.userId] || [] }));
+  }, [filas]);
+
+  const coincide = (f, q) =>
+    (f.nombre || "").toLowerCase().includes(q) ||
+    (f.emailMask || "").toLowerCase().includes(q) ||
+    (f.docMask || "").includes(q);
+
+  const gruposVisibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return filas;
-    return filas.filter(f =>
-      (f.nombre || "").toLowerCase().includes(q) ||
-      (f.emailMask || "").toLowerCase().includes(q) ||
-      (f.docMask || "").includes(q)
-    );
-  }, [filas, busqueda]);
+    if (!q) return grupos;
+    return grupos
+      .map(g => ({ titular: g.titular, titularCoincide: coincide(g.titular, q), dependientes: g.dependientes.filter(d => coincide(d, q)) }))
+      .filter(g => g.titularCoincide || g.dependientes.length > 0);
+  }, [grupos, busqueda]);
 
   const titulares = filas.filter(f => f.tipo === "titular").length;
   const dependientes = filas.filter(f => f.tipo === "dependiente").length;
   const conSaldo = filas.filter(f => f.balance > 0).length;
   const saldoTotal = filas.reduce((a, f) => a + f.balance, 0);
-  const mundo = mundos.find(m => m.id === mundoId);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -100,8 +120,8 @@ export function Usuarios() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Kpi icono="person" titulo="Titulares" valor={titulares} />
-        <Kpi icono="family_restroom" titulo="Dependientes" valor={dependientes} />
+        <Kpi icono="person" titulo={`${nom.principal}es`} valor={titulares} />
+        <Kpi icono="family_restroom" titulo={`${nom.dependiente}s`} valor={dependientes} />
         <Kpi icono="account_balance_wallet" titulo="Con saldo" valor={conSaldo} />
         <Kpi icono="payments" titulo="Saldo en circulación" valor={soles(saldoTotal)} />
       </div>
@@ -111,7 +131,7 @@ export function Usuarios() {
           <Vacio icono="hourglass_empty" titulo="Cargando usuarios" detalle="Leyendo las billeteras del mundo." />
         ) : error ? (
           <Vacio icono="error" titulo="No se pudieron cargar" detalle={error} />
-        ) : visibles.length === 0 ? (
+        ) : gruposVisibles.length === 0 ? (
           <Vacio
             icono="person_off"
             titulo={filas.length === 0 ? "Todavía no hay usuarios" : "Nada coincide con la búsqueda"}
@@ -128,56 +148,27 @@ export function Usuarios() {
                   <Th>Documento</Th>
                   <Th>Correo</Th>
                   <Th className="text-right">Saldo</Th>
+                  <Th>Bandita NFC</Th>
                   <Th>Alta</Th>
                   <Th className="w-10" />
                 </tr>
               </thead>
               <tbody>
-                {visibles.map(f => {
-                  const et = ETIQUETA_TIPO[f.tipo];
-                  return (
-                    <tr key={f.userId} className="border-b border-outline-variant/60 last:border-0 hover:bg-surface-container-low/60 transition-colors">
-                      <Td>
-                        <div className="font-semibold text-on-surface">{f.nombre || "Sin nombre registrado"}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Pill color={et.color}>{et.texto}</Pill>
-                          {f.dependientesACargo > 0 && (
-                            <span className="text-[11px] text-on-surface-variant">
-                              {f.dependientesACargo} a cargo
-                            </span>
-                          )}
-                        </div>
-                      </Td>
-                      <Td>
-                        {f.docMask
-                          ? <span className="font-mono text-xs">{f.docTipo} · {f.docMask}</span>
-                          : <span className="text-on-surface-variant text-xs">—</span>}
-                      </Td>
-                      <Td>
-                        {f.emailMask
-                          ? <span className="font-mono text-xs">{f.emailMask}</span>
-                          : <span className="text-on-surface-variant text-xs">—</span>}
-                      </Td>
-                      <Td className="text-right font-semibold tabular-nums">{soles(f.balance)}</Td>
-                      <Td className="text-on-surface-variant text-xs">{fecha(f.creado)}</Td>
-                      <Td>
-                        <button
-                          onClick={() => setDetalle(f)}
-                          title="Ver detalle"
-                          className="w-8 h-8 rounded-lg grid place-items-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
-                          <Icon n="visibility" className="text-[18px]" />
-                        </button>
-                      </Td>
-                    </tr>
-                  );
-                })}
+                {gruposVisibles.map(g => (
+                  <React.Fragment key={g.titular.userId}>
+                    <FilaUsuario f={g.titular} nom={nom} onVer={setDetalle} />
+                    {g.dependientes.map(d => (
+                      <FilaUsuario key={d.userId} f={d} nom={nom} onVer={setDetalle} esSubfila />
+                    ))}
+                  </React.Fragment>
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      <DetalleUsuario usuario={detalle} mundos={mundos} onClose={() => setDetalle(null)} />
+      <DetalleUsuario usuario={detalle} mundos={mundos} nom={nom} onClose={() => setDetalle(null)} />
     </div>
   );
 }
@@ -187,6 +178,62 @@ function Th({ children, className = "" }) {
 }
 function Td({ children, className = "" }) {
   return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
+}
+
+// Una fila macro (titular/tutor) o una sub-fila indentada (dependiente,
+// colgando visualmente de su titular) — mismo set de columnas para ambas.
+function FilaUsuario({ f, nom, onVer, esSubfila }) {
+  const et = etiquetaTipo(f.tipo, nom);
+  return (
+    <tr className={`border-b border-outline-variant/60 last:border-0 hover:bg-surface-container-low/60 transition-colors ${esSubfila ? "bg-surface-container-low/30" : ""}`}>
+      <Td>
+        <div className={`font-semibold text-on-surface flex items-center gap-1.5 ${esSubfila ? "pl-6" : ""}`}>
+          {esSubfila && <Icon n="subdirectory_arrow_right" className="text-[14px] text-outline flex-shrink-0" />}
+          {f.nombre || "Sin nombre registrado"}
+        </div>
+        <div className={`flex items-center gap-2 mt-1 ${esSubfila ? "pl-6" : ""}`}>
+          <Pill color={et.color}>{et.texto}</Pill>
+          {!esSubfila && f.dependientesACargo > 0 && (
+            <span className="text-[11px] text-on-surface-variant">
+              {f.dependientesACargo} {nom.dependiente.toLowerCase()}{f.dependientesACargo === 1 ? "" : "s"} a cargo
+            </span>
+          )}
+        </div>
+      </Td>
+      <Td>
+        {f.docMask
+          ? <span className="font-mono text-xs">{f.docTipo} · {f.docMask}</span>
+          : <span className="text-on-surface-variant text-xs">—</span>}
+      </Td>
+      <Td>
+        {f.emailMask
+          ? <span className="font-mono text-xs">{f.emailMask}</span>
+          : <span className="text-on-surface-variant text-xs">—</span>}
+      </Td>
+      <Td className="text-right font-semibold tabular-nums">{soles(f.balance)}</Td>
+      <Td>
+        {f.bandita?.estado === "activa" ? (
+          <div>
+            <Pill color="bg-ok">Activa</Pill>
+            {f.bandita.venceAt && <div className="text-[10px] text-on-surface-variant mt-1">vence {fecha(f.bandita.venceAt)}</div>}
+          </div>
+        ) : f.bandita?.estado === "solicitada" ? (
+          <Pill color="bg-tertiary">Solicitada</Pill>
+        ) : (
+          <span className="text-on-surface-variant text-xs">—</span>
+        )}
+      </Td>
+      <Td className="text-on-surface-variant text-xs">{fecha(f.creado)}</Td>
+      <Td>
+        <button
+          onClick={() => onVer(f)}
+          title="Ver detalle"
+          className="w-8 h-8 rounded-lg grid place-items-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+          <Icon n="visibility" className="text-[18px]" />
+        </button>
+      </Td>
+    </tr>
+  );
 }
 
 function Kpi({ icono, titulo, valor }) {
@@ -211,7 +258,7 @@ function Vacio({ icono, titulo, detalle }) {
   );
 }
 
-function DetalleUsuario({ usuario, mundos, onClose }) {
+function DetalleUsuario({ usuario, mundos, nom, onClose }) {
   const [d, setD] = useState(null);
   const [cargando, setCargando] = useState(false);
 
@@ -233,7 +280,7 @@ function DetalleUsuario({ usuario, mundos, onClose }) {
       open={!!usuario}
       onClose={onClose}
       title={usuario?.nombre || "Usuario"}
-      subtitle={usuario ? `${ETIQUETA_TIPO[usuario.tipo].texto} · alta ${fecha(usuario.creado)}` : ""}
+      subtitle={usuario ? `${etiquetaTipo(usuario.tipo, nom).texto} · alta ${fecha(usuario.creado)}` : ""}
       icon="person"
       width="w-[560px]">
       {usuario && (

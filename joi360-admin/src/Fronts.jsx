@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
-import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG } from "./store";
+import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
@@ -65,24 +65,25 @@ function RecargasMundoWidget({ worldId }) {
 }
 
 /* ── Familiares vinculados en el mundo (Panel Mundo) ────────────────────── */
-function FamiliaresMundoWidget({ worldId }) {
+function FamiliaresMundoWidget({ worldId, vertical }) {
   const [deps, setDeps] = useState(null);
   useEffect(() => { fetchDependientesMundo(worldId).then(setDeps).catch(() => setDeps([])); }, [worldId]);
+  const nom = nomenclaturaFamiliar(vertical);
 
   const exportar = () => {
-    const header = "nombre,tutor,fecha_vinculacion\n";
+    const header = `nombre,${nom.principal.toLowerCase()},fecha_vinculacion\n`;
     const filas = (deps || []).map(d => [d.nombre, d.guardian_user_id, d.created_at].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([header + filas], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `familiares-${worldId}.csv`; a.click();
+    a.href = url; a.download = `${nom.dependiente.toLowerCase()}s-${worldId}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
       <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
-        <h3 className="font-semibold flex items-center gap-2"><Icon n="family_restroom" className="text-primary text-[20px]" /> Familiares vinculados</h3>
+        <h3 className="font-semibold flex items-center gap-2"><Icon n="family_restroom" className="text-primary text-[20px]" /> {nom.tituloSeccion}</h3>
         <div className="flex items-center gap-2">
           <span className="font-mono text-[11px] text-on-surface-variant">{deps === null ? "…" : deps.length}</span>
           <button onClick={exportar} disabled={!deps?.length} className="text-outline hover:text-primary disabled:opacity-30" title="Exportar CSV"><Icon n="download" className="text-[16px]" /></button>
@@ -91,14 +92,14 @@ function FamiliaresMundoWidget({ worldId }) {
       {deps === null ? (
         <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
       ) : deps.length === 0 ? (
-        <p className="px-5 py-4 text-sm text-on-surface-variant">Sin dependientes vinculados todavía.</p>
+        <p className="px-5 py-4 text-sm text-on-surface-variant">Sin {nom.dependiente.toLowerCase()}s vinculados todavía.</p>
       ) : (
         <div className="divide-y divide-outline-variant/60 max-h-72 overflow-y-auto">
           {deps.map(d => (
             <div key={d.id} className="px-5 py-2.5 flex justify-between items-center text-sm">
               <span className="font-medium">{d.nombre}</span>
               <span className="text-right">
-                <p className="font-mono text-[10px] text-on-surface-variant">tutor: {d.guardian_user_id.slice(0, 10)}…</p>
+                <p className="font-mono text-[10px] text-on-surface-variant">{nom.principal.toLowerCase()}: {d.guardian_user_id.slice(0, 10)}…</p>
                 <p className="font-mono text-[9px] text-outline">vinculado {new Date(d.created_at).toLocaleDateString("es-PE")}</p>
               </span>
             </div>
@@ -110,7 +111,8 @@ function FamiliaresMundoWidget({ worldId }) {
 }
 
 /* ── Solicitudes de pulsera NFC (Panel Mundo) ───────────────────────────── */
-function SolicitudesNfcWidget({ worldId }) {
+function SolicitudesNfcWidget({ worldId, vertical }) {
+  const nom = nomenclaturaFamiliar(vertical);
   const [reqs, setReqs] = useState(null);
   const [busy, setBusy] = useState(null);
   const load = () => fetchSolicitudesNfcMundo(worldId).then(setReqs).catch(() => setReqs([]));
@@ -143,8 +145,8 @@ function SolicitudesNfcWidget({ worldId }) {
             <div key={r.id} className="px-5 py-3 flex justify-between items-center text-sm">
               <div>
                 <p className="text-xs font-medium">
-                  {r.nombre || (r.esDependiente ? "Dependiente" : "Titular")}
-                  {r.esDependiente && <span className="ml-1.5 font-mono text-[9px] uppercase text-tertiary">dependiente</span>}
+                  {r.nombre || (r.esDependiente ? nom.dependiente : nom.principal)}
+                  {r.esDependiente && <span className="ml-1.5 font-mono text-[9px] uppercase text-tertiary">{nom.dependiente.toLowerCase()}</span>}
                   {r.motivo === "perdida_robo" && <span className="ml-1.5 font-mono text-[9px] uppercase px-1.5 py-0.5 rounded border font-bold bg-amber-100 text-amber-700 border-amber-200">reposición</span>}
                 </p>
                 <p className="font-mono text-[10px] text-outline">{r.user_id.slice(0, 12)}… · {new Date(r.created_at).toLocaleDateString("es-PE")}</p>
@@ -229,6 +231,7 @@ function MiCatalogoPanel({ comercio }) {
   const merchantId = comercio.supabaseId || comercio.id;
   const [productos, setProductos] = useState(null);
   const [form, setForm] = useState({ name: "", price: "", category: "", stock: "", imageUrl: "" });
+  const [catNueva, setCatNueva] = useState(false); // true = mostrar input de categoría nueva en vez del select
   const [savingId, setSavingId] = useState(null);
   const [subiendoImg, setSubiendoImg] = useState(null); // "new" | product.id | null
 
@@ -259,6 +262,7 @@ function MiCatalogoPanel({ comercio }) {
     try {
       await upsertProductRemote({ world_id: comercio.mundoId, merchant_id: merchantId, name: form.name, price: +form.price, category: form.category || null, stock: form.stock ? +form.stock : null, image_url: form.imageUrl || null });
       setForm({ name: "", price: "", category: "", stock: "", imageUrl: "" });
+      setCatNueva(false);
       notify("Producto agregado a tu catálogo.");
       load();
     } catch (e) {
@@ -308,7 +312,30 @@ function MiCatalogoPanel({ comercio }) {
           <div className="grid md:grid-cols-4 gap-3 flex-1">
             <input className={inputCls} placeholder="Nombre (ej. Sandwich mixto)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             <NumInput className={inputCls} step="0.10" placeholder="Precio S/" value={form.price} onChange={v => setForm({ ...form, price: v })} />
-            <input className={inputCls} placeholder="Categoría (opcional)" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} />
+            {(() => {
+              const categoriasExistentes = [...new Set((productos || []).map(p => p.category).filter(Boolean))].sort();
+              if (catNueva || categoriasExistentes.length === 0) {
+                return (
+                  <div className="flex gap-1">
+                    <input className={inputCls} placeholder="Categoría nueva" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} autoFocus={catNueva} />
+                    {categoriasExistentes.length > 0 && (
+                      <button type="button" onClick={() => { setCatNueva(false); setForm({ ...form, category: "" }); }}
+                        className="flex-shrink-0 px-2 rounded-lg border border-outline-variant text-outline hover:text-primary" title="Elegir de las existentes">
+                        <Icon n="list" className="text-[16px]" />
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <select className={inputCls} value={form.category}
+                  onChange={e => { if (e.target.value === "__nueva__") { setCatNueva(true); setForm({ ...form, category: "" }); } else { setForm({ ...form, category: e.target.value }); } }}>
+                  <option value="">Categoría (opcional)</option>
+                  {categoriasExistentes.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="__nueva__">+ Otra categoría…</option>
+                </select>
+              );
+            })()}
             <NumInput className={inputCls} placeholder="Stock (opcional)" value={form.stock} onChange={v => setForm({ ...form, stock: v })} />
           </div>
         </div>
@@ -384,6 +411,7 @@ function MenuCatalogoPanel({ comercio }) {
   const [items, setItems] = useState(null);
   const [programacion, setProgramacion] = useState({}); // { menuItemId: [row,...] }
   const [form, setForm] = useState({ nombre: "", descripcion: "", precio: "", categoria: "", alergenos: [], imagen_url: "" });
+  const [catNueva, setCatNueva] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandido, setExpandido] = useState(null); // menuItemId
   const [progDraft, setProgDraft] = useState({ dias: [], cupos: "" });
@@ -410,6 +438,7 @@ function MenuCatalogoPanel({ comercio }) {
         precio: +form.precio, categoria: form.categoria || null, alergenos: form.alergenos, imagen_url: form.imagen_url || null,
       });
       setForm({ nombre: "", descripcion: "", precio: "", categoria: "", alergenos: [], imagen_url: "" });
+      setCatNueva(false);
       notify("Plato agregado. Prográmalo en la fila para que aparezca en el calendario del app.");
       load();
     } catch (e) {
@@ -445,7 +474,30 @@ function MenuCatalogoPanel({ comercio }) {
         <div className="grid md:grid-cols-4 gap-3 mb-3">
           <input className={inputCls} placeholder="Nombre (ej. Milanesa con puré)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
           <NumInput className={inputCls} step="0.10" placeholder="Precio S/" value={form.precio} onChange={v => setForm({ ...form, precio: v })} />
-          <input className={inputCls} placeholder="Categoría (ej. Plato de fondo)" value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} />
+          {(() => {
+            const categoriasExistentes = [...new Set((items || []).map(p => p.categoria).filter(Boolean))].sort();
+            if (catNueva || categoriasExistentes.length === 0) {
+              return (
+                <div className="flex gap-1">
+                  <input className={inputCls} placeholder="Categoría nueva" value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} autoFocus={catNueva} />
+                  {categoriasExistentes.length > 0 && (
+                    <button type="button" onClick={() => { setCatNueva(false); setForm({ ...form, categoria: "" }); }}
+                      className="flex-shrink-0 px-2 rounded-lg border border-outline-variant text-outline hover:text-primary" title="Elegir de las existentes">
+                      <Icon n="list" className="text-[16px]" />
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            return (
+              <select className={inputCls} value={form.categoria}
+                onChange={e => { if (e.target.value === "__nueva__") { setCatNueva(true); setForm({ ...form, categoria: "" }); } else { setForm({ ...form, categoria: e.target.value }); } }}>
+                <option value="">Categoría (opcional)</option>
+                {categoriasExistentes.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="__nueva__">+ Otra categoría…</option>
+              </select>
+            );
+          })()}
           <input className={inputCls} placeholder="URL de imagen (opcional)" value={form.imagen_url} onChange={e => setForm({ ...form, imagen_url: e.target.value })} />
         </div>
         <input className={`${inputCls} mb-3`} placeholder="Descripción breve (opcional)" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
@@ -1849,21 +1901,22 @@ function HardwareMundoTab({ m }) {
       <div className="grid lg:grid-cols-2 gap-6">
         <SolicitarLoteNfcWidget worldId={m.id} />
         <RequerirHardwareWidget worldId={m.id} />
-        <SolicitudesNfcWidget worldId={m.id} />
+        <SolicitudesNfcWidget worldId={m.id} vertical={m.vertical} />
       </div>
     </>
   );
 }
 
 function WalletMundoTab({ m }) {
+  const nom = nomenclaturaFamiliar(m.vertical);
   return (
     <>
       <div className="mb-6"><h2 className="text-2xl font-bold">Wallet de {m.nombre}</h2>
-        <p className="text-on-surface-variant mt-1 text-sm">Recargas, familiares vinculados y solicitudes de pulsera NFC — datos reales.</p></div>
+        <p className="text-on-surface-variant mt-1 text-sm">Recargas, {nom.tituloSeccion.toLowerCase()} y solicitudes de pulsera NFC — datos reales.</p></div>
       <div className="grid lg:grid-cols-2 gap-6">
         <RecargasMundoWidget worldId={m.id} />
-        <FamiliaresMundoWidget worldId={m.id} />
-        <SolicitudesNfcWidget worldId={m.id} />
+        <FamiliaresMundoWidget worldId={m.id} vertical={m.vertical} />
+        <SolicitudesNfcWidget worldId={m.id} vertical={m.vertical} />
         <SolicitarLoteNfcWidget worldId={m.id} />
       </div>
     </>

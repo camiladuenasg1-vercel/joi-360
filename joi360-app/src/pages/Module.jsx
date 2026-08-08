@@ -7,7 +7,7 @@ import {
   getSyntheticUserId, fetchEventosLive, fetchVendidasPorEvento,
   fetchTicketTypesLive, fetchVendidasPorTipo, comprarTicketsLive,
   fetchMisEntradasLive, transferirEntradaRemote, crearEnlaceTransferenciaEntrada, fetchEventMerchantsLive, fetchProgramasBNPLLive, crearContratoBNPLLive, updateContratoBNPL, fetchMisContratosBNPL, sincronizarCicloBNPL, pagarCuotaBNPLUsuario, fetchModificacionesBNPL, fetchCampanasBNPLMundo,
-  errorControlado, logErrorControlado, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
+  errorControlado, logErrorControlado, mensajeDeError, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
   fetchMiPerfilExtendido, guardarPerfilExtendido,
   fetchMisDependientes, crearDependienteRemote, fetchDependienteBalance,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
@@ -195,7 +195,7 @@ function WalletTemplate({ cfg, u }) {
       setP2pResult(r);
       if (r.ok) { refresh(); setP2pMonto(""); }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "wallet-p2p", mundoId);
       setP2pResult({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally { setP2pSending(false); }
@@ -780,7 +780,7 @@ function RestriccionesTemplate({ cfg, u }) {
       setAddingChild(false); setPasoSuscripcion(false);
       setReload(k => k + 1);
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "dependiente-crear", worldId);
       setDependienteError([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setCreando(false); }
@@ -815,7 +815,7 @@ function RestriccionesTemplate({ cfg, u }) {
           : [err.mensaje, err.accion].filter(Boolean).join(" "));
       }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "dependiente-recarga", worldId);
       setRechargeError([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setRecharging(false); }
@@ -1330,7 +1330,7 @@ function MenuTemplate({ cfg, u }) {
         setMembresias(ms => [...(ms || []), ...(creadas || [])]);
       }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "menu-membresia", worldId);
       showToast({ titulo: "No se pudo actualizar la membresía", mensaje: err.mensaje, accion: err.accion }, "error");
     } finally { setActualizandoMembresia(null); }
@@ -1374,7 +1374,7 @@ function MenuTemplate({ cfg, u }) {
         setResultado({ ok: false, titulo: err.titulo, mensaje: `${err.mensaje} Saldo de ${beneficiario.nombre}: S/ ${(r.balance ?? saldoBeneficiario ?? 0).toFixed(2)}.`, accion: err.accion });
       }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", `menu-checkout:${cartMerchant}`, worldId);
       setResultado({ ok: false, titulo: err.titulo, mensaje: err.mensaje, accion: err.accion });
     } finally { setPagando(false); }
@@ -1795,7 +1795,7 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
       setResultado(r);
       if (r.ok) { setSel(null); setReload(k => k + 1); refreshWallet(); }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", `compra-entradas:${ev.id}`, mundo.id);
       setResultado({ ok: false, titulo: err.titulo, mensaje: err.mensaje, accion: err.accion });
     } finally { setComprando(false); }
@@ -1973,7 +1973,7 @@ function MisEntradasList({ mundo, refreshKey }) {
         setTransferError([err.mensaje, err.accion].filter(Boolean).join(" "));
       }
     } catch (e) {
-      const err = await errorControlado("transferencia_no_valida");
+      const err = await mensajeDeError(e, "transferencia_no_valida");
       logErrorControlado("transferencia_no_valida", `transferir-entrada:${ticketId}`, mundo.id);
       setTransferError([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setTransfiriendo(false); }
@@ -2320,7 +2320,7 @@ function EventosTemplate({ cfg, u }) {
       await crearEventoB2CRemote(worldId, nuevoEvento);
       setSubmitted(true); setCreando(false); setStep(1); setReloadKey(k => k + 1);
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "crear-evento-b2c", worldId);
       showToast({ titulo: "No se pudo enviar el evento", mensaje: err.mensaje, accion: "Revisa los datos e inténtalo nuevamente." }, "error");
       // Se queda en el formulario (step 3, revisar y enviar) para que el usuario pueda reintentar —
@@ -2820,7 +2820,7 @@ function PerfilExtTemplate({ cfg, u }) {
       await guardarPerfilExtendido(userId, worldId, draft);
       setPerfil(draft); setEditando(false);
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "perfil-ext-guardar", worldId);
       setGuardarError([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setGuardando(false); }
@@ -3286,7 +3286,7 @@ function BNPLTemplate({ cfg, u }) {
         setReload(k => k + 1);
       }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       setPagoMsg({ tipo: "error", texto: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally {
       setPagandoCuota(null);
@@ -3378,7 +3378,7 @@ function BNPLTemplate({ cfg, u }) {
       setFase("firmado");
       setReload(k => k + 1);
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", "bnpl-firmar", worldId);
       setRechazoMsg([err.mensaje, err.accion].filter(Boolean).join(" "));
       setFase("rechazado");
@@ -3869,7 +3869,7 @@ function MarketplaceTemplate({ cfg, u }) {
         setResultado({ ok: false, titulo: err.titulo, mensaje: `${err.mensaje} Saldo de ${beneficiario.nombre}: S/ ${(r.balance ?? saldoMostrado).toFixed(2)}.`, accion: err.accion });
       }
     } catch (e) {
-      const err = await errorControlado("operacion_no_completada");
+      const err = await mensajeDeError(e, "operacion_no_completada");
       logErrorControlado("operacion_no_completada", `marketplace-checkout:${cartMerchant}`, worldId);
       setResultado({ ok: false, titulo: err.titulo, mensaje: err.mensaje, accion: err.accion });
     } finally { setPagando(false); }

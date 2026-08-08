@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useStore, useWalletLive, useModuleConfig } from "../hooks.js";
 import { useUser } from "../userStore.js";
-import { getSyntheticUserId, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchRecargasHoyCount, errorControlado, logErrorControlado } from "../supabaseClient.js";
+import { getSyntheticUserId, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchRecargasHoyCount, errorControlado, logErrorControlado, mensajeDeError } from "../supabaseClient.js";
 import BottomNav from "../components/BottomNav.jsx";
 import { showToast } from "../components/Toast.jsx";
 
@@ -54,6 +54,13 @@ export default function PayPage() {
         logErrorControlado("saldo_insuficiente", "pay-qr", activeMundo?.id);
         showToast({ titulo: err.titulo, mensaje: err.mensaje, accion: err.accion }, err.severidad);
       }
+    } catch (e) {
+      // Antes esto no tenía catch: si la sesión estaba vencida, pagarLive
+      // lanzaba y el error quedaba sin capturar — sin toast, sin pista de
+      // qué pasó, el botón solo dejaba de girar.
+      const err = await mensajeDeError(e, "operacion_no_completada");
+      logErrorControlado("operacion_no_completada", "pay-qr", activeMundo?.id);
+      showToast({ titulo: err.titulo, mensaje: err.mensaje, accion: err.accion }, err.severidad);
     } finally { setPagando(false); }
   };
 
@@ -95,8 +102,8 @@ export default function PayPage() {
       showToast(`S/ ${m.toFixed(2)} acreditado vía ${canalSel.nombre}`);
       setMonto(""); setCanalSel(null); setCheckoutOpen(false);
     } catch (e) {
-      const err = await errorControlado("transferencia_no_valida");
-      logErrorControlado("transferencia_no_valida", "recarga-checkout", activeMundo?.id);
+      const err = await mensajeDeError(e, "operacion_no_completada");
+      logErrorControlado("operacion_no_completada", "recarga-checkout", activeMundo?.id);
       showToast({ titulo: err.titulo, mensaje: err.mensaje, accion: err.accion }, err.severidad);
     } finally { setProcesando(false); }
   };

@@ -1300,6 +1300,17 @@ export function rubroNombre(value) {
   return found ? found.nombre : (value || "—");
 }
 
+// "Familiares vinculados" / "Titular" son términos genéricos que no calzan
+// en un colegio (donde la cuenta principal es un "Tutor" y el dependiente un
+// "Alumno") — el vertical del mundo decide el vocabulario correcto en vez de
+// forzar un solo nombre para todos los rubros.
+export function nomenclaturaFamiliar(vertical) {
+  if (vertical === "Educación") {
+    return { principal: "Tutor", dependiente: "Alumno", tituloSeccion: "Tutores y alumnos vinculados" };
+  }
+  return { principal: "Cuenta principal", dependiente: "Cuenta dependiente", tituloSeccion: "Cuentas vinculadas" };
+}
+
 
 // ============ PSP / PROVEEDORES DE PAGO (catálogo global) ============
 // Separamos el PROVEEDOR del CANAL. Un canal (ej. "billetera_digital/yape")
