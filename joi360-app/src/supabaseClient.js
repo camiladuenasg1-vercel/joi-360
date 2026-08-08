@@ -452,6 +452,14 @@ export async function crearDependienteRemote(worldId, guardianUserId, nombre, dn
 export async function fetchDependienteBalance(dependentUserId, worldId) {
   return fetchWalletBalance(dependentUserId, worldId);
 }
+// Antes las alergias solo se fijaban una vez, al crear el dependiente — un
+// dato médico que sí cambia con el tiempo y quedaba sin forma de corregir.
+export async function actualizarDependienteAlergiasRemote(dependentUserId, alergias) {
+  return rest(`dependents?dependent_user_id=eq.${dependentUserId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ alergias: alergias || null }),
+  });
+}
 
 // ── Membresías de Menú — a qué perfil (titular o dependiente) se le reserva
 // el módulo Menú, para el selector "¿Para quién?" del checkout (Caso Raimondi) ──

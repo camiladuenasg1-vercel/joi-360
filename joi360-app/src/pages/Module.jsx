@@ -9,7 +9,7 @@ import {
   fetchMisEntradasLive, transferirEntradaRemote, crearEnlaceTransferenciaEntrada, fetchEventMerchantsLive, fetchProgramasBNPLLive, crearContratoBNPLLive, updateContratoBNPL, fetchMisContratosBNPL, sincronizarCicloBNPL, pagarCuotaBNPLUsuario, fetchModificacionesBNPL, fetchCampanasBNPLMundo,
   errorControlado, logErrorControlado, mensajeDeError, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
   fetchMiPerfilExtendido, guardarPerfilExtendido,
-  fetchMisDependientes, crearDependienteRemote, fetchDependienteBalance,
+  fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, fetchDependienteBalance,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
   transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
@@ -685,6 +685,14 @@ function AsistenciaTemplate({ cfg, u }) {
 // config: perfilesControladosActivo, maxPerfilesControlados, registroAlergias,
 //         limiteDiarioPerfil, montoAprobacionPadre, horarioConsumo, notificacionConsumoRealTime
 // ══════════════════════════════════════════════════════════════════════════════
+// Misma taxonomía fija que ALERGENOS_MENU en el panel de comercio
+// (joi360-admin/src/Fronts.jsx) — el bloqueo de platos en Menú compara estas
+// strings contra item.alergenos, así que deben coincidir exactamente. Es la
+// única fuente de "alergias" en la superapp: se usa al crear/editar un
+// dependiente (Restricciones) y en el perfil del propio titular (Perfil
+// Extendido), en vez de que cada pantalla tenga su propio campo de texto libre.
+const ALERGIAS_CATALOG = ["Gluten","Lactosa","Mariscos","Nueces","Huevo","Soya","Frutos rojos","Maní"];
+
 function AlertasConsumoBanner({ guardianId, worldId, reload, onLeida }) {
   const [alertas, setAlertas] = useState(null);
   useEffect(() => {
@@ -744,8 +752,10 @@ function RestriccionesTemplate({ cfg, u }) {
   const [recharging, setRecharging] = useState(false);
   const [reload, setReload] = useState(0);
   const [codigoAbierto, setCodigoAbierto] = useState(null); // dependent_user_id con QR/código visible
+  const [editandoAlergiasId, setEditandoAlergiasId] = useState(null); // dependent_user_id en edición
+  const [editAlergiasArr, setEditAlergiasArr] = useState([]);
+  const [guardandoAlergias, setGuardandoAlergias] = useState(false);
 
-  const ALERGIAS = ["Gluten","Lactosa","Mariscos","Nueces","Huevo","Soya","Frutos rojos","Maní"];
   // toISOString() adelanta la fecha en horario de tarde/noche en Perú (UTC-5) —
   // debe coincidir con la fecha local que crearReservaMenu usa para guardar
   // (ver diasStripDe), si no el conteo "gastado hoy" mira el día equivocado.
@@ -883,7 +893,7 @@ function RestriccionesTemplate({ cfg, u }) {
           <div>
             <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
             <div className="flex flex-wrap gap-2">
-              {ALERGIAS.map(a=>(
+              {ALERGIAS_CATALOG.map(a=>(
                 <button key={a} onClick={()=>toggleAlergia(a)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${nuevo.alergias.includes(a)?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
               ))}
@@ -949,9 +959,13 @@ function RestriccionesTemplate({ cfg, u }) {
                 <div>
                   <p className="font-black text-[#1b1b24]">{c.nombre}</p>
                   <p className="text-xs text-[#777587] font-mono">{c.dependent_user_id.slice(0,12)}</p>
-                  {registroAlergias && alergiasArr.length > 0 && (
-                    <div className="flex gap-1 mt-1 flex-wrap">
+                  {registroAlergias && (
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
+                      {editandoAlergiasId !== c.dependent_user_id && (
+                        <button onClick={()=>{setEditandoAlergiasId(c.dependent_user_id); setEditAlergiasArr(alergiasArr);}}
+                          className="text-[9px] font-bold text-[#3525cd] tap-active">{alergiasArr.length ? "Editar" : "+ Agregar alergias"}</button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -961,6 +975,28 @@ function RestriccionesTemplate({ cfg, u }) {
                 <Icon name="qr_code" size="text-base" color="text-[#3525cd]"/>
               </button>
             </div>
+            {editandoAlergiasId === c.dependent_user_id && (
+              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
+                <div className="flex flex-wrap gap-2">
+                  {ALERGIAS_CATALOG.map(a=>(
+                    <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.includes(a)?arr.filter(x=>x!==a):[...arr,a])}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${editAlergiasArr.includes(a)?"bg-red-50 border-red-300 text-red-700":"bg-white border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button disabled={guardandoAlergias} onClick={async()=>{
+                    setGuardandoAlergias(true);
+                    try {
+                      await actualizarDependienteAlergiasRemote(c.dependent_user_id, editAlergiasArr.join(", "));
+                      setEditandoAlergiasId(null);
+                      setReload(k=>k+1);
+                    } catch {} finally { setGuardandoAlergias(false); }
+                  }} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoAlergias?"Guardando…":"Guardar"}</button>
+                </div>
+              </div>
+            )}
             {codigoAbierto === c.dependent_user_id && (
               <div className="bg-[#f0ecf9] rounded-2xl p-4">
                 <p className="text-xs text-[#777587] text-center mb-3">Muestra esto en el POS del comercio para identificar a {c.nombre.split(" ")[0]}.</p>
@@ -1256,6 +1292,7 @@ function MenuTemplate({ cfg, u }) {
   const [filtroComercio, setFiltroComercio] = useState("todos");
   const [dependientes, setDependientes] = useState(null);
   const [membresias, setMembresias] = useState(null);
+  const [miPerfilExt, setMiPerfilExt] = useState(null); // alergias propias del titular (Perfil Extendido)
   const [beneficiarioId, setBeneficiarioId] = useState(null); // null = todavía no se eligió a propósito
   const [saldoBeneficiario, setSaldoBeneficiario] = useState(null);
   const [gestionAbierta, setGestionAbierta] = useState(false);
@@ -1270,6 +1307,7 @@ function MenuTemplate({ cfg, u }) {
     let vivo = true;
     fetchMisDependientes(userId, worldId).then(r => { if (vivo) setDependientes(r || []); }).catch(() => { if (vivo) setDependientes([]); });
     fetchMenuMembresias(userId, worldId).then(r => { if (vivo) setMembresias(r || []); }).catch(() => { if (vivo) setMembresias([]); });
+    fetchMiPerfilExtendido(userId, worldId).then(r => { if (vivo) setMiPerfilExt(r); }).catch(() => { if (vivo) setMiPerfilExt(null); });
     return () => { vivo = false; };
   }, [worldId]);
 
@@ -1289,9 +1327,12 @@ function MenuTemplate({ cfg, u }) {
 
   const nombreDe = id => comercios.find(c => c.id === id)?.nombre || "Comercio";
 
-  // Beneficiarios elegibles: el titular siempre, + dependientes con membresía de Menú activa
+  // Beneficiarios elegibles: el titular siempre, + dependientes con membresía de Menú activa.
+  // Las alergias del titular vienen de su propio Perfil Extendido — antes
+  // quedaban fuera del bloqueo de platos, solo se aplicaba a dependientes.
   const beneficiarios = [
-    { id: userId, nombre: nombreTitular, tipo: "titular", alergias: null, alergiasArr: [] },
+    { id: userId, nombre: nombreTitular, tipo: "titular", alergias: miPerfilExt?.alergias || null,
+      alergiasArr: (miPerfilExt?.alergias || "").split(",").map(a => a.trim()).filter(Boolean) },
     ...(dependientes || [])
       .filter(d => (membresias || []).some(m => m.beneficiario_user_id === d.dependent_user_id && m.activo))
       .map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", alergias: d.alergias, alergiasArr: (d.alergias || "").split(",").map(a => a.trim()).filter(Boolean) })),
@@ -2860,7 +2901,26 @@ function PerfilExtTemplate({ cfg, u }) {
             <p className="px-4 py-4 text-sm text-[#777587]">Cargando…</p>
           ) : editando ? (
             <div className="px-4 pb-4 space-y-3">
-              {CAMPOS.map(f => (
+              {CAMPOS.map(f => f.key === "alergias" ? (
+                <div key={f.key}>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{f.label}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALERGIAS_CATALOG.map(a => {
+                      const arr = (draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
+                      const activa = arr.includes(a);
+                      return (
+                        <button key={a} type="button"
+                          onClick={() => setDraft(d => {
+                            const cur = (d.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
+                            const next = cur.includes(a) ? cur.filter(x=>x!==a) : [...cur, a];
+                            return { ...d, alergias: next.join(", ") };
+                          })}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${activa?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
                 <div key={f.key}>
                   <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">{f.label}</label>
                   <input className="w-full bg-[#f0ecf9] rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
