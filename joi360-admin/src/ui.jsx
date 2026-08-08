@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { logout, session } from "./store";
-import { getSyncStatus, onSyncStatus } from "./supabase.js";
+import { getSyncStatus, onSyncStatus, fetchResumenNotificacionesRedPontis } from "./supabase.js";
+import { useStore } from "./hooks";
 
 /* Badge de sincronización con Supabase (Render Engine en vivo):
    lo que el admin guarda se upserta a la fuente que lee la superapp. */
@@ -160,6 +161,91 @@ export const BtnOutline = ({ children, ...p }) => (
   <button {...p} className={`px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant text-sm font-medium hover:bg-surface-container transition-colors flex items-center justify-center gap-2 ${p.className || ""}`}>{children}</button>
 );
 
+// ── Campanita de notificaciones (Task #170) ─────────────────────────────
+// Un solo fetch agregado (fetchResumenNotificacionesRedPontis) junta las 4
+// colas que ya existían dispersas (Aprobaciones, Hardware, Soporte,
+// Liquidación) — no hay tabla de "notificaciones" nueva que mantener
+// sincronizada, la notificación ES el item pendiente en su propia tabla.
+// Tickets de soporte salen de st.tickets (ya vive en el store, sin fetch
+// aparte) para no duplicar esa reconciliación.
+function useResumenNotificaciones() {
+  const st = useStore();
+  const [remoto, setRemoto] = useState(null);
+  const cargar = () => fetchResumenNotificacionesRedPontis().then(setRemoto).catch(() => setRemoto(null));
+  useEffect(() => {
+    cargar();
+    const id = setInterval(cargar, 60_000); // refresco silencioso, sin que la usuaria tenga que recargar la página
+    return () => clearInterval(id);
+  }, []);
+  const soporte = (st.tickets || []).filter(t => t.estado === "ABIERTO").length;
+  return {
+    aprobaciones: remoto?.aprobaciones || 0,
+    hardware: remoto?.hardware || 0,
+    liquidacion: remoto?.liquidacion || 0,
+    soporte,
+    detalle: remoto?.detalle || null,
+    recargar: cargar,
+  };
+}
+
+function NotificationBell({ r }) {
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  const total = r.aprobaciones + r.hardware + r.liquidacion + r.soporte;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const filas = [
+    { n: r.aprobaciones, icon: "approval", label: "Aprobaciones pendientes", detalle: "Eventos y comercios esperando revisión.", to: "/admin/gobierno" },
+    { n: r.hardware, icon: "inventory_2", label: "Hardware por atender", detalle: "Requerimientos de equipo, lotes NFC y banditas con cobro pendiente.", to: "/admin/hardware-pos" },
+    { n: r.soporte, icon: "support_agent", label: "Tickets de soporte abiertos", detalle: "Casos sin asignar o sin respuesta todavía.", to: "/admin/soporte" },
+    { n: r.liquidacion, icon: "account_balance", label: "Liquidación retenida", detalle: "Lotes que no alcanzaron el mínimo o quedaron con neto negativo.", to: "/admin/liquidacion" },
+  ];
+
+  const ir = (to) => { setOpen(false); nav(to); };
+
+  return (
+    <span className="relative inline-flex" ref={ref}>
+      <button type="button" onClick={() => setOpen(o => !o)} title="Notificaciones"
+        className="relative w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+        <Icon n="notifications" className="text-[20px]" />
+        {total > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-error text-white text-[9px] font-black flex items-center justify-center">{total > 99 ? "99+" : total}</span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-40 top-11 right-0 w-80 rounded-xl bg-surface-container-lowest border border-outline-variant shadow-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+            <p className="font-semibold text-sm">Notificaciones</p>
+            <button onClick={r.recargar} className="text-outline hover:text-primary" title="Actualizar"><Icon n="refresh" className="text-[16px]" /></button>
+          </div>
+          {total === 0 ? (
+            <p className="px-4 py-6 text-sm text-on-surface-variant text-center">Todo al día — sin pendientes.</p>
+          ) : (
+            <div className="divide-y divide-outline-variant/60">
+              {filas.filter(f => f.n > 0).map(f => (
+                <button key={f.label} onClick={() => ir(f.to)} className="w-full text-left px-4 py-3 flex gap-3 hover:bg-surface-container transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-tertiary-fixed text-tertiary flex items-center justify-center flex-shrink-0"><Icon n={f.icon} className="text-[18px]" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">{f.label} <span className="font-mono text-[10px] text-tertiary">({f.n})</span></p>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">{f.detalle}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
+
 // Orden alineado al guion del demo (doc §8): plataforma → mundos → pagos → operación.
 const NAV = [
   { group: "Plataforma", items: [
@@ -186,10 +272,25 @@ const NAV = [
   ]},
 ];
 
+// Badge por ruta: cada NAV item que tiene algo pendiente que atender muestra
+// su numeral, calculado desde el mismo resumen que usa la campanita —
+// evita que la usuaria tenga que abrir el dropdown para saber por dónde
+// entrar; puede simplemente seguir el numeral rojo hasta la pestaña.
+function badgesPorRuta(r) {
+  return {
+    "/admin/gobierno": r.aprobaciones,
+    "/admin/catalogos": r.hardware,
+    "/admin/soporte": r.soporte,
+    "/admin/liquidacion": r.liquidacion,
+  };
+}
+
 export function Shell({ children, title, contextNav }) {
   const loc = useLocation();
   const nav = useNavigate();
   const s = session();
+  const r = useResumenNotificaciones();
+  const badges = badgesPorRuta(r);
 
   useEffect(() => { if (!s) nav("/login"); }, [s]);
 
@@ -210,6 +311,7 @@ export function Shell({ children, title, contextNav }) {
               <ul className="space-y-0.5">
                 {group.items.map(item => {
                   const active = loc.pathname === item.to;
+                  const badge = badges[item.to] || 0;
                   if (item.proximamente) return (
                     <li key={item.to}>
                       <div title="Próximamente" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-outline cursor-not-allowed">
@@ -224,6 +326,7 @@ export function Shell({ children, title, contextNav }) {
                       <Link to={item.to} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${active ? "text-primary font-bold bg-primary-fixed border-r-4 border-primary" : "text-on-surface-variant hover:text-primary hover:bg-surface-container"}`}>
                         <Icon n={item.icon} fill={active} className="text-[20px]" />
                         {item.label}
+                        {badge > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-error text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{badge > 9 ? "9+" : badge}</span>}
                       </Link>
                     </li>
                   );
@@ -250,6 +353,7 @@ export function Shell({ children, title, contextNav }) {
           <h2 className="font-black text-on-surface">{title || "Joi 360 Ecosystem"}</h2>
           <div className="flex items-center gap-4">
             {contextNav}
+            <NotificationBell r={r} />
             <SyncBadge />
             <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest hidden md:block">JOI 360 · v2.0</span>
           </div>

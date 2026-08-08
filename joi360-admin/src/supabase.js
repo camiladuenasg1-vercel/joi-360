@@ -1038,6 +1038,31 @@ export async function syncCatalogRemote(catalog, uxMap = {}) {
 export async function fetchTodasLiquidacionesRemote() {
   return rest(`liquidaciones?select=*&order=fecha.desc`);
 }
+
+// ── Campanita de notificaciones (Task #170) ─────────────────────────────
+// No hay una tabla de "notificaciones" separada que mantener sincronizada
+// con cada cola real (eso duplicaría la fuente de verdad y podría
+// desalinearse) — la notificación ES el item pendiente en su propia tabla.
+// Un solo fetch agregado junta las 4 colas que ya existían dispersas
+// (Aprobaciones, Hardware, Soporte, Liquidación) para la campanita y los
+// badges del sidebar.
+export async function fetchResumenNotificacionesRedPontis() {
+  const [eventos, comercios, equipos, lotesNfc, banditasCobro, liquidaciones] = await Promise.all([
+    rest(`events?estado=eq.PENDIENTE_APROBACION&select=id,titulo,world_id,created_at`).catch(() => []),
+    rest(`merchant_requests?estado=eq.PENDIENTE&select=id,nombre,world_id,created_at`).catch(() => []),
+    rest(`hardware_requests?estado=eq.pendiente&select=id,cantidad,modelo_nombre,world_id,created_at`).catch(() => []),
+    rest(`nfc_band_requests?estado=eq.pendiente&select=id,cantidad,world_id,created_at`).catch(() => []),
+    rest(`nfc_asignaciones?estado_pago=eq.pendiente&select=id,cantidad,monto_total,world_id,created_at`).catch(() => []),
+    rest(`liquidaciones?estado=eq.RETENIDO&select=id,world_id,neto,created_at`).catch(() => []),
+  ]);
+  const aprobaciones = (eventos || []).length + (comercios || []).length;
+  const hardware = (equipos || []).length + (lotesNfc || []).length + (banditasCobro || []).length;
+  const soporte = 0; // se completa client-side con st.tickets (ya vive en el store, sin fetch aparte)
+  return {
+    aprobaciones, hardware, liquidacion: (liquidaciones || []).length, soporte,
+    detalle: { eventos, comercios, equipos, lotesNfc, banditasCobro, liquidaciones },
+  };
+}
 export async function fetchLiquidacionesMundoRemote(worldId) {
   return rest(`liquidaciones?world_id=eq.${worldId}&select=*&order=fecha.desc`);
 }
