@@ -499,7 +499,7 @@ function TabEventosOrganizador({ m, eventos, ticketsMap, onRefresh, onNew, onEdi
 /* -------- Tab Comercios — afiliar/ubicar comercios + catálogo del evento
    (Gantt #63/#67/#70). Antes: la vitrina de un evento en la app mostraba
    TODOS los comercios activos del mundo — sin afiliación real. -------- */
-function TabComerciosOrganizador({ m, eventos }) {
+export function TabComerciosOrganizador({ m, eventos }) {
   const publicados = eventos.filter(e => e.estado === "PUBLICADO" || e.estado === "PENDIENTE_APROBACION");
   const [merchants, setMerchants] = useState(null);
   React.useEffect(() => { fetchMerchantsRemote(m.id).then(r => setMerchants(r || [])).catch(() => setMerchants([])); }, [m.id]);
@@ -658,7 +658,7 @@ function EventoCatalogoComercio({ worldId, eventId, merchant }) {
 }
 
 /* -------- Tab Asistencia — check-in/out por ticket real (QR Scanner) -------- */
-function TabAsistenciaOrganizador({ m, eventos, ticketsMap, onRefresh }) {
+export function TabAsistenciaOrganizador({ m, eventos, ticketsMap, onRefresh }) {
   const publicados = eventos.filter(e => e.estado === "PUBLICADO");
 
   return (
@@ -871,7 +871,7 @@ function EventoAsistenciaCard({ ev, tk, onRefresh }) {
 const ESTADO_INVITADO_LABEL = { invitado: "Invitado", bandita_asignada: "Pulsera asignada", activo: "Activo", cerrado: "Cerrado" };
 const ESTADO_INVITADO_COLOR = { invitado: "bg-outline", bandita_asignada: "bg-tertiary", activo: "bg-ok", cerrado: "bg-outline" };
 
-function TabBanditasEventoOrganizador({ m, eventos }) {
+export function TabBanditasEventoOrganizador({ m, eventos }) {
   const publicados = eventos.filter(e => e.estado === "PUBLICADO");
   return (
     <>
@@ -1085,7 +1085,7 @@ function CashInBanditaEventoDrawer({ guest, m, onClose, onDone }) {
 /* -------- Tab Liquidaciones — instancia "evento" separada de la diaria -------- */
 /* Doc §5.2: el Módulo de Liquidación de Comercios existía solo para operación
    diaria; aquí se extiende con una instancia independiente por evento. */
-function TabLiqOrganizador({ m, eventos, ticketsMap }) {
+export function TabLiqOrganizador({ m, eventos, ticketsMap }) {
   const moduloEvento = (m?.modulos||[]).find(x => x.id === "eventos") || {};
   const comisionPct = moduloEvento?.acuerdo?.porTx || moduloEvento?.config?.comisionEntrada || 5;
 

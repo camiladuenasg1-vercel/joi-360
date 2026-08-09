@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
-import { EventoDrawer } from "./OrganizadorFront.jsx";
+import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
 function RecargasMundoWidget({ worldId }) {
@@ -2675,7 +2675,7 @@ function SponsorDashboard({ m, st, preview }) {
 // Aforo/asistentes en vivo (Gantt #82) — antes esta tab solo leía st.eventos
 // local (vendidas/aforo podían quedar desactualizados); ahora trae tickets
 // reales por evento, mismo mecanismo que ya usa el dashboard del Organizador.
-function useAforoLive(eventos) {
+function useAforoLive(eventos, refreshKey = 0) {
   const [map, setMap] = useState({});
   const idsKey = eventos.map(e => e.id).join(",");
   React.useEffect(() => {
@@ -2685,14 +2685,30 @@ function useAforoLive(eventos) {
       catch { return [ev.id, null]; }
     })).then(pairs => { if (vivo) setMap(Object.fromEntries(pairs)); });
     return () => { vivo = false; };
-  }, [idsKey]);
+  }, [idsKey, refreshKey]);
   return map;
 }
+
+// Sub-tabs de gestión por evento (Task #141) — antes el modo Embebido solo
+// tenía crear evento + aforo; Comercios/Asistencia/Banditas/Liquidación por
+// evento ya existían construidos para el organizador B2B
+// (OrganizadorFront.jsx) pero nunca se conectaron acá. Los 4 componentes no
+// dependen de sesión de organizador (solo de m/eventos/ticketsMap), así que
+// se reusan tal cual — nada duplicado.
+const EVENTOS_SUBTABS = [
+  { k: "eventos", l: "Eventos", i: "confirmation_number" },
+  { k: "comercios", l: "Comercios", i: "storefront" },
+  { k: "asistencia", l: "Asistencia", i: "people" },
+  { k: "banditas", l: "Banditas del evento", i: "sensors" },
+  { k: "liquidacion", l: "Liquidación por evento", i: "account_balance" },
+];
 
 function SponsorEventosTab({ m, eventos }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const ticketsMap = useAforoLive(eventos);
+  const [subtab, setSubtab] = useState("eventos");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const ticketsMap = useAforoLive(eventos, refreshKey);
 
   return (
     <>
@@ -2701,37 +2717,54 @@ function SponsorEventosTab({ m, eventos }) {
           <h2 className="text-3xl font-bold tracking-tight">Eventos de {m.nombre}</h2>
           <p className="text-on-surface-variant mt-1">Publica directo desde tu panel. RedPontis revisa y aprueba antes de que se vea en el app.</p>
         </div>
-        <BtnPrimary onClick={() => { setEditing(null); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nuevo evento</BtnPrimary>
+        {subtab === "eventos" && <BtnPrimary onClick={() => { setEditing(null); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nuevo evento</BtnPrimary>}
       </div>
-      <div className="grid md:grid-cols-2 gap-5">
-        {eventos.length === 0 && <p className="text-sm text-on-surface-variant">Sin eventos todavía.</p>}
-        {eventos.map(ev => {
-          const tk = ticketsMap[ev.id];
-          const vendidas = Array.isArray(tk) ? tk.filter(t => t.estado !== "anulado").length : (ev.vendidas || 0);
-          const dentro = Array.isArray(tk) ? tk.filter(t => t.estado === "checkin").length : null;
-          const aforo = ev.aforo || 0;
-          return (
-          <div key={ev.id} onClick={() => { setEditing(ev); setOpen(true); }}
-            className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm cursor-pointer hover:border-primary/40 transition-colors">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h4 className="font-semibold">{ev.titulo||ev.nombre}</h4>
-                <p className="font-mono text-[10px] text-on-surface-variant uppercase">{ev.fecha} · {ev.lugar}</p>
+
+      <div className="flex gap-1 bg-surface-container-lowest border border-outline-variant rounded-xl p-1 mb-6 w-fit">
+        {EVENTOS_SUBTABS.map(t => (
+          <button key={t.k} onClick={() => setSubtab(t.k)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${subtab===t.k?"bg-surface-container text-on-surface shadow-sm":"text-on-surface-variant hover:bg-surface-container/40"}`}>
+            <Icon n={t.i} className="text-[16px]"/>{t.l}
+          </button>
+        ))}
+      </div>
+
+      {subtab === "eventos" && (
+        <div className="grid md:grid-cols-2 gap-5">
+          {eventos.length === 0 && <p className="text-sm text-on-surface-variant">Sin eventos todavía.</p>}
+          {eventos.map(ev => {
+            const tk = ticketsMap[ev.id];
+            const vendidas = Array.isArray(tk) ? tk.filter(t => t.estado !== "anulado").length : (ev.vendidas || 0);
+            const dentro = Array.isArray(tk) ? tk.filter(t => t.estado === "checkin").length : null;
+            const aforo = ev.aforo || 0;
+            return (
+            <div key={ev.id} onClick={() => { setEditing(ev); setOpen(true); }}
+              className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-sm cursor-pointer hover:border-primary/40 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="font-semibold">{ev.titulo||ev.nombre}</h4>
+                  <p className="font-mono text-[10px] text-on-surface-variant uppercase">{ev.fecha} · {ev.lugar}</p>
+                </div>
+                <Pill color={ev.estado==="PUBLICADO"?"bg-ok":ev.estado==="PENDIENTE_APROBACION"?"bg-tertiary":ev.estado==="RECHAZADO"?"bg-error":"bg-outline"}>{ev.estado==="PENDIENTE_APROBACION"?"EN REVISIÓN":ev.estado}</Pill>
               </div>
-              <Pill color={ev.estado==="PUBLICADO"?"bg-ok":ev.estado==="PENDIENTE_APROBACION"?"bg-tertiary":ev.estado==="RECHAZADO"?"bg-error":"bg-outline"}>{ev.estado==="PENDIENTE_APROBACION"?"EN REVISIÓN":ev.estado}</Pill>
+              <div className="flex gap-4 text-xs mb-3">
+                <span className="font-mono">{m.moneda} {ev.precio||0}</span>
+                <span className="text-on-surface-variant">{vendidas}/{aforo} entradas</span>
+                {dentro !== null && <span className="text-tertiary font-semibold">{dentro} dentro ahora</span>}
+              </div>
+              <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full" style={{width:`${Math.min(100,(vendidas/(aforo||1))*100)}%`}}/>
+              </div>
             </div>
-            <div className="flex gap-4 text-xs mb-3">
-              <span className="font-mono">{m.moneda} {ev.precio||0}</span>
-              <span className="text-on-surface-variant">{vendidas}/{aforo} entradas</span>
-              {dentro !== null && <span className="text-tertiary font-semibold">{dentro} dentro ahora</span>}
-            </div>
-            <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{width:`${Math.min(100,(vendidas/(aforo||1))*100)}%`}}/>
-            </div>
-          </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
+      {subtab === "comercios" && <TabComerciosOrganizador m={m} eventos={eventos} />}
+      {subtab === "asistencia" && <TabAsistenciaOrganizador m={m} eventos={eventos} ticketsMap={ticketsMap} onRefresh={() => setRefreshKey(k => k + 1)} />}
+      {subtab === "banditas" && <TabBanditasEventoOrganizador m={m} eventos={eventos} />}
+      {subtab === "liquidacion" && <TabLiqOrganizador m={m} eventos={eventos} ticketsMap={ticketsMap} />}
+
       <EventoDrawer
         open={open}
         onClose={() => { setOpen(false); setEditing(null); }}
