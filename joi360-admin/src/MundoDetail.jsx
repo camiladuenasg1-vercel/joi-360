@@ -1219,6 +1219,17 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
               <Icon n="account_tree" className="inline mr-1 text-[14px] align-text-top"/>
               Cada microservicio tiene su propia configuración y puede depender de otro. Si está bloqueado, revisa la dependencia indicada.
             </div>
+            {/* Auditoría Task #132: acá existía un microservicio "Familiares /
+                Sub-perfiles" (habilitarFamiliares) que nunca se leía en ningún
+                lado del superapp — un admin lo prendía y no pasaba nada. La
+                gestión real de familiares/dependientes vive en la capacidad
+                Restricciones (control.perfilesControladosActivo), ya
+                construida y en uso. Se retiró el toggle muerto de acá para no
+                confundir con un segundo interruptor que no hacía nada. */}
+            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg text-xs text-on-surface-variant">
+              <Icon n="info" className="inline mr-1 text-[14px] align-text-top text-primary"/>
+              La gestión de familiares/dependientes (agregar, restricciones, alergias, banditas) vive en la capacidad <b>Restricciones</b>, no acá — actívala en la pestaña Módulos si este mundo la necesita.
+            </div>
             {(() => {
               const defaultsLookup = {};
               (c.microservicios||[]).forEach(m2 => (m2.campos||[]).forEach(cf => { defaultsLookup[`${m2.id}_${cf.key}`] = cf.default; }));

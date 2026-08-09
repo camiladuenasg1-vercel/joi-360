@@ -67,16 +67,6 @@ export const MODULE_CATALOG = [
         efectos: { app: "Determina si el perfil muestra saldo o solo identificación.", mundo: "BO: modelo de operación de Wallet para todo el mundo." },
       },
       {
-        id: "familiares", nombre: "Familiares / Sub-perfiles", icon: "group",
-        desc: "Permite vincular familiares registrados en la cuenta como sub-perfiles de este mundo.",
-        dependsOn: null,
-        campos: [
-          { key: "habilitarFamiliares", label: "Habilitar familiares", type: "switch", default: false,
-            hint: "Permite que familiares registrados en la cuenta se vinculen a este mundo." },
-        ],
-        efectos: { app: "Habilita 'Agregar familiar' en el perfil.", mundo: "BO: registro de usuarios/familiares dentro de una cuenta." },
-      },
-      {
         id: "transferencia", nombre: "Transferencia (P2P)", icon: "swap_horiz",
         desc: "Transferencia de saldo entre usuarios del mismo mundo.",
         dependsOn: { microservicio: "modelo_perfil", campo: "modelo", valor: "consumo" },
