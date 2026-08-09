@@ -9,7 +9,7 @@
  * (el mundo) — el prop `comercio` que reciben nunca se usaba dentro de su
  * cuerpo, así que se reusan tal cual, sin duplicar código.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "./hooks";
 import { worldOperatorLogin, worldOperatorLogout } from "./store";
@@ -75,6 +75,22 @@ function WorldOperadorShell({ m }) {
     if (md.id === "accesos") return accesosOn;
     return true;
   });
+
+  // Cierre de sesión definitivo por inactividad (Task #143) — mismo terminal
+  // compartido que /operador/:comercioId, mismo riesgo si alguien se aleja
+  // sin cerrar sesión.
+  useEffect(() => {
+    const INACTIVITY_MS = 5 * 60 * 1000;
+    const cerrarPorInactividad = () => {
+      worldOperatorLogout();
+      notify("Sesión cerrada por inactividad.", "info");
+    };
+    let timer = setTimeout(cerrarPorInactividad, INACTIVITY_MS);
+    const reset = () => { clearTimeout(timer); timer = setTimeout(cerrarPorInactividad, INACTIVITY_MS); };
+    const eventos = ["pointerdown", "keydown", "touchstart"];
+    eventos.forEach(e => document.addEventListener(e, reset));
+    return () => { clearTimeout(timer); eventos.forEach(e => document.removeEventListener(e, reset)); };
+  }, []);
 
   return (
     <div className="min-h-screen bg-surface-bright">

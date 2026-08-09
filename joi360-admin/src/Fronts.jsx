@@ -3219,7 +3219,7 @@ export function MerchantGate({ comercio, m }) {
         {modo === "pin" && comercio.posPin ? (
           <form onSubmit={handlePin} className="space-y-4">
             <Field label="PIN del POS (4 dígitos)">
-              <input className={`${inputCls} font-mono text-center text-2xl tracking-[0.5em]`} inputMode="numeric" maxLength={4}
+              <input type="password" className={`${inputCls} font-mono text-center text-2xl tracking-[0.5em]`} inputMode="numeric" maxLength={4}
                 value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} autoFocus />
             </Field>
             {err && <p className="text-xs text-error">{err}</p>}

@@ -5,7 +5,7 @@
  * backend ya existentes. Selector de modo: Venta QR / Confirmar Reserva /
  * Solicitud BNPL / Control de Accesos.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "./hooks";
 import { merchantLogout, rubroNombre } from "./store";
@@ -50,6 +50,25 @@ function OperadorShell({ comercio, m }) {
   // siguen viendo el tile, igual que ya asumía el backend del POS nativo.
   const banditaOn = !!walletMod && walletMod.config?.usaPulseraNfc !== false;
   const fichaOn = (m?.modulos || []).some(x => x.id === "perfil_ext" && x.enabled);
+
+  // Cierre de sesión definitivo por inactividad (Task #143) — el POS es un
+  // dispositivo compartido en el mostrador: si el operador se aleja sin
+  // cerrar sesión a propósito, cualquiera que llegue después queda con
+  // acceso a cobros y a las credenciales de este comercio hasta que alguien
+  // note el error. A los 5 minutos sin interacción real, la sesión se cierra
+  // sola y vuelve a pedir PIN/usuario.
+  useEffect(() => {
+    const INACTIVITY_MS = 5 * 60 * 1000;
+    const cerrarPorInactividad = () => {
+      merchantLogout();
+      notify("Sesión cerrada por inactividad.", "info");
+    };
+    let timer = setTimeout(cerrarPorInactividad, INACTIVITY_MS);
+    const reset = () => { clearTimeout(timer); timer = setTimeout(cerrarPorInactividad, INACTIVITY_MS); };
+    const eventos = ["pointerdown", "keydown", "touchstart"];
+    eventos.forEach(e => document.addEventListener(e, reset));
+    return () => { clearTimeout(timer); eventos.forEach(e => document.removeEventListener(e, reset)); };
+  }, []);
 
   const disponibles = MODOS.filter(md => {
     if (md.id === "bnpl") return bnplOn;
