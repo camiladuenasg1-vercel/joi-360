@@ -3095,13 +3095,34 @@ function PerfilExtTemplate({ cfg, u }) {
   const [guardarError, setGuardarError] = useState(null);
   const [dependientes, setDependientes] = useState(null);
   const [otraAlergiaPerfil, setOtraAlergiaPerfil] = useState("");
+  // Selector de perfil (Task #155) — antes esta pantalla SOLO leía/escribía la
+  // ficha médica del titular logueado. Un dependiente nunca podía tener tipo
+  // de sangre, clínica o contacto de emergencia propios: no había forma de
+  // decirle a esta pantalla "estoy viendo la ficha de mi hijo", así que
+  // guardarPerfilExtendido (que ya acepta cualquier userId) nunca se llamaba
+  // con el id del dependiente. Las alergias NO se duplican acá para un
+  // dependiente — su fuente real sigue siendo dependents.alergias, editable
+  // desde Restricciones (Task #175); acá se muestran solo de lectura.
+  const [perfilActivoId, setPerfilActivoId] = useState(userId);
 
   useEffect(() => {
     let vivo = true;
-    fetchMiPerfilExtendido(userId, worldId).then(r => { if (vivo) setPerfil(r || {}); }).catch(() => { if (vivo) setPerfil({}); });
     fetchMisDependientes(userId, worldId).then(r => { if (vivo) setDependientes(r || []); }).catch(() => { if (vivo) setDependientes([]); });
     return () => { vivo = false; };
   }, [worldId, userId]);
+
+  useEffect(() => {
+    let vivo = true;
+    setPerfil(null); setEditando(false);
+    fetchMiPerfilExtendido(perfilActivoId, worldId).then(r => { if (vivo) setPerfil(r || {}); }).catch(() => { if (vivo) setPerfil({}); });
+    return () => { vivo = false; };
+  }, [worldId, perfilActivoId]);
+
+  const perfiles = [
+    { id: userId, nombre, esTitular: true },
+    ...(dependientes || []).map(d => ({ id: d.dependent_user_id, nombre: d.nombre, esTitular: false, alergias: d.alergias })),
+  ];
+  const activo = perfiles.find(p => p.id === perfilActivoId) || perfiles[0];
 
   const abrirEdicion = () => {
     setDraft({
@@ -3115,7 +3136,7 @@ function PerfilExtTemplate({ cfg, u }) {
   const guardar = async () => {
     setGuardando(true); setGuardarError(null);
     try {
-      await guardarPerfilExtendido(userId, worldId, draft);
+      await guardarPerfilExtendido(perfilActivoId, worldId, draft);
       setPerfil(draft); setEditando(false);
     } catch (e) {
       const err = await mensajeDeError(e, "operacion_no_completada");
@@ -3132,7 +3153,9 @@ function PerfilExtTemplate({ cfg, u }) {
   // Cada campo (tipo_sangre/alergias/clinica/contacto_emergencia) es un feature
   // flag independiente en el catálogo — antes se mostraban los 4 en bloque
   // apenas camposMedicos estaba activo, sin respetar cuáles activó RedPontis.
-  const CAMPOS = CAMPOS_TODOS.filter(f => cfg.has(f.key));
+  // Para un dependiente, alergias se excluye de este formulario — es de solo
+  // lectura acá, se edita en Restricciones.
+  const CAMPOS = CAMPOS_TODOS.filter(f => cfg.has(f.key) && (activo.esTitular || f.key !== "alergias"));
   const mostrarEmergencia = cfg.has("contacto_emergencia");
 
   return (
@@ -3154,6 +3177,21 @@ function PerfilExtTemplate({ cfg, u }) {
       {medicos && (
         <SectionCard>
           <SectionHeader label="Datos médicos y emergencia" icon="medical_information" action={editando ? undefined : "Editar"} onAction={editando ? undefined : abrirEdicion}/>
+          {(dependientes?.length || 0) > 0 && (
+            <div className="px-4 pb-3 flex gap-1.5 overflow-x-auto">
+              {perfiles.map(p => (
+                <button key={p.id} onClick={()=>{ if (!editando) setPerfilActivoId(p.id); }} disabled={editando}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border tap-active transition-colors disabled:opacity-40 ${p.id===perfilActivoId?"bg-[#3525cd] text-white border-[#3525cd]":"border-[#e4e1ee] text-[#464555]"}`}>
+                  {p.esTitular ? `${p.nombre} (tú)` : p.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+          {!activo.esTitular && (
+            <p className="px-4 pb-3 text-[11px] text-[#777587]">
+              Ficha de {activo.nombre}. {activo.alergias ? `Alergias: ${activo.alergias}. ` : ""}Las alergias se editan desde Restricciones, no acá.
+            </p>
+          )}
           {perfil === null ? (
             <p className="px-4 py-4 text-sm text-[#777587]">Cargando…</p>
           ) : editando ? (
@@ -3218,7 +3256,7 @@ function PerfilExtTemplate({ cfg, u }) {
               </div>
             </div>
           ) : !CAMPOS.some(f => perfil[f.key]) && !(mostrarEmergencia && perfil.contacto_emergencia_nombre) ? (
-            <div className="px-4 pb-4"><EmptyState icon="medical_information" title="Sin datos médicos" subtitle='Toca "Editar" para registrar tus datos médicos.'/></div>
+            <div className="px-4 pb-4"><EmptyState icon="medical_information" title="Sin datos médicos" subtitle={`Toca "Editar" para registrar ${activo.esTitular ? "tus datos médicos" : `los datos médicos de ${activo.nombre}`}.`}/></div>
           ) : (
             <>
               {CAMPOS.filter(f => perfil[f.key]).map(f => (
@@ -3249,7 +3287,9 @@ function PerfilExtTemplate({ cfg, u }) {
             <div className="px-4 pb-4"><EmptyState icon="group_add" title="Sin miembros vinculados" subtitle='Agrega familiares desde el módulo "Mi Familia" para gestión conjunta en el mundo.'/></div>
           ) : dependientes.map(d => (
             <ListItem key={d.id} icon="person" iconBg="bg-[#e2dfff]" iconColor="text-[#3525cd]" title={d.nombre}
-              subtitle={d.alergias ? `Alergias: ${d.alergias}` : "Sin alergias registradas"}/>
+              subtitle={d.alergias ? `Alergias: ${d.alergias}` : "Sin alergias registradas"}
+              onClick={medicos ? () => setPerfilActivoId(d.dependent_user_id) : undefined}
+              right={medicos ? <Icon name="medical_information" size="text-sm" color="text-[#3525cd]"/> : undefined}/>
           ))}
         </SectionCard>
       )}
