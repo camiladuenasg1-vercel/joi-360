@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
-import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
+import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
@@ -3173,12 +3173,22 @@ export function ComercioFront() {
 
 export function MerchantGate({ comercio, m }) {
   const [f, setF] = useState({ usuario: "", password: "" });
+  const [pin, setPin] = useState("");
+  // El PIN solo existe si el comercio pidió unidades de POS al entregarle el
+  // panel (Task #164) — un comercio sin POS no tiene entrada rápida, entra
+  // siempre por usuario/contraseña.
+  const [modo, setModo] = useState(comercio.posPin ? "pin" : "credenciales");
   const [err, setErr] = useState("");
   const handleLogin = (e) => {
     e.preventDefault();
     if (!comercio.credenciales) { setErr("Sin credenciales asignadas. Contacta a RedPontis."); return; }
     const ok = merchantLogin(comercio.id, f.usuario, f.password);
     if (!ok) setErr("Credenciales inválidas. Solicítalas al administrador del mundo.");
+  };
+  const handlePin = (e) => {
+    e.preventDefault();
+    const ok = merchantPinLogin(comercio.id, pin);
+    if (!ok) setErr("PIN incorrecto.");
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -3191,12 +3201,29 @@ export function MerchantGate({ comercio, m }) {
             <p className="font-mono text-[10px] text-on-surface-variant uppercase">{rubroNombre(comercio.rubro)} · {m?.nombre || "JOI 360"}</p>
           </div>
         </div>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <Field label="Usuario"><input className={`${inputCls} font-mono text-xs`} value={f.usuario} onChange={e => setF({ ...f, usuario: e.target.value })} placeholder="...@comercios.joi360.pe" /></Field>
-          <Field label="Contraseña"><input className={inputCls} type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
-          {err && <p className="text-xs text-error">{err}</p>}
-          <BtnPrimary type="submit" className="w-full !bg-secondary hover:!bg-secondary/90"><Icon n="login" className="text-[18px]" /> Ingresar al panel</BtnPrimary>
-        </form>
+        {comercio.posPin && (
+          <div className="flex gap-1.5 mb-4">
+            <button onClick={() => { setModo("pin"); setErr(""); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modo === "pin" ? "bg-secondary text-white border-secondary" : "border-outline-variant text-on-surface-variant"}`}>PIN rápido</button>
+            <button onClick={() => { setModo("credenciales"); setErr(""); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modo === "credenciales" ? "bg-secondary text-white border-secondary" : "border-outline-variant text-on-surface-variant"}`}>Usuario y contraseña</button>
+          </div>
+        )}
+        {modo === "pin" && comercio.posPin ? (
+          <form onSubmit={handlePin} className="space-y-4">
+            <Field label="PIN del POS (4 dígitos)">
+              <input className={`${inputCls} font-mono text-center text-2xl tracking-[0.5em]`} inputMode="numeric" maxLength={4}
+                value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} autoFocus />
+            </Field>
+            {err && <p className="text-xs text-error">{err}</p>}
+            <BtnPrimary type="submit" disabled={pin.length !== 4} className="w-full !bg-secondary hover:!bg-secondary/90"><Icon n="dialpad" className="text-[18px]" /> Entrar al POS</BtnPrimary>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Field label="Usuario"><input className={`${inputCls} font-mono text-xs`} value={f.usuario} onChange={e => setF({ ...f, usuario: e.target.value })} placeholder="...@comercios.joi360.pe" /></Field>
+            <Field label="Contraseña"><input className={inputCls} type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
+            {err && <p className="text-xs text-error">{err}</p>}
+            <BtnPrimary type="submit" className="w-full !bg-secondary hover:!bg-secondary/90"><Icon n="login" className="text-[18px]" /> Ingresar al panel</BtnPrimary>
+          </form>
+        )}
         <p className="text-center text-xs text-on-surface-variant mt-4">Panel exclusivo para el operador del comercio. ¿Sin acceso? Contacta al administrador del mundo <b>{m?.nombre}</b>.</p>
       </div>
     </div>

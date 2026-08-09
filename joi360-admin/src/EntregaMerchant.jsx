@@ -1,11 +1,15 @@
 import React, { useState } from "react";
-import { update, generarPassword, rubroNombre } from "./store";
+import { update, generarPassword, generarPin4, generarCodigoComercio, rubroNombre } from "./store";
 import { Drawer, BtnPrimary, BtnOutline, Field, inputCls, Icon, notify } from "./ui";
 
+// usaPosOperador: el PIN de 4 dígitos solo tiene sentido si el comercio de
+// verdad va a operar un mostrador (pidió unidades de POS) — un comercio sin
+// POS no necesita una entrada rápida de caja.
 export function EntregaMerchantDrawer({ comercio, m, open, onClose }) {
   const [cred, setCred] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [emailEntrega, setEmailEntrega] = useState("");
+  const usaPosOperador = +comercio.pos > 0;
 
   React.useEffect(() => {
     if (open) {
@@ -14,6 +18,8 @@ export function EntregaMerchantDrawer({ comercio, m, open, onClose }) {
       setCred(comercio.credenciales || {
         usuario: `${(comercio.nombre||"").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,12)}@comercios.${((m.codigo||m.id)||"").toLowerCase().replace(/[^a-z0-9]/g,"")}.joi360.pe`,
         password: generarPassword(),
+        codigo: comercio.codigo || generarCodigoComercio(comercio.nombre),
+        posPin: usaPosOperador ? (comercio.posPin || generarPin4()) : null,
       });
     }
   }, [open, comercio.id]);
@@ -34,11 +40,12 @@ Tu panel de operaciones JOI 360 ya está listo para ${comercio.nombre} en el mun
 
 Accede con las siguientes credenciales:
 
+🏷️ Código de comercio: ${cred.codigo}
 🔗 URL del panel (dashboard completo): ${url}
 📱 URL del POS Operador (App Operador / Tap2Phone, cobro día a día): ${urlOperador}
 👤 Usuario: ${cred.usuario}
 🔑 Contraseña: ${cred.password}
-
+${cred.posPin ? `🔢 PIN rápido del POS Operador (para el mostrador, sin escribir usuario/contraseña cada turno): ${cred.posPin}\n` : ""}
 Desde tu panel podrás:
 • Ver el resumen de ventas del día por canal de cobro
 • Generar QR de cobro dinámico o activar el lector Bandita NFC
@@ -59,7 +66,9 @@ Equipo RedPontis · JOI 360`;
     update(s => {
       const c = s.comercios.find(x => x.id === comercio.id);
       if (c) {
-        c.credenciales = cred;
+        c.credenciales = { usuario: cred.usuario, password: cred.password };
+        c.codigo = cred.codigo;
+        c.posPin = cred.posPin;
         c.entregado = true;
         c.fechaEntrega = Date.now();
         c.emailEntrega = emailEntrega;
@@ -152,6 +161,14 @@ Equipo RedPontis · JOI 360`;
             <Icon n="key" className="text-primary text-[18px]" /> Credenciales de acceso al panel
           </h4>
           <div className="space-y-4">
+            <Field label="Código de comercio" hint="Identificador legible del comercio — no cambia, sirve como referencia rápida.">
+              <div className="flex gap-2">
+                <input className={`${inputCls} font-mono text-xs`} readOnly value={cred.codigo} />
+                <BtnOutline className="!px-3 flex-shrink-0" onClick={() => copiar(cred.codigo, "Código de comercio")}>
+                  <Icon n="content_copy" className="text-[16px]" />
+                </BtnOutline>
+              </div>
+            </Field>
             <Field label="URL del Panel (link externo)">
               <div className="flex gap-2">
                 <input className={`${inputCls} font-mono text-xs`} readOnly value={url} />
@@ -186,6 +203,24 @@ Equipo RedPontis · JOI 360`;
                 </BtnOutline>
               </div>
             </Field>
+            {usaPosOperador && (
+              <Field label="PIN rápido del POS Operador" hint="Para entrar al POS Operador con solo 4 dígitos en el mostrador, sin escribir usuario/contraseña en cada turno.">
+                <div className="flex gap-2">
+                  <input className={`${inputCls} font-mono text-xs`} value={cred.posPin}
+                    readOnly={yaEntregado}
+                    onChange={e => !yaEntregado && setCred({ ...cred, posPin: e.target.value.replace(/\D/g,"").slice(0,4) })} />
+                  {!yaEntregado && (
+                    <BtnOutline className="!px-3 flex-shrink-0" title="Regenerar PIN"
+                      onClick={() => { setCred({ ...cred, posPin: generarPin4() }); notify("PIN regenerado.", "info"); }}>
+                      <Icon n="autorenew" className="text-[16px]" />
+                    </BtnOutline>
+                  )}
+                  <BtnOutline className="!px-3 flex-shrink-0" onClick={() => copiar(cred.posPin, "PIN")}>
+                    <Icon n="content_copy" className="text-[16px]" />
+                  </BtnOutline>
+                </div>
+              </Field>
+            )}
           </div>
         </section>
 

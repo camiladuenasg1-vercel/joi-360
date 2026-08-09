@@ -1125,6 +1125,20 @@ export function generarPassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
+// PIN de 4 dígitos para el acceso rápido al POS Operador (Task #164) — mismo
+// propósito que worlds.pos_pin, pero por comercio: en un mostrador con
+// rotación de personal, pedir que tipeen usuario+contraseña en cada turno no
+// es realista.
+export function generarPin4() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+// Código legible de comercio — se muestra en el admin y sirve como referencia
+// rápida para RedPontis/el mundo, independiente de las credenciales de login.
+export function generarCodigoComercio(nombre) {
+  const slug = (nombre || "comercio").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "COM";
+  const suf = String(Math.floor(100 + Math.random() * 900));
+  return `${slug}-${suf}`;
+}
 
 export function ejecutarEntrega(mundoId, credenciales) {
   update(st => {
@@ -1767,6 +1781,18 @@ export function merchantLogin(comercioId, usuario, password) {
   const c = load().comercios.find(x => x.id === comercioId);
   if (c?.credenciales?.usuario === usuario && c?.credenciales?.password === password) {
     update(st => { st.merchantSession = { comercioId, usuario }; });
+    return true;
+  }
+  return false;
+}
+// Entrada rápida por PIN (Task #164) — mismo merchantSession que el login
+// completo, así que OperadorApp.jsx no necesita saber por cuál camino entró.
+// Solo existe si el comercio tiene posPin generado (se genera al crearlo,
+// solo cuando pidió unidades de POS).
+export function merchantPinLogin(comercioId, pin) {
+  const c = load().comercios.find(x => x.id === comercioId);
+  if (c?.posPin && String(pin).trim() === String(c.posPin).trim()) {
+    update(st => { st.merchantSession = { comercioId, usuario: c.credenciales?.usuario || null }; });
     return true;
   }
   return false;

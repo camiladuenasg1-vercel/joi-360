@@ -1926,6 +1926,7 @@ function ActoresMerchants({ m, comercios }) {
           <thead>
             <tr className="bg-surface-container-low border-b border-outline-variant font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
               <th className="p-4 font-medium">Comercio</th>
+              <th className="p-4 font-medium">Código</th>
               <th className="p-4 font-medium">Rubro</th>
               <th className="p-4 font-medium">Tarifa</th>
               <th className="p-4 font-medium">Hardware asignado</th>
@@ -1937,13 +1938,14 @@ function ActoresMerchants({ m, comercios }) {
           </thead>
           <tbody className="divide-y divide-outline-variant/60">
             {comercios.length === 0
-              ? <tr><td colSpan="8" className="p-8 text-center text-on-surface-variant text-sm">Aún no hay comercios cargados en este mundo.</td></tr>
+              ? <tr><td colSpan="9" className="p-8 text-center text-on-surface-variant text-sm">Aún no hay comercios cargados en este mundo.</td></tr>
               : comercios.map(c => {
                 const merchantId = c.supabaseId || c.id;
                 const hw = hardwareDe(merchantId);
                 return (
                 <tr key={c.id} className="hover:bg-surface-container-low transition-colors">
                   <td className="p-4 font-semibold">{c.nombre}</td>
+                  <td className="p-4 font-mono text-xs text-on-surface-variant">{c.codigo || "—"}</td>
                   <td className="p-4 text-on-surface-variant">{rubroNombre(c.rubro)}</td>
                   <td className="p-4 font-mono text-xs">{c.tarifa}% + {m.moneda} {Number(c.fijoTx||0).toFixed(2)}</td>
                   <td className="p-4">
