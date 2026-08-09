@@ -651,10 +651,10 @@ export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) 
 // ── Solicitud de pulsera NFC (antes: botones decorativos sin backend) ─────
 // nombre es opcional pero recomendado: sin él, RedPontis solo ve el user_id
 // crudo en su cola de solicitudes — con él, ve el nombre real de quien pidió.
-export async function solicitarBanditaNfc(worldId, userId, nombre = null) {
+export async function solicitarBanditaNfc(worldId, userId, nombre = null, universal = false) {
   await rest("nfc_requests", {
     method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ world_id: worldId, user_id: userId, status: "pendiente", nombre }),
+    body: JSON.stringify({ world_id: worldId, user_id: userId, status: "pendiente", nombre, universal }),
   });
 }
 export async function fetchMiSolicitudNfc(worldId, userId) {

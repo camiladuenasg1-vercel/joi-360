@@ -1415,21 +1415,36 @@ export async function buscarNfcBandPorCodigo(codigo, worldId) {
 // antes ese estado dependía de que alguien lo marcara a mano en el admin,
 // pudiendo quedar "entregada" sin que la pulsera se hubiera vinculado nunca,
 // o viceversa.
+// Bandita universal (Task #168): si la solicitud que se está resolviendo
+// vino marcada universal:true (el titular la pidió para usar en todos sus
+// mundos, no solo este), la banda se vincula SIN mundo fijo (world_id null)
+// — bandResolver.js ya deja pasar una banda sin world_id en cualquier mundo,
+// y shop-charge.js ya debita la wallet del mundo del lector que la lee, así
+// que no hace falta tocar nada más para que funcione cross-mundo.
 export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null, worldId = null) {
   const now = new Date();
   const vence = vigenciaMeses ? new Date(now.setMonth(now.getMonth() + Number(vigenciaMeses))).toISOString() : null;
+
+  let pendienteId = null, universal = false;
+  if (worldId) {
+    const pendientes = await rest(`nfc_requests?world_id=eq.${worldId}&user_id=eq.${userId}&status=eq.pendiente&select=id,universal&order=created_at.asc&limit=1`).catch(() => []);
+    pendienteId = pendientes?.[0]?.id || null;
+    universal = pendientes?.[0]?.universal === true;
+  }
+
   await rest(`nfc_bands?id=eq.${bandId}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ estado: "activa", linked_user_id: userId, activada_at: new Date().toISOString(), vence_at: vence }),
+    body: JSON.stringify({
+      estado: "activa", linked_user_id: userId, activada_at: new Date().toISOString(), vence_at: vence,
+      ...(universal ? { world_id: null } : {}),
+    }),
   });
-  if (worldId) {
-    const pendientes = await rest(`nfc_requests?world_id=eq.${worldId}&user_id=eq.${userId}&status=eq.pendiente&select=id&order=created_at.asc&limit=1`).catch(() => []);
-    if (pendientes?.[0]?.id) {
-      await rest(`nfc_requests?id=eq.${pendientes[0].id}`, {
-        method: "PATCH", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ status: "entregada" }),
-      }).catch(() => {});
-    }
+
+  if (pendienteId) {
+    await rest(`nfc_requests?id=eq.${pendienteId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "entregada" }),
+    }).catch(() => {});
   }
 }
 

@@ -149,10 +149,16 @@ function WalletTemplate({ cfg, u }) {
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mundoId, JSON.stringify(Object.fromEntries(beneficiarios.map(b => [b.id, solicitudesNfc[b.id]?.status])))]);
-  const pedirBandita = async (beneficiarioId, beneficiarioNombre) => {
+  // Bandita universal (Task #168): solo tiene sentido para la cuenta
+  // principal — un dependiente vive en un único mundo, así que su bandita
+  // siempre queda scoped a ese mundo. El backend (bands-link) discrimina la
+  // wallet correcta según el mundo del lector físico que la lee; acá solo
+  // se marca la intención al solicitarla.
+  const [universalTitular, setUniversalTitular] = useState(false);
+  const pedirBandita = async (beneficiarioId, beneficiarioNombre, universal = false) => {
     setSolicitandoNfcId(beneficiarioId);
     try {
-      await solicitarBanditaNfc(mundoId, beneficiarioId, beneficiarioNombre || null);
+      await solicitarBanditaNfc(mundoId, beneficiarioId, beneficiarioNombre || null, universal);
       const r = await fetchMiSolicitudNfc(mundoId, beneficiarioId);
       setSolicitudesNfc(prev => ({ ...prev, [beneficiarioId]: r }));
       showToast({ titulo: "Solicitud enviada", mensaje: "RedPontis te avisará cuando la pulsera esté lista para recoger." }, "success");
@@ -366,12 +372,18 @@ function WalletTemplate({ cfg, u }) {
                     )}
                   </div>
                   {(solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
-                    <button onClick={() => pedirBandita(b.id, nombreParaAcciones)} disabled={solicitandoNfcId === b.id}
+                    <button onClick={() => pedirBandita(b.id, nombreParaAcciones, b.esTitular && universalTitular)} disabled={solicitandoNfcId === b.id}
                       className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
                       {solicitandoNfcId === b.id ? "Enviando…" : (solicitud?.status === "entregada" ? "Renovar" : "Solicitar")}
                     </button>
                   )}
                 </div>
+                {b.esTitular && (solicitud === null || solicitud?.status === "rechazada") && (
+                  <label className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 flex items-start gap-2 text-[10px] text-[#777587] cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={universalTitular} onChange={e=>setUniversalTitular(e.target.checked)}/>
+                    <span>Quiero usarla para consumir en <b>todos los mundos</b> a los que pertenezco, no solo {cfg.mundo.nombre}.</span>
+                  </label>
+                )}
                 {solicitud?.status === "entregada" && !vencida && (
                   <button onClick={() => reportarPerdida(b.id, nombreParaAcciones)} disabled={reportandoPerdidaId === b.id}
                     className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 w-full flex items-center gap-1.5 text-[11px] font-semibold text-red-600 disabled:opacity-50">
