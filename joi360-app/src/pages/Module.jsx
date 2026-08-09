@@ -756,7 +756,7 @@ function RestriccionesTemplate({ cfg, u }) {
   const [dependientes, setDependientes] = useState(null); // [{...dependent, balance, gastadoHoy}]
   const [addingChild, setAddingChild] = useState(() => new URLSearchParams(location.search).get("agregar") === "1");
   const [pasoSuscripcion, setPasoSuscripcion] = useState(false); // paso 2: confirmar cobro antes de crear
-  const [nuevo, setNuevo] = useState({ nombre: "", dni: "", alergias: [] });
+  const [nuevo, setNuevo] = useState({ nombre: "", dni: "", alias: "", alergias: [] });
   const [otraAlergiaNueva, setOtraAlergiaNueva] = useState(""); // "+ Otra" del catálogo fijo de alergias, al crear un dependiente
   const [creando, setCreando] = useState(false);
   const [saldoGuardian, setSaldoGuardian] = useState(null);
@@ -781,6 +781,7 @@ function RestriccionesTemplate({ cfg, u }) {
   const [editandoPerfilId, setEditandoPerfilId] = useState(null);
   const [editNombre, setEditNombre] = useState("");
   const [editDni, setEditDni] = useState("");
+  const [editAlias, setEditAlias] = useState("");
   const [guardandoPerfil, setGuardandoPerfil] = useState(false);
   const [perfilError, setPerfilError] = useState(null);
   // Restricciones granulares por dependiente (Task #173) — antes horario y
@@ -863,8 +864,8 @@ function RestriccionesTemplate({ cfg, u }) {
   const crear = async () => {
     setCreando(true); setDependienteError(null);
     try {
-      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.dni.trim(), nuevo.alergias.join(", "), cuotaSuscripcion || 0);
-      setNuevo({ nombre: "", dni: "", alergias: [] });
+      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.dni.trim(), nuevo.alergias.join(", "), cuotaSuscripcion || 0, nuevo.alias.trim() || null);
+      setNuevo({ nombre: "", dni: "", alias: "", alergias: [] });
       setAddingChild(false); setPasoSuscripcion(false); setPlanSeleccionadoId(null);
       setReload(k => k + 1);
     } catch (e) {
@@ -1002,6 +1003,11 @@ function RestriccionesTemplate({ cfg, u }) {
           <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
             placeholder="8 dígitos" inputMode="numeric" value={nuevo.dni} onChange={e=>setNuevo(n=>({...n, dni: e.target.value.replace(/\D/g,"")}))}/>
         </div>
+        <div>
+          <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alias (opcional)</label>
+          <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+            placeholder="Ej. Anita — cómo le dicen" value={nuevo.alias} onChange={e=>setNuevo(n=>({...n, alias: e.target.value}))}/>
+        </div>
         {registroAlergias && (
           <div>
             <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
@@ -1079,15 +1085,15 @@ function RestriccionesTemplate({ cfg, u }) {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-black text-[#1b1b24]">{c.nombre}</p>
+                    <p className="font-black text-[#1b1b24]">{c.alias || c.nombre}</p>
                     {editandoPerfilId !== c.dependent_user_id && (
-                      <button onClick={()=>{setEditandoPerfilId(c.dependent_user_id); setEditNombre(c.nombre); setEditDni(c.dni||""); setPerfilError(null);}}
+                      <button onClick={()=>{setEditandoPerfilId(c.dependent_user_id); setEditNombre(c.nombre); setEditDni(c.dni||""); setEditAlias(c.alias||""); setPerfilError(null);}}
                         className="w-5 h-5 flex items-center justify-center tap-active flex-shrink-0">
                         <Icon name="edit" size="text-xs" color="text-[#777587]"/>
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-[#777587] font-mono">{c.dni ? `DNI ${c.dni}` : c.dependent_user_id.slice(0,12)}</p>
+                  <p className="text-xs text-[#777587] font-mono">{c.alias ? c.nombre : ""}{c.alias && c.dni ? " · " : ""}{c.dni ? `DNI ${c.dni}` : (c.alias ? "" : c.dependent_user_id.slice(0,12))}</p>
                   {registroAlergias && (
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
@@ -1117,13 +1123,18 @@ function RestriccionesTemplate({ cfg, u }) {
                   <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
                     placeholder="8 dígitos" inputMode="numeric" value={editDni} onChange={e=>setEditDni(e.target.value.replace(/\D/g,""))}/>
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Alias (opcional)</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                    placeholder="Cómo le dicen" value={editAlias} onChange={e=>setEditAlias(e.target.value)}/>
+                </div>
                 {perfilError && <p className="text-xs text-red-600">{perfilError}</p>}
                 <div className="flex gap-2">
                   <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
                   <button disabled={guardandoPerfil || !editNombre.trim()} onClick={async()=>{
                     setGuardandoPerfil(true); setPerfilError(null);
                     try {
-                      await actualizarDependientePerfilRemote(c.dependent_user_id, { nombre: editNombre.trim(), dni: editDni.trim() });
+                      await actualizarDependientePerfilRemote(c.dependent_user_id, { nombre: editNombre.trim(), dni: editDni.trim(), alias: editAlias.trim() });
                       setEditandoPerfilId(null);
                       setReload(k=>k+1);
                     } catch { setPerfilError("No se pudo guardar. Intenta de nuevo."); } finally { setGuardandoPerfil(false); }

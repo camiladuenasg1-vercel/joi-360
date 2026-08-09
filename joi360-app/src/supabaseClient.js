@@ -425,13 +425,13 @@ export async function sincronizarCicloBNPL(contratos) {
 export async function fetchMisDependientes(guardianUserId, worldId) {
   return rest(`dependents?guardian_user_id=eq.${guardianUserId}&world_id=eq.${worldId}&select=*&order=created_at`);
 }
-export async function crearDependienteRemote(worldId, guardianUserId, nombre, dni, alergias, cuotaSuscripcion = 0) {
+export async function crearDependienteRemote(worldId, guardianUserId, nombre, dni, alergias, cuotaSuscripcion = 0, alias = null) {
   // wallets.user_id es tipo uuid — el id del dependiente debe ser un UUID puro,
   // igual que getSyntheticUserId(), para poder tener su propia fila en wallets.
   const dependentUserId = crypto.randomUUID();
   const rows = await rest("dependents", {
     method: "POST", headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, dni: dni || null, alergias: alergias || null }),
+    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, dni: dni || null, alergias: alergias || null, alias: alias || null }),
   });
   const moneda = await monedaDeMundo(worldId);
   await rest("wallets?on_conflict=user_id,world_id", {
@@ -463,10 +463,10 @@ export async function actualizarDependienteAlergiasRemote(dependentUserId, alerg
 // Editar nombre/DNI de un dependiente ya creado (Task #161) — antes solo se
 // fijaban una vez al crearlo, sin forma de corregir un typo o un DNI mal
 // tecleado después.
-export async function actualizarDependientePerfilRemote(dependentUserId, { nombre, dni }) {
+export async function actualizarDependientePerfilRemote(dependentUserId, { nombre, dni, alias }) {
   return rest(`dependents?dependent_user_id=eq.${dependentUserId}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ nombre, dni: dni || null }),
+    body: JSON.stringify({ nombre, dni: dni || null, alias: alias || null }),
   });
 }
 
