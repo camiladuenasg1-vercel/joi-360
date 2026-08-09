@@ -67,24 +67,19 @@ export const MODULE_CATALOG = [
         efectos: { app: "Determina si el perfil muestra saldo o solo identificación.", mundo: "BO: modelo de operación de Wallet para todo el mundo." },
       },
       {
+        // Auditoría Task #133: "Habilitar P2P" acá adentro era un segundo
+        // interruptor que aparentaba lo mismo que p2pEnabled (configField de
+        // arriba, el que sí lee la app en Module.jsx) — se retiró para dejar
+        // uno solo. maxPorTx/maxPorDia SÍ son nuevos (no existían arriba) y
+        // ahora se aplican de verdad en el P2P real (ver transferirP2PRemote).
         id: "transferencia", nombre: "Transferencia (P2P)", icon: "swap_horiz",
-        desc: "Transferencia de saldo entre usuarios del mismo mundo.",
+        desc: "Límites de transferencia de saldo entre usuarios del mismo mundo. Para prender/apagar el P2P en sí, usa \"Habilitar transferencias\" en Parámetros.",
         dependsOn: { microservicio: "modelo_perfil", campo: "modelo", valor: "consumo" },
         campos: [
-          { key: "enabled", label: "Habilitar P2P", type: "switch", default: true },
           { key: "maxPorTx", label: "Máximo por transacción", type: "currency", default: null, nullable: true, nullLabel: "Sin límite" },
           { key: "maxPorDia", label: "Máximo por día", type: "currency", default: null, nullable: true, nullLabel: "Sin límite" },
         ],
-        efectos: { app: "Botón Transferir + límites aplicados.", mundo: "Ver transferencias entre usuarios." },
-      },
-      {
-        id: "medios", nombre: "Habilitar Medios", icon: "contactless",
-        desc: "Decide si este mundo usa pulseras NFC además de QR para identificar y pagar.",
-        dependsOn: null,
-        campos: [
-          { key: "usaPulsera", label: "Usar pulseras NFC en este mundo", type: "switch", default: false },
-        ],
-        efectos: { mundo: "Inventario de pulseras: total / vinculadas / disponibles / bloqueadas.", pos: "Funcionalidad de vinculación de pulsera.", app: "Botón 'Solicitar bandita NFC'." },
+        efectos: { app: "Límites aplicados al confirmar una transferencia.", mundo: "Ver transferencias entre usuarios." },
       },
     ],
   },
@@ -108,17 +103,11 @@ export const MODULE_CATALOG = [
     // ── Microservicios de Comercios (storytelling de flujo real) ────────
     // Mismo patrón que Wallet: cada uno con campos propios y dependencia
     // explícita. Convive con `servicios`/`configFields` de arriba.
+    // Auditoría Task #133: existía acá un microservicio "Plataforma Comercio"
+    // (habilitarBackoffice) que no se leía en ningún lado, ni siquiera del
+    // lado admin — el directorio real de comercios (useMerchantsLive) no lo
+    // chequea. Se retiró, mismo criterio que "Familiares" en Wallet (#132).
     microservicios: [
-      {
-        id: "plataforma", nombre: "Plataforma Comercio", icon: "storefront",
-        desc: "Interruptor a nivel mundo: habilita el BackOffice de gestión a todos los comercios registrados en este mundo.",
-        dependsOn: null,
-        campos: [
-          { key: "habilitarBackoffice", label: "Habilitar BackOffice a todos los comercios", type: "switch", default: true,
-            hint: "Cada comercio incorporado recibe su propio panel de gestión al activarse." },
-        ],
-        efectos: { mundo: "BO: registro de comercios con acceso propio.", app: "Directorio de comercios del mundo." },
-      },
       {
         id: "hardware", nombre: "Hardware", icon: "point_of_sale",
         desc: "Inventario de equipos físicos del ecosistema: tótems, POS y ticketeras. RedPontis registra el stock; el mundo asigna a comercios específicos.",
@@ -173,7 +162,11 @@ export const MODULE_CATALOG = [
     pricing: { modelo: "transaccional", porTx: 0.3, setup: 0, moneda: "PEN" },
     configFields: [
       { key: "horarioOperativo", label: "Horario de operación del POS", type: "timerange", default: null, nullable: true, nullLabel: "Sin restricción horaria (24/7)" },
-      { key: "anulacionHasta", label: "Horas máximas para anular una transacción", type: "number", default: 24, nullable: true, nullLabel: "Sin límite para anulaciones" },
+      // Auditoría Task #133: existía acá "Horas máximas para anular una
+      // transacción" (anulacionHasta) — no hay ningún flujo de "anular venta"
+      // construido todavía (ni en el POS ni en joi-pos-backend), así que el
+      // campo no tenía nada que aplicar. Se retira hasta que exista una
+      // función real de anulación de venta a la que atarlo.
     ],
     posiblesIngresos: ["Comisión por transacción"],
   },

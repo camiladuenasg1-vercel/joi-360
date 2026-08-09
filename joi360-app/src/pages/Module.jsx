@@ -13,7 +13,7 @@ import {
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
-  transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
+  transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
 } from "../supabaseClient.js";
@@ -184,10 +184,26 @@ function WalletTemplate({ cfg, u }) {
     } finally { setReportandoPerdidaId(null); }
   };
 
+  // Límites de Transferencia (P2P) que el mundo fija en el microservicio del
+  // mismo nombre — antes existían solo en el catálogo del admin, nada acá
+  // los leía ni los aplicaba (Task #133).
+  const maxPorTxP2P = cfg.config.transferencia_maxPorTx;
+  const maxPorDiaP2P = cfg.config.transferencia_maxPorDia;
   const enviarP2P = async () => {
     const monto = +p2pMonto;
     if (!(monto > 0) || !p2pCodigo.trim()) return;
     setP2pSending(true); setP2pResult(null);
+    if (maxPorTxP2P != null && monto > +maxPorTxP2P) {
+      setP2pResult({ ok: false, mensaje: `Este mundo permite transferir hasta S/ ${(+maxPorTxP2P).toFixed(2)} por transacción.` });
+      setP2pSending(false); return;
+    }
+    if (maxPorDiaP2P != null) {
+      const enviadoHoy = await fetchP2PEnviadoHoy(myCode, mundoId).catch(() => 0);
+      if (enviadoHoy + monto > +maxPorDiaP2P) {
+        setP2pResult({ ok: false, mensaje: `Ya transferiste S/ ${enviadoHoy.toFixed(2)} hoy — el límite diario de este mundo es S/ ${(+maxPorDiaP2P).toFixed(2)}.` });
+        setP2pSending(false); return;
+      }
+    }
     try {
       const r = await transferirP2PRemote(myCode, p2pCodigo.trim(), mundoId, monto);
       if (!r.ok) {
@@ -298,6 +314,13 @@ function WalletTemplate({ cfg, u }) {
                       <input className="flex-1 text-xl font-black text-[#1b1b24] bg-transparent py-3 outline-none" type="number"
                         value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                     </div>
+                    {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
+                      <p className="text-[10px] text-[#777587] mt-1.5">
+                        {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
+                        {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
+                        {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
+                      </p>
+                    )}
                   </div>
                   {p2pResult && !p2pResult.ok && (
                     <p className="text-xs text-red-600">{p2pResult.mensaje}</p>

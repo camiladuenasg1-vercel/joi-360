@@ -974,6 +974,17 @@ export async function fetchWalletBalance(userId, worldId) {
 
 const TIPO_LABEL = { recarga: "Recarga", compra: "Pago", transferencia_p2p: "Transferencia", devolucion: "Devolución", cashback: "Cashback", puntos: "Puntos" };
 
+// Auditoría Task #133: el mundo podía fijar "Máximo por transacción"/
+// "Máximo por día" en Transferencia (P2P) desde el admin, pero nada en la
+// app lo leía ni lo aplicaba — un límite que existía solo en el papel. El
+// de por-transacción se valida contra el monto tipeado; este trae lo ya
+// enviado hoy para poder validar el acumulado diario antes de confirmar.
+export async function fetchP2PEnviadoHoy(userId, worldId) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const rows = await rest(`transactions?wallet_id=eq.${wallet.id}&type=eq.transferencia_p2p&reference=like.*-envio&created_at=gte.${hoy.toISOString()}&select=amount`);
+  return (rows || []).reduce((a, r) => a + (+r.amount || 0), 0);
+}
 export async function fetchTxHistory(userId, worldId) {
   const wallet = await getOrCreateWallet(userId, worldId);
   const rows = await rest(`transactions?wallet_id=eq.${wallet.id}&select=*&order=created_at.desc&limit=20`);
