@@ -10,6 +10,7 @@ import {
   errorControlado, logErrorControlado, mensajeDeError, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
   fetchMiPerfilExtendido, guardarPerfilExtendido,
   fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, fetchDependienteBalance,
+  fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
   transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
@@ -755,6 +756,40 @@ function RestriccionesTemplate({ cfg, u }) {
   const [editandoAlergiasId, setEditandoAlergiasId] = useState(null); // dependent_user_id en edición
   const [editAlergiasArr, setEditAlergiasArr] = useState([]);
   const [guardandoAlergias, setGuardandoAlergias] = useState(false);
+  // Restricciones granulares por dependiente (Task #173) — antes horario y
+  // límite diario eran un único valor que RedPontis fijaba para TODO el
+  // mundo; ahora el tutor los configura por cada dependiente, y puede elegir
+  // qué productos del catálogo real del comercio bloquearle.
+  const [restriccionesAbiertoId, setRestriccionesAbiertoId] = useState(null);
+  const [restriccionesDraft, setRestriccionesDraft] = useState(null);
+  const [catalogoMundo, setCatalogoMundo] = useState(null);
+  const [guardandoRestricciones, setGuardandoRestricciones] = useState(false);
+
+  const abrirRestricciones = async (dep) => {
+    setRestriccionesAbiertoId(dep.dependent_user_id);
+    if (catalogoMundo === null) {
+      fetchProductosMundoLive(worldId).then(setCatalogoMundo).catch(() => setCatalogoMundo([]));
+    }
+    const actual = await fetchRestriccionesDependiente(dep.dependent_user_id, worldId).catch(() => null);
+    setRestriccionesDraft({
+      horario_inicio: actual?.horario_inicio || "", horario_fin: actual?.horario_fin || "",
+      limite_diario: actual?.limite_diario != null ? String(actual.limite_diario) : "",
+      productos_bloqueados: actual?.productos_bloqueados || [],
+    });
+  };
+  const guardarRestriccionesBtn = async (dep) => {
+    setGuardandoRestricciones(true);
+    try {
+      await guardarRestriccionesDependiente(worldId, dep.dependent_user_id, guardianId, {
+        horario_inicio: restriccionesDraft.horario_inicio || null,
+        horario_fin: restriccionesDraft.horario_fin || null,
+        limite_diario: restriccionesDraft.limite_diario === "" ? null : +restriccionesDraft.limite_diario,
+        productos_bloqueados: restriccionesDraft.productos_bloqueados,
+      });
+      setRestriccionesAbiertoId(null);
+      setReload(k => k + 1);
+    } catch {} finally { setGuardandoRestricciones(false); }
+  };
 
   // toISOString() adelanta la fecha en horario de tarde/noche en Perú (UTC-5) —
   // debe coincidir con la fecha local que crearReservaMenu usa para guardar
@@ -766,13 +801,17 @@ function RestriccionesTemplate({ cfg, u }) {
     let vivo = true;
     fetchMisDependientes(guardianId, worldId).then(async rows => {
       if (!vivo) return;
+      const restricciones = await fetchRestriccionesDependientesBulk((rows || []).map(d => d.dependent_user_id), worldId).catch(() => []);
+      const porId = new Map((restricciones || []).map(r => [r.dependent_user_id, r]));
       const conSaldo = await Promise.all((rows || []).map(async d => {
+        const restriccion = porId.get(d.dependent_user_id) || null;
+        const limiteEfectivo = restriccion?.limite_diario ?? limiteDiarioPerfil;
         const [balance, reservasHoy] = await Promise.all([
           fetchDependienteBalance(d.dependent_user_id, worldId),
-          limiteDiarioPerfil != null ? fetchReservasDeFecha(d.dependent_user_id, worldId, hoyISO).catch(() => []) : Promise.resolve([]),
+          limiteEfectivo != null ? fetchReservasDeFecha(d.dependent_user_id, worldId, hoyISO).catch(() => []) : Promise.resolve([]),
         ]);
         const gastadoHoy = (reservasHoy || []).reduce((a, r) => a + (+r.monto || 0), 0);
-        return { ...d, balance, gastadoHoy };
+        return { ...d, balance, gastadoHoy, restriccion, limiteEfectivo };
       }));
       setDependientes(conSaldo);
     }).catch(() => { if (vivo) setDependientes([]); });
@@ -917,10 +956,10 @@ function RestriccionesTemplate({ cfg, u }) {
         <ConfigBanner icon="approval" message={`Transacciones sobre S/ ${montoAprobacionPadre} requieren tu aprobación antes de procesarse.`} color="blue" />
       )}
       {horarioConsumo && (
-        <ConfigBanner icon="schedule" message={`Consumo permitido: ${horarioConsumo}. Fuera de este horario los pagos están bloqueados.`} color="amber" />
+        <ConfigBanner icon="schedule" message={`Horario por defecto del mundo: ${horarioConsumo}. Puedes darle a cada dependiente su propio horario desde "Configurar restricciones" en su tarjeta.`} color="amber" />
       )}
       {limiteDiarioPerfil != null && (
-        <ConfigBanner icon="speed" message={`Límite diario por dependiente: S/ ${Number(limiteDiarioPerfil).toFixed(2)}. Si un dependiente intenta superarlo (ej. en Menú), la compra se bloquea y te llega una alerta aquí.`} color="blue" />
+        <ConfigBanner icon="speed" message={`Límite diario por defecto: S/ ${Number(limiteDiarioPerfil).toFixed(2)}. Puedes darle a cada dependiente su propio límite y bloquearle productos específicos del catálogo desde "Configurar restricciones".`} color="blue" />
       )}
 
       <div className="flex justify-between items-center">
@@ -1009,22 +1048,78 @@ function RestriccionesTemplate({ cfg, u }) {
                 </div>
               </div>
             )}
-            <div className={`grid gap-2 ${limiteDiarioPerfil != null ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-2 ${c.limiteEfectivo != null ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="bg-[#f0ecf9] p-2.5 rounded-xl text-center">
                 <p className="text-[10px] font-bold text-[#777587] uppercase">Saldo</p>
                 <p className="font-black text-[#1b1b24] text-sm mt-0.5">S/ {(c.balance||0).toFixed(2)}</p>
               </div>
               <div className="bg-[#f0ecf9] p-2.5 rounded-xl text-center">
                 <p className="text-[10px] font-bold text-[#777587] uppercase">Horario</p>
-                <p className="font-black text-[#1b1b24] text-[10px] mt-0.5">{horarioConsumo||"Sin límite"}</p>
+                <p className="font-black text-[#1b1b24] text-[10px] mt-0.5">
+                  {c.restriccion?.horario_inicio ? `${c.restriccion.horario_inicio}-${c.restriccion.horario_fin}` : horarioConsumo || "Sin límite"}
+                </p>
               </div>
-              {limiteDiarioPerfil != null && (
-                <div className={`p-2.5 rounded-xl text-center ${c.gastadoHoy >= limiteDiarioPerfil ? "bg-red-50" : "bg-[#f0ecf9]"}`}>
+              {c.limiteEfectivo != null && (
+                <div className={`p-2.5 rounded-xl text-center ${c.gastadoHoy >= c.limiteEfectivo ? "bg-red-50" : "bg-[#f0ecf9]"}`}>
                   <p className="text-[10px] font-bold text-[#777587] uppercase">Hoy</p>
-                  <p className={`font-black text-sm mt-0.5 ${c.gastadoHoy >= limiteDiarioPerfil ? "text-red-600" : "text-[#1b1b24]"}`}>S/ {(c.gastadoHoy||0).toFixed(0)}/{Number(limiteDiarioPerfil).toFixed(0)}</p>
+                  <p className={`font-black text-sm mt-0.5 ${c.gastadoHoy >= c.limiteEfectivo ? "text-red-600" : "text-[#1b1b24]"}`}>S/ {(c.gastadoHoy||0).toFixed(0)}/{Number(c.limiteEfectivo).toFixed(0)}</p>
                 </div>
               )}
             </div>
+            <button onClick={()=>restriccionesAbiertoId === c.dependent_user_id ? setRestriccionesAbiertoId(null) : abrirRestricciones(c)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-[#3525cd] bg-[#f0ecf9] tap-active">
+              <Icon name="tune" size="text-sm" color="text-[#3525cd]"/>
+              {restriccionesAbiertoId === c.dependent_user_id ? "Cerrar restricciones" : c.restriccion ? "Editar restricciones" : "Configurar restricciones"}
+            </button>
+            {restriccionesAbiertoId === c.dependent_user_id && restriccionesDraft && (
+              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Consumo desde</label>
+                    <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                      value={restriccionesDraft.horario_inicio} onChange={e=>setRestriccionesDraft(d=>({...d, horario_inicio: e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Consumo hasta</label>
+                    <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                      value={restriccionesDraft.horario_fin} onChange={e=>setRestriccionesDraft(d=>({...d, horario_fin: e.target.value}))}/>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Límite diario (S/)</label>
+                  <input type="number" min="0" placeholder={limiteDiarioPerfil != null ? `Por defecto del mundo: S/ ${limiteDiarioPerfil}` : "Sin límite"}
+                    className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                    value={restriccionesDraft.limite_diario} onChange={e=>setRestriccionesDraft(d=>({...d, limite_diario: e.target.value}))}/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Productos bloqueados</label>
+                  {catalogoMundo === null ? (
+                    <p className="text-xs text-[#777587]">Cargando catálogo…</p>
+                  ) : catalogoMundo.length === 0 ? (
+                    <p className="text-xs text-[#777587]">Este mundo todavía no tiene productos cargados.</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto bg-white rounded-xl divide-y divide-[#e4e1ee]">
+                      {catalogoMundo.map(p => {
+                        const bloqueado = restriccionesDraft.productos_bloqueados.includes(p.id);
+                        return (
+                          <label key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 text-xs cursor-pointer">
+                            <span className={bloqueado ? "text-red-600 font-semibold" : "text-[#1b1b24]"}>{p.name}</span>
+                            <input type="checkbox" checked={bloqueado} onChange={()=>setRestriccionesDraft(d=>({
+                              ...d, productos_bloqueados: bloqueado ? d.productos_bloqueados.filter(id=>id!==p.id) : [...d.productos_bloqueados, p.id],
+                            }))}/>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={()=>setRestriccionesAbiertoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button disabled={guardandoRestricciones} onClick={()=>guardarRestriccionesBtn(c)}
+                    className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoRestricciones?"Guardando…":"Guardar"}</button>
+                </div>
+              </div>
+            )}
             {rechargeFor === c.dependent_user_id ? (
               <div className="space-y-2">
                 <div className="flex gap-2 items-center">
@@ -1274,7 +1369,7 @@ function MenuTemplate({ cfg, u }) {
   const { saldo: saldoTitular, refresh: refreshWallet } = useWalletLive(worldId);
   const comercios = useMerchantsLive(worldId);
   const controlCfg = useModuleConfig("control");
-  const limiteDiario = controlCfg?.config?.limiteDiarioPerfil ?? null;
+  const limiteDiarioDefault = controlCfg?.config?.limiteDiarioPerfil ?? null;
 
   const [vista, setVista] = useState("calendario"); // calendario | reservas
   // metodoReserva ("saldo" | "qr") es una decisión real del admin que antes no
@@ -1293,6 +1388,7 @@ function MenuTemplate({ cfg, u }) {
   const [dependientes, setDependientes] = useState(null);
   const [membresias, setMembresias] = useState(null);
   const [miPerfilExt, setMiPerfilExt] = useState(null); // alergias propias del titular (Perfil Extendido)
+  const [restricciones, setRestricciones] = useState({}); // { [dependent_user_id]: dependent_restrictions row }
   const [beneficiarioId, setBeneficiarioId] = useState(null); // null = todavía no se eligió a propósito
   const [saldoBeneficiario, setSaldoBeneficiario] = useState(null);
   const [gestionAbierta, setGestionAbierta] = useState(false);
@@ -1305,7 +1401,12 @@ function MenuTemplate({ cfg, u }) {
 
   useEffect(() => {
     let vivo = true;
-    fetchMisDependientes(userId, worldId).then(r => { if (vivo) setDependientes(r || []); }).catch(() => { if (vivo) setDependientes([]); });
+    fetchMisDependientes(userId, worldId).then(async r => {
+      if (!vivo) return;
+      setDependientes(r || []);
+      const rest = await fetchRestriccionesDependientesBulk((r || []).map(d => d.dependent_user_id), worldId).catch(() => []);
+      if (vivo) setRestricciones(Object.fromEntries((rest || []).map(x => [x.dependent_user_id, x])));
+    }).catch(() => { if (vivo) setDependientes([]); });
     fetchMenuMembresias(userId, worldId).then(r => { if (vivo) setMembresias(r || []); }).catch(() => { if (vivo) setMembresias([]); });
     fetchMiPerfilExtendido(userId, worldId).then(r => { if (vivo) setMiPerfilExt(r); }).catch(() => { if (vivo) setMiPerfilExt(null); });
     return () => { vivo = false; };
@@ -1332,10 +1433,10 @@ function MenuTemplate({ cfg, u }) {
   // quedaban fuera del bloqueo de platos, solo se aplicaba a dependientes.
   const beneficiarios = [
     { id: userId, nombre: nombreTitular, tipo: "titular", alergias: miPerfilExt?.alergias || null,
-      alergiasArr: (miPerfilExt?.alergias || "").split(",").map(a => a.trim()).filter(Boolean) },
+      alergiasArr: (miPerfilExt?.alergias || "").split(",").map(a => a.trim()).filter(Boolean), restriccion: null },
     ...(dependientes || [])
       .filter(d => (membresias || []).some(m => m.beneficiario_user_id === d.dependent_user_id && m.activo))
-      .map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", alergias: d.alergias, alergiasArr: (d.alergias || "").split(",").map(a => a.trim()).filter(Boolean) })),
+      .map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", alergias: d.alergias, alergiasArr: (d.alergias || "").split(",").map(a => a.trim()).filter(Boolean), restriccion: restricciones[d.dependent_user_id] || null })),
   ];
   // Sin fallback automático al titular: si hay dependientes elegibles, la
   // usuaria SIEMPRE debe elegir a propósito para quién es el menú — pedido
@@ -1382,9 +1483,13 @@ function MenuTemplate({ cfg, u }) {
   const total = cart.reduce((a, it) => a + (+it.item.precio) * it.qty, 0);
   const unidades = cart.reduce((a, it) => a + it.qty, 0);
   const bloqueadoPorAlergia = item => (item.alergenos || []).some(a => beneficiario.alergiasArr.includes(a));
+  const bloqueadoPorRestriccion = item => (beneficiario?.restriccion?.productos_bloqueados || []).includes(item.id);
+  // El límite diario propio del dependiente (Restricciones) manda sobre el
+  // valor por defecto que RedPontis fijó para todo el mundo.
+  const limiteDiario = beneficiario?.restriccion?.limite_diario ?? limiteDiarioDefault;
 
   const agregar = (p) => {
-    if (bloqueadoPorAlergia(p)) return;
+    if (bloqueadoPorAlergia(p) || bloqueadoPorRestriccion(p)) return;
     if (cartMerchant && p.merchant_id !== cartMerchant) { setAvisoMixto(true); return; }
     setAvisoMixto(false);
     setCart(c => {
@@ -1631,7 +1736,9 @@ function MenuTemplate({ cfg, u }) {
             <div className="space-y-3">
               {visibles.map(p => {
                 const enCart = cart.find(it => it.item.id === p.id);
-                const bloqueado = bloqueadoPorAlergia(p);
+                const bloqueadoAlergia = bloqueadoPorAlergia(p);
+                const bloqueadoRestriccion = bloqueadoPorRestriccion(p);
+                const bloqueado = bloqueadoAlergia || bloqueadoRestriccion;
                 return (
                   <SectionCard key={p.id} className={`p-4 ${bloqueado ? "opacity-60" : ""}`}>
                     <div className="flex items-center gap-3">
@@ -1643,7 +1750,8 @@ function MenuTemplate({ cfg, u }) {
                         <p className="text-xs text-[#777587]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
                         {p.descripcion && <p className="text-[10px] text-[#777587] mt-0.5">{p.descripcion}</p>}
                         {p.alergenos?.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">Contiene: {p.alergenos.join(", ")}</p>}
-                        {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
+                        {bloqueadoAlergia && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
+                        {!bloqueadoAlergia && bloqueadoRestriccion && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-black text-[#3525cd]">S/ {Number(p.precio).toFixed(2)}</p>
@@ -3868,6 +3976,7 @@ function MarketplaceTemplate({ cfg, u }) {
   const [productos, setProductos] = useState(null);
   const [filtro, setFiltro] = useState(location.state?.filtro || "todos");     // "todos" | merchant_id
   const [dependientes, setDependientes] = useState(null);
+  const [restricciones, setRestricciones] = useState({}); // { [dependent_user_id]: dependent_restrictions row }
   const [beneficiarioId, setBeneficiarioId] = useState(userId);
   const [saldoBeneficiario, setSaldoBeneficiario] = useState(null);
   const [cart, setCart] = useState([]);              // [{product, qty}] — un comercio a la vez
@@ -3879,15 +3988,30 @@ function MarketplaceTemplate({ cfg, u }) {
   useEffect(() => {
     let vivo = true;
     fetchProductosMundoLive(worldId).then(r => { if (vivo) setProductos(r || []); }).catch(() => { if (vivo) setProductos([]); });
-    fetchMisDependientes(userId, worldId).then(r => { if (vivo) setDependientes(r || []); }).catch(() => { if (vivo) setDependientes([]); });
+    fetchMisDependientes(userId, worldId).then(async r => {
+      if (!vivo) return;
+      setDependientes(r || []);
+      const rest = await fetchRestriccionesDependientesBulk((r || []).map(d => d.dependent_user_id), worldId).catch(() => []);
+      if (vivo) setRestricciones(Object.fromEntries((rest || []).map(x => [x.dependent_user_id, x])));
+    }).catch(() => { if (vivo) setDependientes([]); });
     return () => { vivo = false; };
   }, [worldId]);
 
   const beneficiarios = [
-    { id: userId, nombre: nombreTitular, tipo: "titular" },
-    ...(dependientes || []).map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente" })),
+    { id: userId, nombre: nombreTitular, tipo: "titular", restriccion: null },
+    ...(dependientes || []).map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", restriccion: restricciones[d.dependent_user_id] || null })),
   ];
   const beneficiario = beneficiarios.find(b => b.id === beneficiarioId) || beneficiarios[0];
+  const bloqueadoPorRestriccion = p => (beneficiario.restriccion?.productos_bloqueados || []).includes(p.id);
+  const fueraDeHorario = () => {
+    const h = beneficiario.restriccion;
+    if (!h?.horario_inicio || !h?.horario_fin) return false;
+    const ahora = new Date();
+    const actual = ahora.getHours() * 60 + ahora.getMinutes();
+    const [hi, mi] = h.horario_inicio.split(":").map(Number);
+    const [hf, mf] = h.horario_fin.split(":").map(Number);
+    return !(actual >= hi * 60 + mi && actual <= hf * 60 + mf);
+  };
 
   const refrescarSaldoBeneficiario = () => {
     if (beneficiarioId === userId) { setSaldoBeneficiario(saldo); return; }
@@ -3904,6 +4028,7 @@ function MarketplaceTemplate({ cfg, u }) {
   const saldoMostrado = beneficiarioId === userId ? saldo : (saldoBeneficiario ?? 0);
 
   const agregar = (p) => {
+    if (bloqueadoPorRestriccion(p)) return;
     if (cartMerchant && p.merchant_id !== cartMerchant) { setAvisoMixto(true); return; }
     setAvisoMixto(false);
     setCart(c => {
@@ -3915,6 +4040,10 @@ function MarketplaceTemplate({ cfg, u }) {
   const quitar = (pid) => setCart(c => c.map(it => it.product.id === pid ? { ...it, qty: it.qty - 1 } : it).filter(it => it.qty > 0));
 
   const pagar = async () => {
+    if (fueraDeHorario()) {
+      setResultado({ ok: false, titulo: "Fuera de horario", mensaje: `${beneficiario.nombre} solo puede comprar entre ${beneficiario.restriccion.horario_inicio} y ${beneficiario.restriccion.horario_fin}.`, accion: null });
+      return;
+    }
     setPagando(true);
     try {
       const r = await comprarProductosLive(beneficiario.id, worldId, cartMerchant, cart);
@@ -4061,21 +4190,25 @@ function MarketplaceTemplate({ cfg, u }) {
             <div className="space-y-3">
               {visibles.map(p => {
                 const enCart = cart.find(it => it.product.id === p.id);
+                const bloqueado = bloqueadoPorRestriccion(p);
                 return (
-                  <SectionCard key={p.id} className="p-4 flex items-center gap-3">
+                  <SectionCard key={p.id} className={`p-4 flex items-center gap-3 ${bloqueado ? "opacity-60" : ""}`}>
                     <div className="w-12 h-12 rounded-xl bg-[#f0ecf9] flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover"/> : <Icon name="sell" fill size="text-xl" color="text-[#3525cd]"/>}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[#1b1b24] text-sm">{p.name}</p>
                       <p className="text-[10px] text-[#777587]">{nombreDe(p.merchant_id)}{p.category ? ` · ${p.category}` : ""}</p>
+                      {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-black text-[#3525cd] text-sm">S/ {Number(p.price).toFixed(2)}</p>
-                      <button onClick={() => agregar(p)}
-                        className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active">
-                        {enCart ? `Agregar (${enCart.qty})` : "Agregar"}
-                      </button>
+                      {!bloqueado && (
+                        <button onClick={() => agregar(p)}
+                          className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active">
+                          {enCart ? `Agregar (${enCart.qty})` : "Agregar"}
+                        </button>
+                      )}
                     </div>
                   </SectionCard>
                 );

@@ -461,6 +461,24 @@ export async function actualizarDependienteAlergiasRemote(dependentUserId, alerg
   });
 }
 
+// ── Restricciones granulares por dependiente (Task #173) — reemplaza el
+// horario/límite macro que antes fijaba RedPontis para todo el mundo. ──────
+export async function fetchRestriccionesDependiente(dependentUserId, worldId) {
+  const rows = await rest(`dependent_restrictions?dependent_user_id=eq.${dependentUserId}&world_id=eq.${worldId}&select=*`);
+  return rows?.[0] || null;
+}
+export async function fetchRestriccionesDependientesBulk(dependentUserIds, worldId) {
+  if (!dependentUserIds?.length) return [];
+  const ids = dependentUserIds.map(id => `"${id}"`).join(",");
+  return rest(`dependent_restrictions?world_id=eq.${worldId}&dependent_user_id=in.(${ids})&select=*`);
+}
+export async function guardarRestriccionesDependiente(worldId, dependentUserId, guardianUserId, datos) {
+  await rest("dependent_restrictions?on_conflict=world_id,dependent_user_id", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{ world_id: worldId, dependent_user_id: dependentUserId, guardian_user_id: guardianUserId, updated_at: new Date().toISOString(), ...datos }]),
+  });
+}
+
 // ── Membresías de Menú — a qué perfil (titular o dependiente) se le reserva
 // el módulo Menú, para el selector "¿Para quién?" del checkout (Caso Raimondi) ──
 export async function fetchMenuMembresias(guardianUserId, worldId) {
