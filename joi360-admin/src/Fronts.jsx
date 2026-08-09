@@ -571,7 +571,16 @@ function MenuCatalogoPanel({ comercio }) {
                   <button onClick={() => abrirProgramacion(item)} className="px-3 py-1.5 rounded border border-outline-variant font-mono text-[10px] uppercase hover:bg-surface-container flex items-center gap-1">
                     <Icon n="calendar_month" className="text-[14px]" /> Programar
                   </button>
-                  <button onClick={() => toggleActivo(item)}><Pill color={item.activo ? "bg-ok" : "bg-outline"}>{item.activo ? "ACTIVO" : "PAUSADO"}</Pill></button>
+                  {/* "ACTIVO" antes solo miraba item.activo — un plato recién
+                      creado (activo=true por defecto) se veía publicado aunque
+                      no tuviera programación, y sin programación real nunca
+                      aparece en el calendario del app (fetchMenuDelDia exige un
+                      join contra menu_programacion). El pill ahora refleja eso. */}
+                  <button onClick={() => toggleActivo(item)}>
+                    <Pill color={!item.activo ? "bg-outline" : prog.length > 0 ? "bg-ok" : "bg-tertiary"}>
+                      {!item.activo ? "PAUSADO" : prog.length > 0 ? "ACTIVO" : "PENDIENTE DE PROGRAMAR"}
+                    </Pill>
+                  </button>
                   <button onClick={() => eliminar(item)} className="text-error hover:bg-error-container/20 p-1 rounded"><Icon n="delete" className="text-[16px]" /></button>
                 </div>
               </div>
