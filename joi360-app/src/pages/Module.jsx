@@ -9,7 +9,7 @@ import {
   fetchMisEntradasLive, transferirEntradaRemote, crearEnlaceTransferenciaEntrada, fetchEventMerchantsLive, fetchProgramasBNPLLive, crearContratoBNPLLive, updateContratoBNPL, fetchMisContratosBNPL, sincronizarCicloBNPL, pagarCuotaBNPLUsuario, fetchModificacionesBNPL, fetchCampanasBNPLMundo,
   errorControlado, logErrorControlado, mensajeDeError, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
   fetchMiPerfilExtendido, guardarPerfilExtendido,
-  fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, fetchDependienteBalance,
+  fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, actualizarDependientePerfilRemote, fetchDependienteBalance,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
@@ -776,6 +776,13 @@ function RestriccionesTemplate({ cfg, u }) {
   const [editAlergiasArr, setEditAlergiasArr] = useState([]);
   const [guardandoAlergias, setGuardandoAlergias] = useState(false);
   const [otraAlergiaEdit, setOtraAlergiaEdit] = useState("");
+  // Editar perfil de un dependiente ya creado (Task #161) — nombre y DNI,
+  // antes fijos desde la creación sin forma de corregirlos.
+  const [editandoPerfilId, setEditandoPerfilId] = useState(null);
+  const [editNombre, setEditNombre] = useState("");
+  const [editDni, setEditDni] = useState("");
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [perfilError, setPerfilError] = useState(null);
   // Restricciones granulares por dependiente (Task #173) — antes horario y
   // límite diario eran un único valor que RedPontis fijaba para TODO el
   // mundo; ahora el tutor los configura por cada dependiente, y puede elegir
@@ -1071,8 +1078,16 @@ function RestriccionesTemplate({ cfg, u }) {
                   <span className="text-[#3525cd] font-black text-xl">{c.nombre[0]}</span>
                 </div>
                 <div>
-                  <p className="font-black text-[#1b1b24]">{c.nombre}</p>
-                  <p className="text-xs text-[#777587] font-mono">{c.dependent_user_id.slice(0,12)}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-black text-[#1b1b24]">{c.nombre}</p>
+                    {editandoPerfilId !== c.dependent_user_id && (
+                      <button onClick={()=>{setEditandoPerfilId(c.dependent_user_id); setEditNombre(c.nombre); setEditDni(c.dni||""); setPerfilError(null);}}
+                        className="w-5 h-5 flex items-center justify-center tap-active flex-shrink-0">
+                        <Icon name="edit" size="text-xs" color="text-[#777587]"/>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#777587] font-mono">{c.dni ? `DNI ${c.dni}` : c.dependent_user_id.slice(0,12)}</p>
                   {registroAlergias && (
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
@@ -1089,6 +1104,33 @@ function RestriccionesTemplate({ cfg, u }) {
                 <Icon name="qr_code" size="text-base" color="text-[#3525cd]"/>
               </button>
             </div>
+            {editandoPerfilId === c.dependent_user_id && (
+              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Editar perfil</p>
+                <div>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Nombre completo</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                    value={editNombre} onChange={e=>setEditNombre(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">DNI</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                    placeholder="8 dígitos" inputMode="numeric" value={editDni} onChange={e=>setEditDni(e.target.value.replace(/\D/g,""))}/>
+                </div>
+                {perfilError && <p className="text-xs text-red-600">{perfilError}</p>}
+                <div className="flex gap-2">
+                  <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button disabled={guardandoPerfil || !editNombre.trim()} onClick={async()=>{
+                    setGuardandoPerfil(true); setPerfilError(null);
+                    try {
+                      await actualizarDependientePerfilRemote(c.dependent_user_id, { nombre: editNombre.trim(), dni: editDni.trim() });
+                      setEditandoPerfilId(null);
+                      setReload(k=>k+1);
+                    } catch { setPerfilError("No se pudo guardar. Intenta de nuevo."); } finally { setGuardandoPerfil(false); }
+                  }} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoPerfil?"Guardando…":"Guardar"}</button>
+                </div>
+              </div>
+            )}
             {editandoAlergiasId === c.dependent_user_id && (
               <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
                 <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>

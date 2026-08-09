@@ -460,6 +460,15 @@ export async function actualizarDependienteAlergiasRemote(dependentUserId, alerg
     body: JSON.stringify({ alergias: alergias || null }),
   });
 }
+// Editar nombre/DNI de un dependiente ya creado (Task #161) — antes solo se
+// fijaban una vez al crearlo, sin forma de corregir un typo o un DNI mal
+// tecleado después.
+export async function actualizarDependientePerfilRemote(dependentUserId, { nombre, dni }) {
+  return rest(`dependents?dependent_user_id=eq.${dependentUserId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ nombre, dni: dni || null }),
+  });
+}
 
 // ── Restricciones granulares por dependiente (Task #173) — reemplaza el
 // horario/límite macro que antes fijaba RedPontis para todo el mundo. ──────
