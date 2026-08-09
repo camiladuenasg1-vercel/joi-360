@@ -479,6 +479,13 @@ export async function guardarRestriccionesDependiente(worldId, dependentUserId, 
   });
 }
 
+// ── Planes de suscripción del mundo (Task #174) — el mundo puede tener
+// varios planes nombrados (mensual/anual) con descuento promocional; si no
+// hay ninguno activo, el flujo de vinculación cae al monto fijo legado. ──────
+export async function fetchPlanesSuscripcionLive(worldId) {
+  return rest(`subscription_plans?world_id=eq.${worldId}&activo=eq.true&select=*&order=precio`);
+}
+
 // ── Membresías de Menú — a qué perfil (titular o dependiente) se le reserva
 // el módulo Menú, para el selector "¿Para quién?" del checkout (Caso Raimondi) ──
 export async function fetchMenuMembresias(guardianUserId, worldId) {

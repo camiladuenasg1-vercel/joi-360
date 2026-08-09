@@ -11,6 +11,7 @@ import {
   fetchMiPerfilExtendido, guardarPerfilExtendido,
   fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, fetchDependienteBalance,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
+  fetchPlanesSuscripcionLive,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
   transferirP2PRemote, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
@@ -752,6 +753,11 @@ function RestriccionesTemplate({ cfg, u }) {
   const [dependienteError, setDependienteError] = useState(null);
   const [recharging, setRecharging] = useState(false);
   const [reload, setReload] = useState(0);
+  // Planes de suscripción (Task #174) — si el mundo definió varios (mensual/
+  // anual, con descuento opcional), el usuario elige entre ellos en vez de
+  // pagar un monto fijo único.
+  const [planesSuscripcion, setPlanesSuscripcion] = useState(null);
+  const [planSeleccionadoId, setPlanSeleccionadoId] = useState(null);
   const [codigoAbierto, setCodigoAbierto] = useState(null); // dependent_user_id con QR/código visible
   const [editandoAlergiasId, setEditandoAlergiasId] = useState(null); // dependent_user_id en edición
   const [editAlergiasArr, setEditAlergiasArr] = useState([]);
@@ -818,15 +824,27 @@ function RestriccionesTemplate({ cfg, u }) {
     return () => { vivo = false; };
   }, [guardianId, worldId, reload]);
 
+  useEffect(() => {
+    if (!perfilesSuscripcion) { setPlanesSuscripcion([]); return; }
+    let vivo = true;
+    fetchPlanesSuscripcionLive(worldId).then(r => { if (vivo) setPlanesSuscripcion(r || []); }).catch(() => { if (vivo) setPlanesSuscripcion([]); });
+    return () => { vivo = false; };
+  }, [worldId, perfilesSuscripcion]);
+
   const toggleAlergia = (a) => setNuevo(n => ({ ...n, alergias: n.alergias.includes(a) ? n.alergias.filter(x => x !== a) : [...n.alergias, a] }));
-  const cuotaSuscripcion = perfilesSuscripcion ? (+montoSuscripcion || 5) : 0;
+  const precioPlan = p => p.descuento_pct > 0 ? p.precio * (1 - p.descuento_pct / 100) : p.precio;
+  const hayPlanes = (planesSuscripcion || []).length > 0;
+  const planSeleccionado = (planesSuscripcion || []).find(p => p.id === planSeleccionadoId) || null;
+  // Con planes: el monto final lo decide el plan elegido en el paso 2. Sin
+  // planes (mundo legado): monto fijo único, igual que antes.
+  const cuotaSuscripcion = !perfilesSuscripcion ? 0 : hayPlanes ? (planSeleccionado ? precioPlan(planSeleccionado) : null) : (+montoSuscripcion || 5);
 
   const crear = async () => {
     setCreando(true); setDependienteError(null);
     try {
-      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.dni.trim(), nuevo.alergias.join(", "), cuotaSuscripcion);
+      await crearDependienteRemote(worldId, guardianId, nuevo.nombre.trim(), nuevo.dni.trim(), nuevo.alergias.join(", "), cuotaSuscripcion || 0);
       setNuevo({ nombre: "", dni: "", alergias: [] });
-      setAddingChild(false); setPasoSuscripcion(false);
+      setAddingChild(false); setPasoSuscripcion(false); setPlanSeleccionadoId(null);
       setReload(k => k + 1);
     } catch (e) {
       const err = await mensajeDeError(e, "operacion_no_completada");
@@ -841,7 +859,7 @@ function RestriccionesTemplate({ cfg, u }) {
   // que ya cobra vía pagarSupabase (RPC real, rechaza si el saldo no alcanza).
   const continuar = async () => {
     if (!nuevo.nombre.trim()) return;
-    if (!cuotaSuscripcion) { crear(); return; }
+    if (!perfilesSuscripcion) { crear(); return; }
     setDependienteError(null);
     const saldo = await fetchDependienteBalance(guardianId, worldId).catch(() => 0);
     setSaldoGuardian(saldo);
@@ -874,18 +892,49 @@ function RestriccionesTemplate({ cfg, u }) {
   // saldo real del tutor (fetchDependienteBalance reusado, funciona para
   // cualquier user_id) para que no descubra el rechazo recién al confirmar.
   if (addingChild && pasoSuscripcion) {
-    const saldoInsuficiente = saldoGuardian != null && saldoGuardian < cuotaSuscripcion;
+    const saldoInsuficiente = saldoGuardian != null && cuotaSuscripcion != null && saldoGuardian < cuotaSuscripcion;
     return (
       <div className="px-5 pb-8">
         <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
           <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
         </button>
         <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Confirmar suscripción</h3>
-        <p className="text-sm text-[#777587] mb-5">{cfg.mundo.nombre} cobra una cuota única al vincular a {nuevo.nombre.trim()}.</p>
+        <p className="text-sm text-[#777587] mb-5">
+          {hayPlanes ? `Elige un plan para vincular a ${nuevo.nombre.trim()}.` : `${cfg.mundo.nombre} cobra una cuota única al vincular a ${nuevo.nombre.trim()}.`}
+        </p>
+
+        {hayPlanes && (
+          <div className="space-y-2 mb-5">
+            {planesSuscripcion.map(p => {
+              const precio = precioPlan(p);
+              const elegido = planSeleccionadoId === p.id;
+              return (
+                <button key={p.id} onClick={()=>setPlanSeleccionadoId(p.id)}
+                  className={`w-full text-left p-4 rounded-2xl border-2 tap-active transition-colors ${elegido ? "border-[#3525cd] bg-[#f0ecf9]" : "border-[#e4e1ee]"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-[#1b1b24] text-sm">{p.nombre}</span>
+                    <span className="font-mono text-[9px] uppercase text-[#777587]">{p.periodo === "anual" ? "Anual" : "Mensual"}</span>
+                  </div>
+                  {p.descripcion && <p className="text-xs text-[#777587] mt-0.5">{p.descripcion}</p>}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="font-black text-[#3525cd]">S/ {precio.toFixed(2)}</span>
+                    {p.descuento_pct > 0 && (
+                      <>
+                        <span className="text-xs text-[#777587] line-through">S/ {Number(p.precio).toFixed(2)}</span>
+                        <span className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">-{p.descuento_pct}%</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="rounded-2xl p-4 border border-[#e4e1ee] space-y-3 mb-5">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[#777587]">Cuota de vinculación</span>
-            <span className="font-black text-[#1b1b24]">S/ {cuotaSuscripcion.toFixed(2)}</span>
+            <span className="text-sm text-[#777587]">{hayPlanes ? "Plan elegido" : "Cuota de vinculación"}</span>
+            <span className="font-black text-[#1b1b24]">{cuotaSuscripcion != null ? `S/ ${cuotaSuscripcion.toFixed(2)}` : "—"}</span>
           </div>
           <div className="flex justify-between items-center pt-3 border-t border-[#e4e1ee]">
             <span className="text-sm text-[#777587]">Tu saldo actual</span>
@@ -902,8 +951,8 @@ function RestriccionesTemplate({ cfg, u }) {
         ) : (
           <>
             {dependienteError && <p className="text-xs text-red-600 mb-3">{dependienteError}</p>}
-            <PrimaryBtn label={creando ? "Cobrando y registrando…" : `Pagar S/ ${cuotaSuscripcion.toFixed(2)} y registrar`}
-              icon="task_alt" disabled={creando || saldoGuardian == null} onClick={crear} />
+            <PrimaryBtn label={creando ? "Cobrando y registrando…" : cuotaSuscripcion != null ? `Pagar S/ ${cuotaSuscripcion.toFixed(2)} y registrar` : "Elige un plan"}
+              icon="task_alt" disabled={creando || saldoGuardian == null || cuotaSuscripcion == null} onClick={crear} />
           </>
         )}
       </div>
@@ -916,7 +965,11 @@ function RestriccionesTemplate({ cfg, u }) {
         <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
       </button>
       <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Agregar dependiente</h3>
-      <p className="text-sm text-[#777587] mb-5">Registra un menor para controlar su consumo.{perfilesSuscripcion && ` Este mundo cobra S/ ${cuotaSuscripcion.toFixed(2)} por vinculación.`}</p>
+      <p className="text-sm text-[#777587] mb-5">
+        Registra un menor para controlar su consumo.
+        {perfilesSuscripcion && hayPlanes && " Este mundo tiene planes de suscripción para vincular perfiles."}
+        {perfilesSuscripcion && !hayPlanes && ` Este mundo cobra S/ ${(+montoSuscripcion || 5).toFixed(2)} por vinculación.`}
+      </p>
       <div className="space-y-4">
         <div>
           <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Nombre completo</label>
@@ -940,8 +993,8 @@ function RestriccionesTemplate({ cfg, u }) {
           </div>
         )}
         {dependienteError && <p className="text-xs text-red-600">{dependienteError}</p>}
-        <PrimaryBtn label={creando ? "Registrando…" : cuotaSuscripcion ? "Continuar" : "Registrar dependiente"}
-          icon={cuotaSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando} onClick={continuar} />
+        <PrimaryBtn label={creando ? "Registrando…" : perfilesSuscripcion ? "Continuar" : "Registrar dependiente"}
+          icon={perfilesSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando} onClick={continuar} />
       </div>
     </div>
   );

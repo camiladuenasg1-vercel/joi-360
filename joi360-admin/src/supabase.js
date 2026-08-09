@@ -1182,6 +1182,29 @@ export async function desactivarHardwareModeloCustom(id) {
   });
 }
 
+// ── Planes de suscripción por mundo (Task #174) — reemplaza el monto fijo
+// único (wallet.montoSuscripcion) por planes nombrados con período y
+// descuento promocional opcional, elegibles por el usuario en la superapp. ──
+export async function fetchPlanesSuscripcion(worldId) {
+  return rest(`subscription_plans?world_id=eq.${worldId}&select=*&order=created_at`);
+}
+export async function crearPlanSuscripcion(worldId, payload) {
+  const rows = await rest("subscription_plans", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, ...payload }),
+  });
+  return rows?.[0] || null;
+}
+export async function actualizarPlanSuscripcion(id, payload) {
+  await rest(`subscription_plans?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(payload),
+  });
+}
+export async function eliminarPlanSuscripcion(id) {
+  await rest(`subscription_plans?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+
 export async function registerPosDeviceRemote(modelo, serial, tipoIngreso = "venta") {
   const rows = await rest("pos_devices", {
     method: "POST", headers: { Prefer: "return=representation" },

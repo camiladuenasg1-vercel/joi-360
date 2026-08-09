@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, uploadArchivo, actualizarLogoMundoRemote } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -1029,6 +1029,97 @@ function EventosActivadoPopup({ m, onClose }) {
 const CAPACIDADES_CON_CANALES = new Set(["wallet", "comercios"]);
 
 /* ── ModuleConfigDrawer ───────────────────────────────────────────── */
+const PERIODO_LABEL = { mensual: "Mensual", anual: "Anual" };
+
+// Planes de suscripción (Task #174) — CRUD directo contra Supabase, sin
+// pasar por el draft f/save() del drawer: igual patrón que "Gestionar
+// modelos" en HardwarePOS (PosDevicesTab), cada plan es su propia fila y se
+// guarda al toque, no junto con el resto de la config del módulo.
+function PlanesSuscripcionPanel({ worldId, moneda }) {
+  const [planes, setPlanes] = useState(null);
+  const [creando, setCreando] = useState(false);
+  const [nuevo, setNuevo] = useState({ nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "" });
+  const [guardando, setGuardando] = useState(false);
+
+  const load = () => fetchPlanesSuscripcion(worldId).then(setPlanes).catch(() => setPlanes([]));
+  React.useEffect(() => { load(); }, [worldId]);
+
+  const crear = async () => {
+    if (!nuevo.nombre.trim() || !(+nuevo.precio > 0)) return;
+    setGuardando(true);
+    try {
+      await crearPlanSuscripcion(worldId, {
+        nombre: nuevo.nombre.trim(), descripcion: nuevo.descripcion.trim() || null,
+        precio: +nuevo.precio, periodo: nuevo.periodo,
+        descuento_pct: nuevo.descuento_pct ? +nuevo.descuento_pct : null, activo: true,
+      });
+      setNuevo({ nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "" });
+      setCreando(false);
+      load();
+    } finally { setGuardando(false); }
+  };
+  const toggleActivo = async (p) => { await actualizarPlanSuscripcion(p.id, { activo: !p.activo }); load(); };
+  const eliminar = async (p) => {
+    if (!confirm(`¿Eliminar el plan "${p.nombre}"?`)) return;
+    await eliminarPlanSuscripcion(p.id);
+    load();
+  };
+
+  return (
+    <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-on-surface">Planes de suscripción</p>
+        <button onClick={()=>setCreando(v=>!v)} className="text-[10px] text-primary font-bold underline">{creando ? "Cancelar" : "+ Nuevo plan"}</button>
+      </div>
+      <p className="text-[10px] text-on-surface-variant">El usuario elige entre estos planes al vincular un dependiente. Si no hay ninguno activo, se usa el monto fijo de "Monto de la suscripción por perfil" de arriba.</p>
+
+      {creando && (
+        <div className="p-3 bg-surface rounded-lg border border-outline-variant space-y-2">
+          <input className="w-full h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder="Nombre (ej. Plan Mensual)"
+            value={nuevo.nombre} onChange={e=>setNuevo(n=>({...n, nombre: e.target.value}))}/>
+          <input className="w-full h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder="Descripción (opcional)"
+            value={nuevo.descripcion} onChange={e=>setNuevo(n=>({...n, descripcion: e.target.value}))}/>
+          <div className="flex gap-2">
+            <input type="number" min="0" step="0.01" className="flex-1 h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder={`Precio (${moneda||"PEN"})`}
+              value={nuevo.precio} onChange={e=>setNuevo(n=>({...n, precio: e.target.value}))}/>
+            <select className="h-8 px-2 border border-outline-variant rounded-lg text-xs" value={nuevo.periodo} onChange={e=>setNuevo(n=>({...n, periodo: e.target.value}))}>
+              <option value="mensual">Mensual</option>
+              <option value="anual">Anual</option>
+            </select>
+            <input type="number" min="0" max="100" className="w-24 h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder="% desc."
+              value={nuevo.descuento_pct} onChange={e=>setNuevo(n=>({...n, descuento_pct: e.target.value}))}/>
+          </div>
+          <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={guardando} onClick={crear}>{guardando ? "Creando…" : "Crear plan"}</BtnPrimary>
+        </div>
+      )}
+
+      {planes === null ? (
+        <p className="text-xs text-on-surface-variant">Cargando…</p>
+      ) : planes.length === 0 ? (
+        <p className="text-xs text-on-surface-variant italic">Sin planes creados — se usa el monto fijo.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {planes.map(p => (
+            <div key={p.id} className={`flex items-center gap-2 p-2 rounded-lg border ${p.activo ? "bg-surface border-outline-variant" : "bg-surface-container opacity-50 border-outline-variant"}`}>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-on-surface">{p.nombre} <span className="font-mono text-[9px] text-on-surface-variant">· {PERIODO_LABEL[p.periodo]||p.periodo}</span></p>
+                <p className="text-[10px] text-on-surface-variant">
+                  S/ {Number(p.precio).toFixed(2)}
+                  {p.descuento_pct > 0 && <span className="ml-1 text-green-700 font-bold">-{p.descuento_pct}% → S/ {(p.precio*(1-p.descuento_pct/100)).toFixed(2)}</span>}
+                </p>
+              </div>
+              <button onClick={()=>toggleActivo(p)} className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded-full border font-bold ${p.activo?"bg-green-100 text-green-700 border-green-200":"bg-surface-container-low text-outline border-outline-variant"}`}>{p.activo?"Activo":"Inactivo"}</button>
+              <button onClick={()=>eliminar(p)} className="w-6 h-6 flex items-center justify-center text-error hover:bg-error-container/40 rounded-full">
+                <Icon n="delete" className="text-[14px]"/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModuleConfigDrawer({ mundoId, modId, onClose }) {
   const st = useStore();
   const m = (st.mundos||[]).find(x => x.id === mundoId);
@@ -1329,6 +1420,9 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
             ))}
             {(c?.configFields||[]).some(cf=>cf.nullable) && (
               <p className="text-[10px] text-on-surface-variant italic">Campos con «Sin límite»: dejar vacío para no restringir.</p>
+            )}
+            {modId === "wallet" && (f.config?.perfilesSuscripcion ?? c.configFields.find(cf=>cf.key==="perfilesSuscripcion")?.default) && (
+              <PlanesSuscripcionPanel worldId={mundoId} moneda={m.moneda}/>
             )}
           </section>
         )}
