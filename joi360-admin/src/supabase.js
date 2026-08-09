@@ -1448,6 +1448,133 @@ export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null
   }
 }
 
+// ── Bandita de evento con saldo pre-cargado (Task #119) ────────────────────
+// Distinto de vincularNfcBandRemote: acá la persona puede NO tener cuenta
+// todavía — se le crea una wallet con un user_id sintético (mismo patrón que
+// un dependiente), así que cobro/consumo/recarga reusan mover_saldo_wallet
+// sin ningún cambio. Ver docs/arquitectura/03-diseno-cashin-evento.md.
+export async function importarInvitadosEventoRemote(eventId, worldId, moneda, nombreArchivo, filas, importadoPor) {
+  const lista = await rest("event_guest_lists", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ event_id: eventId, world_id: worldId, nombre_archivo: nombreArchivo || null, importado_por: importadoPor || null }),
+  });
+  const listaId = lista?.[0]?.id;
+  if (!listaId) throw new Error("No se pudo crear la lista de invitados.");
+
+  let creados = 0, duplicados = 0;
+  for (const fila of filas) {
+    const nombre = String(fila.nombre || "").trim();
+    const documento = String(fila.documento || "").trim();
+    if (!nombre || !documento) continue;
+    const guestUserId = crypto.randomUUID();
+    try {
+      await rest("event_guests", {
+        method: "POST", headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ guest_list_id: listaId, event_id: eventId, world_id: worldId, nombre, documento, guest_user_id: guestUserId, estado: "invitado" }),
+      });
+    } catch {
+      duplicados++; continue; // documento ya cargado para este evento (unique event_id+documento)
+    }
+    await rest("wallets?on_conflict=user_id,world_id", {
+      method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({ user_id: guestUserId, world_id: worldId, balance: 0, currency: moneda || "PEN" }),
+    });
+    creados++;
+  }
+  return { listaId, creados, duplicados };
+}
+
+// Trae la lista completa con saldo actual (join contra wallets) y consumo
+// total (join contra transactions) — para el panel "Banditas del evento".
+export async function fetchEventGuests(eventId) {
+  const guests = await rest(`event_guests?event_id=eq.${eventId}&select=*&order=created_at`);
+  if (!guests?.length) return [];
+  const ids = guests.map(g => `"${g.guest_user_id}"`).join(",");
+  const worldId = guests[0].world_id;
+  const wallets = await rest(`wallets?user_id=in.(${ids})&world_id=eq.${worldId}&select=id,user_id,balance`).catch(() => []);
+  const walletPorGuest = new Map((wallets || []).map(w => [w.user_id, w]));
+  const walletIds = (wallets || []).map(w => w.id);
+  const txs = walletIds.length
+    ? await rest(`transactions?type=eq.compra&status=eq.completada&wallet_id=in.(${walletIds.map(id => `"${id}"`).join(",")})&select=wallet_id,amount`).catch(() => [])
+    : [];
+  const consumoPorWallet = new Map();
+  for (const t of txs || []) {
+    consumoPorWallet.set(t.wallet_id, (consumoPorWallet.get(t.wallet_id) || 0) + (+t.amount || 0));
+  }
+  return guests.map(g => {
+    const wallet = walletPorGuest.get(g.guest_user_id);
+    return { ...g, balance: wallet ? +wallet.balance : 0, consumo: wallet ? (consumoPorWallet.get(wallet.id) || 0) : 0 };
+  });
+}
+
+export async function buscarInvitadoPorDocumentoRemote(eventId, documento) {
+  const rows = await rest(`event_guests?event_id=eq.${eventId}&documento=eq.${encodeURIComponent(documento.trim())}&select=*`);
+  return rows?.[0] || null;
+}
+export async function buscarInvitadoPorBanditaRemote(worldId, codigoBandita) {
+  const band = await buscarNfcBandPorCodigo(codigoBandita, worldId);
+  if (!band?.linked_user_id) return null;
+  const rows = await rest(`event_guests?world_id=eq.${worldId}&guest_user_id=eq.${band.linked_user_id}&select=*`);
+  return rows?.[0] ? { guest: rows[0], band } : null;
+}
+
+// Activa la bandita física de un invitado ya cargado en la lista: vincula
+// nfc_bands (igual que #118, pero linked_user_id es el guest_user_id
+// sintético, y la vigencia es la del evento + margen, no meses) y, si hay
+// monto de precarga, lo acredita como una recarga real (p_tipo
+// "recarga_evento") — queda en el ledger, no es un número inventado.
+export async function activarBanditaEventoRemote({ guestId, worldId, bandaCodigo, montoPrecarga, venceAt, eventoNombre }) {
+  const guestRows = await rest(`event_guests?id=eq.${guestId}&select=*`);
+  const guest = guestRows?.[0];
+  if (!guest) throw new Error("Invitado no encontrado.");
+
+  const band = await buscarNfcBandPorCodigo(bandaCodigo, worldId);
+  if (!band) throw new Error(`No se encontró la pulsera "${bandaCodigo.toUpperCase()}" en el inventario de este mundo.`);
+  if (band.linked_user_id && band.linked_user_id !== guest.guest_user_id) throw new Error("Esta pulsera ya está vinculada a otra persona.");
+  if (band.estado === "bloqueada") throw new Error("Esta pulsera está bloqueada.");
+
+  await rest(`nfc_bands?id=eq.${band.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "activa", linked_user_id: guest.guest_user_id, activada_at: new Date().toISOString(), vence_at: venceAt || null }),
+  });
+
+  let balance = 0;
+  const monto = +montoPrecarga || 0;
+  if (monto > 0) {
+    const wallet = await rest(`wallets?user_id=eq.${guest.guest_user_id}&world_id=eq.${worldId}&select=id,balance`).then(r => r?.[0]);
+    if (!wallet) throw new Error("No se encontró la billetera del invitado — vuelve a importar la lista.");
+    const r = (await rest("rpc/mover_saldo_wallet", {
+      method: "POST",
+      body: JSON.stringify({
+        p_wallet_id: wallet.id, p_delta: Math.abs(monto), p_tipo: "recarga_evento",
+        p_world_id: worldId, p_reference: `Precarga bandita evento${eventoNombre ? " · " + eventoNombre : ""}`,
+      }),
+    }))?.[0];
+    if (!r?.ok) throw new Error("No se pudo precargar el saldo.");
+    balance = +r.nuevo_saldo;
+  }
+
+  await rest(`event_guests?id=eq.${guestId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ bandita_codigo: band.codigo, saldo_inicial: monto, vence_at: venceAt || null, estado: monto > 0 ? "activo" : "bandita_asignada" }),
+  });
+
+  return { balance, codigo: band.codigo };
+}
+
+// Cash-in adicional durante el evento — mismo mover_saldo_wallet que una
+// recarga normal, sin turno de caja (el organizador no tiene pos_turnos).
+export async function recargarBanditaEventoRemote(guestUserId, worldId, monto, referencia) {
+  const wallet = await rest(`wallets?user_id=eq.${guestUserId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
+  if (!wallet) return { ok: false, motivo: "sin_wallet" };
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
+    body: JSON.stringify({ p_wallet_id: wallet.id, p_delta: Math.abs(monto), p_tipo: "recarga_evento", p_world_id: worldId, p_reference: referencia || "Cash-in evento" }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo || "sin_wallet" };
+  return { ok: true, balance: +r.nuevo_saldo };
+}
+
 // ── Solicitud de LOTE de banditas NFC — el mundo pide más stock a RedPontis
 // (distinto de nfc_requests, que es un usuario final pidiendo SU pulsera).
 // entregarLoteNfcRemote() asigna banditas reales del almacén (world_id IS

@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, session, organizadorLogin, organizadorLogout, organizadorSession, generarPassword, refreshEventosLive } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
-import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo } from "./supabase.js";
+import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo, importarInvitadosEventoRemote, fetchEventGuests, buscarInvitadoPorDocumentoRemote, activarBanditaEventoRemote, recargarBanditaEventoRemote } from "./supabase.js";
 
 const TIPO_ENTRADA_BLANK = { id: "", nombre: "General", precio: 0, cupos: 100, descripcion: "", incluye: "" };
 
@@ -203,6 +203,7 @@ export function OrganizadorFront() {
     { k: "eventos", l: "Mis Eventos", i: "confirmation_number" },
     { k: "comercios", l: "Comercios", i: "storefront" },
     { k: "asistencia", l: "Asistencia", i: "people" },
+    { k: "banditas_evento", l: "Banditas del evento", i: "sensors" },
     { k: "liquidacion", l: "Liquidaciones", i: "account_balance" },
   ];
 
@@ -296,6 +297,7 @@ export function OrganizadorFront() {
           )}
           {tab === "comercios" && <TabComerciosOrganizador m={m} eventos={eventos} />}
           {tab === "asistencia" && <TabAsistenciaOrganizador m={m} eventos={eventos} ticketsMap={ticketsMap} onRefresh={refreshTickets} />}
+          {tab === "banditas_evento" && <TabBanditasEventoOrganizador m={m} eventos={eventos} />}
           {tab === "liquidacion" && <TabLiqOrganizador m={m} eventos={eventos} ticketsMap={ticketsMap} />}
         </div>
       </main>
@@ -856,6 +858,227 @@ function EventoAsistenciaCard({ ev, tk, onRefresh }) {
         </table>
       )}
     </div>
+  );
+}
+
+/* -------- Tab Banditas del evento (Task #119) — cash-in con lista de
+   asistencia. Distinto de "Vincular Pulsera NFC" del POS/Operador (#118):
+   ese asume que la persona ya tiene cuenta en la app; acá el invitado puede
+   no tenerla — se le crea una wallet con user_id sintético al importar la
+   lista, y el resto (cobro, consumo, recarga) reusa mover_saldo_wallet sin
+   ningún cambio, mismo patrón que un dependiente. Ver
+   docs/arquitectura/03-diseno-cashin-evento.md. -------- */
+const ESTADO_INVITADO_LABEL = { invitado: "Invitado", bandita_asignada: "Pulsera asignada", activo: "Activo", cerrado: "Cerrado" };
+const ESTADO_INVITADO_COLOR = { invitado: "bg-outline", bandita_asignada: "bg-tertiary", activo: "bg-ok", cerrado: "bg-outline" };
+
+function TabBanditasEventoOrganizador({ m, eventos }) {
+  const publicados = eventos.filter(e => e.estado === "PUBLICADO");
+  return (
+    <>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Banditas del evento</h2>
+        <p className="text-on-surface-variant mt-1 text-sm">Precarga una lista de invitados por documento, activa su pulsera física con saldo inicial y monitorea el consumo en vivo.</p>
+      </div>
+      {publicados.length === 0 ? (
+        <div className="text-center py-16 border-2 border-dashed border-outline-variant rounded-xl text-on-surface-variant">
+          <Icon n="sensors" className="text-[48px] text-outline mb-3 block mx-auto" />
+          No hay eventos publicados todavía.
+        </div>
+      ) : publicados.map(ev => (
+        <EventoBanditasCard key={ev.id} ev={ev} m={m} />
+      ))}
+    </>
+  );
+}
+
+function EventoBanditasCard({ ev, m }) {
+  const [guests, setGuests] = useState(null);
+  const [importando, setImportando] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [activarPara, setActivarPara] = useState(null); // event_guest en edición
+  const [cashInPara, setCashInPara] = useState(null);
+
+  const load = () => fetchEventGuests(ev.id).then(setGuests).catch(() => setGuests([]));
+  React.useEffect(() => { load(); }, [ev.id]);
+
+  const totalPrecargado = (guests || []).reduce((a, g) => a + (+g.saldo_inicial || 0), 0);
+  const totalSaldo = (guests || []).reduce((a, g) => a + (+g.balance || 0), 0);
+  const totalConsumo = (guests || []).reduce((a, g) => a + (+g.consumo || 0), 0);
+
+  const importarCSV = (file) => {
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const lineas = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const primeraFila = lineas[0]?.split(",").map(c => c.trim().toLowerCase()) || [];
+      const tieneEncabezado = primeraFila.includes("nombre") || primeraFila.includes("documento");
+      const filas = (tieneEncabezado ? lineas.slice(1) : lineas).map(l => {
+        const [nombre, documento] = l.split(",").map(c => c.trim());
+        return { nombre, documento };
+      }).filter(f => f.nombre && f.documento);
+      if (!filas.length) { notify("El archivo no tiene filas válidas (nombre, documento).", "error"); return; }
+      setImportando(true);
+      try {
+        const r = await importarInvitadosEventoRemote(ev.id, m.id, m.moneda, file.name, filas, m.nombre);
+        notify(`${r.creados} invitados importados${r.duplicados ? ` · ${r.duplicados} documentos duplicados omitidos` : ""}.`);
+        load();
+      } catch (e) {
+        notify("No se pudo importar la lista: " + e.message, "error");
+      } finally { setImportando(false); setFileName(""); }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm mb-6">
+      <div className="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+        <div>
+          <p className="font-bold">{ev.nombre}</p>
+          <p className="font-mono text-[10px] text-on-surface-variant uppercase">{ev.fecha} {ev.hora || ""} · {guests === null ? "…" : guests.length} invitados</p>
+        </div>
+        <div className="flex gap-4 font-mono text-[11px] text-on-surface-variant">
+          <span>Precargado <b className="text-on-surface">{m.moneda} {totalPrecargado.toFixed(2)}</b></span>
+          <span>Saldo vivo <b className="text-on-surface">{m.moneda} {totalSaldo.toFixed(2)}</b></span>
+          <span>Consumido <b className="text-tertiary">{m.moneda} {totalConsumo.toFixed(2)}</b></span>
+        </div>
+      </div>
+
+      <div className="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
+        <label className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant text-sm font-medium cursor-pointer hover:border-primary/40 ${importando ? "opacity-50 pointer-events-none" : ""}`}>
+          <Icon n="upload_file" className="text-[18px] text-primary" />
+          {importando ? `Importando ${fileName}…` : "Importar lista (CSV: nombre, documento)"}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => e.target.files[0] && importarCSV(e.target.files[0])} />
+        </label>
+        <span className="text-[10px] text-outline">Cada fila crea al invitado y su billetera en S/0 — sin bandita todavía.</span>
+      </div>
+
+      {guests === null ? (
+        <p className="px-6 py-8 text-sm text-on-surface-variant">Cargando…</p>
+      ) : guests.length === 0 ? (
+        <p className="px-6 py-8 text-sm text-on-surface-variant">Sin invitados todavía. Importa una lista arriba.</p>
+      ) : (
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="font-mono text-[10px] uppercase tracking-wider text-outline border-b border-outline-variant/60">
+              <th className="px-6 py-3">Invitado</th>
+              <th className="px-6 py-3">Documento</th>
+              <th className="px-6 py-3">Pulsera</th>
+              <th className="px-6 py-3">Estado</th>
+              <th className="px-6 py-3 text-right">Saldo</th>
+              <th className="px-6 py-3 text-right">Consumo</th>
+              <th className="px-6 py-3 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-outline-variant/60">
+            {guests.map(g => (
+              <tr key={g.id} className="hover:bg-surface-container-low">
+                <td className="px-6 py-3 font-semibold">{g.nombre}</td>
+                <td className="px-6 py-3 font-mono text-xs text-on-surface-variant">{g.documento}</td>
+                <td className="px-6 py-3 font-mono text-xs">{g.bandita_codigo || "—"}</td>
+                <td className="px-6 py-3"><Pill color={ESTADO_INVITADO_COLOR[g.estado]}>{ESTADO_INVITADO_LABEL[g.estado] || g.estado}</Pill></td>
+                <td className="px-6 py-3 text-right font-mono text-xs">{m.moneda} {Number(g.balance).toFixed(2)}</td>
+                <td className="px-6 py-3 text-right font-mono text-xs text-tertiary">{m.moneda} {Number(g.consumo).toFixed(2)}</td>
+                <td className="px-6 py-3 text-right">
+                  {!g.bandita_codigo ? (
+                    <BtnPrimary className="!py-1.5 !px-3 !text-xs" onClick={() => setActivarPara(g)}>
+                      <Icon n="sensors" className="text-[14px]" /> Activar pulsera
+                    </BtnPrimary>
+                  ) : (
+                    <BtnOutline className="!py-1.5 !px-3 !text-xs" onClick={() => setCashInPara(g)}>
+                      <Icon n="add_card" className="text-[14px]" /> Cash-in
+                    </BtnOutline>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {activarPara && (
+        <ActivarBanditaEventoDrawer guest={activarPara} ev={ev} m={m} onClose={() => setActivarPara(null)}
+          onDone={() => { setActivarPara(null); load(); }} />
+      )}
+      {cashInPara && (
+        <CashInBanditaEventoDrawer guest={cashInPara} m={m} onClose={() => setCashInPara(null)}
+          onDone={() => { setCashInPara(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ActivarBanditaEventoDrawer({ guest, ev, m, onClose, onDone }) {
+  const [codigo, setCodigo] = useState("");
+  const [monto, setMonto] = useState("");
+  const [margenDias, setMargenDias] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const activar = async () => {
+    if (!codigo.trim()) return;
+    setBusy(true); setError(null);
+    try {
+      const fechaEvento = ev.fecha ? new Date(ev.fecha) : new Date();
+      const venceAt = new Date(fechaEvento.getTime() + (Number(margenDias) || 0) * 86400000).toISOString();
+      const r = await activarBanditaEventoRemote({
+        guestId: guest.id, worldId: m.id, bandaCodigo: codigo.trim(),
+        montoPrecarga: monto ? +monto : 0, venceAt, eventoNombre: ev.nombre,
+      });
+      notify(`Pulsera ${r.codigo} activada para ${guest.nombre}${monto ? ` · precargada con ${m.moneda} ${(+monto).toFixed(2)}` : ""}.`);
+      onDone();
+    } catch (e) {
+      setError(e.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Drawer open={true} onClose={onClose} icon="sensors" title="Activar pulsera de evento" subtitle={`${guest.nombre} · ${guest.documento}`}
+      footer={<><BtnOutline onClick={onClose}>Cancelar</BtnOutline><BtnPrimary loading={busy} loadingLabel="Activando…" disabled={!codigo.trim()} onClick={activar}>Activar pulsera</BtnPrimary></>}>
+      <div className="space-y-4">
+        <Field label="Código / UID de la pulsera física" hint="Tapea la pulsera contra el lector NFC o escribe el código impreso.">
+          <input className={`${inputCls} font-mono`} value={codigo} onChange={e => setCodigo(e.target.value)} autoFocus placeholder="04:D6:01:5A:68:19:94" />
+        </Field>
+        <Field label={`Saldo a precargar (${m.moneda}, opcional)`} hint="Queda registrado como una recarga real, no un número inventado.">
+          <NumInput className={inputCls} min="0" step="0.10" value={monto} onChange={setMonto} />
+        </Field>
+        <Field label="Vigencia: días después del evento" hint="A diferencia de una bandita normal (meses), esta vence al terminar el evento + este margen.">
+          <NumInput className={inputCls} min="0" value={margenDias} onChange={setMargenDias} />
+        </Field>
+        {error && <p className="text-xs text-error">{error}</p>}
+      </div>
+    </Drawer>
+  );
+}
+
+function CashInBanditaEventoDrawer({ guest, m, onClose, onDone }) {
+  const [monto, setMonto] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const recargar = async () => {
+    if (!(+monto > 0)) return;
+    setBusy(true); setError(null);
+    try {
+      const r = await recargarBanditaEventoRemote(guest.guest_user_id, m.id, +monto, `Cash-in evento · ${guest.nombre}`);
+      if (!r.ok) { setError("No se pudo procesar el cash-in."); return; }
+      notify(`Cash-in de ${m.moneda} ${(+monto).toFixed(2)} para ${guest.nombre}. Nuevo saldo: ${m.moneda} ${r.balance.toFixed(2)}.`);
+      onDone();
+    } catch (e) {
+      setError(e.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Drawer open={true} onClose={onClose} icon="add_card" title="Cash-in de pulsera de evento" subtitle={`${guest.nombre} · pulsera ${guest.bandita_codigo}`}
+      footer={<><BtnOutline onClick={onClose}>Cancelar</BtnOutline><BtnPrimary loading={busy} loadingLabel="Procesando…" disabled={!(+monto > 0)} onClick={recargar}>Confirmar cash-in</BtnPrimary></>}>
+      <div className="space-y-4">
+        <p className="text-sm text-on-surface-variant">Saldo actual: <b className="text-on-surface">{m.moneda} {Number(guest.balance).toFixed(2)}</b></p>
+        <Field label={`Monto a acreditar (${m.moneda})`}>
+          <NumInput className={inputCls} min="0.01" step="0.10" value={monto} onChange={setMonto} autoFocus />
+        </Field>
+        {error && <p className="text-xs text-error">{error}</p>}
+      </div>
+    </Drawer>
   );
 }
 
