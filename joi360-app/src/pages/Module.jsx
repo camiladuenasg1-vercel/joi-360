@@ -161,7 +161,7 @@ function WalletTemplate({ cfg, u }) {
       await solicitarBanditaNfc(mundoId, beneficiarioId, beneficiarioNombre || null, universal);
       const r = await fetchMiSolicitudNfc(mundoId, beneficiarioId);
       setSolicitudesNfc(prev => ({ ...prev, [beneficiarioId]: r }));
-      showToast({ titulo: "Solicitud enviada", mensaje: "RedPontis te avisará cuando la pulsera esté lista para recoger." }, "success");
+      showToast({ titulo: "Solicitud enviada", mensaje: `Acércate al módulo de ${cfg.mundo.nombre} para recoger y vincular tu pulsera — ellos gestionan la entrega.` }, "success");
     } catch (e) {
       showToast({ titulo: "No se pudo enviar la solicitud", mensaje: "Intenta de nuevo en unos minutos." }, "error");
     } finally { setSolicitandoNfcId(null); }

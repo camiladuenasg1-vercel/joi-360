@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
 import { EventoDrawer } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -114,8 +114,12 @@ function FamiliaresMundoWidget({ worldId, vertical }) {
 function SolicitudesNfcWidget({ worldId, vertical }) {
   const nom = nomenclaturaFamiliar(vertical);
   const [reqs, setReqs] = useState(null);
+  const [bandas, setBandas] = useState(null);
   const [busy, setBusy] = useState(null);
-  const load = () => fetchSolicitudesNfcMundo(worldId).then(setReqs).catch(() => setReqs([]));
+  const load = () => {
+    fetchSolicitudesNfcMundo(worldId).then(setReqs).catch(() => setReqs([]));
+    fetchNfcBandsRemote(worldId).then(setBandas).catch(() => setBandas([]));
+  };
   useEffect(() => { load(); }, [worldId]);
   const resolver = async (id, status) => {
     setBusy(id);
@@ -129,12 +133,35 @@ function SolicitudesNfcWidget({ worldId, vertical }) {
     } finally { setBusy(null); }
   };
   const pendientes = (reqs || []).filter(r => r.status === "pendiente");
+  const entregadas = (reqs || []).filter(r => r.status === "entregada").length;
+  const disponibles = (bandas || []).filter(b => b.estado === "disponible").length;
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
       <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
         <h3 className="font-semibold flex items-center gap-2"><Icon n="contactless" className="text-primary text-[20px]" /> Solicitudes de pulsera NFC</h3>
         {pendientes.length > 0 && <span className="w-6 h-6 rounded-full bg-tertiary text-white text-xs font-black flex items-center justify-center">{pendientes.length}</span>}
       </div>
+      {reqs !== null && bandas !== null && (
+        <div className="grid grid-cols-3 divide-x divide-outline-variant/60 border-b border-outline-variant bg-surface">
+          <div className="px-4 py-3 text-center">
+            <p className="font-mono text-[9px] uppercase text-outline">Demanda actual</p>
+            <p className={`font-black text-xl mt-0.5 ${pendientes.length > 0 ? "text-tertiary" : "text-on-surface"}`}>{pendientes.length}</p>
+          </div>
+          <div className="px-4 py-3 text-center">
+            <p className="font-mono text-[9px] uppercase text-outline">Entregadas</p>
+            <p className="font-black text-xl mt-0.5 text-ok">{entregadas}</p>
+          </div>
+          <div className="px-4 py-3 text-center">
+            <p className="font-mono text-[9px] uppercase text-outline">En stock</p>
+            <p className={`font-black text-xl mt-0.5 ${disponibles < pendientes.length ? "text-error" : "text-on-surface"}`}>{disponibles}</p>
+          </div>
+        </div>
+      )}
+      {reqs !== null && bandas !== null && disponibles < pendientes.length && (
+        <p className="px-5 py-2 text-[11px] text-error bg-error-container/30 border-b border-outline-variant">
+          Stock insuficiente para cubrir la demanda pendiente — pide más banditas a RedPontis desde Hardware.
+        </p>
+      )}
       {reqs === null ? (
         <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
       ) : reqs.length === 0 ? (
