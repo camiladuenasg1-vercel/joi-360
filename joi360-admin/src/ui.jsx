@@ -154,11 +154,22 @@ export const Drawer = ({ open, onClose, title, subtitle, icon, children, footer,
   );
 };
 
-export const BtnPrimary = ({ children, ...p }) => (
-  <button {...p} className={`px-5 py-2.5 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${p.className || ""}`}>{children}</button>
+// Spinner reutilizable para el estado loading de los botones — antes cada
+// pantalla resolvía "guardando…" a mano (texto swap + disabled por separado,
+// sin spinner), con el riesgo real de que alguna se olvidara el disabled y
+// permitiera doble-click mientras el guardado en curso todavía viaja en la
+// sync en cascada hacia Supabase (ver SyncBadge arriba).
+const BtnSpinner = () => <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" aria-hidden="true"/>;
+
+export const BtnPrimary = ({ children, loading, loadingLabel, disabled, ...p }) => (
+  <button {...p} disabled={disabled || loading} className={`px-5 py-2.5 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-primary-container transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${p.className || ""}`}>
+    {loading && <BtnSpinner/>}{loading ? (loadingLabel || children) : children}
+  </button>
 );
-export const BtnOutline = ({ children, ...p }) => (
-  <button {...p} className={`px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant text-sm font-medium hover:bg-surface-container transition-colors flex items-center justify-center gap-2 ${p.className || ""}`}>{children}</button>
+export const BtnOutline = ({ children, loading, loadingLabel, disabled, ...p }) => (
+  <button {...p} disabled={disabled || loading} className={`px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant text-sm font-medium hover:bg-surface-container transition-colors flex items-center justify-center gap-2 ${p.className || ""}`}>
+    {loading && <BtnSpinner/>}{loading ? (loadingLabel || children) : children}
+  </button>
 );
 
 // ── Campanita de notificaciones (Task #170) ─────────────────────────────

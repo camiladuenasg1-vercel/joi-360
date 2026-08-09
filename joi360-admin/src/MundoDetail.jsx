@@ -1089,7 +1089,7 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
             <input type="number" min="0" max="100" className="w-24 h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder="% desc."
               value={nuevo.descuento_pct} onChange={e=>setNuevo(n=>({...n, descuento_pct: e.target.value}))}/>
           </div>
-          <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={guardando} onClick={crear}>{guardando ? "Creando…" : "Crear plan"}</BtnPrimary>
+          <BtnPrimary className="!py-1.5 !px-3 !text-xs" loading={guardando} loadingLabel="Creando…" onClick={crear}>Crear plan</BtnPrimary>
         </div>
       )}
 
@@ -2322,7 +2322,7 @@ function ActoresOrganizadores({ m }) {
 
       <Drawer open={open} onClose={() => setOpen(false)} icon="business_center" title="Nuevo organizador" subtitle={m.nombre}
         footer={credencialesNuevas ? <BtnPrimary onClick={() => setOpen(false)}>Listo</BtnPrimary> :
-          <><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre.trim() || creando} onClick={crear}>{creando ? "Creando…" : "Crear organizador"}</BtnPrimary></>}>
+          <><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre.trim()} loading={creando} loadingLabel="Creando…" onClick={crear}>Crear organizador</BtnPrimary></>}>
         {credencialesNuevas ? (
           <div className="space-y-4">
             <div className="p-4 bg-ok/10 border border-ok/30 rounded-xl text-center">
