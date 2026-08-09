@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
-import { update, uid, MODULE_CATALOG, CORE_IDS, VERTICALS, GIROS_POR_VERTICAL, modosDeMundo } from "./store";
+import { update, uid, MODULE_CATALOG, CORE_IDS, VERTICALS, GIROS_POR_VERTICAL, modosDeMundo, MODULOS_PROXIMAMENTE, MONEDAS_CATALOG } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { uploadArchivo } from "./supabase.js";
 
@@ -382,7 +382,7 @@ function Step2Entidad({ f, set }) {
         <Field label="RUC"><input className={`${inputCls} font-mono`} value={f.ruc} onChange={e => set({ ruc: e.target.value })} placeholder="20XXXXXXXXX" /></Field>
         <Field label="Moneda base">
           <select className={inputCls} value={f.moneda} onChange={e => set({ moneda: e.target.value })}>
-            <option value="PEN">PEN — Sol Peruano</option><option value="USD">USD — Dólar</option>
+            {MONEDAS_CATALOG.map(c => <option key={c.id} value={c.id}>{c.id} — {c.nombre}</option>)}
           </select>
         </Field>
       </div>
@@ -539,8 +539,12 @@ const SERVICIOS_INICIALES = ["wallet", "comercios", "consumos", "reservas", "pro
 function Step4Servicios({ f, set }) {
   const [search, setSearch] = useState("");
   const [showOpcional, setShowOpcional] = useState(false);
+  // MODULOS_PROXIMAMENTE nunca llega a sincronizarse a Supabase (ver
+  // syncAllWorlds) — ofrecerlos como si fueran un módulo real elegible en el
+  // wizard de creación solo genera falsa confianza de que quedaron activos.
   const filtered = (tier) => MODULE_CATALOG.filter(m =>
     m.tier === tier &&
+    !MODULOS_PROXIMAMENTE.has(m.id) &&
     (!m.lock || m.lock === f.vertical) &&
     (search === "" || m.name.toLowerCase().includes(search.toLowerCase()) || m.desc.toLowerCase().includes(search.toLowerCase()))
   );
@@ -559,24 +563,26 @@ function Step4Servicios({ f, set }) {
         <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
           <Icon n="checklist" className="text-[16px] text-primary"/> Servicios iniciales de este mundo
         </p>
-        <p className="text-[11px] text-on-surface-variant mb-3">Wallet, Comercios y Compras y Transacciones son la base — siempre activos. Reservas y Promociones son opcionales, elígelos si aplican.</p>
+        <p className="text-[11px] text-on-surface-variant mb-3">Wallet, Comercios y Compras y Transacciones son la base — siempre activos. Reservas y Promociones todavía están en desarrollo y no se pueden activar en un mundo nuevo.</p>
         <div className="space-y-2">
           {serviciosIniciales.map(mod => {
-            const sel = !!f.modulos[mod.id];
-            const locked = mod.tier === "CORE" || mod.base;
+            const proximamente = MODULOS_PROXIMAMENTE.has(mod.id);
+            const sel = !proximamente && !!f.modulos[mod.id];
+            const locked = mod.tier === "CORE" || mod.base || proximamente;
             return (
-              <div key={mod.id} className={`rounded-lg border transition-colors bg-surface overflow-hidden ${sel ? "border-primary/50" : "border-outline-variant hover:border-primary/30"}`}>
-                <label className="flex items-center gap-3 p-3 cursor-pointer">
+              <div key={mod.id} className={`rounded-lg border transition-colors bg-surface overflow-hidden ${proximamente ? "opacity-60" : sel ? "border-primary/50" : "border-outline-variant hover:border-primary/30"}`}>
+                <label className={`flex items-center gap-3 p-3 ${proximamente ? "cursor-not-allowed" : "cursor-pointer"}`}>
                   <input type="checkbox" disabled={locked} checked={sel}
-                    onChange={e => set({ modulos: { ...f.modulos, [mod.id]: e.target.checked } })}
+                    onChange={e => !proximamente && set({ modulos: { ...f.modulos, [mod.id]: e.target.checked } })}
                     className="rounded border-outline-variant text-primary" />
                   <Icon n={mod.icon} className="text-primary text-[18px]" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{mod.name}</p>
                     <p className="text-[11px] text-on-surface-variant">{mod.desc}</p>
                   </div>
-                  {locked ? <span className="font-mono text-[9px] bg-surface-container text-outline px-1.5 py-0.5 rounded">automático</span>
-                          : <span className="font-mono text-[9px] bg-tertiary-fixed text-tertiary px-1.5 py-0.5 rounded">opcional</span>}
+                  {proximamente ? <span className="font-mono text-[9px] bg-surface-container text-outline px-1.5 py-0.5 rounded">próximamente</span>
+                    : locked ? <span className="font-mono text-[9px] bg-surface-container text-outline px-1.5 py-0.5 rounded">automático</span>
+                    : <span className="font-mono text-[9px] bg-tertiary-fixed text-tertiary px-1.5 py-0.5 rounded">opcional</span>}
                 </label>
                 {sel && (mod.configFields || []).length > 0 && (
                   <div className="px-3 pb-3 pt-1 border-t border-outline-variant/50 bg-surface-container-low grid grid-cols-2 gap-3">

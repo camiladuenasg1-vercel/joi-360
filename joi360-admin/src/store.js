@@ -10,6 +10,16 @@ import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeature
 
 const KEY = "joi360_state_v3";
 
+// Catálogo real de monedas soportadas (Task #150) — antes vivía duplicado
+// como dos listas ["PEN","USD"] hardcodeadas por separado (el select del
+// wizard de creación de mundo y el configField monedaPermitida de Wallet),
+// con el riesgo real de que alguien agregue una moneda en un lado y se le
+// olvide el otro. Una sola fuente.
+export const MONEDAS_CATALOG = [
+  { id: "PEN", nombre: "Sol Peruano" },
+  { id: "USD", nombre: "Dólar Estadounidense" },
+];
+
 // --- Catálogo Maestro de Módulos (R0, matriz Emisión/Adquirencia) ---
 export const MODULE_CATALOG = [
 
@@ -28,7 +38,7 @@ export const MODULE_CATALOG = [
     pricing: { modelo: "mixto", fijoMensual: 1200, porTx: 0.5, setup: 800, moneda: "PEN" },
     settlementSugerido: { frecuencia: "diaria", corte: "19:00", retencion: 0 },
     configFields: [
-      { key: "monedaPermitida", label: "Moneda de operación del mundo", type: "select", options: ["PEN", "USD"], default: "PEN" },
+      { key: "monedaPermitida", label: "Moneda de operación del mundo", type: "select", options: MONEDAS_CATALOG.map(c => c.id), default: "PEN" },
       { key: "maxRecargasDiarias", label: "Cantidad máxima de recargas por usuario por día", type: "number", default: 3, nullable: true, nullLabel: "Sin límite" },
       { key: "maxPorRecarga", label: "Máximo por recarga", type: "currency", default: 500, nullable: true, nullLabel: "Sin tope por recarga" },
       { key: "p2pEnabled", label: "Habilitar transferencias entre usuarios del mismo mundo", type: "switch", default: true },
