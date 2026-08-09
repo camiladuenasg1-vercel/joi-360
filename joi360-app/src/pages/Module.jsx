@@ -745,6 +745,7 @@ function RestriccionesTemplate({ cfg, u }) {
   const [addingChild, setAddingChild] = useState(() => new URLSearchParams(location.search).get("agregar") === "1");
   const [pasoSuscripcion, setPasoSuscripcion] = useState(false); // paso 2: confirmar cobro antes de crear
   const [nuevo, setNuevo] = useState({ nombre: "", dni: "", alergias: [] });
+  const [otraAlergiaNueva, setOtraAlergiaNueva] = useState(""); // "+ Otra" del catálogo fijo de alergias, al crear un dependiente
   const [creando, setCreando] = useState(false);
   const [saldoGuardian, setSaldoGuardian] = useState(null);
   const [rechargeFor, setRechargeFor] = useState(null); // dependent_user_id
@@ -762,6 +763,7 @@ function RestriccionesTemplate({ cfg, u }) {
   const [editandoAlergiasId, setEditandoAlergiasId] = useState(null); // dependent_user_id en edición
   const [editAlergiasArr, setEditAlergiasArr] = useState([]);
   const [guardandoAlergias, setGuardandoAlergias] = useState(false);
+  const [otraAlergiaEdit, setOtraAlergiaEdit] = useState("");
   // Restricciones granulares por dependiente (Task #173) — antes horario y
   // límite diario eran un único valor que RedPontis fijaba para TODO el
   // mundo; ahora el tutor los configura por cada dependiente, y puede elegir
@@ -984,11 +986,19 @@ function RestriccionesTemplate({ cfg, u }) {
         {registroAlergias && (
           <div>
             <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {ALERGIAS_CATALOG.map(a=>(
                 <button key={a} onClick={()=>toggleAlergia(a)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${nuevo.alergias.includes(a)?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
               ))}
+              {nuevo.alergias.filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a=>(
+                <button key={a} onClick={()=>toggleAlergia(a)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold border tap-active bg-red-50 border-red-300 text-red-700">{a}</button>
+              ))}
+              <input value={otraAlergiaNueva} onChange={e=>setOtraAlergiaNueva(e.target.value)}
+                onKeyDown={e=>{ if (e.key==="Enter" && otraAlergiaNueva.trim()) { e.preventDefault(); setNuevo(n=>({...n, alergias: [...n.alergias, otraAlergiaNueva.trim()]})); setOtraAlergiaNueva(""); } }}
+                onBlur={()=>{ if (otraAlergiaNueva.trim()) { setNuevo(n=>({...n, alergias: [...n.alergias, otraAlergiaNueva.trim()]})); setOtraAlergiaNueva(""); } }}
+                placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-transparent outline-none w-20 focus:w-32 transition-all"/>
             </div>
           </div>
         )}
@@ -1055,7 +1065,7 @@ function RestriccionesTemplate({ cfg, u }) {
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
                       {editandoAlergiasId !== c.dependent_user_id && (
-                        <button onClick={()=>{setEditandoAlergiasId(c.dependent_user_id); setEditAlergiasArr(alergiasArr);}}
+                        <button onClick={()=>{setEditandoAlergiasId(c.dependent_user_id); setEditAlergiasArr(alergiasArr); setOtraAlergiaEdit("");}}
                           className="text-[9px] font-bold text-[#3525cd] tap-active">{alergiasArr.length ? "Editar" : "+ Agregar alergias"}</button>
                       )}
                     </div>
@@ -1070,11 +1080,19 @@ function RestriccionesTemplate({ cfg, u }) {
             {editandoAlergiasId === c.dependent_user_id && (
               <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
                 <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                   {ALERGIAS_CATALOG.map(a=>(
                     <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.includes(a)?arr.filter(x=>x!==a):[...arr,a])}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${editAlergiasArr.includes(a)?"bg-red-50 border-red-300 text-red-700":"bg-white border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
                   ))}
+                  {editAlergiasArr.filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a=>(
+                    <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.filter(x=>x!==a))}
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold border tap-active bg-red-50 border-red-300 text-red-700">{a}</button>
+                  ))}
+                  <input value={otraAlergiaEdit} onChange={e=>setOtraAlergiaEdit(e.target.value)}
+                    onKeyDown={e=>{ if (e.key==="Enter" && otraAlergiaEdit.trim()) { e.preventDefault(); setEditAlergiasArr(arr=>[...arr, otraAlergiaEdit.trim()]); setOtraAlergiaEdit(""); } }}
+                    onBlur={()=>{ if (otraAlergiaEdit.trim()) { setEditAlergiasArr(arr=>[...arr, otraAlergiaEdit.trim()]); setOtraAlergiaEdit(""); } }}
+                    placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-white outline-none w-20 focus:w-32 transition-all"/>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
@@ -1126,16 +1144,27 @@ function RestriccionesTemplate({ cfg, u }) {
             </button>
             {restriccionesAbiertoId === c.dependent_user_id && restriccionesDraft && (
               <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Consumo desde</label>
-                    <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
-                      value={restriccionesDraft.horario_inicio} onChange={e=>setRestriccionesDraft(d=>({...d, horario_inicio: e.target.value}))}/>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Horario de consumo</label>
+                    {(restriccionesDraft.horario_inicio || restriccionesDraft.horario_fin) ? (
+                      <button onClick={()=>setRestriccionesDraft(d=>({...d, horario_inicio: "", horario_fin: ""}))}
+                        className="text-[9px] font-bold text-[#3525cd] tap-active">Quitar restricción</button>
+                    ) : (
+                      <span className="text-[9px] font-bold text-green-700">Sin restricción de horario</span>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Consumo hasta</label>
-                    <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
-                      value={restriccionesDraft.horario_fin} onChange={e=>setRestriccionesDraft(d=>({...d, horario_fin: e.target.value}))}/>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] text-[#777587] block mb-1">Desde</label>
+                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                        value={restriccionesDraft.horario_inicio} onChange={e=>setRestriccionesDraft(d=>({...d, horario_inicio: e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-[#777587] block mb-1">Hasta</label>
+                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                        value={restriccionesDraft.horario_fin} onChange={e=>setRestriccionesDraft(d=>({...d, horario_fin: e.target.value}))}/>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -3000,6 +3029,7 @@ function PerfilExtTemplate({ cfg, u }) {
   const [guardando, setGuardando] = useState(false);
   const [guardarError, setGuardarError] = useState(null);
   const [dependientes, setDependientes] = useState(null);
+  const [otraAlergiaPerfil, setOtraAlergiaPerfil] = useState("");
 
   useEffect(() => {
     let vivo = true;
@@ -3014,6 +3044,7 @@ function PerfilExtTemplate({ cfg, u }) {
       clinica: perfil?.clinica || "", contacto_emergencia_nombre: perfil?.contacto_emergencia_nombre || "",
       contacto_emergencia_telefono: perfil?.contacto_emergencia_telefono || "",
     });
+    setOtraAlergiaPerfil("");
     setEditando(true);
   };
   const guardar = async () => {
@@ -3065,7 +3096,7 @@ function PerfilExtTemplate({ cfg, u }) {
               {CAMPOS.map(f => f.key === "alergias" ? (
                 <div key={f.key}>
                   <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{f.label}</label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {ALERGIAS_CATALOG.map(a => {
                       const arr = (draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
                       const activa = arr.includes(a);
@@ -3079,6 +3110,22 @@ function PerfilExtTemplate({ cfg, u }) {
                           className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${activa?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
                       );
                     })}
+                    {(draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean).filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a => (
+                      <button key={a} type="button"
+                        onClick={() => setDraft(d => {
+                          const cur = (d.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
+                          return { ...d, alergias: cur.filter(x=>x!==a).join(", ") };
+                        })}
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold border tap-active bg-red-50 border-red-300 text-red-700">{a}</button>
+                    ))}
+                    <input value={otraAlergiaPerfil} onChange={e=>setOtraAlergiaPerfil(e.target.value)}
+                      onKeyDown={e=>{ if (e.key==="Enter" && otraAlergiaPerfil.trim()) { e.preventDefault();
+                        setDraft(d => { const cur = (d.alergias || "").split(",").map(x=>x.trim()).filter(Boolean); return { ...d, alergias: [...cur, otraAlergiaPerfil.trim()].join(", ") }; });
+                        setOtraAlergiaPerfil(""); } }}
+                      onBlur={()=>{ if (otraAlergiaPerfil.trim()) {
+                        setDraft(d => { const cur = (d.alergias || "").split(",").map(x=>x.trim()).filter(Boolean); return { ...d, alergias: [...cur, otraAlergiaPerfil.trim()].join(", ") }; });
+                        setOtraAlergiaPerfil(""); } }}
+                      placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-[#f0ecf9] outline-none w-20 focus:w-32 transition-all"/>
                   </div>
                 </div>
               ) : (
