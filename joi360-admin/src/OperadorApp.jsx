@@ -37,6 +37,7 @@ const MODOS = [
   { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
   { id: "menu", nombre: "Entregar Menú", icon: "restaurant", desc: "Marcar como entregadas las reservas de menú de hoy, ya pagadas." },
   { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "Asociar una pulsera física a la cuenta de un usuario." },
+  { id: "ficha", nombre: "Consultar Ficha", icon: "medical_information", desc: "Ver alergias, tipo de sangre y contacto de emergencia por DNI o bandita." },
 ];
 
 function OperadorShell({ comercio, m }) {
@@ -48,12 +49,14 @@ function OperadorShell({ comercio, m }) {
   // usaPulseraNfc por defecto true: mundos configurados antes de este campo
   // siguen viendo el tile, igual que ya asumía el backend del POS nativo.
   const banditaOn = !!walletMod && walletMod.config?.usaPulseraNfc !== false;
+  const fichaOn = (m?.modulos || []).some(x => x.id === "perfil_ext" && x.enabled);
 
   const disponibles = MODOS.filter(md => {
     if (md.id === "bnpl") return bnplOn;
     if (md.id === "accesos") return accesosOn;
     if (md.id === "menu") return menuOn;
     if (md.id === "bandita") return banditaOn;
+    if (md.id === "ficha") return fichaOn;
     return true;
   });
 
@@ -99,6 +102,7 @@ function OperadorShell({ comercio, m }) {
         {modo === "accesos" && <AccesosOperador comercio={comercio} m={m} />}
         {modo === "bandita" && <VincularBanditaOperador comercio={comercio} m={m} />}
         {modo === "menu" && <EntregarMenuOperador comercio={comercio} m={m} />}
+        {modo === "ficha" && <ConsultarFichaOperador comercio={comercio} m={m} />}
         {modo === "reserva" && <ReservaProximamente />}
       </div>
     </div>
@@ -541,6 +545,150 @@ export function VincularBanditaOperador({ comercio, m }) {
         <p className={`text-sm flex items-center gap-1.5 ${resultado.ok ? "text-ok" : "text-error"}`}>
           <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
         </p>
+      )}
+    </div>
+  );
+}
+
+// ── Consultar Ficha (Task #160) — módulo Perfil Extendido visible en el POS:
+// buscar por DNI (titular o dependiente, muestra a toda la familia para
+// elegir) o por código/bandita, y ver la ficha médica completa (alergias,
+// tipo de sangre, clínica, contacto de emergencia). El backend ya la traía
+// completa desde antes (titular-dni.js / titular.js, vía lib/ficha.js) —
+// VincularBanditaOperador solo usaba el campo alergias de esa misma
+// respuesta; acá se muestra entera, con el titular/apoderado siempre visible
+// cuando la persona es un dependiente.
+function ConsultarFichaOperador({ comercio, m }) {
+  const [modoIdent, setModoIdent] = useState("codigo"); // "codigo" | "dni"
+  const [codigoUsuario, setCodigoUsuario] = useState("");
+  const [dniInput, setDniInput] = useState("");
+  const [ficha, setFicha] = useState(null);
+  const [candidatos, setCandidatos] = useState(null);
+  const [buscando, setBuscando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const buscarPorCodigo = async () => {
+    const code = codigoUsuario.trim();
+    if (!code) return;
+    setBuscando(true); setError(null); setFicha(null); setCandidatos(null);
+    try {
+      const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/titular/${encodeURIComponent(code)}?world_id=${encodeURIComponent(m.id)}`);
+      const data = await res.json();
+      if (!res.ok) { setError(data?.error?.message || "No se encontró a nadie con ese código o bandita."); return; }
+      setFicha(data);
+    } catch {
+      setError("No se pudo buscar. Intenta de nuevo.");
+    } finally { setBuscando(false); }
+  };
+
+  const buscarPorDni = async () => {
+    const dni = dniInput.trim();
+    if (!dni) return;
+    setBuscando(true); setError(null); setFicha(null); setCandidatos(null);
+    try {
+      const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/titular-dni/${encodeURIComponent(dni)}?world_id=${encodeURIComponent(m.id)}`);
+      const data = await res.json();
+      if (!res.ok) { setError(res.status === 404 ? "No encontramos a nadie con ese DNI en este mundo." : "No se pudo buscar el documento."); return; }
+      const todos = [data, ...(data.relacionados || [])];
+      if (todos.length === 1) setFicha(todos[0]);
+      else setCandidatos(todos);
+    } catch {
+      setError("No se pudo buscar el documento. Intenta de nuevo.");
+    } finally { setBuscando(false); }
+  };
+
+  const reiniciar = () => { setFicha(null); setCandidatos(null); setCodigoUsuario(""); setDniInput(""); setError(null); };
+
+  if (ficha) {
+    const r = ficha.restricciones || {};
+    const CAMPOS = [
+      { icon: "no_food", label: "Alergias", valor: r.alergias, bg: "bg-amber-50", c: "text-amber-600" },
+      { icon: "water_drop", label: "Tipo de sangre", valor: r.tipoSangre, bg: "bg-red-50", c: "text-red-600" },
+      { icon: "local_hospital", label: "Clínica de atención", valor: r.clinica, bg: "bg-blue-50", c: "text-blue-600" },
+      { icon: "phone_in_talk", label: "Contacto de emergencia", valor: r.contactoEmergencia?.nombre ? `${r.contactoEmergencia.nombre}${r.contactoEmergencia.telefono ? " · " + r.contactoEmergencia.telefono : ""}` : null, bg: "bg-green-50", c: "text-green-600" },
+    ].filter(c => c.valor);
+    return (
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-bold text-sm">{ficha.nombre || "Sin nombre registrado"}</p>
+            <p className="text-[10px] font-mono uppercase text-outline">
+              {ficha.esDependiente ? "Dependiente" : "Titular"}{ficha.apoderado ? ` · Titular: ${ficha.apoderado}` : ""}
+            </p>
+          </div>
+          <BtnOutline onClick={reiniciar}><Icon n="close" className="text-[16px]" /></BtnOutline>
+        </div>
+        {ficha.balance != null && (
+          <div className="bg-surface rounded-xl px-3 py-2 flex items-center justify-between">
+            <span className="text-xs text-on-surface-variant">Saldo en este mundo</span>
+            <span className="font-mono text-sm font-bold">S/ {Number(ficha.balance).toFixed(2)}</span>
+          </div>
+        )}
+        {CAMPOS.length === 0 ? (
+          <div className="text-center py-8 border-2 border-dashed border-outline-variant rounded-xl">
+            <Icon n="medical_information" className="text-[36px] text-outline mb-2 block mx-auto" />
+            <p className="text-sm text-on-surface-variant">Sin datos médicos registrados.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {CAMPOS.map(c => (
+              <div key={c.label} className="flex items-start gap-3 bg-surface rounded-xl px-3 py-2.5">
+                <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center flex-shrink-0`}>
+                  <Icon n={c.icon} className={`text-[16px] ${c.c}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[9px] uppercase text-outline">{c.label}</p>
+                  <p className="text-sm font-medium truncate">{c.valor}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
+      {!candidatos && (
+        <div className="flex gap-1.5">
+          <button onClick={() => setModoIdent("codigo")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "codigo" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>Código o bandita</button>
+          <button onClick={() => setModoIdent("dni")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "dni" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>DNI</button>
+        </div>
+      )}
+      {!candidatos && modoIdent === "codigo" && (
+        <div className="flex gap-2">
+          <input className={`${inputCls} font-mono`} placeholder="Código JOI o UID de bandita" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} onKeyDown={e => e.key === "Enter" && buscarPorCodigo()} autoFocus />
+          <BtnPrimary disabled={!codigoUsuario.trim() || buscando} onClick={buscarPorCodigo}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+        </div>
+      )}
+      {!candidatos && modoIdent === "dni" && (
+        <div>
+          <div className="flex gap-2">
+            <input className={`${inputCls} font-mono`} placeholder="DNI del titular o del dependiente" value={dniInput} onChange={e => setDniInput(e.target.value)} onKeyDown={e => e.key === "Enter" && buscarPorDni()} />
+            <BtnPrimary disabled={!dniInput.trim() || buscando} onClick={buscarPorDni}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+          </div>
+          <p className="text-[10px] text-outline mt-1.5">Cualquier DNI de la familia funciona — si hay más de una cuenta asociada, se puede elegir cuál.</p>
+        </div>
+      )}
+      {candidatos && (
+        <div className="space-y-2">
+          <p className="text-xs text-on-surface-variant">Este DNI trae {candidatos.length} cuentas asociadas — elige a quién consultas:</p>
+          {candidatos.map(c => (
+            <button key={c.userId} onClick={() => setFicha(c)}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-outline-variant hover:border-primary/50 bg-surface text-left tap-active">
+              <div className="min-w-0">
+                <p className="font-bold text-sm truncate">{c.nombre || "Sin nombre"} {c.esDependiente ? <span className="font-mono text-[9px] uppercase text-tertiary ml-1">dependiente</span> : <span className="font-mono text-[9px] uppercase text-primary ml-1">titular</span>}</p>
+                {c.restricciones?.alergias && <p className="text-[10px] text-amber-700">Alergias: {c.restricciones.alergias}</p>}
+              </div>
+              {c.balance != null && <span className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(c.balance).toFixed(2)}</span>}
+            </button>
+          ))}
+          <button onClick={reiniciar} className="text-xs text-on-surface-variant">Cancelar</button>
+        </div>
+      )}
+      {error && (
+        <p className="text-sm text-error flex items-center gap-1.5"><Icon n="error" className="text-[16px]" />{error}</p>
       )}
     </div>
   );
