@@ -11,6 +11,7 @@ import ActivityPage from "./pages/Activity.jsx";
 import ProfilePage from "./pages/Profile.jsx";
 import ModulePage from "./pages/Module.jsx";
 import ClaimTicketPage from "./pages/ClaimTicket.jsx";
+import PagarQRPage from "./pages/PagarQR.jsx";
 import { ToastHost } from "./components/Toast.jsx";
 
 function Guard({ children }) {
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/profile" element={<Guard><ProfilePage /></Guard>} />
         <Route path="/module/:moduleId" element={<Guard><ModulePage /></Guard>} />
         <Route path="/reclamar/:token" element={<Guard><ClaimTicketPage /></Guard>} />
+        <Route path="/pagar/:id" element={<Guard><PagarQRPage /></Guard>} />
         <Route path="*" element={<Root />} />
       </Routes>
     </HashRouter>

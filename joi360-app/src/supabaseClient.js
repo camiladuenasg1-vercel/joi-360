@@ -651,6 +651,35 @@ export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) 
   return { ok: true, balance: +r.nuevo_saldo_origen };
 }
 
+// ── Pago por QR generado por el comercio — el operador del POS tipea el
+// monto y muestra un QR (contraparte: crearChargeRequestRemote en
+// joi360-admin); esta pantalla resuelve el link, y quien lo escaneó paga
+// desde su propia sesión. Misma RPC atómica que ya usa cobrarPOSRemote.
+export async function fetchChargeRequestRemote(id) {
+  const rows = await rest(`charge_requests?id=eq.${id}&select=*`);
+  return rows?.[0] || null;
+}
+export async function pagarChargeRequestRemote(chargeRequestId, userId) {
+  const cr = await fetchChargeRequestRemote(chargeRequestId);
+  if (!cr) return { ok: false, motivo: "no_encontrado" };
+  if (cr.estado !== "pendiente") return { ok: false, motivo: cr.estado === "pagado" ? "ya_pagado" : "cancelado" };
+  const wallet = await getOrCreateWallet(userId, cr.world_id);
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_wallet_id: wallet.id, p_delta: -Math.abs(+cr.monto), p_tipo: "compra",
+      p_world_id: cr.world_id, p_merchant_id: cr.merchant_id, p_reference: cr.referencia, p_turno_id: cr.turno_id || null,
+    }),
+  }))?.[0];
+  exigirAutorizacionWallet(r);
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : (r?.motivo || "error"), balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  await rest(`charge_requests?id=eq.${chargeRequestId}&estado=eq.pendiente`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "pagado", pagador_user_id: userId, paid_at: new Date().toISOString() }),
+  }).catch(() => {});
+  return { ok: true, balance: +r.nuevo_saldo, monto: +cr.monto, merchantNombre: cr.merchant_nombre };
+}
+
 // ── Código JOI del titular — corto y digerible para compartir de palabra o
 // por WhatsApp al recibir una transferencia. Antes "mi código JOI" era el
 // UUID crudo de getSyntheticUserId(). Es información pública (como un alias

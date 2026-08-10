@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -737,7 +737,7 @@ const CANALES_RECARGA_PRESENCIAL = [
 
 export function CobrarPanel({ comercio, m }) {
   const merchantId = comercio.supabaseId || comercio.id;
-  const [modo, setModo] = useState("cobrar"); // "cobrar" | "recargar"
+  const [modo, setModo] = useState("cobrar"); // "cobrar" | "recargar" | "qr"
   const [codigo, setCodigo] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [cliente, setCliente] = useState(null); // {id, user_id, balance}
@@ -753,6 +753,43 @@ export function CobrarPanel({ comercio, m }) {
   // cualquier cobro/recarga con merchant_id (gap real cerrado post-#114) —
   // sin esto, cobrar()/recargar() de abajo se rechazan con TURNO_INVALIDO.
   const [turnoId, setTurnoId] = useState(null);
+
+  // Cobrar con QR — el operador tipea el monto, genera una solicitud de
+  // cobro, y el cliente la paga escaneando con su propia cámara desde su
+  // sesión del superapp. No hay "identificar al cliente" en este modo: quien
+  // paga se identifica solo, del otro lado.
+  const [qrMonto, setQrMonto] = useState("");
+  const [qrRequest, setQrRequest] = useState(null); // charge_request creada
+  const [qrGenerando, setQrGenerando] = useState(false);
+  const QR_EXPIRA_MIN = 10;
+  useEffect(() => {
+    if (!qrRequest || qrRequest.estado !== "pendiente") return;
+    const t = setInterval(async () => {
+      const r = await fetchChargeRequestRemote(qrRequest.id).catch(() => null);
+      if (r) setQrRequest(r);
+    }, 2000);
+    return () => clearInterval(t);
+  }, [qrRequest?.id, qrRequest?.estado]);
+  const qrExpirado = qrRequest && qrRequest.estado === "pendiente"
+    && (Date.now() - new Date(qrRequest.created_at).getTime()) > QR_EXPIRA_MIN * 60 * 1000;
+  const generarQr = async () => {
+    const m2 = +qrMonto;
+    if (!m2) return;
+    setQrGenerando(true);
+    try {
+      const r = await crearChargeRequestRemote(m.id, merchantId, comercio.nombre, m2, comercio.nombre, turnoId);
+      if (!r) throw new Error("sin respuesta");
+      setQrRequest(r);
+    } catch {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `pos-cobrar-qr:${merchantId}`, m.id);
+      notify([err.mensaje, err.accion].filter(Boolean).join(" "), "error");
+    } finally { setQrGenerando(false); }
+  };
+  const cancelarQr = async () => {
+    if (qrRequest) await cancelarChargeRequestRemote(qrRequest.id).catch(() => {});
+    setQrRequest(null); setQrMonto("");
+  };
 
   useEffect(() => { fetchProductsRemote(merchantId).then(rows => setProductos((rows || []).filter(p => p.active))).catch(() => {}); }, [merchantId]);
   useEffect(() => { abrirTurnoRemote(merchantId, m.id).then(setTurnoId).catch(() => setTurnoId(null)); }, [merchantId, m.id]);
@@ -841,7 +878,7 @@ export function CobrarPanel({ comercio, m }) {
 
   return (
     <>
-      <h2 className="text-2xl font-bold mb-4">{modo === "cobrar" ? "Cobrar" : "Recargar billetera"}</h2>
+      <h2 className="text-2xl font-bold mb-4">{modo === "cobrar" ? "Cobrar" : modo === "recargar" ? "Recargar billetera" : "Cobrar con QR"}</h2>
       <div className="flex gap-2 mb-6">
         <button onClick={() => cambiarModo("cobrar")} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors ${modo === "cobrar" ? "bg-secondary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container"}`}>
           <Icon n="point_of_sale" className="text-[16px]" /> Cobrar
@@ -849,8 +886,56 @@ export function CobrarPanel({ comercio, m }) {
         <button onClick={() => cambiarModo("recargar")} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors ${modo === "recargar" ? "bg-secondary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container"}`}>
           <Icon n="add_card" className="text-[16px]" /> Recargar billetera
         </button>
+        <button onClick={() => cambiarModo("qr")} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors ${modo === "qr" ? "bg-secondary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container"}`}>
+          <Icon n="qr_code_2" className="text-[16px]" /> Cobrar con QR
+        </button>
       </div>
 
+      {modo === "qr" ? (
+        <div className="max-w-xl bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
+          {!qrRequest ? (
+            <div>
+              <p className="font-mono text-[10px] uppercase text-outline mb-2">Monto a cobrar</p>
+              <div className="flex gap-2">
+                <NumInput className={`${inputCls} font-mono`} placeholder="0.00" value={qrMonto} onChange={e => setQrMonto(e.target.value)} onKeyDown={e => e.key === "Enter" && generarQr()} autoFocus />
+                <BtnPrimary disabled={!(+qrMonto > 0) || qrGenerando} onClick={generarQr}>
+                  <Icon n="qr_code_2" className="text-[18px]" /> {qrGenerando ? "Generando…" : "Generar QR"}
+                </BtnPrimary>
+              </div>
+              <p className="text-[11px] text-on-surface-variant mt-2">El cliente escanea el QR con la cámara de su celular, confirma el pago en su app y el saldo se descuenta de su billetera. No necesitas identificarlo antes.</p>
+            </div>
+          ) : qrRequest.estado === "pagado" ? (
+            <div className="text-center py-6">
+              <Icon n="check_circle" className="text-[48px] text-ok" />
+              <p className="font-bold text-lg mt-2">Pago recibido</p>
+              <p className="text-sm text-on-surface-variant mt-1">S/ {Number(qrRequest.monto).toFixed(2)}</p>
+              <BtnPrimary onClick={() => { setQrRequest(null); setQrMonto(""); }} className="w-full mt-4">Cobrar otro</BtnPrimary>
+            </div>
+          ) : qrRequest.estado === "cancelado" || qrExpirado ? (
+            <div className="text-center py-6">
+              <Icon n="error" className="text-[48px] text-error" />
+              <p className="font-bold text-lg mt-2">{qrExpirado ? "El QR expiró" : "Cobro cancelado"}</p>
+              <p className="text-sm text-on-surface-variant mt-1">{qrExpirado ? "Pasaron más de 10 minutos sin que se confirmara el pago." : "Se canceló antes de que el cliente pagara."}</p>
+              <BtnPrimary onClick={() => { setQrRequest(null); setQrMonto(""); }} className="w-full mt-4">Generar otro QR</BtnPrimary>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="font-mono text-[10px] uppercase text-outline mb-3">S/ {Number(qrRequest.monto).toFixed(2)} · Esperando pago</p>
+              <div className="w-52 h-52 mx-auto rounded-2xl bg-white border-2 border-outline-variant mb-4 flex items-center justify-center overflow-hidden">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=0&data=${encodeURIComponent(`https://joi360-app.vercel.app/#/pagar/${qrRequest.id}`)}`}
+                  alt="QR de cobro" className="w-full h-full object-contain p-2" />
+              </div>
+              <div className="flex items-center justify-center gap-2 text-sm text-on-surface-variant mb-4">
+                <span className="w-4 h-4 border-2 border-outline-variant border-t-secondary rounded-full animate-spin" />
+                Esperando que el cliente confirme…
+              </div>
+              <button onClick={cancelarQr} className="w-full py-3 rounded-xl bg-error text-white font-bold text-sm tap-active">
+                Cancelar cobro
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="max-w-xl bg-surface-container-lowest border border-outline-variant rounded-xl p-6 space-y-5">
         {/* Paso 1: identificar */}
         <div>
@@ -970,6 +1055,7 @@ export function CobrarPanel({ comercio, m }) {
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

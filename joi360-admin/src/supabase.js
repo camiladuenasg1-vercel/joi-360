@@ -1906,6 +1906,27 @@ export async function abrirTurnoRemote(merchantId, worldId) {
   return creado?.[0]?.id || null;
 }
 
+// ── Pago por QR generado por el comercio — el operador tipea el monto y
+// muestra un QR; el cliente lo escanea con su cámara y paga desde su propia
+// sesión del superapp. Contraparte en joi360-app: pagarChargeRequestRemote.
+export async function crearChargeRequestRemote(worldId, merchantId, merchantNombre, monto, referencia, turnoId) {
+  const rows = await rest("charge_requests", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, merchant_id: merchantId, merchant_nombre: merchantNombre, monto, referencia: referencia || null, turno_id: turnoId || null }),
+  });
+  return rows?.[0] || null;
+}
+export async function fetchChargeRequestRemote(id) {
+  const rows = await rest(`charge_requests?id=eq.${id}&select=*`);
+  return rows?.[0] || null;
+}
+export async function cancelarChargeRequestRemote(id) {
+  await rest(`charge_requests?id=eq.${id}&estado=eq.pendiente`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "cancelado" }),
+  });
+}
+
 export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia, turnoId) {
   const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
