@@ -1125,12 +1125,17 @@ export function generarPassword() {
 export function generarPin4() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
-// Código legible de comercio — se muestra en el admin y sirve como referencia
-// rápida para RedPontis/el mundo, independiente de las credenciales de login.
+// Código de comercio — el identificador real que el operador tipea en el POS
+// (junto al PIN) para entrar sin URL ni credenciales, mismo espíritu que el
+// código CR-01 del mundo. Sin guion a propósito (pedido explícito de la
+// usuaria: "sencillo") — más rápido de tipear en un mostrador. Antes era
+// SLUG-XXX con 900 combinaciones posibles y CERO chequeo de colisión contra
+// comercios ya existentes; ahora el llamador (EntregaMerchant.jsx) debe
+// verificar unicidad real contra Supabase y volver a generar si choca.
 export function generarCodigoComercio(nombre) {
-  const slug = (nombre || "comercio").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "COM";
+  const slug = (nombre || "COM").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "COM";
   const suf = String(Math.floor(100 + Math.random() * 900));
-  return `${slug}-${suf}`;
+  return `${slug}${suf}`;
 }
 
 export function ejecutarEntrega(mundoId, credenciales) {

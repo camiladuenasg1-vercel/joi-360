@@ -394,6 +394,32 @@ export async function registrarAccesoRemote(worldId, userId, tipo, zona) {
   });
 }
 
+// ── Turnos de Control de Accesos — el operador marca cuándo toma y cuándo
+// deja el puesto; el mundo ve esa ventana en su panel de monitoreo, no solo
+// los registros de entrada/salida sueltos. Uno por zona: dos porterías
+// pueden tener turnos abiertos al mismo tiempo sin pisarse.
+export async function fetchTurnoAbiertoRemote(worldId, zona) {
+  const zf = zona ? `zona=eq.${encodeURIComponent(zona)}` : `zona=is.null`;
+  const rows = await rest(`access_shifts?world_id=eq.${worldId}&${zf}&fin_at=is.null&select=*&order=inicio_at.desc&limit=1`);
+  return rows?.[0] || null;
+}
+export async function fetchTurnosMundo(worldId, limit = 20) {
+  return rest(`access_shifts?world_id=eq.${worldId}&select=*&order=inicio_at.desc&limit=${limit}`);
+}
+export async function iniciarTurnoRemote(worldId, zona, operadorNombre) {
+  const rows = await rest("access_shifts", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, zona: zona || null, operador_nombre: operadorNombre?.trim() || null }),
+  });
+  return rows?.[0] || null;
+}
+export async function cerrarTurnoRemote(shiftId) {
+  await rest(`access_shifts?id=eq.${shiftId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ fin_at: new Date().toISOString() }),
+  });
+}
+
 // ── Comercios (merchants) ────────────────────────────────────────────────────
 // "+v || null" convertía un 0% (tarifa/fijo legítimamente cero, ej. un
 // comercio sin comisión) en null ("sin override, usa el default del mundo")
@@ -615,6 +641,18 @@ export async function upsertEventoRemote(ev) {
 // que refreshMundosLive(). Ver refreshEventosLive() en store.js.
 export async function fetchEventosDeMundo(worldId) {
   return rest(`events?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+
+// Landing pública de JOI Solutions (cross-mundo) — mismo criterio real que
+// ya usa el marketplace de la superapp (fetchEventosLive: PUBLICADO + no
+// privado), sin filtrar por world_id porque la landing muestra eventos de
+// TODO el ecosistema, no de un mundo puntual.
+export async function fetchEventosPublicosLanding() {
+  return rest(`events?estado=eq.PUBLICADO&privado=eq.false&select=*&order=fecha`);
+}
+export async function fetchEventoPublico(eventId) {
+  const rows = await rest(`events?id=eq.${eventId}&estado=eq.PUBLICADO&privado=eq.false&select=*`);
+  return rows?.[0] || null;
 }
 
 export async function syncTicketTypesRemote(eventId, tipos) {

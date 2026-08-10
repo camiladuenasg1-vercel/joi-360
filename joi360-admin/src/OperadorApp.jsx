@@ -17,6 +17,7 @@ import {
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
   buscarNfcBandPorCodigo, vincularNfcBandRemote,
   fetchReservasMenuMerchant, marcarMenuReservaEntregadaRemote,
+  fetchTurnoAbiertoRemote, iniciarTurnoRemote, cerrarTurnoRemote,
 } from "./supabase.js";
 
 export function OperadorApp() {
@@ -339,6 +340,35 @@ export function AccesosOperador({ comercio, m }) {
   const [resultado, setResultado] = useState(null);
   const [log, setLog] = useState(null);
 
+  const [turno, setTurno] = useState(undefined); // undefined = cargando, null = sin turno abierto
+  const [nombreOperador, setNombreOperador] = useState("");
+  const [turnoBusy, setTurnoBusy] = useState(false);
+
+  const cargarTurno = () => fetchTurnoAbiertoRemote(m.id, zona).then(setTurno).catch(() => setTurno(null));
+  React.useEffect(() => { setTurno(undefined); cargarTurno(); }, [m.id, zona]);
+
+  const iniciarTurno = async () => {
+    setTurnoBusy(true);
+    try {
+      const t = await iniciarTurnoRemote(m.id, zona, nombreOperador);
+      setTurno(t);
+      notify("Turno iniciado.");
+    } catch {
+      notify("No se pudo iniciar el turno. Intenta de nuevo.", "error");
+    } finally { setTurnoBusy(false); }
+  };
+  const cerrarTurno = async () => {
+    if (!turno) return;
+    setTurnoBusy(true);
+    try {
+      await cerrarTurnoRemote(turno.id);
+      setTurno(null);
+      notify("Turno cerrado.");
+    } catch {
+      notify("No se pudo cerrar el turno. Intenta de nuevo.", "error");
+    } finally { setTurnoBusy(false); }
+  };
+
   const cargar = () => fetchAccesosMundo(m.id).then(r => setLog((r || []).slice(0, 8))).catch(() => setLog([]));
   React.useEffect(() => { cargar(); }, [m.id]);
 
@@ -366,6 +396,24 @@ export function AccesosOperador({ comercio, m }) {
 
   return (
     <div className="space-y-4">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4">
+        {turno === undefined ? (
+          <p className="text-xs text-on-surface-variant">Verificando turno…</p>
+        ) : turno ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold flex items-center gap-1.5"><Icon n="schedule" className="text-[16px] text-ok" /> Turno en curso{turno.operador_nombre ? ` · ${turno.operador_nombre}` : ""}</p>
+              <p className="text-xs text-on-surface-variant">Desde las {new Date(turno.inicio_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })} en {zona}</p>
+            </div>
+            <BtnOutline onClick={cerrarTurno} disabled={turnoBusy} className="flex-shrink-0">{turnoBusy ? "…" : "Cerrar turno"}</BtnOutline>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input className={`${inputCls} flex-1`} placeholder="Tu nombre (opcional)" value={nombreOperador} onChange={e => setNombreOperador(e.target.value)} />
+            <BtnPrimary onClick={iniciarTurno} disabled={turnoBusy} className="flex-shrink-0">{turnoBusy ? "…" : "Iniciar turno"}</BtnPrimary>
+          </div>
+        )}
+      </div>
       <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-3">
         <input className={`${inputCls} font-mono`} placeholder="Código JOI (QR o pulsera)" value={codigo} onChange={e => setCodigo(e.target.value)} onKeyDown={e => e.key === "Enter" && registrar()} />
         <div className="grid grid-cols-2 gap-2">

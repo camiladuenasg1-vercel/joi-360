@@ -5,7 +5,8 @@ import { Shell, Toaster } from "./ui";
 import { Login, AdminDashboard } from "./PagesCore";
 import { Mundos } from "./Mundos";
 import { MundoDetail } from "./MundoDetail";
-import { MundoFront, ComercioFront, Landing, AnuncianteFront } from "./Fronts";
+import { MundoFront, ComercioFront, AnuncianteFront } from "./Fronts";
+import { LandingHome, LandingEventos, LandingEventoDetalle } from "./LandingPublica";
 import { OrganizadorFront } from "./OrganizadorFront";
 import { OperadorApp } from "./OperadorApp";
 import { WorldOperadorApp } from "./WorldOperadorApp";
@@ -76,7 +77,9 @@ export default function App() {
         <Route path="/operador-mundo/:worldId" element={<WorldOperadorApp />} />
         <Route path="/anunciante/:id" element={<AnuncianteFront />} />
         <Route path="/organizador/:id" element={<OrganizadorFront />} />
-        <Route path="/landing" element={<Landing />} />
+        <Route path="/landing" element={<LandingHome />} />
+        <Route path="/landing/eventos" element={<LandingEventos />} />
+        <Route path="/landing/eventos/:id" element={<LandingEventoDetalle />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       </RoutedErrorBoundary>

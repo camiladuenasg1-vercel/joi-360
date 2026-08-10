@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -3112,9 +3112,11 @@ function SponsorAccesos({ m }) {
   const [zona, setZona] = useState(zonas[0]);
   const [busy, setBusy] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [turnos, setTurnos] = useState(null);
 
   const cargar = () => fetchAccesosMundo(m.id).then(r => setLog(r || [])).catch(() => setLog([]));
   useEffect(() => { cargar(); }, [m.id]);
+  useEffect(() => { fetchTurnosMundo(m.id).then(r => setTurnos(r || [])).catch(() => setTurnos([])); }, [m.id]);
 
   const registrar = async (e) => {
     e.preventDefault();
@@ -3172,6 +3174,41 @@ function SponsorAccesos({ m }) {
           <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
         </p>
       )}
+
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm mb-6">
+        <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
+          <h3 className="font-semibold">Turnos de portería</h3>
+          <span className="font-mono text-[10px] text-outline uppercase">{turnos?.length ?? "…"} registrados</span>
+        </div>
+        {turnos === null ? (
+          <p className="px-5 py-6 text-sm text-on-surface-variant">Cargando…</p>
+        ) : turnos.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-on-surface-variant">Ningún operador ha iniciado turno todavía.</p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+                <th className="px-5 py-3">Operador</th>
+                <th className="px-5 py-3">Zona</th>
+                <th className="px-5 py-3">Inicio</th>
+                <th className="px-5 py-3">Cierre</th>
+                <th className="px-5 py-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60">
+              {turnos.map(t => (
+                <tr key={t.id} className="hover:bg-surface-container-low">
+                  <td className="px-5 py-3">{t.operador_nombre || "—"}</td>
+                  <td className="px-5 py-3 text-xs">{t.zona || "—"}</td>
+                  <td className="px-5 py-3 text-xs text-on-surface-variant">{new Date(t.inicio_at).toLocaleString("es-PE")}</td>
+                  <td className="px-5 py-3 text-xs text-on-surface-variant">{t.fin_at ? new Date(t.fin_at).toLocaleString("es-PE") : "—"}</td>
+                  <td className="px-5 py-3">{t.fin_at ? <Pill color="bg-outline">Cerrado</Pill> : <Pill color="bg-ok">En curso</Pill>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center">
@@ -3715,44 +3752,6 @@ function AnuncianteGate({ a }) {
   );
 }
 
-/* ====== Frente: Landing pública ====== */
-export function Landing() {
-  const st = useStore();
-  const mundosPublicos = (st.mundos||[]).filter(m => m.estado === "ACTIVO" && !m.fixed);
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-primary text-white px-8 py-4 flex items-center gap-4">
-        <h1 className="text-2xl font-black tracking-tight">JOI 360</h1>
-        <p className="font-mono text-[10px] uppercase text-white/60 mt-1">Ecosistema cerrado de pagos y servicios</p>
-      </header>
-      <main className="max-w-6xl mx-auto px-8 py-16">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-black mb-4">Comunidades habilitadas</h2>
-          <p className="text-on-surface-variant text-lg">Cada mundo es una comunidad con su propio ecosistema de pagos, beneficios y servicios.</p>
-        </div>
-        {mundosPublicos.length === 0 ? (
-          <div className="text-center py-16 text-on-surface-variant">
-            <Icon n="public_off" className="text-[40px] mb-3 opacity-60" />
-            <p className="text-sm">Todavía no hay comunidades activas.</p>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mundosPublicos.map(m => (
-              <div key={m.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm hover:border-primary/50 transition-colors">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white mb-4" style={{ background: m.color }}>
-                  <Icon n="public" className="text-[24px]" />
-                </div>
-                <h3 className="text-lg font-bold mb-1">{m.nombre}</h3>
-                <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-3">{m.vertical}</p>
-                <p className="text-sm text-on-surface-variant mb-4">{m.descripcion}</p>
-                <a href={`#/mundo/${m.id}`} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
-                  <Icon n="open_in_new" className="text-[16px]" /> Ver mundo →
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
+/* Frente: Landing pública — movido a LandingPublica.jsx (header + nav +
+   rutaje real: Inicio / Eventos / detalle, en vez de una sola pantalla
+   plana). */

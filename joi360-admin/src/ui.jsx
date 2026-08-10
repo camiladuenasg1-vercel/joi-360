@@ -276,10 +276,7 @@ const NAV = [
     { to: "/admin/resumen", icon: "analytics", label: "Reportes y Auditoría" },
   ]},
   { group: "Público", items: [
-    // Deshabilitada por el momento: hasta tener una UI más estética para
-    // construir web con render config, esta pantalla queda fuera del
-    // alcance activo — no se elimina el código, solo se saca del uso real.
-    { to: "/landing", icon: "language", label: "Landing", proximamente: true },
+    { to: "/landing", icon: "language", label: "Landing", proximamente: false },
   ]},
 ];
 
