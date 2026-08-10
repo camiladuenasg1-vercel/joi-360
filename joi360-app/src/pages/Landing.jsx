@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../hooks.js";
 import { useUser, joinMundo, setActiveMundo, logoutUser } from "../userStore.js";
+import MundoInfoModal from "../components/MundoInfoModal.jsx";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -9,12 +10,22 @@ export default function LandingPage() {
   const u = useUser();
   const [search, setSearch] = useState("");
   const [joining, setJoining] = useState(null);
+  // Antes "Unirme" te dejaba directo en el Hub sin mostrar nada más que lo
+  // que ya cabía en la card — ahora abre un detalle completo primero, y solo
+  // ahí adentro está el botón real de unión (Task de UX pedida por la usuaria).
+  const [preview, setPreview] = useState(null); // { mundo, mode: "preview" | "success" }
+
+  // Filtro rápido por vertical (Educación, Retail, etc.) — antes solo se
+  // podía filtrar escribiendo el nombre de la vertical a mano en el buscador.
+  const [verticalFiltro, setVerticalFiltro] = useState("Todas");
 
   const publicMundos = (st.mundos || []).filter(m => m.estado === "ACTIVO" && !m.fixed && !m.redpontis);
+  const verticales = [...new Set(publicMundos.map(m => m.vertical).filter(Boolean))].sort();
   const filtered = publicMundos.filter(m =>
-    search === "" ||
-    m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    m.vertical?.toLowerCase().includes(search.toLowerCase())
+    (verticalFiltro === "Todas" || m.vertical === verticalFiltro) &&
+    (search === "" ||
+      m.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      m.vertical?.toLowerCase().includes(search.toLowerCase()))
   );
   const joined = u?.memberships || [];
   const isFirstTime = joined.length === 0;
@@ -27,10 +38,19 @@ export default function LandingPage() {
     "Especial RedPontis": { bg:"bg-purple-50", border:"border-purple-100", badge:"bg-purple-600", text:"text-purple-700" },
   };
 
-  const handle = (m) => {
+  const abrirPreview = (m) => setPreview({ mundo: m, mode: "preview" });
+
+  const confirmarUnion = () => {
+    const m = preview.mundo;
     setJoining(m.id);
-    setTimeout(() => { joinMundo(m.id); setActiveMundo(m.id); nav("/hub"); }, 700);
+    setTimeout(() => {
+      joinMundo(m.id); setActiveMundo(m.id);
+      setJoining(null);
+      setPreview({ mundo: m, mode: "success" });
+    }, 700);
   };
+
+  const irAlHub = () => nav("/hub");
 
   return (
     <div className="min-h-screen aura-bg">
@@ -114,6 +134,19 @@ export default function LandingPage() {
               </button>
             )}
           </div>
+
+          {/* Filtro rápido por vertical */}
+          {verticales.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 mt-3 pb-1">
+              {["Todas", ...verticales].map(v => (
+                <button key={v} onClick={() => setVerticalFiltro(v)}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
+                    verticalFiltro === v ? "bg-[#3525cd] text-white" : "glass-card text-[#777587]"}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Lista de comunidades */}
@@ -127,13 +160,12 @@ export default function LandingPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{background:"linear-gradient(135deg,#722ce3,#4f46e5)"}}>
-                    <span className="text-white text-[9px] font-black uppercase tracking-widest">RedPontis</span>
+                    <span className="text-white text-[9px] font-black uppercase tracking-widest">Especial JOI Solutions</span>
                   </div>
-                  <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Mundos del ecosistema · siempre disponibles</p>
+                  <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Siempre disponibles</p>
                 </div>
                 {rpWorlds.map(m=>{
                   const isJoined = joined.includes(m.id);
-                  const isJoining = joining === m.id;
                   const evCfg = m.eventosConfig;
                   return (
                     <div key={m.id} className="rounded-3xl overflow-hidden border border-purple-100 glass-card"
@@ -153,7 +185,7 @@ export default function LandingPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-black text-[#1b1b24] text-base">{m.nombre}</h3>
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded text-white" style={{background:m.color}}>RP</span>
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded text-white" style={{background:m.color}}>JOI</span>
                             </div>
                             <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">{m.vertical}</p>
                           </div>
@@ -172,16 +204,13 @@ export default function LandingPage() {
                       </div>
                       <div className="px-5 py-4 bg-white/70">
                         <button
-                          disabled={isJoining}
-                          onClick={()=> isJoined ? nav("/hub") : handle(m)}
+                          onClick={()=> isJoined ? nav("/hub") : abrirPreview(m)}
                           className="w-full py-3.5 rounded-2xl font-black text-sm transition-all tap-active flex items-center justify-center gap-2 text-white"
                           style={{background:`linear-gradient(135deg,${m.color},#4f46e5)`,boxShadow:`0 4px 14px ${m.color}40`}}>
-                          {isJoining ? (
-                            <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Uniéndome...</>
-                          ) : isJoined ? (
+                          {isJoined ? (
                             <><span className="material-symbols-outlined fill text-base">home</span>Ir a {m.nombre} →</>
                           ) : (
-                            `Unirme a ${m.nombre} →`
+                            "Ver detalle →"
                           )}
                         </button>
                       </div>
@@ -230,13 +259,15 @@ export default function LandingPage() {
             </div>
           )}
 
-          {/* Cards de comunidades */}
+          {/* Todas las comunidades — segunda sección, separada de "Especial JOI Solutions" */}
+          {filtered.length > 0 && (
+            <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Todas las comunidades</p>
+          )}
           {filtered.map(m => {
             const vc = VERTICAL_COLORS[m.vertical] || { bg:"bg-gray-50", border:"border-gray-100", badge:"bg-gray-600", text:"text-gray-700" };
             const isJoined = joined.includes(m.id);
-            const modCount = (m.modulos || []).filter(x => x.enabled).length;
+            const servCount = (m.modulos || []).filter(x => x.enabled).length;
             const comCount = (st.comercios || []).filter(c => c.mundoId === m.id).length;
-            const isJoining = joining === m.id;
 
             return (
               <div key={m.id}
@@ -274,7 +305,7 @@ export default function LandingPage() {
                   <div className="flex flex-wrap gap-3 mt-3">
                     <span className="text-[#777587] text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">apps</span>
-                      <b className="text-[#1b1b24]">{modCount}</b> módulos
+                      <b className="text-[#1b1b24]">{servCount}</b> servicios
                     </span>
                     <span className="text-[#777587] text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">storefront</span>
@@ -290,30 +321,22 @@ export default function LandingPage() {
                 {/* CTA */}
                 <div className="px-5 py-4 bg-white">
                   <button
-                    disabled={isJoining}
-                    onClick={() => isJoined ? nav("/hub") : handle(m)}
+                    onClick={() => isJoined ? nav("/hub") : abrirPreview(m)}
                     className={`w-full py-3.5 rounded-2xl font-black text-sm transition-all tap-active flex items-center justify-center gap-2
                       ${isJoined
                         ? "bg-[#f0ecf9] text-[#3525cd] border border-[#e2dfff]"
-                        : isJoining
-                          ? "opacity-70 cursor-not-allowed text-white"
-                          : "text-white"}`}
+                        : "text-white"}`}
                     style={!isJoined ? {
-                      background: isJoining ? "#3525cd" : "linear-gradient(135deg,#3525cd,#4f46e5)",
+                      background: "linear-gradient(135deg,#3525cd,#4f46e5)",
                       boxShadow: "0 4px 14px rgba(53,37,205,0.25)"
                     } : {}}>
-                    {isJoining ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        Uniéndome...
-                      </>
-                    ) : isJoined ? (
+                    {isJoined ? (
                       <>
                         <span className="material-symbols-outlined fill text-base">home</span>
                         Ir a mi hub →
                       </>
                     ) : (
-                      "Unirme a esta comunidad →"
+                      "Ver detalle →"
                     )}
                   </button>
                 </div>
@@ -333,6 +356,17 @@ export default function LandingPage() {
           </div>
         )}
       </div>
+
+      {preview && (
+        <MundoInfoModal
+          mundo={preview.mundo}
+          mode={preview.mode}
+          loading={joining === preview.mundo.id}
+          comerciosCount={(st.comercios || []).filter(c => c.mundoId === preview.mundo.id).length}
+          onClose={() => setPreview(null)}
+          onConfirm={preview.mode === "success" ? irAlHub : confirmarUnion}
+        />
+      )}
     </div>
   );
 }

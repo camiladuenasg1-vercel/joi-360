@@ -852,6 +852,13 @@ function BanditasNfcTab() {
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Registrar UNA bandita suelta (ej. para probar un tag físico puntual) exigía
+  // igual armar un CSV de una sola línea y subirlo por Carga masiva — no había
+  // atajo. Reusa el mismo registerNfcBandsBulkRemote con un array de 1 fila.
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickCodigo, setQuickCodigo] = useState("");
+  const [quickLote, setQuickLote] = useState("");
+  const [quickBusy, setQuickBusy] = useState(false);
   const [renombrandoLote, setRenombrandoLote] = useState(null); // nombre viejo del lote en edición
   const [nombreLoteNuevo, setNombreLoteNuevo] = useState("");
   const [eliminandoLote, setEliminandoLote] = useState(null); // nombre del lote con confirmación de borrado abierta
@@ -1003,6 +1010,23 @@ function BanditasNfcTab() {
       logErrorControlado("operacion_admin_fallida", "nfc-carga-masiva", null);
       notify(`${err.mensaje} ${err.accion}`, "error");
     } finally { setBulkBusy(false); }
+  };
+
+  const confirmarQuickAdd = async () => {
+    const normalizado = normalizarUid(quickCodigo);
+    if (!normalizado) { notify("Código UID inválido — debe ser hexadecimal (ej. 04:D6:01:5A:68:19:94 o el mismo texto corrido, sin separadores).", "error"); return; }
+    if (!quickLote.trim()) { notify("Ponle un nombre de lote — puede ser uno ya existente o uno nuevo solo para pruebas.", "error"); return; }
+    setQuickBusy(true);
+    try {
+      await registerNfcBandsBulkRemote([{ codigo: normalizado, lote: quickLote.trim(), valido: true }]);
+      notify(`Bandita ${normalizado} registrada en el lote "${quickLote.trim()}".`);
+      setShowQuickAdd(false); setQuickCodigo(""); setQuickLote("");
+      load(); loadStockAlmacen();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "nfc-registro-individual", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setQuickBusy(false); }
   };
 
   const liberar = async (b) => {
@@ -1187,11 +1211,40 @@ function BanditasNfcTab() {
           <BtnOutline onClick={abrirHistorial}>
             <Icon n="history" className="text-[16px]"/> Historial
           </BtnOutline>
+          <BtnOutline onClick={()=>setShowQuickAdd(true)}>
+            <Icon n="add" className="text-[16px]"/> Registrar 1 bandita
+          </BtnOutline>
           <BtnPrimary onClick={()=>setShowBulk(true)}>
             <Icon n="upload_file" className="text-[16px]"/> Cargar lote (CSV)
           </BtnPrimary>
         </div>
       </div>
+
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e=>e.target===e.currentTarget && setShowQuickAdd(false)}>
+          <div className="absolute inset-0 bg-black/20" onClick={()=>setShowQuickAdd(false)}/>
+          <div className="relative bg-surface rounded-2xl shadow-2xl border border-outline-variant p-6 w-full max-w-md z-10">
+            <h2 className="font-semibold text-lg mb-1">Registrar una bandita suelta</h2>
+            <p className="text-xs text-on-surface-variant mb-4">Para probar un tag físico puntual sin armar un CSV. Queda en stock, sin asignar a ningún mundo todavía — asígnala abajo en la tabla como cualquier otra.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-on-surface-variant block mb-1">Código UID</label>
+                <input className={`${inputCls} font-mono`} placeholder="04:D6:01:5A:68:19:94" value={quickCodigo} onChange={e=>setQuickCodigo(e.target.value)} autoFocus/>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-on-surface-variant block mb-1">Lote</label>
+                <input className={inputCls} placeholder="ej. pruebas-t6" value={quickLote} onChange={e=>setQuickLote(e.target.value)}/>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <BtnOutline onClick={()=>setShowQuickAdd(false)}>Cancelar</BtnOutline>
+              <BtnPrimary disabled={!quickCodigo.trim() || !quickLote.trim() || quickBusy} onClick={confirmarQuickAdd}>
+                {quickBusy ? "Registrando…" : "Registrar"}
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cobro pendiente — asignaciones "pagada" (anticipado/contraentrega)
           que todavía no se marcaron pagadas. Descuento de ventas NO aparece

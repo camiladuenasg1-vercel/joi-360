@@ -231,14 +231,6 @@ export default function HubPage() {
           </div>
         )}
 
-        {/* Connected indicator */}
-        <div className="flex justify-center pb-8">
-          <div className="glass-card flex items-center gap-2 px-4 py-2 rounded-full">
-            <div className="w-2 h-2 rounded-full bg-[#3525cd] animate-pulse" />
-            <span className="text-[10px] font-bold text-[#464555] uppercase tracking-widest">Conectado · {activeMundo.nombre}</span>
-            <button onClick={() => nav("/mundos")} className="material-symbols-outlined text-[#777587] text-sm">swap_horiz</button>
-          </div>
-        </div>
       </div>
 
       <BottomNav badge={totalTxBadge > 0 ? Math.min(totalTxBadge, 9) : 0} />
