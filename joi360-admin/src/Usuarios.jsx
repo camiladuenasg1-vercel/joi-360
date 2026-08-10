@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "./hooks";
-import { fetchUsuariosDeMundo, fetchDetalleUsuario } from "./supabase.js";
-import { Icon, Pill, Drawer, BtnOutline, inputCls } from "./ui";
+import { fetchUsuariosDeMundo, fetchDetalleUsuario, liberarNfcBandRemote } from "./supabase.js";
+import { Icon, Pill, Drawer, BtnOutline, inputCls, notify } from "./ui";
 import { nomenclaturaFamiliar } from "./store";
 
 const soles = n => `S/ ${(Number(n) || 0).toFixed(2)}`;
@@ -261,11 +261,14 @@ function Vacio({ icono, titulo, detalle }) {
 function DetalleUsuario({ usuario, mundos, nom, onClose }) {
   const [d, setD] = useState(null);
   const [cargando, setCargando] = useState(false);
+  const [desvinculando, setDesvinculando] = useState(false);
+  const [banditaDesvinculada, setBanditaDesvinculada] = useState(false);
 
   useEffect(() => {
     if (!usuario) { setD(null); return; }
     let vivo = true;
     setCargando(true);
+    setBanditaDesvinculada(false);
     fetchDetalleUsuario(usuario.userId)
       .then(r => { if (vivo) setD(r); })
       .catch(() => { if (vivo) setD(null); })
@@ -274,6 +277,22 @@ function DetalleUsuario({ usuario, mundos, nom, onClose }) {
   }, [usuario]);
 
   const nombreMundo = id => mundos.find(m => m.id === id)?.nombre || id;
+
+  // Único caso real de soporte que este panel de solo-lectura puede resolver
+  // sin tocar PII: liberar una bandita atascada (perdida, mal escaneada) para
+  // que se pueda volver a vincular. No borra ni edita ningún dato personal.
+  const desvincularBandita = async () => {
+    if (!usuario?.bandita?.id) return;
+    if (!window.confirm(`¿Desvincular la bandita de ${usuario.nombre || "este usuario"}? Podrá vincular una nueva desde la app.`)) return;
+    setDesvinculando(true);
+    try {
+      await liberarNfcBandRemote(usuario.bandita.id);
+      setBanditaDesvinculada(true);
+      notify("Bandita desvinculada.");
+    } catch (e) {
+      notify("No se pudo desvincular la bandita.", "error");
+    } finally { setDesvinculando(false); }
+  };
 
   return (
     <Drawer
@@ -289,6 +308,22 @@ function DetalleUsuario({ usuario, mundos, nom, onClose }) {
             <Dato etiqueta="Documento" valor={usuario.docMask ? `${usuario.docTipo} · ${usuario.docMask}` : "—"} mono />
             <Dato etiqueta="Correo" valor={usuario.emailMask || "—"} mono />
           </div>
+
+          {usuario.bandita?.estado === "activa" && usuario.bandita?.id && !banditaDesvinculada && (
+            <div className="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-mono text-[10px] uppercase text-outline">Bandita NFC vinculada</p>
+                <p className="text-sm font-mono truncate">{usuario.bandita.codigo}</p>
+              </div>
+              <button onClick={desvincularBandita} disabled={desvinculando}
+                className="flex-shrink-0 text-xs font-medium text-error hover:underline disabled:opacity-50">
+                {desvinculando ? "Desvinculando…" : "Desvincular"}
+              </button>
+            </div>
+          )}
+          {banditaDesvinculada && (
+            <p className="text-xs text-ok flex items-center gap-1.5"><Icon n="check_circle" className="text-[14px]" /> Bandita desvinculada — puede vincular una nueva desde la app.</p>
+          )}
 
           <div className="text-xs text-on-surface-variant bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 flex gap-2">
             <Icon n="lock" className="text-[16px] shrink-0 mt-px" />
