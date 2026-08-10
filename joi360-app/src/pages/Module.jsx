@@ -3418,11 +3418,17 @@ function PerfilExtTemplate({ cfg, u }) {
         </SectionCard>
       )}
 
-      {/* QR / TAQ identification */}
-      <SectionCard className="p-6">
-        <p className="font-bold text-[#1b1b24] text-center mb-4">Tu identificación en el mundo</p>
-        <QRCode label={cfg.mundo.nombre} sub="Identificación universal · TAQ/QR" value={getSyntheticUserId()} />
-      </SectionCard>
+      {/* QR / TAQ identification — solo para un dependiente: la del titular ya
+          está cubierta en Billetera ("Mi código JOI") y en Accesos, así que
+          repetirla acá era puro relleno. Antes esta tarjeta además ignoraba
+          perfilActivoId y siempre mostraba el QR del titular aunque estuvieras
+          viendo la ficha de un hijo. */}
+      {!activo.esTitular && (
+        <SectionCard className="p-6">
+          <p className="font-bold text-[#1b1b24] text-center mb-4">Identificación de {activo.nombre}</p>
+          <QRCode label={activo.nombre} sub="Identificación en el mundo · TAQ/QR" value={activo.id} />
+        </SectionCard>
+      )}
 
       {/* Grupo familiar — reutiliza los dependientes reales del módulo Restricciones */}
       {familiar && (
