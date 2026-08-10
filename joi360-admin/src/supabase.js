@@ -830,6 +830,9 @@ export async function crearPromocionRemote(payload) {
 export async function actualizarPromocionRemote(id, patch) {
   await rest(`promociones?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
 }
+export async function eliminarPromocionRemote(id) {
+  await rest(`promociones?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
 // Canje en el punto de venta: el operador teclea/escanea el código, se valida
 // vigencia/estado/cupos disponibles y recién ahí se incrementa el uso.
 export async function canjearCuponRemote(codigoQr, worldId, userId) {

@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -2764,29 +2764,60 @@ function TabPromos({ m }) {
   const [saving, setSaving] = useState(false);
   const blank = { titulo: "", sponsor: "", tipo: "Descuento %", valor: "", hasta: "", cupos: 0 };
   const [f, setF] = useState(blank);
+  const [editingId, setEditingId] = useState(null); // id de la promo en edición, null = alta
 
   React.useEffect(() => {
     fetchPromocionesMundo(m.id).then(setPromos).catch(() => setPromos([]));
   }, [m.id, reload]);
 
+  const editar = (p) => {
+    setEditingId(p.id);
+    setF({ titulo: p.titulo, sponsor: p.merchant_nombre === m.nombre ? "" : (p.merchant_nombre || ""), tipo: p.tipo, valor: p.valor != null ? String(p.valor) : "", hasta: p.vigencia_hasta || "", cupos: p.usos_max != null ? String(p.usos_max) : "0" });
+    setOpen(true);
+  };
+  const cancelar = () => { setOpen(false); setEditingId(null); setF(blank); };
+
   const save = async () => {
     setSaving(true);
     try {
-      await crearPromocionRemote({
-        world_id: m.id, merchant_nombre: f.sponsor || m.nombre, titulo: f.titulo,
-        tipo: f.tipo, valor: f.valor ? +f.valor : null,
-        vigencia_hasta: f.hasta || null, usos_max: +f.cupos > 0 ? +f.cupos : null,
-        codigo_qr: generarCodigoQR(f.titulo),
-      });
-      setF(blank); setOpen(false); setReload(k => k + 1);
-      notify("Promoción publicada — el cupón QR ya está activo en la app.");
+      if (editingId) {
+        await actualizarPromocionRemote(editingId, {
+          merchant_nombre: f.sponsor || m.nombre, titulo: f.titulo,
+          tipo: f.tipo, valor: f.valor ? +f.valor : null,
+          vigencia_hasta: f.hasta || null, usos_max: +f.cupos > 0 ? +f.cupos : null,
+        });
+        notify("Promoción actualizada.");
+      } else {
+        await crearPromocionRemote({
+          world_id: m.id, merchant_nombre: f.sponsor || m.nombre, titulo: f.titulo,
+          tipo: f.tipo, valor: f.valor ? +f.valor : null,
+          vigencia_hasta: f.hasta || null, usos_max: +f.cupos > 0 ? +f.cupos : null,
+          codigo_qr: generarCodigoQR(f.titulo),
+        });
+        notify("Promoción publicada — el cupón QR ya está activo en la app.");
+      }
+      setF(blank); setEditingId(null); setOpen(false); setReload(k => k + 1);
     } catch (e) {
-      notify("No se pudo publicar la promoción.", "error");
+      notify(editingId ? "No se pudo actualizar la promoción." : "No se pudo publicar la promoción.", "error");
     } finally { setSaving(false); }
   };
 
   const togglePausa = async p => {
     await actualizarPromocionRemote(p.id, { estado: p.estado === "PAUSADA" ? "VIGENTE" : "PAUSADA" });
+    setReload(k => k + 1);
+  };
+
+  // Una promo ya canjeada es un registro con historial real — borrarla se
+  // llevaría esos canjes sin dejar rastro. Sin canjes, es solo un borrador
+  // mal tipeado que puede desaparecer sin costo.
+  const eliminar = async p => {
+    if (p.usos_actuales > 0) {
+      notify(`No se puede eliminar "${p.titulo}": ya tiene ${p.usos_actuales} canje(s) registrado(s). Pausa la promoción en vez de eliminarla.`, "error");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar la promoción "${p.titulo}"? No tiene canjes registrados.`)) return;
+    await eliminarPromocionRemote(p.id);
+    notify("Promoción eliminada.");
     setReload(k => k + 1);
   };
 
@@ -2796,7 +2827,7 @@ function TabPromos({ m }) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <p className="text-sm text-on-surface-variant max-w-2xl">Cupones QR con vigencia. Los vigentes aparecen para <b>todos los usuarios del app</b> y se canjean desde el POS del comercio.</p>
-        <BtnPrimary onClick={() => setOpen(true)}><Icon n="add" className="text-[18px]"/> Nueva Promoción</BtnPrimary>
+        <BtnPrimary onClick={() => { setEditingId(null); setF(blank); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nueva Promoción</BtnPrimary>
       </div>
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm divide-y divide-outline-variant/60">
         {promos.length === 0 && <p className="p-8 text-center text-sm text-on-surface-variant">Sin promociones registradas.</p>}
@@ -2810,17 +2841,23 @@ function TabPromos({ m }) {
                 <p className="font-mono text-[10px] text-primary mt-0.5">{p.codigo_qr} · {p.usos_actuales} canjeado{p.usos_actuales !== 1 ? "s" : ""}{p.usos_max ? ` / ${p.usos_max}` : ""}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Pill color={p.estado==="PAUSADA"?"bg-outline":"bg-ok"}>{p.estado}</Pill>
               <button onClick={() => togglePausa(p)} className="px-3 py-1.5 rounded border border-outline-variant font-mono text-[10px] uppercase hover:bg-surface-container">
                 {p.estado==="PAUSADA"?"Reactivar":"Pausar"}
+              </button>
+              <button onClick={() => editar(p)} className="p-1.5 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container" title="Editar">
+                <Icon n="edit" className="text-[14px]"/>
+              </button>
+              <button onClick={() => eliminar(p)} className="p-1.5 rounded border border-outline-variant text-error hover:bg-error-container/20" title={p.usos_actuales > 0 ? "Tiene canjes registrados — pausa en vez de eliminar" : "Eliminar"}>
+                <Icon n="delete" className="text-[14px]"/>
               </button>
             </div>
           </div>
         ))}
       </div>
-      <Drawer open={open} onClose={() => setOpen(false)} icon="campaign" title="Nueva promoción" subtitle={m.nombre}
-        footer={<><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.titulo || saving} onClick={save}>{saving ? "Publicando…" : "Publicar"}</BtnPrimary></>}>
+      <Drawer open={open} onClose={cancelar} icon="campaign" title={editingId ? `Editar: ${f.titulo}` : "Nueva promoción"} subtitle={m.nombre}
+        footer={<><BtnOutline onClick={cancelar}>Cancelar</BtnOutline><BtnPrimary disabled={!f.titulo || saving} onClick={save}>{saving ? (editingId ? "Guardando…" : "Publicando…") : (editingId ? "Guardar cambios" : "Publicar")}</BtnPrimary></>}>
         <div className="space-y-5">
           <Field label="Título"><input className={inputCls} value={f.titulo} onChange={e => setF({...f, titulo:e.target.value})} placeholder="Ej. 2x1 en entradas"/></Field>
           <Field label="Sponsor / comercio" hint="Vacío = promoción del mundo, sin comercio específico."><input className={inputCls} value={f.sponsor} onChange={e => setF({...f, sponsor:e.target.value})}/></Field>
