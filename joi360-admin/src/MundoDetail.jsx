@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -223,17 +223,39 @@ function ContratoControl({ m }) {
 function DeleteMundoDialog({ m, open, onClose }) {
   const nav = useNavigate();
   const [confirm, setConfirm] = useState("");
-  if (!open) return null;
-  const del = () => {
-    update(s => { s.mundos = s.mundos.filter(x => x.id !== m.id); });
-    deleteWorldRemote(m.id); // el sync no borra — eliminación remota explícita
-    notify(`Mundo "${m.nombre}" eliminado del ecosistema.`, "info");
-    nav("/admin/mundos");
+  const [check, setCheck] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const correrChequeo = () => {
+    setChecking(true); setErr(null);
+    verificarBloqueosEliminacionMundo(m.id).then(setCheck).catch(e => setErr(e.message)).finally(() => setChecking(false));
   };
+  // Eliminar un mundo antes NO verificaba nada — a diferencia de eliminar un
+  // comercio, que sí chequea BNPL/ventas/reservas/hardware. Un mundo contiene
+  // N comercios y, sobre todo, dinero real en wallets.balance de titulares y
+  // dependientes: un DELETE sobre worlds no mueve ese saldo a ningún lado.
+  React.useEffect(() => { if (open) { setConfirm(""); correrChequeo(); } }, [open]);
+
+  if (!open) return null;
+  const puedeEliminar = check && !check.bloqueaDuro;
+
+  const del = async () => {
+    setBusy(true);
+    try {
+      await deleteWorldRemote(m.id); // el sync no borra — eliminación remota explícita
+      update(s => { s.mundos = s.mundos.filter(x => x.id !== m.id); });
+      notify(`Mundo "${m.nombre}" eliminado del ecosistema.`, "info");
+      nav("/admin/mundos");
+    } catch (e) { notify(`No se pudo eliminar: ${e.message}`, "error"); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-on-surface/30 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-md p-6 z-10">
+      <div className="relative bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-lg p-6 z-10 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center"><Icon n="delete_forever" className="text-error text-[24px]" /></div>
           <div>
@@ -242,15 +264,46 @@ function DeleteMundoDialog({ m, open, onClose }) {
           </div>
         </div>
         <div className="bg-error-container/30 border border-error/30 rounded-lg p-3 mb-4 text-sm text-error">
-          ⚠ Esta acción es <b>irreversible</b>. Se eliminarán todos los módulos, comercios y configuraciones asociadas al mundo <b>{m.nombre}</b>. Las liquidaciones e historial de tickets se conservan.
+          ⚠ Esta acción es <b>irreversible</b>. Se eliminarán todos los módulos, comercios y configuraciones asociadas al mundo <b>{m.nombre}</b>.
         </div>
-        <p className="text-sm text-on-surface-variant mb-3">Para confirmar, escribe el nombre del mundo: <b>{m.nombre}</b></p>
-        <input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm mb-4 focus:ring-2 focus:ring-error/20 focus:border-error outline-none" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder={m.nombre} />
+
+        <p className="font-semibold text-sm mb-2">Verificar pendientes antes de eliminar</p>
+        {checking ? (
+          <p className="text-xs text-on-surface-variant mb-4">Verificando…</p>
+        ) : err ? (
+          <p className="text-xs text-error mb-4">{err}</p>
+        ) : check ? (
+          <div className="space-y-1.5 mb-4">
+            <ChequeoRow ok={check.saldoTotalWallets === 0}
+              label={`Saldo real en billeteras de usuarios: ${m.moneda} ${check.saldoTotalWallets.toFixed(2)} (${check.walletsConSaldo} billetera(s) con saldo)`} />
+            <ChequeoRow ok={check.bnplActivos === 0} label={`Financiamientos BNPL activos: ${check.bnplActivos}`} />
+            <ChequeoRow ok={check.liquidacionesPendientes.count === 0}
+              label={`Liquidaciones pendientes o retenidas: ${check.liquidacionesPendientes.count} (${m.moneda} ${check.liquidacionesPendientes.monto.toFixed(2)})`} />
+            <ChequeoRow ok={check.reservasFuturas.count === 0}
+              label={`Reservas de Menú confirmadas a futuro: ${check.reservasFuturas.count}`} />
+            <ChequeoRow ok={check.ticketsEmitidos === 0} label={`Entradas de evento emitidas: ${check.ticketsEmitidos}`} />
+            <ChequeoRow ok warn={check.hardwareAsignado > 0}
+              label={`Equipos POS asignados: ${check.hardwareAsignado}${check.hardwareAsignado ? " (no bloquea la eliminación)" : ""}`} />
+            <button onClick={correrChequeo} className="text-[10px] text-primary font-semibold">↻ Volver a verificar</button>
+          </div>
+        ) : null}
+
+        {!puedeEliminar && check && (
+          <p className="text-xs text-on-surface-variant italic mb-3">Resuelve los pendientes de arriba antes de poder eliminar este mundo.</p>
+        )}
+        {puedeEliminar && (
+          <p className="text-sm text-on-surface-variant mb-3">Para confirmar, escribe el nombre del mundo: <b>{m.nombre}</b></p>
+        )}
+        {puedeEliminar && (
+          <input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm mb-4 focus:ring-2 focus:ring-error/20 focus:border-error outline-none" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder={m.nombre} />
+        )}
         <div className="flex gap-3 justify-end">
           <BtnOutline onClick={onClose}>Cancelar</BtnOutline>
-          <button disabled={confirm !== m.nombre} onClick={del} className="px-4 py-2 rounded-lg bg-error text-white text-sm font-medium disabled:opacity-40 hover:bg-error/90 transition-colors">
-            Sí, eliminar mundo
-          </button>
+          {puedeEliminar && (
+            <button disabled={confirm !== m.nombre || busy} onClick={del} className="px-4 py-2 rounded-lg bg-error text-white text-sm font-medium disabled:opacity-40 hover:bg-error/90 transition-colors">
+              {busy ? "Eliminando…" : "Sí, eliminar mundo"}
+            </button>
+          )}
         </div>
       </div>
     </div>

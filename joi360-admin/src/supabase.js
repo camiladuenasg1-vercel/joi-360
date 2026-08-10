@@ -332,9 +332,11 @@ export async function pruneStaleAcquiringChannels(currentIds) {
 }
 
 export async function deleteWorldRemote(worldId) {
-  try {
-    await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
-  } catch (e) { console.warn("[supabase-sync] delete world", e); }
+  // Antes tragaba el error silenciosamente — el diálogo de borrado siempre
+  // notificaba "eliminado" aunque el DELETE remoto hubiera fallado de verdad
+  // (ver DeleteMundoDialog en MundoDetail.jsx), dejando el mundo local
+  // borrado pero el remoto intacto, sin ningún aviso real del desfase.
+  await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 
 // Cambiar el logo de un mundo YA creado (Task #166) — PATCH directo en vez
@@ -453,6 +455,43 @@ export async function verificarBloqueosEliminacionMerchant(worldId, merchantId, 
     reservasFuturas: { count: (reservas || []).length, monto: montoReservas },
     hardwareAsignado: (hardware || []).length,
     bloqueaDuro: bnplActivos.length > 0 || montoVentasPendientes > 0 || (reservas || []).length > 0,
+  };
+}
+
+// Eliminar un MUNDO no tenía ningún chequeo (a diferencia de eliminar un
+// comercio, que sí verifica BNPL/ventas/reservas/hardware antes de dejar
+// borrar) — un mundo contiene N comercios, sus transacciones, y sobre todo
+// dinero real sentado en wallets.balance de titulares y dependientes. Un
+// DELETE sobre worlds no mueve ese saldo a ningún lado — solo deja de haber
+// mundo al que pertenezca. Mismo patrón de "chequeo real antes de bloquear",
+// a escala de mundo (hallado en auditoría E2E multi-rol, ago-2026).
+export async function verificarBloqueosEliminacionMundo(worldId) {
+  const [wallets, contratos, liquidaciones, reservas, eventos, hardware] = await Promise.all([
+    rest(`wallets?world_id=eq.${worldId}&select=balance`).catch(() => []),
+    rest(`bnpl_contratos?world_id=eq.${worldId}&select=id,estado`).catch(() => []),
+    rest(`liquidaciones?world_id=eq.${worldId}&estado=in.(PENDIENTE,RETENIDO)&select=id,neto`).catch(() => []),
+    rest(`menu_reservas?world_id=eq.${worldId}&estado=eq.CONFIRMADA&fecha=gte.${new Date().toISOString().slice(0, 10)}&select=id,monto`).catch(() => []),
+    rest(`events?world_id=eq.${worldId}&select=id`).catch(() => []),
+    rest(`pos_devices?world_id=eq.${worldId}&select=id`).catch(() => []),
+  ]);
+  const bnplActivos = (contratos || []).filter(c => !BNPL_ESTADOS_TERMINALES.has(c.estado));
+  const saldoTotalWallets = (wallets || []).reduce((a, w) => a + (+w.balance || 0), 0);
+  const montoLiquidacionesPendientes = (liquidaciones || []).reduce((a, l) => a + (+l.neto || 0), 0);
+  const montoReservas = (reservas || []).reduce((a, r) => a + (+r.monto || 0), 0);
+  const eventIds = (eventos || []).map(e => e.id);
+  let ticketsEmitidos = 0;
+  if (eventIds.length) {
+    const tickets = await rest(`event_tickets?event_id=in.(${eventIds.join(",")})&select=id`).catch(() => []);
+    ticketsEmitidos = (tickets || []).length;
+  }
+  return {
+    saldoTotalWallets, walletsConSaldo: (wallets || []).filter(w => (+w.balance || 0) > 0).length,
+    bnplActivos: bnplActivos.length,
+    liquidacionesPendientes: { count: (liquidaciones || []).length, monto: montoLiquidacionesPendientes },
+    reservasFuturas: { count: (reservas || []).length, monto: montoReservas },
+    ticketsEmitidos,
+    hardwareAsignado: (hardware || []).length,
+    bloqueaDuro: saldoTotalWallets > 0 || bnplActivos.length > 0 || (liquidaciones || []).length > 0 || (reservas || []).length > 0 || ticketsEmitidos > 0,
   };
 }
 
