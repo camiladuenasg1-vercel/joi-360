@@ -1972,6 +1972,13 @@ export async function fetchOrganizadoresRemote(worldId) {
 export async function desactivarOrganizadorRemote(id) {
   await rest(`organizadores?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ estado: "inactivo" }) });
 }
+// Antes solo existía desactivar — un organizador inactivo quedaba huérfano
+// sin ningún control para reactivarlo ni corregir nombre/entidad legal/RUC
+// mal tipeados (había que editarlo a mano en Supabase). Genérico para poder
+// reutilizarlo en ambos casos.
+export async function actualizarOrganizadorRemote(id, patch) {
+  await rest(`organizadores?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+}
 
 // ── Checklist pre-demo: sondeo del estado real de la infraestructura ────────
 export async function probeDemoInfra() {

@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -2312,6 +2312,7 @@ function ActoresOrganizadores({ m }) {
   const [f, setF] = useState({ nombre: "", entidadLegal: "", ruc: "" });
   const [creando, setCreando] = useState(false);
   const [credencialesNuevas, setCredencialesNuevas] = useState(null);
+  const [editingId, setEditingId] = useState(null); // id del organizador en edición, null = alta
 
   const load = () => fetchOrganizadoresRemote(m.id).then(r => setOrganizadores(r || [])).catch(() => setOrganizadores([]));
   React.useEffect(() => { load(); }, [m.id]);
@@ -2322,22 +2323,36 @@ function ActoresOrganizadores({ m }) {
     if (!f.nombre.trim()) return;
     setCreando(true);
     try {
-      const usuario = `${slugUsuario(f.nombre)}@organizadores.joi360.pe`;
-      const password = generarPassword();
-      const remoto = await crearOrganizadorRemote(m.id, f.nombre.trim(), f.entidadLegal || null, f.ruc || null, usuario, password);
-      // Espejo local con credenciales — mismo patrón demo-auth que merchants/sponsors.
-      update(s => {
-        if (!s.organizadores) s.organizadores = [];
-        s.organizadores.push({ id: remoto?.id || uid("org"), supabaseId: remoto?.id, mundoId: m.id, nombre: f.nombre.trim(), entidadLegal: f.entidadLegal, ruc: f.ruc, credenciales: { usuario, password }, estado: "activo", createdAt: Date.now() });
-      });
-      setCredencialesNuevas({ nombre: f.nombre.trim(), usuario, password });
+      if (editingId) {
+        await actualizarOrganizadorRemote(editingId, { nombre: f.nombre.trim(), entidad_legal: f.entidadLegal || null, ruc: f.ruc || null });
+        notify(`"${f.nombre.trim()}" actualizado.`);
+        setOpen(false);
+      } else {
+        const usuario = `${slugUsuario(f.nombre)}@organizadores.joi360.pe`;
+        const password = generarPassword();
+        const remoto = await crearOrganizadorRemote(m.id, f.nombre.trim(), f.entidadLegal || null, f.ruc || null, usuario, password);
+        // Espejo local con credenciales — mismo patrón demo-auth que merchants/sponsors.
+        update(s => {
+          if (!s.organizadores) s.organizadores = [];
+          s.organizadores.push({ id: remoto?.id || uid("org"), supabaseId: remoto?.id, mundoId: m.id, nombre: f.nombre.trim(), entidadLegal: f.entidadLegal, ruc: f.ruc, credenciales: { usuario, password }, estado: "activo", createdAt: Date.now() });
+        });
+        setCredencialesNuevas({ nombre: f.nombre.trim(), usuario, password });
+      }
       setF({ nombre: "", entidadLegal: "", ruc: "" });
+      setEditingId(null);
       load();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
-      logErrorControlado("operacion_admin_fallida", "organizador-crear", m.id);
+      logErrorControlado("operacion_admin_fallida", editingId ? "organizador-editar" : "organizador-crear", m.id);
       notify(`${err.mensaje} ${err.accion}`, "error");
     } finally { setCreando(false); }
+  };
+
+  const editar = (org) => {
+    setEditingId(org.id);
+    setF({ nombre: org.nombre, entidadLegal: org.entidad_legal || "", ruc: org.ruc || "" });
+    setCredencialesNuevas(null);
+    setOpen(true);
   };
 
   const desactivar = async (org) => {
@@ -2348,6 +2363,21 @@ function ActoresOrganizadores({ m }) {
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", "organizador-desactivar", m.id);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+  // Antes no había forma de reactivar — un organizador desactivado por error
+  // (o cuya suspensión ya no aplica) quedaba huérfano sin acceso a su
+  // Dashboard B2B, salvo editarlo a mano en Supabase.
+  const reactivar = async (org) => {
+    try {
+      await actualizarOrganizadorRemote(org.id, { estado: "activo" });
+      update(s => { const local = (s.organizadores || []).find(o => o.supabaseId === org.id || o.id === org.id); if (local) local.estado = "activo"; });
+      notify(`${org.nombre} reactivado.`);
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "organizador-reactivar", m.id);
       notify(`${err.mensaje} ${err.accion}`, "error");
     }
   };
@@ -2373,7 +2403,7 @@ function ActoresOrganizadores({ m }) {
           <h3 className="font-semibold">Organizadores</h3>
           <p className="text-xs text-on-surface-variant mt-0.5">Cada uno tiene su propio login al Dashboard B2B y solo ve sus propios eventos.</p>
         </div>
-        <BtnPrimary onClick={() => { setCredencialesNuevas(null); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nuevo organizador</BtnPrimary>
+        <BtnPrimary onClick={() => { setCredencialesNuevas(null); setEditingId(null); setF({ nombre: "", entidadLegal: "", ruc: "" }); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nuevo organizador</BtnPrimary>
       </div>
       {organizadores === null ? (
         <p className="px-6 py-8 text-sm text-on-surface-variant">Cargando…</p>
@@ -2396,8 +2426,11 @@ function ActoresOrganizadores({ m }) {
               </div>
               <div className="flex items-center gap-3">
                 <Pill color={o.estado === "activo" ? "bg-ok" : "bg-outline"}>{o.estado.toUpperCase()}</Pill>
-                {o.estado === "activo" && (
+                <button onClick={() => editar(o)} className="text-xs text-on-surface-variant hover:underline">Editar</button>
+                {o.estado === "activo" ? (
                   <button onClick={() => desactivar(o)} className="text-xs text-error hover:underline">Desactivar</button>
+                ) : (
+                  <button onClick={() => reactivar(o)} className="text-xs text-primary hover:underline">Reactivar</button>
                 )}
               </div>
             </div>
@@ -2405,9 +2438,9 @@ function ActoresOrganizadores({ m }) {
         </div>
       )}
 
-      <Drawer open={open} onClose={() => setOpen(false)} icon="business_center" title="Nuevo organizador" subtitle={m.nombre}
+      <Drawer open={open} onClose={() => setOpen(false)} icon="business_center" title={editingId ? "Editar organizador" : "Nuevo organizador"} subtitle={m.nombre}
         footer={credencialesNuevas ? <BtnPrimary onClick={() => setOpen(false)}>Listo</BtnPrimary> :
-          <><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre.trim()} loading={creando} loadingLabel="Creando…" onClick={crear}>Crear organizador</BtnPrimary></>}>
+          <><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre.trim()} loading={creando} loadingLabel={editingId ? "Guardando…" : "Creando…"} onClick={crear}>{editingId ? "Guardar cambios" : "Crear organizador"}</BtnPrimary></>}>
         {credencialesNuevas ? (
           <div className="space-y-4">
             <div className="p-4 bg-ok/10 border border-ok/30 rounded-xl text-center">
