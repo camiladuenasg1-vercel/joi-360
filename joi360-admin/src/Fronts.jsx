@@ -2615,14 +2615,29 @@ function SponsorDashboard({ m, st, preview }) {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activos.map(x => {
                   const c = moduleCat(x.id);
+                  // Eventos en modo B2B queda activo pero se gestiona desde el
+                  // Dashboard del Organizador (otro actor, otras credenciales),
+                  // no desde este panel — la card no tiene tab propia. Antes el
+                  // click no hacía nada y no lo explicaba (papercut real detectado
+                  // en smoke-test).
+                  const navegable = tabs.some(t => t.k === x.id);
                   return (
-                    <button key={x.id} onClick={() => tabs.some(t => t.k === x.id) && setTab(x.id)}
-                      className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-3 text-left hover:border-primary/50 transition-colors">
+                    <button key={x.id} onClick={() => navegable && setTab(x.id)}
+                      disabled={!navegable}
+                      title={!navegable ? "Este módulo se gestiona fuera de este dashboard" : ""}
+                      className={`bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-3 text-left transition-colors ${navegable ? "hover:border-primary/50" : "opacity-70 cursor-default"}`}>
                       <div className="w-9 h-9 rounded-lg bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
                         <Icon n={c?.icon || "extension"} className="text-[18px]" />
                       </div>
-                      <span className="text-sm font-semibold flex-1">{c?.name || x.id}</span>
-                      <Icon n="arrow_forward" className="text-outline text-[16px]" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold block">{c?.name || x.id}</span>
+                        {!navegable && (
+                          <span className="text-[11px] text-on-surface-variant">
+                            {x.id === "eventos" ? "Gestionado por el Organizador del evento" : "Sin panel propio en este dashboard"}
+                          </span>
+                        )}
+                      </div>
+                      {navegable && <Icon n="arrow_forward" className="text-outline text-[16px]" />}
                     </button>
                   );
                 })}
