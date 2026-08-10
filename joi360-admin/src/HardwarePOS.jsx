@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { useStore } from "./hooks";
-import { Icon, BtnPrimary, BtnOutline, notify, NumInput } from "./ui";
+import { Icon, BtnPrimary, BtnOutline, notify, NumInput, inputCls } from "./ui";
 import { HARDWARE_CATALOG } from "./store";
 
 // Carga masiva de hardware/banditas: antes solo leía .csv/.txt como texto
