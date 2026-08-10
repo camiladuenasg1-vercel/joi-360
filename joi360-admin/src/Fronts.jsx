@@ -2194,16 +2194,74 @@ function MenuMundoTab({ m }) {
 }
 function PerfilExtMundoTab({ m }) {
   const [perfiles, setPerfiles] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // todos | titular | dependiente
+  const [filtroAlergias, setFiltroAlergias] = useState(false);
   useEffect(() => { fetchPerfilesExtendidosMundo(m.id).then(setPerfiles).catch(() => setPerfiles([])); }, [m.id]);
   if (perfiles === null) return <p className="text-on-surface-variant py-8">Cargando…</p>;
+
+  const q = busqueda.trim().toLowerCase();
+  const visibles = perfiles.filter(p => {
+    if (q && !(p.nombre || "").toLowerCase().includes(q)) return false;
+    if (filtroTipo !== "todos" && p.tipo !== filtroTipo) return false;
+    if (filtroAlergias && !p.alergias) return false;
+    return true;
+  });
+  const conAlergias = perfiles.filter(p => p.alergias).length;
+
   return (
     <>
       <div className="mb-6"><h2 className="text-2xl font-bold">Perfil extendido en {m.nombre}</h2>
         <p className="text-on-surface-variant mt-1 text-sm">Usuarios con datos médicos/emergencia reales completados.</p></div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <KpiCard label="Perfiles completados" value={perfiles.length} icon="badge" />
+        <KpiCard label="Con alergias registradas" value={conAlergias} icon="warning" />
       </div>
-      {perfiles.length === 0 && <div className="mt-4"><ModuloVacio icon="badge" texto="Nadie ha completado su perfil extendido todavía." /></div>}
+      {perfiles.length === 0 ? (
+        <ModuloVacio icon="badge" texto="Nadie ha completado su perfil extendido todavía." />
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <input className={`${inputCls} max-w-xs`} placeholder="Buscar por nombre…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+            <select className={inputCls} value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+              <option value="todos">Todos</option>
+              <option value="titular">Solo titulares</option>
+              <option value="dependiente">Solo dependientes</option>
+            </select>
+            <label className="flex items-center gap-2 px-3 rounded-lg border border-outline-variant text-sm cursor-pointer">
+              <input type="checkbox" checked={filtroAlergias} onChange={e => setFiltroAlergias(e.target.checked)} />
+              Con alergias
+            </label>
+          </div>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-surface-container-low font-mono text-[10px] uppercase tracking-wider text-outline">
+                  <th className="px-4 py-3">Nombre</th>
+                  <th className="px-4 py-3">Tipo</th>
+                  <th className="px-4 py-3">Tipo de sangre</th>
+                  <th className="px-4 py-3">Alergias</th>
+                  <th className="px-4 py-3">Clínica</th>
+                  <th className="px-4 py-3">Contacto de emergencia</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/60">
+                {visibles.map(p => (
+                  <tr key={p.user_id} className="hover:bg-surface-container-low">
+                    <td className="px-4 py-3 font-medium">{p.nombre || <span className="font-mono text-xs text-outline">{p.user_id.slice(0, 10)}…</span>}</td>
+                    <td className="px-4 py-3"><Pill color={p.tipo === "titular" ? "bg-primary-fixed" : "bg-tertiary-container"}>{p.tipo}</Pill></td>
+                    <td className="px-4 py-3">{p.tipo_sangre || "—"}</td>
+                    <td className="px-4 py-3">{p.alergias ? <span className="text-amber-700 font-medium">{p.alergias}</span> : "—"}</td>
+                    <td className="px-4 py-3">{p.clinica || "—"}</td>
+                    <td className="px-4 py-3">{p.contacto_emergencia_nombre ? `${p.contacto_emergencia_nombre}${p.contacto_emergencia_telefono ? " · " + p.contacto_emergencia_telefono : ""}` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {visibles.length === 0 && <p className="px-4 py-6 text-sm text-on-surface-variant text-center">Ningún perfil coincide con el filtro.</p>}
+          </div>
+        </>
+      )}
     </>
   );
 }

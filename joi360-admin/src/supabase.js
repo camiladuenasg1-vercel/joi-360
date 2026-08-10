@@ -2080,8 +2080,24 @@ export async function fetchMenuReservasMundo(worldId, limit = 300) {
 export async function fetchAlertasConsumoMundo(worldId, limit = 100) {
   return rest(`consumo_alertas?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
 }
+// El KPI ya existía, pero sin datos ni nombre — solo el conteo. Resuelve
+// nombre igual que fetchUsuariosDeMundo (titular vía app_profiles,
+// dependiente vía dependents) para que el detalle sea de verdad usable.
 export async function fetchPerfilesExtendidosMundo(worldId) {
-  return rest(`user_profiles?world_id=eq.${worldId}&select=user_id,tipo_sangre,alergias,clinica`);
+  const perfiles = await rest(`user_profiles?world_id=eq.${worldId}&select=user_id,tipo_sangre,alergias,clinica,contacto_emergencia_nombre,contacto_emergencia_telefono,updated_at`);
+  if (!perfiles?.length) return [];
+  const ids = [...new Set(perfiles.map(p => p.user_id))];
+  const [appProfiles, dependientes] = await Promise.all([
+    fetchPerfilesUsuarios(ids).catch(() => []),
+    rest(`dependents?world_id=eq.${worldId}&dependent_user_id=in.(${ids.join(",")})&select=dependent_user_id,nombre`).catch(() => []),
+  ]);
+  const porId = Object.fromEntries((appProfiles || []).map(p => [p.id, p]));
+  const nombreDependiente = Object.fromEntries((dependientes || []).map(d => [d.dependent_user_id, d.nombre]));
+  return perfiles.map(row => ({
+    ...row,
+    nombre: porId[row.user_id] ? `${porId[row.user_id].nombres} ${porId[row.user_id].apellidos}`.trim() : nombreDependiente[row.user_id] || null,
+    tipo: nombreDependiente[row.user_id] ? "dependiente" : porId[row.user_id] ? "titular" : "sin_perfil",
+  }));
 }
 
 // ── Organizadores B2B (entidad real — antes: OrganizadorFront era solo una
