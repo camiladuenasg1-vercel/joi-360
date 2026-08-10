@@ -286,6 +286,35 @@ object Api {
             )
         }
 
+    // ── Cobro por QR ──────────────────────────────────────────────────────
+    // El cliente paga desde su propio celular (joi360-app /#/pagar/:id) en
+    // vez de que el operador identifique una wallet y cobre — mismo flujo
+    // real que CobrarPanel modo "qr" del panel web, ahora también desde el
+    // terminal físico.
+
+    suspend fun crearChargeRequest(shopId: String, monto: Double, turnoId: String?): Result<ChargeRequest> =
+        request(
+            "POST",
+            "/api/pos/v1/shops/${enc(shopId)}/charge-requests",
+            JSONObject().put("amount", monto).put("turnoId", turnoId ?: JSONObject.NULL),
+        ).mapCatching { chargeRequestDeJson(it) }
+
+    suspend fun consultarChargeRequest(id: String): Result<ChargeRequest> =
+        request("GET", "/api/pos/v1/charge-requests/${enc(id)}")
+            .mapCatching { chargeRequestDeJson(it) }
+
+    suspend fun cancelarChargeRequest(id: String): Result<Unit> =
+        request("POST", "/api/pos/v1/charge-requests/${enc(id)}/cancel").map { }
+
+    private fun chargeRequestDeJson(j: JSONObject) = ChargeRequest(
+        id = j.optString("id"),
+        estado = j.optString("estado"),
+        monto = j.optDouble("monto", 0.0),
+        merchantNombre = j.optString("merchantNombre").takeIf { it.isNotBlank() && it != "null" },
+        createdAt = j.optString("createdAt").takeIf { it.isNotBlank() && it != "null" },
+        paidAt = j.optString("paidAt").takeIf { it.isNotBlank() && it != "null" },
+    )
+
     // ── Accesos ───────────────────────────────────────────────────────────
 
     // zona es opcional (RenderConfig.accesosZonas trae las que configuró el

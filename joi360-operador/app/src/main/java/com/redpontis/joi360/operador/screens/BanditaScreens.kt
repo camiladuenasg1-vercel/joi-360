@@ -110,5 +110,13 @@ fun VincularBanditaScreen(
             Spacer(Modifier.height(22.dp))
             Notice(error!!, NoticeTone.Danger)
         }
+
+        Spacer(Modifier.height(28.dp))
+        BigButton(
+            label = "Cancelar vinculación",
+            tone = Joi.Danger,
+            enabled = !vinculando,
+            onClick = onBack,
+        )
     }
 }

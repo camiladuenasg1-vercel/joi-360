@@ -18,8 +18,10 @@ sealed interface Pantalla {
     data object AbrirMundo : Pantalla
     data object Inicio : Pantalla
     data object Cobrar : Pantalla
+    data object CobrarQr : Pantalla
     data class Identificar(val proposito: Proposito, val monto: Double = 0.0) : Pantalla
     data class ResultadoCobro(val titular: Titular, val monto: Double) : Pantalla
+    data class CobroQrEspera(val monto: Double) : Pantalla
     data class Ficha(val titular: Titular) : Pantalla
     data class VincularBandita(val titular: Titular) : Pantalla
     data object Acceso : Pantalla
@@ -70,6 +72,7 @@ fun App() {
             is Pantalla.Inicio -> InicioScreen(
                 config = config!!,
                 onCobrar = { ir(Pantalla.Cobrar) },
+                onCobrarQr = { ir(Pantalla.CobrarQr) },
                 onAcceso = { ir(Pantalla.Acceso) },
                 onEntrada = { ir(Pantalla.Entrada) },
                 onConsulta = { ir(Pantalla.Identificar(Proposito.Consulta)) },
@@ -103,6 +106,22 @@ fun App() {
                 config = config!!,
                 onBack = { volver() },
                 onContinuar = { monto -> ir(Pantalla.Identificar(Proposito.Cobro, monto)) },
+            )
+
+            is Pantalla.CobrarQr -> CobrarMontoScreen(
+                config = config!!,
+                onBack = { volver() },
+                onContinuar = { monto -> ir(Pantalla.CobroQrEspera(monto)) },
+                titulo = "Cobrar con QR",
+                botonLabel = "Generar QR",
+            )
+
+            is Pantalla.CobroQrEspera -> CobrarQrEsperaScreen(
+                config = config!!,
+                monto = p.monto,
+                turnoId = turnoId,
+                onBack = { volver() },
+                onListo = { inicio() },
             )
 
             is Pantalla.Identificar -> IdentificarScreen(

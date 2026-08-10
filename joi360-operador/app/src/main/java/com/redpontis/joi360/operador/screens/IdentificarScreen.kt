@@ -54,8 +54,12 @@ fun IdentificarScreen(
         }
     }
 
-    // Lector NFC activo solo mientras esta pantalla está al frente.
-    val nfc = rememberNfcScanner(enabled = config.capabilities.banditaNfc && !buscando) { tag ->
+    // Lector NFC activo solo mientras esta pantalla está al frente, y nunca
+    // para vincular pulsera: leerla acá identificaría a alguien que YA tiene
+    // una, exactamente lo que este flujo busca evitar.
+    val nfc = rememberNfcScanner(
+        enabled = config.capabilities.banditaNfc && proposito != Proposito.VincularBandita && !buscando,
+    ) { tag ->
         resolver(tag, origen = "nfc")
     }
 
@@ -90,7 +94,10 @@ fun IdentificarScreen(
         Spacer(Modifier.height(28.dp))
 
         // ── Camino 1: pulsera NFC ─────────────────────────────────────────
-        if (config.capabilities.banditaNfc) {
+        // Nunca acá cuando el propósito es vincular una pulsera nueva: si la
+        // persona ya tuviera una para tapear, no estaría en este flujo. Solo
+        // QR o documento identifican a alguien que todavía no tiene pulsera.
+        if (config.capabilities.banditaNfc && proposito != Proposito.VincularBandita) {
             Column(
                 Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,

@@ -26,6 +26,8 @@ fun CobrarMontoScreen(
     config: RenderConfig,
     onBack: () -> Unit,
     onContinuar: (Double) -> Unit,
+    titulo: String = "Cobrar",
+    botonLabel: String = "Continuar",
 ) {
     var raw by remember { mutableStateOf("") }
     val monto = (raw.toLongOrNull() ?: 0L) / 100.0
@@ -41,7 +43,7 @@ fun CobrarMontoScreen(
         Modifier.fillMaxSize().background(Joi.Bg)
             .safeDrawingPadding().padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 16.dp),
     ) {
-        ScreenHeader("Cobrar", config.shopName ?: "", onBack)
+        ScreenHeader(titulo, config.shopName ?: "", onBack)
 
         Spacer(Modifier.weight(1f))
 
@@ -83,7 +85,7 @@ fun CobrarMontoScreen(
         }
 
         Spacer(Modifier.height(8.dp))
-        BigButton("Continuar", enabled = monto > 0) { onContinuar(monto) }
+        BigButton(botonLabel, enabled = monto > 0) { onContinuar(monto) }
     }
 }
 

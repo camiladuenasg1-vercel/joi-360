@@ -104,6 +104,16 @@ data class Turno(
     val ventas: Int,
 )
 
+/** Cobro por QR: el cliente paga desde su propio celular, el POS solo espera. */
+data class ChargeRequest(
+    val id: String,
+    val estado: String, // pendiente | pagado | cancelado
+    val monto: Double,
+    val merchantNombre: String?,
+    val createdAt: String?,
+    val paidAt: String?,
+)
+
 /** Motivos de rechazo traducidos a lenguaje de mostrador, no de sistema. */
 fun motivoLegible(code: String?): String = when (code) {
     "SALDO_INSUFICIENTE" -> "Saldo insuficiente para este cobro."

@@ -33,6 +33,7 @@ import com.redpontis.joi360.operador.ui.*
 fun InicioScreen(
     config: RenderConfig,
     onCobrar: () -> Unit,
+    onCobrarQr: () -> Unit,
     onAcceso: () -> Unit,
     onEntrada: () -> Unit,
     onConsulta: () -> Unit,
@@ -96,7 +97,9 @@ fun InicioScreen(
 
         // Cada acción declara además si está utilizable ahora mismo. Validar
         // entrada existe si el mundo tiene eventos, pero solo se habilita
-        // cuando hay al menos un evento aprobado por RedPontis.
+        // cuando hay al menos un evento aprobado por RedPontis. Agrupadas por
+        // lo que el operador va a buscar (mismo criterio que GRUPOS_MODOS del
+        // panel web), no por orden de cuándo se construyó cada flujo.
         data class Accion(
             val titulo: String,
             val sub: String,
@@ -104,9 +107,16 @@ fun InicioScreen(
             val accion: () -> Unit,
         )
         val hayEventos = config.eventosValidables > 0
-        val tiles = buildList {
+        val grupoCobros = buildList {
             if (c.chargeWallet) add(Accion("Cobrar", "Con saldo del cliente", true, onCobrar))
+            if (c.chargeWallet) add(Accion("Cobrar con QR", "El cliente paga desde su celular", true, onCobrarQr))
+        }
+        val grupoIdentificacion = buildList {
             if (c.accesos) add(Accion("Validar acceso", "Ingreso y salida con pulsera", true, onAcceso))
+            if (c.banditaNfc) add(Accion("Vincular pulsera", "Atar una pulsera nueva a una cuenta", true, onVincularBandita))
+            if (c.wallet) add(Accion("Consultar", "Saldo, alergias y perfil", true, onConsulta))
+        }
+        val grupoEventos = buildList {
             if (c.eventos) add(
                 Accion(
                     "Validar entrada",
@@ -115,42 +125,55 @@ fun InicioScreen(
                     onEntrada,
                 )
             )
-            if (c.wallet) add(Accion("Consultar", "Saldo, alergias y perfil", true, onConsulta))
-            if (c.banditaNfc) add(Accion("Vincular pulsera", "Atar una pulsera nueva a una cuenta", true, onVincularBandita))
         }
+        val grupos = listOf(
+            "Cobros" to grupoCobros,
+            "Identificación y accesos" to grupoIdentificacion,
+            "Eventos" to grupoEventos,
+        ).filter { it.second.isNotEmpty() }
         val icons = mapOf(
             "Cobrar" to Icons.Default.PointOfSale,
+            "Cobrar con QR" to Icons.Default.QrCode,
             "Validar acceso" to Icons.Default.MeetingRoom,
             "Validar entrada" to Icons.Default.ConfirmationNumber,
             "Consultar" to Icons.Default.Badge,
             "Vincular pulsera" to Icons.Default.Sensors,
         )
 
-        if (tiles.isEmpty()) {
+        if (grupos.isEmpty()) {
             EmptyState(
                 title = "Sin operaciones habilitadas",
                 detail = "RedPontis todavía no activó ninguna capacidad para este comercio en ${config.worldName}.",
             )
         } else {
-            // Rejilla de 2 columnas construida a mano: son pocas celdas y así se
-            // evita anidar scroll dentro de scroll.
-            tiles.chunked(2).forEach { fila ->
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    fila.forEach { t ->
-                        ActionTile(
-                            title = t.titulo,
-                            subtitle = t.sub,
-                            icon = icons[t.titulo] ?: Icons.Default.Circle,
-                            enabled = t.habilitada,
-                            onClick = t.accion,
-                            modifier = Modifier.weight(1f),
-                        )
+            grupos.forEach { (titulo, tiles) ->
+                Text(
+                    titulo.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Joi.InkFaint,
+                    modifier = Modifier.padding(bottom = 10.dp, start = 2.dp),
+                )
+                // Rejilla de 2 columnas construida a mano: son pocas celdas y así
+                // se evita anidar scroll dentro de scroll.
+                tiles.chunked(2).forEach { fila ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        fila.forEach { t ->
+                            ActionTile(
+                                title = t.titulo,
+                                subtitle = t.sub,
+                                icon = icons[t.titulo] ?: Icons.Default.Circle,
+                                enabled = t.habilitada,
+                                onClick = t.accion,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (fila.size == 1) Spacer(Modifier.weight(1f))
                     }
-                    if (fila.size == 1) Spacer(Modifier.weight(1f))
                 }
+                Spacer(Modifier.height(10.dp))
             }
         }
 
