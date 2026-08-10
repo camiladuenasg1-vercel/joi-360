@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, session, organizadorLogin, organizadorLogout, organizadorSession, generarPassword, refreshEventosLive } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
-import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo, importarInvitadosEventoRemote, fetchEventGuests, buscarInvitadoPorDocumentoRemote, activarBanditaEventoRemote, recargarBanditaEventoRemote } from "./supabase.js";
+import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo, importarInvitadosEventoRemote, fetchEventGuests, buscarInvitadoPorDocumentoRemote, activarBanditaEventoRemote, recargarBanditaEventoRemote, deleteEventoRemote } from "./supabase.js";
 
 const TIPO_ENTRADA_BLANK = { id: "", nombre: "General", precio: 0, cupos: 100, descripcion: "", incluye: "" };
 
@@ -343,6 +343,26 @@ function TabEventosOrganizador({ m, eventos, ticketsMap, onRefresh, onNew, onEdi
       .catch(e => notify(`Cambio guardado localmente, pero no se publicó en la app: ${e.message}`, "error"));
   };
 
+  // deleteEventoRemote ya existía en supabase.js pero nunca estaba cableado
+  // a ningún botón — un evento en borrador/rechazado con 0 ventas reales no
+  // tenía forma de eliminarse, solo "editar y reenviar" o quedar pausado para
+  // siempre. Solo se permite sin ninguna entrada vendida — con ventas reales,
+  // borrar el evento se llevaría ese historial sin dejar rastro.
+  const eliminarEvento = async (ev) => {
+    if (vendidasDe(ev) > 0) {
+      notify(`No se puede eliminar "${ev.nombre}": ya tiene ${vendidasDe(ev)} entrada(s) vendida(s). Pausa el evento en vez de eliminarlo.`, "error");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar el evento "${ev.nombre}"? No tiene entradas vendidas. Esta acción es irreversible.`)) return;
+    update(s => { s.eventos = (s.eventos || []).filter(x => x.id !== ev.id); });
+    try {
+      await deleteEventoRemote(ev.supabaseId || ev.id);
+      notify(`Evento "${ev.nombre}" eliminado.`);
+    } catch (e) {
+      notify(`Se eliminó localmente, pero no se pudo eliminar en el servidor: ${e.message}`, "error");
+    }
+  };
+
   return (
     <>
       <div className="flex justify-between items-end mb-6">
@@ -446,6 +466,11 @@ function TabEventosOrganizador({ m, eventos, ticketsMap, onRefresh, onNew, onEdi
                           {ev.estado === "PENDIENTE_APROBACION" ? "EN REVISIÓN RP" : ev.estado}
                         </Pill>
                         <button onClick={() => onEdit(ev)} className="p-1.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant"><Icon n="edit" className="text-[16px]" /></button>
+                        {vendidasDe(ev) === 0 && (
+                          <button onClick={() => eliminarEvento(ev)} className="p-1.5 rounded border border-outline-variant text-error hover:bg-error-container/20" title="Eliminar (sin entradas vendidas)">
+                            <Icon n="delete" className="text-[16px]" />
+                          </button>
+                        )}
                         {ev.estado === "PENDIENTE_APROBACION" ? (
                           <span className="font-mono text-[9px] text-on-surface-variant uppercase px-2">esperando aprobación final</span>
                         ) : ev.estado === "RECHAZADO" ? (

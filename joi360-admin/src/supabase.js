@@ -675,9 +675,12 @@ export async function setTicketEstado(ticket, estado) {
 export async function fetchTicketTypesDeEvento(eventId) {
   return rest(`event_ticket_types?event_id=eq.${eventId}&select=*&order=precio`);
 }
+// Existía pero nunca estaba cableado a ningún botón real — un evento en
+// borrador o rechazado, con 0 entradas vendidas, no tenía forma de
+// eliminarse; solo quedaba "editar y reenviar" o pausado para siempre.
+// Tragaba el error en silencio, igual que deleteWorldRemote antes de su fix.
 export async function deleteEventoRemote(eventId) {
-  try { await rest(`events?id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }); }
-  catch (e) { console.warn("[supabase-sync] delete evento", e); }
+  await rest(`events?id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 
 // ── BNPL (Caso 1 — Mok / Hiraoka) ───────────────────────────────────────────
