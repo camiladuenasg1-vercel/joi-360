@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -257,13 +257,22 @@ function VentasPorComercioWidget({ worldId, comercios }) {
 function MiCatalogoPanel({ comercio }) {
   const merchantId = comercio.supabaseId || comercio.id;
   const [productos, setProductos] = useState(null);
-  const [form, setForm] = useState({ name: "", price: "", category: "", stock: "", imageUrl: "" });
+  const BLANK_FORM = { name: "", price: "", category: "", stock: "", imageUrl: "" };
+  const [form, setForm] = useState(BLANK_FORM);
   const [catNueva, setCatNueva] = useState(false); // true = mostrar input de categoría nueva en vez del select
   const [savingId, setSavingId] = useState(null);
   const [subiendoImg, setSubiendoImg] = useState(null); // "new" | product.id | null
+  const [editingId, setEditingId] = useState(null); // id del producto en edición, null = formulario de alta
 
   const load = () => fetchProductsRemote(merchantId).then(setProductos).catch(() => setProductos([]));
   useEffect(() => { load(); }, [merchantId]);
+
+  const editar = (p) => {
+    setEditingId(p.id);
+    setForm({ name: p.name, price: String(p.price), category: p.category || "", stock: p.stock != null ? String(p.stock) : "", imageUrl: p.image_url || "" });
+    setCatNueva(true); // el select de categorías existentes no tiene por qué contener la actual si se limpió — texto libre es más simple al editar
+  };
+  const cancelarEdicion = () => { setEditingId(null); setForm(BLANK_FORM); setCatNueva(false); };
 
   const subirImagen = async (file) => {
     if (!file) return null;
@@ -285,12 +294,13 @@ function MiCatalogoPanel({ comercio }) {
 
   const agregar = async () => {
     if (!form.name.trim() || !form.price) return;
-    setSavingId("new");
+    setSavingId(editingId || "new");
     try {
-      await upsertProductRemote({ world_id: comercio.mundoId, merchant_id: merchantId, name: form.name, price: +form.price, category: form.category || null, stock: form.stock ? +form.stock : null, image_url: form.imageUrl || null });
-      setForm({ name: "", price: "", category: "", stock: "", imageUrl: "" });
+      await upsertProductRemote({ id: editingId || undefined, world_id: comercio.mundoId, merchant_id: merchantId, name: form.name, price: +form.price, category: form.category || null, stock: form.stock ? +form.stock : null, image_url: form.imageUrl || null });
+      setForm(BLANK_FORM);
       setCatNueva(false);
-      notify("Producto agregado a tu catálogo.");
+      notify(editingId ? "Producto actualizado." : "Producto agregado a tu catálogo.");
+      setEditingId(null);
       load();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
@@ -330,7 +340,7 @@ function MiCatalogoPanel({ comercio }) {
       <p className="text-on-surface-variant mb-6">Aparecen al cobrar en el POS y en tu reportería.</p>
 
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 mb-6">
-        <p className="font-semibold text-sm mb-3">Nuevo producto</p>
+        <p className="font-semibold text-sm mb-3">{editingId ? "Editar producto" : "Nuevo producto"}</p>
         <div className="flex gap-3">
           <label className="flex-shrink-0 w-16 h-16 rounded-lg border border-dashed border-outline-variant flex items-center justify-center text-outline cursor-pointer overflow-hidden hover:border-primary/50">
             {form.imageUrl ? <img src={form.imageUrl} alt="" className="w-full h-full object-cover" /> : (subiendoImg === "new" ? <Icon n="hourglass_empty" className="text-[20px]" /> : <Icon n="add_a_photo" className="text-[20px]" />)}
@@ -366,9 +376,10 @@ function MiCatalogoPanel({ comercio }) {
             <NumInput className={inputCls} placeholder="Stock (opcional)" value={form.stock} onChange={v => setForm({ ...form, stock: v })} />
           </div>
         </div>
-        <div className="flex justify-end mt-3">
-          <BtnPrimary disabled={!form.name.trim() || !form.price || savingId === "new"} onClick={agregar}>
-            <Icon n="add" className="text-[18px]" /> Agregar producto
+        <div className="flex justify-end gap-2 mt-3">
+          {editingId && <BtnOutline onClick={cancelarEdicion}>Cancelar</BtnOutline>}
+          <BtnPrimary disabled={!form.name.trim() || !form.price || savingId === (editingId || "new")} onClick={agregar}>
+            <Icon n={editingId ? "save" : "add"} className="text-[18px]" /> {editingId ? "Guardar cambios" : "Agregar producto"}
           </BtnPrimary>
         </div>
       </div>
@@ -411,7 +422,10 @@ function MiCatalogoPanel({ comercio }) {
                     </button>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button onClick={() => eliminar(p)} className="text-error hover:bg-error-container/20 p-1 rounded"><Icon n="delete" className="text-[16px]" /></button>
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => editar(p)} className="text-on-surface-variant hover:bg-surface-container p-1 rounded" title="Editar"><Icon n="edit" className="text-[16px]" /></button>
+                      <button onClick={() => eliminar(p)} className="text-error hover:bg-error-container/20 p-1 rounded" title="Eliminar"><Icon n="delete" className="text-[16px]" /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -437,12 +451,14 @@ function MenuCatalogoPanel({ comercio }) {
   const merchantId = comercio.supabaseId || comercio.id;
   const [items, setItems] = useState(null);
   const [programacion, setProgramacion] = useState({}); // { menuItemId: [row,...] }
-  const [form, setForm] = useState({ nombre: "", descripcion: "", precio: "", categoria: "", alergenos: [], imagen_url: "" });
+  const BLANK_FORM = { nombre: "", descripcion: "", precio: "", categoria: "", alergenos: [], imagen_url: "" };
+  const [form, setForm] = useState(BLANK_FORM);
   const [catNueva, setCatNueva] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandido, setExpandido] = useState(null); // menuItemId
   const [progDraft, setProgDraft] = useState({ dias: [], cupos: "" });
   const [savingProg, setSavingProg] = useState(false);
+  const [editingId, setEditingId] = useState(null); // id del plato en edición, null = alta
 
   const load = () => {
     fetchMenuItemsMerchant(merchantId).then(setItems).catch(() => setItems([]));
@@ -456,25 +472,51 @@ function MenuCatalogoPanel({ comercio }) {
 
   const toggleAlergeno = a => setForm(f => ({ ...f, alergenos: f.alergenos.includes(a) ? f.alergenos.filter(x => x !== a) : [...f.alergenos, a] }));
 
+  const editar = (item) => {
+    setEditingId(item.id);
+    setForm({ nombre: item.nombre, descripcion: item.descripcion || "", precio: String(item.precio), categoria: item.categoria || "", alergenos: item.alergenos || [], imagen_url: item.imagen_url || "" });
+    setCatNueva(true);
+  };
+  const cancelarEdicion = () => { setEditingId(null); setForm(BLANK_FORM); setCatNueva(false); };
+
   const agregar = async () => {
     if (!form.nombre.trim() || !form.precio) return;
     setSaving(true);
     try {
-      await crearMenuItemRemote({
-        world_id: comercio.mundoId, merchant_id: merchantId, nombre: form.nombre, descripcion: form.descripcion || null,
+      const payload = {
+        nombre: form.nombre, descripcion: form.descripcion || null,
         precio: +form.precio, categoria: form.categoria || null, alergenos: form.alergenos, imagen_url: form.imagen_url || null,
-      });
-      setForm({ nombre: "", descripcion: "", precio: "", categoria: "", alergenos: [], imagen_url: "" });
+      };
+      if (editingId) {
+        await actualizarMenuItemRemote(editingId, payload);
+        notify(`"${form.nombre}" actualizado.`);
+      } else {
+        await crearMenuItemRemote({ world_id: comercio.mundoId, merchant_id: merchantId, ...payload });
+        notify("Plato agregado. Prográmalo en la fila para que aparezca en el calendario del app.");
+      }
+      setForm(BLANK_FORM);
       setCatNueva(false);
-      notify("Plato agregado. Prográmalo en la fila para que aparezca en el calendario del app.");
+      setEditingId(null);
       load();
     } catch (e) {
-      notify("No se pudo agregar el plato.", "error");
+      notify(editingId ? "No se pudo guardar el cambio." : "No se pudo agregar el plato.", "error");
     } finally { setSaving(false); }
   };
 
   const toggleActivo = async p => { await actualizarMenuItemRemote(p.id, { activo: !p.activo }); load(); };
-  const eliminar = async p => { await eliminarMenuItemRemote(p.id); notify("Plato eliminado."); load(); };
+  const eliminar = async p => {
+    const hoy = new Date();
+    const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    let futuras = [];
+    try { futuras = await fetchReservasFuturasDePlato(merchantId, p.id, hoyISO); } catch (e) { /* si falla la consulta, no bloquear el borrado por eso */ }
+    if (futuras?.length > 0) {
+      const nombres = [...new Set(futuras.map(r => r.beneficiario_nombre))].slice(0, 3).join(", ");
+      notify(`No se puede eliminar "${p.nombre}": tiene ${futuras.length} reserva(s) confirmada(s) a futuro (${nombres}${futuras.length > 3 ? "…" : ""}). Pausa el plato en vez de eliminarlo.`, "error");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar "${p.nombre}" del catálogo de Menú? Esto no afecta el histórico de reservas ya hechas.`)) return;
+    await eliminarMenuItemRemote(p.id); notify("Plato eliminado."); load();
+  };
 
   const abrirProgramacion = item => {
     const actuales = programacion[item.id] || [];
@@ -497,7 +539,7 @@ function MenuCatalogoPanel({ comercio }) {
       <p className="text-on-surface-variant mb-6">Los platos que programes aquí aparecen en el calendario de Menú de la app, filtrados automáticamente por las alergias de cada usuario.</p>
 
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 mb-6">
-        <p className="font-semibold text-sm mb-3">Nuevo plato</p>
+        <p className="font-semibold text-sm mb-3">{editingId ? "Editar plato" : "Nuevo plato"}</p>
         <div className="grid md:grid-cols-4 gap-3 mb-3">
           <input className={inputCls} placeholder="Nombre (ej. Milanesa con puré)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
           <NumInput className={inputCls} step="0.10" placeholder="Precio S/" value={form.precio} onChange={v => setForm({ ...form, precio: v })} />
@@ -539,9 +581,10 @@ function MenuCatalogoPanel({ comercio }) {
             ))}
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {editingId && <BtnOutline onClick={cancelarEdicion}>Cancelar</BtnOutline>}
           <BtnPrimary disabled={!form.nombre.trim() || !form.precio || saving} onClick={agregar}>
-            <Icon n="add" className="text-[18px]" /> {saving ? "Agregando…" : "Agregar plato"}
+            <Icon n={editingId ? "save" : "add"} className="text-[18px]" /> {saving ? "Guardando…" : editingId ? "Guardar cambios" : "Agregar plato"}
           </BtnPrimary>
         </div>
       </div>
@@ -581,7 +624,8 @@ function MenuCatalogoPanel({ comercio }) {
                       {!item.activo ? "PAUSADO" : prog.length > 0 ? "ACTIVO" : "PENDIENTE DE PROGRAMAR"}
                     </Pill>
                   </button>
-                  <button onClick={() => eliminar(item)} className="text-error hover:bg-error-container/20 p-1 rounded"><Icon n="delete" className="text-[16px]" /></button>
+                  <button onClick={() => editar(item)} className="text-on-surface-variant hover:bg-surface-container p-1 rounded" title="Editar"><Icon n="edit" className="text-[16px]" /></button>
+                  <button onClick={() => eliminar(item)} className="text-error hover:bg-error-container/20 p-1 rounded" title="Eliminar"><Icon n="delete" className="text-[16px]" /></button>
                 </div>
               </div>
               {expandido === item.id && (

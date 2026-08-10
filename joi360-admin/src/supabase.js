@@ -703,7 +703,24 @@ export async function actualizarMenuItemRemote(id, patch) {
   await rest(`menu_items?id=eq.${id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
 }
 export async function eliminarMenuItemRemote(id) {
+  // menu_reservas.items no referencia menu_items — es un snapshot jsonb, no
+  // queda huérfano. menu_programacion sí referencia menu_item_id y no se
+  // limpiaba sola: borrar el plato dejaba filas de programación fantasma
+  // (Task E2E cross-role, ago-2026). Se borra primero por si la FK real
+  // bloquearía el DELETE del plato con programación todavía activa.
+  await rest(`menu_programacion?menu_item_id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {});
   await rest(`menu_items?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
+// menu_reservas.items es un jsonb con snapshots {id, nombre, precio, cantidad}
+// (ver crearReservaMenu en joi360-app) — no hay FK, así que se busca por
+// containment. Antes de borrar un plato del catálogo hay que saber si alguien
+// ya lo reservó para una fecha futura (Task E2E cross-role, ago-2026): borrarlo
+// hoy no rompe el histórico de esa reserva (el snapshot sobrevive), pero el
+// plato desaparecería del catálogo del comercio sin que nadie del mundo se
+// entere de que ya hay una entrega comprometida.
+export async function fetchReservasFuturasDePlato(merchantId, menuItemId, hoyISO) {
+  const filtro = encodeURIComponent(JSON.stringify([{ id: menuItemId }]));
+  return rest(`menu_reservas?merchant_id=eq.${merchantId}&estado=eq.CONFIRMADA&fecha=gte.${hoyISO}&items=cs.${filtro}&select=id,fecha,beneficiario_nombre`);
 }
 export async function fetchProgramacionMerchant(merchantId) {
   return rest(`menu_programacion?merchant_id=eq.${merchantId}&select=*`);
