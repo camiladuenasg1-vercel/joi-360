@@ -51,6 +51,15 @@ data class Titular(
     val alergias: String?,
     val tipoSangre: String?,
     val contactoEmergencia: String?,
+    val menuHoy: MenuHoy? = null,
+)
+
+/** Reserva de Menú de hoy — CONFIRMADA/ENTREGADA implica pagada por construcción. */
+data class MenuHoy(
+    val entregado: Boolean,
+    val items: List<String>,
+    val monto: Double,
+    val merchantNombre: String?,
 )
 
 data class ChargeResult(

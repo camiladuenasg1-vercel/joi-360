@@ -233,6 +233,21 @@ fun FichaTitularScreen(titular: Titular, onBack: () -> Unit, onListo: () -> Unit
         }
 
         Spacer(Modifier.height(16.dp))
+        val menu = titular.menuHoy
+        if (menu != null) {
+            Notice(
+                buildString {
+                    append(if (menu.entregado) "Menú de hoy: pagado y entregado" else "Menú de hoy: pagado, pendiente de entregar")
+                    if (menu.items.isNotEmpty()) append(" — ${menu.items.joinToString(", ")}")
+                    if (menu.merchantNombre != null) append(" (${menu.merchantNombre})")
+                },
+                NoticeTone.Ok,
+            )
+        } else {
+            Notice("Sin menú reservado para hoy.", NoticeTone.Info)
+        }
+
+        Spacer(Modifier.height(12.dp))
         if (!titular.alergias.isNullOrBlank()) {
             Notice("Alergias registradas: ${titular.alergias}", NoticeTone.Warn)
         } else {

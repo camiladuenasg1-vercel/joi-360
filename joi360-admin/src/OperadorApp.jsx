@@ -819,6 +819,23 @@ export function ConsultarFichaOperador({ comercio, m }) {
             <span className="font-mono text-sm font-bold">S/ {Number(ficha.balance).toFixed(2)}</span>
           </div>
         )}
+        {ficha.menuHoy ? (
+          <div className="bg-ok/5 border border-ok/20 rounded-xl px-3 py-2.5 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-ok/15 flex items-center justify-center flex-shrink-0">
+              <Icon n="restaurant" className="text-[16px] text-ok" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-[9px] uppercase text-outline">Menú de hoy · pagado{ficha.menuHoy.entregado ? " · entregado" : ""}</p>
+              <p className="text-sm font-medium truncate">{ficha.menuHoy.items.join(", ") || "Reserva confirmada"}</p>
+              {ficha.menuHoy.merchantNombre && <p className="text-xs text-on-surface-variant">{ficha.menuHoy.merchantNombre} · S/ {Number(ficha.menuHoy.monto).toFixed(2)}</p>}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-surface-container-low rounded-xl px-3 py-2.5 flex items-center gap-3">
+            <Icon n="restaurant" className="text-[16px] text-outline flex-shrink-0" />
+            <p className="text-xs text-on-surface-variant">Sin menú reservado para hoy.</p>
+          </div>
+        )}
         {CAMPOS.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed border-outline-variant rounded-xl">
             <Icon n="medical_information" className="text-[36px] text-outline mb-2 block mx-auto" />

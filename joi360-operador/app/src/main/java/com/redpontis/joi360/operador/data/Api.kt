@@ -203,41 +203,44 @@ object Api {
             "GET",
             "/api/pos/v1/titular/${enc(codigo)}?world_id=${enc(worldId)}&origen=${enc(origen)}",
         ).getOrElse { return Result.failure(it) }
+        return Result.success(titularDeJson(j))
+    }
+
+    /** Persona resuelta desde cualquiera de las rutas de identificación, con o sin menú de hoy. */
+    private fun titularDeJson(j: JSONObject): Titular {
         val r = j.optJSONObject("restricciones")
-        return Result.success(
-            Titular(
-                userId = j.optString("userId"),
-                nombre = j.optString("nombre").takeIf { it.isNotBlank() && it != "null" },
-                esDependiente = j.optBoolean("esDependiente"),
-                balance = j.optDouble("balance").takeIf { !it.isNaN() },
-                alergias = r?.optString("alergias")?.takeIf { it.isNotBlank() && it != "null" },
-                tipoSangre = r?.optString("tipoSangre")?.takeIf { it.isNotBlank() && it != "null" },
-                contactoEmergencia = r?.optJSONObject("contactoEmergencia")
-                    ?.let { c ->
-                        val n = c.optString("nombre")
-                        val t = c.optString("telefono")
-                        listOf(n, t).filter { it.isNotBlank() && it != "null" }
-                            .joinToString(" · ").takeIf { it.isNotBlank() }
-                    },
-            )
+        val menu = j.optJSONObject("menuHoy")
+        return Titular(
+            userId = j.optString("userId"),
+            nombre = j.optString("nombre").takeIf { it.isNotBlank() && it != "null" },
+            esDependiente = j.optBoolean("esDependiente"),
+            balance = j.optDouble("balance").takeIf { !it.isNaN() },
+            alergias = r?.optString("alergias")?.takeIf { it.isNotBlank() && it != "null" },
+            tipoSangre = r?.optString("tipoSangre")?.takeIf { it.isNotBlank() && it != "null" },
+            contactoEmergencia = r?.optJSONObject("contactoEmergencia")
+                ?.let { c ->
+                    val n = c.optString("nombre")
+                    val t = c.optString("telefono")
+                    listOf(n, t).filter { it.isNotBlank() && it != "null" }
+                        .joinToString(" · ").takeIf { it.isNotBlank() }
+                },
+            menuHoy = menu?.let { m ->
+                MenuHoy(
+                    entregado = m.optBoolean("entregado"),
+                    items = m.optJSONArray("items")?.let { arr ->
+                        (0 until arr.length()).mapNotNull { arr.optString(it).takeIf(String::isNotBlank) }
+                    } ?: emptyList(),
+                    monto = m.optDouble("monto", 0.0),
+                    merchantNombre = m.optString("merchantNombre").takeIf { it.isNotBlank() && it != "null" },
+                )
+            },
         )
     }
 
     /** Búsqueda por documento de identidad. */
     suspend fun buscarPorDni(worldId: String, dni: String): Result<Titular> =
         request("GET", "/api/pos/v1/titular-dni/${enc(dni)}?world_id=${enc(worldId)}")
-            .mapCatching { j ->
-                val r = j.optJSONObject("restricciones")
-                Titular(
-                    userId = j.optString("userId"),
-                    nombre = j.optString("nombre").takeIf { it.isNotBlank() && it != "null" },
-                    esDependiente = j.optBoolean("esDependiente"),
-                    balance = j.optDouble("balance").takeIf { !it.isNaN() },
-                    alergias = r?.optString("alergias")?.takeIf { it.isNotBlank() && it != "null" },
-                    tipoSangre = r?.optString("tipoSangre")?.takeIf { it.isNotBlank() && it != "null" },
-                    contactoEmergencia = null,
-                )
-            }
+            .mapCatching { j -> titularDeJson(j) }
 
     // ── Banditas NFC ──────────────────────────────────────────────────────
 
