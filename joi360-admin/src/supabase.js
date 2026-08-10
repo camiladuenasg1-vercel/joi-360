@@ -427,6 +427,25 @@ export async function actualizarEstadoMerchantRemote(merchantId, status) {
     body: JSON.stringify({ status }),
   });
 }
+// Antes solo existía alta — corregir un RUC, cuenta bancaria o tarifa mal
+// tipeada después de crear el comercio no tenía forma de hacerse desde acá
+// (había que editar Supabase a mano). Mismo mapeo de campos que
+// addMerchantRemote, en PATCH.
+export async function actualizarMerchantRemote(merchantId, comercio) {
+  await rest(`merchants?id=eq.${merchantId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      name: comercio.nombre,
+      mdr_override: +comercio.tarifa || null,
+      fixed_fee_override: +comercio.fijoTx || null,
+      ruc: comercio.ruc || null, razon_social: comercio.razonSocial || null,
+      direccion_fiscal: comercio.direccionFiscal || null,
+      apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
+      contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
+      banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
+    }),
+  });
+}
 export async function eliminarMerchantRemote(merchantId) {
   await rest(`merchants?id=eq.${merchantId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }

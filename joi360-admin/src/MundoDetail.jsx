@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -1978,8 +1978,27 @@ function ActoresMerchants({ m, comercios }) {
     banco: BANCOS_PE[0], cuentaBancaria:"", cci:"",
   };
   const [f, setF] = useState(blank);
+  const [editingId, setEditingId] = useState(null); // c.id local en edición, null = alta
+
+  const editar = (c) => {
+    setEditingId(c.id);
+    setF({ ...blank, ...c, tarifa: String(c.tarifa ?? blank.tarifa), fijoTx: String(c.fijoTx ?? blank.fijoTx), pos: String(c.pos ?? blank.pos) });
+    setOpen(true);
+  };
 
   const save = () => {
+    if (editingId) {
+      const merchantId = comercios.find(c => c.id === editingId)?.supabaseId || editingId;
+      update(st => {
+        const c = (st.comercios||[]).find(x => x.id === editingId);
+        if (c) Object.assign(c, f, { tarifa:+f.tarifa, fijoTx:+f.fijoTx });
+      });
+      actualizarMerchantRemote(merchantId, f)
+        .then(() => notify("Comercio actualizado."))
+        .catch(e => notify(`Se actualizó localmente, pero no se pudo publicar: ${e.message}`, "error"));
+      setF(blank); setEditingId(null); setOpen(false);
+      return;
+    }
     const localId = uid("com");
     update(st => {
       if (!st.comercios) st.comercios = [];
@@ -2004,7 +2023,7 @@ function ActoresMerchants({ m, comercios }) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <p className="text-sm text-on-surface-variant max-w-2xl">Carga de merchants del mundo <b>{m.nombre}</b>. Cada uno obtiene su frente dedicado y sus POS se consolidan en el Dashboard.</p>
-        <BtnPrimary onClick={() => setOpen(true)}><Icon n="add" className="text-[18px]"/> Nuevo Merchant</BtnPrimary>
+        <BtnPrimary onClick={() => { setEditingId(null); setF(blank); setOpen(true); }}><Icon n="add" className="text-[18px]"/> Nuevo Merchant</BtnPrimary>
       </div>
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-sm">
@@ -2053,10 +2072,16 @@ function ActoresMerchants({ m, comercios }) {
                     </div>
                   </td>
                   <td className="p-4 text-right">
-                    <button onClick={() => setEliminando(c)} title="Deshabilitar / Eliminar comercio"
-                      className="p-1.5 rounded-lg border border-error/30 text-error hover:bg-error-container/20 transition-colors">
-                      <Icon n="delete" className="text-[16px]"/>
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => editar(c)} title="Editar datos del comercio"
+                        className="p-1.5 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+                        <Icon n="edit" className="text-[16px]"/>
+                      </button>
+                      <button onClick={() => setEliminando(c)} title="Deshabilitar / Eliminar comercio"
+                        className="p-1.5 rounded-lg border border-error/30 text-error hover:bg-error-container/20 transition-colors">
+                        <Icon n="delete" className="text-[16px]"/>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );})
@@ -2070,8 +2095,8 @@ function ActoresMerchants({ m, comercios }) {
         <Icon n="info" className="text-secondary text-[18px] flex-shrink-0"/>
         <span>El "Hardware asignado" y el "Volumen real" son datos reales (pos_devices y transacciones del comercio). La liquidación formal, en cambio, se calcula hoy en <b>lote agregado por mundo</b> (pestaña Liquidación de RedPontis), no desglosada por comercio — el motor no reparte el neto entre comercios individuales todavía.</span>
       </div>
-      <Drawer open={open} onClose={() => setOpen(false)} icon="storefront" title="Alta de Merchant" subtitle={`Mundo: ${m.nombre}`} width="w-[560px]"
-        footer={<><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre || !f.ruc || !f.razonSocial} onClick={save}>Habilitar merchant</BtnPrimary></>}>
+      <Drawer open={open} onClose={() => { setOpen(false); setEditingId(null); }} icon="storefront" title={editingId ? `Editar: ${f.nombre}` : "Alta de Merchant"} subtitle={`Mundo: ${m.nombre}`} width="w-[560px]"
+        footer={<><BtnOutline onClick={() => { setOpen(false); setEditingId(null); }}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre || !f.ruc || !f.razonSocial} onClick={save}>{editingId ? "Guardar cambios" : "Habilitar merchant"}</BtnPrimary></>}>
         <div className="space-y-5">
           <Field label="Nombre comercial"><input className={inputCls} value={f.nombre} onChange={e => setF({...f, nombre:e.target.value})} placeholder="Ej. Cafetería Norte"/></Field>
           <Field label="Rubro" hint={`Filtrado por vertical del mundo: ${m.vertical}`}>
