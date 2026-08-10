@@ -38,7 +38,7 @@ function leerLineasDeArchivo(file, cb) {
     reader.readAsText(file);
   }
 }
-import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, actualizarAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware, fetchHardwareModelosCustom, crearHardwareModeloCustom, desactivarHardwareModeloCustom } from "./supabase.js";
+import { fetchPosDevicesRemote, registerPosDeviceRemote, registerPosDevicesBulkRemote, assignPosDeviceRemote, releasePosDeviceRemote, updatePosDeviceEstadoRemote, actualizarSerialPosDeviceRemote, eliminarPosDeviceRemote, fetchNfcBandsRemote, registerNfcBandsBulkRemote, liberarNfcBandRemote, renombrarLoteNfcRemote, eliminarLoteNfcRemote, revertirAsignacionesLoteRemote, crearAsignacionNfcRemote, actualizarAsignacionNfcRemote, marcarAsignacionPagadaRemote, fetchAsignacionesPendientesCobro, fetchHistorialAsignacionesNfc, uploadArchivo, fetchSolicitudesNfcTodas, resolverSolicitudNfcRemote, fetchSolicitudesLoteNfcTodas, fetchStockAlmacenNfc, entregarLoteNfcRemote, errorControlado, logErrorControlado, fetchRequerimientosHardwareTodos, resolverRequerimientoHardware, fetchHardwareModelosCustom, crearHardwareModeloCustom, desactivarHardwareModeloCustom } from "./supabase.js";
 
 // Íconos Material Symbols razonables para un modelo de hardware nuevo —
 // evita un input de texto libre que rompería el ícono en el resto de la UI.
@@ -270,6 +270,8 @@ function PosDevicesTab() {
   const [stock, setStock] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
   const [assignForm, setAssignForm] = useState({ worldId:"", merchantId:"", eventId:"" });
+  const [editingSerialId, setEditingSerialId] = useState(null);
+  const [serialDraft, setSerialDraft] = useState("");
   const [showBulk, setShowBulk] = useState(false);
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
@@ -386,6 +388,52 @@ function PosDevicesTab() {
     load();
   };
 
+  const cambiarEstadoDevice = async (d, estado) => {
+    try {
+      await updatePosDeviceEstadoRemote(d.id, estado);
+      notify(`${d.serial}: ${estado.replace("_", " ")}.`);
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-cambiar-estado", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
+  const guardarSerial = async (d) => {
+    if (!serialDraft.trim()) return;
+    try {
+      await actualizarSerialPosDeviceRemote(d.id, serialDraft.trim().toUpperCase());
+      notify(`Serie actualizada a "${serialDraft.trim().toUpperCase()}".`);
+      setEditingSerialId(null);
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-editar-serial", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
+  // Solo se puede eliminar una unidad fuera de servicio — si está asignada,
+  // primero hay que liberarla (mismo criterio que el resto de eliminaciones
+  // de esta auditoría: no borrar algo con vínculo activo sin avisar).
+  const eliminarDevice = async (d) => {
+    if (d.estado === "asignado") {
+      notify("Esta unidad está asignada — libérala antes de eliminarla del inventario.", "error");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar la unidad "${d.serial}" del inventario? Esta acción es irreversible.`)) return;
+    try {
+      await eliminarPosDeviceRemote(d.id);
+      notify(`${d.serial} eliminado del inventario.`);
+      load();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", "hardware-eliminar", null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    }
+  };
+
   const comerciosDelMundo = (worldId) => comercios.filter(c => c.mundoId === worldId);
   // Eventos publicados del mundo (Gantt #64/#73) — un POS puede prestarse
   // temporalmente a un evento puntual, además de su asignación a merchant.
@@ -496,7 +544,17 @@ function PosDevicesTab() {
               return (
                 <React.Fragment key={d.id}>
                   <tr className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-bold">{d.serial}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-bold">
+                      {editingSerialId === d.id ? (
+                        <div className="flex items-center gap-1">
+                          <input autoFocus className="w-28 h-7 px-1.5 border border-outline-variant rounded text-xs font-mono" value={serialDraft} onChange={e=>setSerialDraft(e.target.value)} />
+                          <button onClick={()=>guardarSerial(d)} className="text-ok hover:underline text-xs">✓</button>
+                          <button onClick={()=>setEditingSerialId(null)} className="text-outline hover:underline text-xs">✕</button>
+                        </div>
+                      ) : (
+                        <button onClick={()=>{ setEditingSerialId(d.id); setSerialDraft(d.serial); }} className="hover:text-primary" title="Editar serie">{d.serial}</button>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Icon n={modelo?.icon||"devices"} className="text-[16px] text-outline"/>
@@ -517,14 +575,34 @@ function PosDevicesTab() {
                     <td className="px-4 py-3 text-xs">{merchant?.nombre||<span className="text-outline">—</span>}</td>
                     <td className="px-4 py-3 text-xs">{evento?.nombre||<span className="text-outline">—</span>}</td>
                     <td className="px-4 py-3 text-right">
-                      {d.estado==="disponible" && !assigning && (
-                        <button onClick={()=>{ setAssigningId(d.id); setAssignForm({ worldId:"", merchantId:"", eventId:"" }); }}
-                          className="text-xs text-primary hover:underline font-medium">Asignar</button>
-                      )}
-                      {d.estado==="asignado" && (
-                        <button onClick={()=>releaseDevice(d)}
-                          className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
-                      )}
+                      <div className="flex items-center gap-3 justify-end">
+                        {d.estado==="disponible" && !assigning && (
+                          <>
+                            <button onClick={()=>{ setAssigningId(d.id); setAssignForm({ worldId:"", merchantId:"", eventId:"" }); }}
+                              className="text-xs text-primary hover:underline font-medium">Asignar</button>
+                            <button onClick={()=>cambiarEstadoDevice(d, "en_reparacion")} className="text-xs text-on-surface-variant hover:text-primary">A reparación</button>
+                            <button onClick={()=>cambiarEstadoDevice(d, "baja")} className="text-xs text-error hover:underline">Dar de baja</button>
+                          </>
+                        )}
+                        {d.estado==="asignado" && (
+                          <button onClick={()=>releaseDevice(d)}
+                            className="text-xs text-on-surface-variant hover:text-primary font-medium">Liberar</button>
+                        )}
+                        {d.estado==="en_reparacion" && (
+                          <>
+                            <button onClick={()=>cambiarEstadoDevice(d, "disponible")} className="text-xs text-primary hover:underline font-medium">Marcar disponible</button>
+                            <button onClick={()=>cambiarEstadoDevice(d, "baja")} className="text-xs text-error hover:underline">Dar de baja</button>
+                          </>
+                        )}
+                        {d.estado==="baja" && (
+                          <button onClick={()=>cambiarEstadoDevice(d, "disponible")} className="text-xs text-primary hover:underline font-medium">Reactivar</button>
+                        )}
+                        {d.estado!=="asignado" && (
+                          <button onClick={()=>eliminarDevice(d)} className="text-error hover:bg-error-container/20 p-1 rounded" title="Eliminar del inventario">
+                            <Icon n="delete" className="text-[14px]"/>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   {assigning && (

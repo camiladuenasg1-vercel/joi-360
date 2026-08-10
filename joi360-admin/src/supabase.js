@@ -1294,6 +1294,24 @@ export async function releasePosDeviceRemote(deviceId) {
     body: JSON.stringify({ estado: "disponible", world_id: null, merchant_id: null, event_id: null, assigned_at: null }),
   });
 }
+// La tabla ya filtraba por "en_reparacion"/"baja" (PosDevicesTab) pero no
+// existía ningún botón que pusiera una unidad en esos estados, ni forma de
+// corregir una serie mal tipeada, ni de eliminar una unidad del inventario.
+export async function updatePosDeviceEstadoRemote(deviceId, estado) {
+  await rest(`pos_devices?id=eq.${deviceId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado }),
+  });
+}
+export async function actualizarSerialPosDeviceRemote(deviceId, serial) {
+  await rest(`pos_devices?id=eq.${deviceId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ serial }),
+  });
+}
+export async function eliminarPosDeviceRemote(deviceId) {
+  await rest(`pos_devices?id=eq.${deviceId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+}
 
 // ── Banditas NFC — stock real por lote (30-jul) ─────────────────────────────
 // Carga masiva desde CSV: un código único por bandita, agrupado por lote.
