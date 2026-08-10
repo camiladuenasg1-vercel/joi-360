@@ -878,9 +878,36 @@ export function EntregarMenuOperador({ comercio, m }) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [reservas, setReservas] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  // Validar por DNI — en una fila de comedor nadie quiere buscar a mano entre
+  // todas las reservas del día; el que está haciendo fila sí sabe su DNI (o
+  // el del apoderado). Reusa titular-dni.js: cualquier DNI de la familia
+  // resuelve a todos sus user_id, y se filtra contra las reservas ya cargadas.
+  const [dniInput, setDniInput] = useState("");
+  const [buscandoDni, setBuscandoDni] = useState(false);
+  const [dniError, setDniError] = useState(null);
+  const [dniFiltroIds, setDniFiltroIds] = useState(null); // Set<userId> o null = sin filtro
 
   const cargar = () => fetchReservasMenuMerchant(merchantId, hoy).then(setReservas).catch(() => setReservas([]));
   React.useEffect(() => { cargar(); }, [merchantId]);
+
+  const buscarPorDni = async () => {
+    const dni = dniInput.trim();
+    if (!dni) return;
+    setBuscandoDni(true); setDniError(null); setDniFiltroIds(null);
+    try {
+      const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/titular-dni/${encodeURIComponent(dni)}?world_id=${encodeURIComponent(m.id)}`);
+      if (!res.ok) {
+        setDniError(res.status === 404 ? "No encontramos a nadie con ese DNI en este mundo." : "No se pudo buscar el documento. Intenta de nuevo.");
+        return;
+      }
+      const data = await res.json();
+      const ids = new Set([data.userId, ...(data.relacionados || []).map(r => r.userId)]);
+      setDniFiltroIds(ids);
+    } catch {
+      setDniError("No se pudo buscar el documento. Intenta de nuevo.");
+    } finally { setBuscandoDni(false); }
+  };
+  const quitarFiltroDni = () => { setDniInput(""); setDniFiltroIds(null); setDniError(null); };
 
   const entregar = async (r) => {
     setBusyId(r.id);
@@ -895,17 +922,34 @@ export function EntregarMenuOperador({ comercio, m }) {
 
   if (reservas === null) return <p className="text-sm text-on-surface-variant py-8 text-center">Cargando reservas de hoy…</p>;
 
-  const pendientes = reservas.filter(r => r.estado === "CONFIRMADA");
-  const entregadas = reservas.filter(r => r.estado === "ENTREGADA");
+  const base = dniFiltroIds ? reservas.filter(r => dniFiltroIds.has(r.beneficiario_user_id)) : reservas;
+  const pendientes = base.filter(r => r.estado === "CONFIRMADA");
+  const entregadas = base.filter(r => r.estado === "ENTREGADA");
 
   return (
     <div className="space-y-4">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3">
+        {!dniFiltroIds ? (
+          <>
+            <div className="flex gap-2">
+              <input className={`${inputCls} font-mono`} placeholder="DNI para validar su reserva" value={dniInput} onChange={e => setDniInput(e.target.value)} onKeyDown={e => e.key === "Enter" && buscarPorDni()} />
+              <BtnPrimary disabled={!dniInput.trim() || buscandoDni} onClick={buscarPorDni}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+            </div>
+            {dniError && <p className="text-xs text-error mt-1.5">{dniError}</p>}
+          </>
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-on-surface-variant">Mostrando solo la reserva de este DNI.</p>
+            <button onClick={quitarFiltroDni} className="text-xs font-bold text-primary">Ver todas</button>
+          </div>
+        )}
+      </div>
       <div>
         <p className="font-mono text-[10px] uppercase text-outline mb-2">Por entregar hoy ({pendientes.length})</p>
         {pendientes.length === 0 ? (
           <div className="text-center py-10 border-2 border-dashed border-outline-variant rounded-xl">
             <Icon n="restaurant" className="text-[36px] text-outline mb-2 block mx-auto" />
-            <p className="text-sm text-on-surface-variant">Sin reservas pendientes de entrega hoy.</p>
+            <p className="text-sm text-on-surface-variant">{dniFiltroIds ? "Esta persona no tiene ningún menú reservado hoy." : "Sin reservas pendientes de entrega hoy."}</p>
           </div>
         ) : (
           <div className="space-y-2">
