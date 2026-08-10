@@ -535,7 +535,7 @@ const POS_BACKEND_URL = "https://joi-pos-backend.vercel.app";
 
 export function VincularBanditaOperador({ comercio, m }) {
   const vigenciaMeses = (m?.modulos || []).find(x => x.id === "wallet")?.config?.vigenciaBanditasMeses ?? null;
-  const [modoIdent, setModoIdent] = useState("codigo"); // "codigo" | "dni"
+  const [modoIdent, setModoIdent] = useState("codigo"); // "codigo" | "dni" — "codigo" también acepta el QR del superapp escaneado con el lector del POS (llega como texto, igual que tipearlo)
   const [codigoUsuario, setCodigoUsuario] = useState("");
   const [dniInput, setDniInput] = useState("");
   const [wallet, setWallet] = useState(null);
@@ -551,10 +551,17 @@ export function VincularBanditaOperador({ comercio, m }) {
     setBuscando(true); setResultado(null);
     try {
       const w = await buscarWalletPorCodigo(code, m.id);
-      if (!w) { setResultado({ ok: false, mensaje: "No se encontró ningún usuario con ese código JOI en este mundo." }); return; }
+      if (!w) {
+        const err = await errorControlado("wallet_no_encontrada");
+        logErrorControlado("wallet_no_encontrada", `vincular-bandita:${m.id}`, m.id);
+        setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+        return;
+      }
       setWallet(w);
     } catch {
-      setResultado({ ok: false, mensaje: "No se pudo buscar el código. Intenta de nuevo." });
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `vincular-bandita-identificar:${m.id}`, m.id);
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally { setBuscando(false); }
   };
 
@@ -569,7 +576,13 @@ export function VincularBanditaOperador({ comercio, m }) {
     try {
       const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/titular-dni/${encodeURIComponent(dni)}?world_id=${encodeURIComponent(m.id)}`);
       if (!res.ok) {
-        setResultado({ ok: false, mensaje: res.status === 404 ? "No encontramos a nadie con ese DNI en este mundo." : "No se pudo buscar el documento. Intenta de nuevo." });
+        if (res.status === 404) {
+          setResultado({ ok: false, mensaje: "No encontramos a nadie con ese DNI en este mundo." });
+        } else {
+          const err = await errorControlado("operacion_admin_fallida");
+          logErrorControlado("operacion_admin_fallida", `vincular-bandita-dni:${m.id}`, m.id);
+          setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+        }
         return;
       }
       const data = await res.json();
@@ -582,7 +595,9 @@ export function VincularBanditaOperador({ comercio, m }) {
         setCandidatos(todos);
       }
     } catch {
-      setResultado({ ok: false, mensaje: "No se pudo buscar el documento. Intenta de nuevo." });
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `vincular-bandita-dni:${m.id}`, m.id);
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally { setBuscando(false); }
   };
 
@@ -605,78 +620,98 @@ export function VincularBanditaOperador({ comercio, m }) {
       if (band.estado !== "asignada") { setResultado({ ok: false, mensaje: `Esta pulsera está en estado "${band.estado}", no está lista para vincular.` }); return; }
       await vincularNfcBandRemote(band.id, wallet.user_id, vigenciaMeses, m.id);
       setResultado({ ok: true, mensaje: `Pulsera ${band.codigo} vinculada correctamente.` });
-      setCodigoBandita("");
     } catch {
-      setResultado({ ok: false, mensaje: "No se pudo vincular la pulsera. Intenta de nuevo." });
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `vincular-bandita-vincular:${m.id}`, m.id);
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally { setBusy(false); }
   };
 
   const reiniciar = () => { setWallet(null); setCodigoUsuario(""); setDniInput(""); setCandidatos(null); setCodigoBandita(""); setResultado(null); };
+  // "Cancelar" ≠ "reintentar": después de un éxito, reiniciar() vuelve al
+  // inicio para vincular a otra persona; en cualquier otro momento, aborta
+  // el intento en curso. Un solo botón rojo cubre ambos casos sin flecha.
+  const cancelarVinculacion = reiniciar;
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 space-y-4">
-      <div>
-        <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar a la persona</p>
-        {!wallet && !candidatos && (
-          <div className="flex gap-1.5 mb-2">
-            <button onClick={() => setModoIdent("codigo")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "codigo" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>Código JOI</button>
-            <button onClick={() => setModoIdent("dni")} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modoIdent === "dni" ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>DNI</button>
-          </div>
-        )}
-        {!wallet && !candidatos && modoIdent === "codigo" && (
-          <div className="flex gap-2">
-            <input className={`${inputCls} font-mono`} placeholder="Código JOI del usuario" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} onKeyDown={e => e.key === "Enter" && identificar()} />
-            <BtnPrimary disabled={!codigoUsuario.trim() || buscando} onClick={identificar}><Icon n="search" className="text-[16px]" /></BtnPrimary>
-          </div>
-        )}
-        {!wallet && !candidatos && modoIdent === "dni" && (
-          <div>
-            <div className="flex gap-2">
-              <input className={`${inputCls} font-mono`} placeholder="DNI del titular o del dependiente" value={dniInput} onChange={e => setDniInput(e.target.value)} onKeyDown={e => e.key === "Enter" && identificarPorDni()} />
-              <BtnPrimary disabled={!dniInput.trim() || buscando} onClick={identificarPorDni}><Icon n="search" className="text-[16px]" /></BtnPrimary>
-            </div>
-            <p className="text-[10px] text-outline mt-1.5">Cualquier DNI de la familia funciona — si hay más de una cuenta asociada, se puede elegir cuál.</p>
-          </div>
-        )}
-        {candidatos && (
-          <div className="space-y-2">
-            <p className="text-xs text-on-surface-variant">Este DNI trae {candidatos.length} cuentas asociadas — elige a quién identificas:</p>
-            {candidatos.map(c => (
-              <button key={c.userId} onClick={() => elegirCandidato(c)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-outline-variant hover:border-primary/50 bg-surface text-left tap-active">
-                <div className="min-w-0">
-                  <p className="font-bold text-sm truncate">{c.nombre || "Sin nombre"} {c.esDependiente ? <span className="font-mono text-[9px] uppercase text-tertiary ml-1">dependiente</span> : <span className="font-mono text-[9px] uppercase text-primary ml-1">titular</span>}</p>
-                  {c.alergias && <p className="text-[10px] text-amber-700">Alergias: {c.alergias}</p>}
-                </div>
-                {c.balance != null && <span className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(c.balance).toFixed(2)}</span>}
-              </button>
-            ))}
-            <button onClick={reiniciar} className="text-xs text-on-surface-variant">Cancelar</button>
-          </div>
-        )}
-        {wallet && (
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-ok flex items-center gap-1.5"><Icon n="check_circle" className="text-[16px]"/> Persona identificada.</p>
-            <BtnOutline onClick={reiniciar}><Icon n="close" className="text-[16px]" /></BtnOutline>
-          </div>
-        )}
-      </div>
-      {wallet && (
+      {!wallet && !resultado?.ok && (
         <div>
-          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 2 · Código de la pulsera</p>
-          <div className="flex gap-2">
-            <input className={`${inputCls} font-mono`} placeholder="Código impreso o escaneado (NFC-...)" value={codigoBandita} onChange={e => setCodigoBandita(e.target.value)} onKeyDown={e => e.key === "Enter" && vincular()} autoFocus />
-          </div>
-          <p className="text-[10px] text-outline mt-1.5">O escanea con el lector NFC del POS — el código se completa solo.</p>
-          <BtnPrimary onClick={vincular} disabled={!codigoBandita.trim() || busy} className="w-full mt-3">
-            <Icon n="sensors" className="text-[18px]" /> {busy ? "Vinculando…" : "Vincular pulsera"}
-          </BtnPrimary>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar a la persona</p>
+          {!candidatos && (
+            <div className="flex gap-1.5 mb-2">
+              <button onClick={() => setModoIdent("codigo")} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${modoIdent === "codigo" ? "bg-primary text-white" : "bg-surface-container text-on-surface-variant"}`}>Código JOI o QR</button>
+              <button onClick={() => setModoIdent("dni")} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${modoIdent === "dni" ? "bg-primary text-white" : "bg-surface-container text-on-surface-variant"}`}>DNI</button>
+            </div>
+          )}
+          {!candidatos && modoIdent === "codigo" && (
+            <div>
+              <div className="flex gap-2">
+                <input className={`${inputCls} font-mono`} placeholder="Código JOI del usuario" value={codigoUsuario} onChange={e => setCodigoUsuario(e.target.value)} onKeyDown={e => e.key === "Enter" && identificar()} autoFocus />
+                <BtnPrimary disabled={!codigoUsuario.trim() || buscando} onClick={identificar}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+              </div>
+              <p className="text-[10px] text-outline mt-1.5">Escanea el QR de su app JOI con el lector del POS — el código se completa solo.</p>
+            </div>
+          )}
+          {!candidatos && modoIdent === "dni" && (
+            <div>
+              <div className="flex gap-2">
+                <input className={`${inputCls} font-mono`} placeholder="DNI del titular o del dependiente" value={dniInput} onChange={e => setDniInput(e.target.value)} onKeyDown={e => e.key === "Enter" && identificarPorDni()} autoFocus />
+                <BtnPrimary disabled={!dniInput.trim() || buscando} onClick={identificarPorDni}><Icon n="search" className="text-[16px]" /></BtnPrimary>
+              </div>
+              <p className="text-[10px] text-outline mt-1.5">Cualquier DNI de la familia funciona — si hay más de una cuenta asociada, se puede elegir cuál.</p>
+            </div>
+          )}
+          {candidatos && (
+            <div className="space-y-2">
+              <p className="text-xs text-on-surface-variant">Este DNI trae {candidatos.length} cuentas asociadas — elige a quién identificas:</p>
+              {candidatos.map(c => (
+                <button key={c.userId} onClick={() => elegirCandidato(c)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface hover:bg-surface-container text-left tap-active">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm truncate">{c.nombre || "Sin nombre"} {c.esDependiente ? <span className="font-mono text-[9px] uppercase text-tertiary ml-1">dependiente</span> : <span className="font-mono text-[9px] uppercase text-primary ml-1">titular</span>}</p>
+                    {c.alergias && <p className="text-[10px] text-amber-700">Alergias: {c.alergias}</p>}
+                  </div>
+                  {c.balance != null && <span className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(c.balance).toFixed(2)}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {resultado && !resultado.ok && (
+            <p className="text-sm text-error flex items-center gap-1.5 mt-3"><Icon n="error" className="text-[16px]" />{resultado.mensaje}</p>
+          )}
         </div>
       )}
-      {resultado && (
-        <p className={`text-sm flex items-center gap-1.5 ${resultado.ok ? "text-ok" : "text-error"}`}>
-          <Icon n={resultado.ok ? "check_circle" : "error"} className="text-[16px]" />{resultado.mensaje}
-        </p>
+
+      {/* Paso 2 · Acerca la bandita — pantalla dedicada de espera, no un input
+          suelto: en el T6 real el NFC tarda un momento en leer, y el operador
+          necesita saber que el sistema está escuchando, no que se colgó. */}
+      {wallet && !resultado?.ok && (
+        <div className="text-center py-6">
+          <div className="w-20 h-20 rounded-full bg-primary-fixed flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Icon n="sensors" className="text-[36px] text-primary" />
+          </div>
+          <p className="font-bold text-base">Acerca la bandita al lector</p>
+          <p className="text-xs text-on-surface-variant mt-1">Vinculando para {wallet.user_id ? "la persona identificada" : "este usuario"}.</p>
+          <input className={`${inputCls} font-mono text-center mt-4`} placeholder="Código de la pulsera" value={codigoBandita} onChange={e => setCodigoBandita(e.target.value)} onKeyDown={e => e.key === "Enter" && vincular()} autoFocus />
+          {resultado && !resultado.ok && (
+            <p className="text-sm text-error flex items-center justify-center gap-1.5 mt-3"><Icon n="error" className="text-[16px]" />{resultado.mensaje}</p>
+          )}
+          <BtnPrimary onClick={vincular} disabled={!codigoBandita.trim() || busy} className="w-full mt-4">
+            <Icon n="sensors" className="text-[18px]" /> {busy ? "Vinculando…" : "Vincular pulsera"}
+          </BtnPrimary>
+          <button onClick={cancelarVinculacion} className="w-full mt-2 py-2.5 rounded-xl bg-error text-white font-bold text-sm tap-active">
+            Cancelar vinculación
+          </button>
+        </div>
+      )}
+
+      {resultado?.ok && (
+        <div className="text-center py-6">
+          <Icon n="check_circle" className="text-[48px] text-ok" />
+          <p className="font-bold text-base mt-2">{resultado.mensaje}</p>
+          <BtnPrimary onClick={reiniciar} className="w-full mt-4">Vincular otra bandita</BtnPrimary>
+        </div>
       )}
     </div>
   );
