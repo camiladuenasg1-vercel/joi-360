@@ -8,7 +8,7 @@ import { MundoDetail } from "./MundoDetail";
 import { MundoFront, ComercioFront, AnuncianteFront } from "./Fronts";
 import { LandingHome, LandingEventos, LandingEventoDetalle } from "./LandingPublica";
 import { OrganizadorFront } from "./OrganizadorFront";
-import { OperadorApp } from "./OperadorApp";
+import { OperadorApp, PosEntryGate } from "./OperadorApp";
 import { WorldOperadorApp } from "./WorldOperadorApp";
 import { Catalogo } from "./Catalogo";
 import { CatalogoProductos } from "./CatalogoProductos";
@@ -73,6 +73,7 @@ export default function App() {
         <Route path="/admin/modulos-mundo" element={<A title="JOI 360 · Vista por Capacidad"><ModulosMundo /></A>} />
         <Route path="/mundo/:id" element={<MundoFront />} />
         <Route path="/comercio/:id" element={<ComercioFront />} />
+        <Route path="/pos" element={<PosEntryGate />} />
         <Route path="/operador/:comercioId" element={<OperadorApp />} />
         <Route path="/operador-mundo/:worldId" element={<WorldOperadorApp />} />
         <Route path="/anunciante/:id" element={<AnuncianteFront />} />

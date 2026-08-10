@@ -3320,21 +3320,26 @@ export function ComercioFront() {
 export function MerchantGate({ comercio, m }) {
   const [f, setF] = useState({ usuario: "", password: "" });
   const [pin, setPin] = useState("");
-  // El PIN solo existe si el comercio pidió unidades de POS al entregarle el
-  // panel (Task #164) — un comercio sin POS no tiene entrada rápida, entra
-  // siempre por usuario/contraseña.
-  const [modo, setModo] = useState(comercio.posPin ? "pin" : "credenciales");
+  // "Tiene código" es la señal de que este comercio pasó por entrega (Task
+  // #164) — comercio.posPin ya NO viaja en texto plano desde Supabase (se
+  // hashea server-side), así que no sirve como señal en un dispositivo
+  // distinto al que hizo la entrega. El código sí es público y estable.
+  const [modo, setModo] = useState(comercio.codigo ? "pin" : "credenciales");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
   const handleLogin = (e) => {
     e.preventDefault();
     if (!comercio.credenciales) { setErr("Sin credenciales asignadas. Contacta a RedPontis."); return; }
     const ok = merchantLogin(comercio.id, f.usuario, f.password);
     if (!ok) setErr("Credenciales inválidas. Solicítalas al administrador del mundo.");
   };
-  const handlePin = (e) => {
+  const handlePin = async (e) => {
     e.preventDefault();
-    const ok = merchantPinLogin(comercio.id, pin);
-    if (!ok) setErr("PIN incorrecto.");
+    setErr(""); setBusy(true);
+    try {
+      const ok = await merchantPinLogin(comercio.id, pin);
+      if (!ok) setErr("PIN incorrecto.");
+    } finally { setBusy(false); }
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -3347,20 +3352,20 @@ export function MerchantGate({ comercio, m }) {
             <p className="font-mono text-[10px] text-on-surface-variant uppercase">{rubroNombre(comercio.rubro)} · {m?.nombre || "JOI 360"}</p>
           </div>
         </div>
-        {comercio.posPin && (
+        {comercio.codigo && (
           <div className="flex gap-1.5 mb-4">
             <button onClick={() => { setModo("pin"); setErr(""); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modo === "pin" ? "bg-secondary text-white border-secondary" : "border-outline-variant text-on-surface-variant"}`}>PIN rápido</button>
             <button onClick={() => { setModo("credenciales"); setErr(""); }} className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${modo === "credenciales" ? "bg-secondary text-white border-secondary" : "border-outline-variant text-on-surface-variant"}`}>Usuario y contraseña</button>
           </div>
         )}
-        {modo === "pin" && comercio.posPin ? (
+        {modo === "pin" && comercio.codigo ? (
           <form onSubmit={handlePin} className="space-y-4">
             <Field label="PIN del POS (4 dígitos)">
               <input type="password" className={`${inputCls} font-mono text-center text-2xl tracking-[0.5em]`} inputMode="numeric" maxLength={4}
                 value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} autoFocus />
             </Field>
             {err && <p className="text-xs text-error">{err}</p>}
-            <BtnPrimary type="submit" disabled={pin.length !== 4} className="w-full !bg-secondary hover:!bg-secondary/90"><Icon n="dialpad" className="text-[18px]" /> Entrar al POS</BtnPrimary>
+            <BtnPrimary type="submit" disabled={pin.length !== 4 || busy} className="w-full !bg-secondary hover:!bg-secondary/90"><Icon n="dialpad" className="text-[18px]" /> {busy ? "Verificando…" : "Entrar al POS"}</BtnPrimary>
           </form>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">

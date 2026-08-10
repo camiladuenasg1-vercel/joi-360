@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -1785,11 +1785,14 @@ export function merchantLogin(comercioId, usuario, password) {
 }
 // Entrada rápida por PIN (Task #164) — mismo merchantSession que el login
 // completo, así que OperadorApp.jsx no necesita saber por cuál camino entró.
-// Solo existe si el comercio tiene posPin generado (se genera al crearlo,
-// solo cuando pidió unidades de POS).
-export function merchantPinLogin(comercioId, pin) {
+// El PIN nunca se compara en el cliente contra un valor local (eso es lo que
+// exponía worlds.pos_pin en texto plano vía la llave anónima) — se verifica
+// server-side por RPC contra el hash, usando el código corto del comercio.
+export async function merchantPinLogin(comercioId, pin) {
   const c = load().comercios.find(x => x.id === comercioId);
-  if (c?.posPin && String(pin).trim() === String(c.posPin).trim()) {
+  if (!c?.codigo) return false;
+  const r = await verificarPinOperadorRemote(c.codigo, pin).catch(() => null);
+  if (r?.tipo === "comercio" && r.id === (c.supabaseId || c.id)) {
     update(st => { st.merchantSession = { comercioId, usuario: c.credenciales?.usuario || null }; });
     return true;
   }
@@ -1800,10 +1803,14 @@ export function merchantLogout() { update(st => { st.merchantSession = null; });
 // --- Sesión de Operador de Mundo (Task #128) ---
 // Distinta de merchantLogin: un operador de mundo no representa a ningún
 // comercio (no cobra saldo, por diseño) — solo la clave del mundo, mismo
-// patrón que el POS nativo T6 usa con worlds.pos_pin.
-export function worldOperatorLogin(worldId, pin) {
+// patrón que el POS nativo T6 usa con worlds.pos_pin. Mismo fix de seguridad
+// que merchantPinLogin: verificación server-side por RPC, nunca comparando
+// contra un PIN leído en el cliente.
+export async function worldOperatorLogin(worldId, pin) {
   const m = load().mundos.find(x => x.id === worldId);
-  if (m?.posPin && String(pin).trim() === String(m.posPin).trim()) {
+  if (!m?.codigo) return false;
+  const r = await verificarPinOperadorRemote(m.codigo, pin).catch(() => null);
+  if (r?.tipo === "mundo" && r.id === worldId) {
     update(st => { st.worldOperatorSession = { worldId }; });
     return true;
   }

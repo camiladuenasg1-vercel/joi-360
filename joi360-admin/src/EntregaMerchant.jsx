@@ -1,6 +1,23 @@
 import React, { useState } from "react";
 import { update, generarPassword, generarPin4, generarCodigoComercio, rubroNombre } from "./store";
+import { existeCodigoComercioRemote, actualizarMerchantRemote } from "./supabase.js";
 import { Drawer, BtnPrimary, BtnOutline, Field, inputCls, Icon, notify } from "./ui";
+
+// generarCodigoComercio solo tiene ~900 combinaciones por slug de nombre —
+// dos comercios con nombres parecidos ("Non Solo Pasta 1", "Non Solo Pasta 2")
+// podían chocar. Se verifica contra Supabase (única fuente real: el código
+// tiene que ser único en TODO el ecosistema, no solo en este mundo) antes de
+// aceptarlo.
+async function generarCodigoComercioUnico(nombre) {
+  for (let i = 0; i < 8; i++) {
+    const candidato = generarCodigoComercio(nombre);
+    const existe = await existeCodigoComercioRemote(candidato).catch(() => false);
+    if (!existe) return candidato;
+  }
+  // Casi imposible de alcanzar (8 intentos sobre ~900 combinaciones), pero
+  // nunca debe bloquear una entrega — el sufijo de timestamp garantiza unicidad.
+  return `${generarCodigoComercio(nombre)}${Date.now().toString().slice(-3)}`;
+}
 
 // usaPosOperador: el PIN de 4 dígitos solo tiene sentido si el comercio de
 // verdad va a operar un mostrador (pidió unidades de POS) — un comercio sin
@@ -9,22 +26,34 @@ export function EntregaMerchantDrawer({ comercio, m, open, onClose }) {
   const [cred, setCred] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [emailEntrega, setEmailEntrega] = useState("");
+  const [entregando, setEntregando] = useState(false);
   const usaPosOperador = +comercio.pos > 0;
 
   React.useEffect(() => {
-    if (open) {
-      setConfirm(false);
-      setEmailEntrega(comercio.contactoCorreo || comercio.contactoEmail || "");
-      setCred(comercio.credenciales || {
+    if (!open) return;
+    setConfirm(false);
+    setEmailEntrega(comercio.contactoCorreo || comercio.contactoEmail || "");
+    if (comercio.credenciales) {
+      setCred({ ...comercio.credenciales, codigo: comercio.codigo, posPin: comercio.posPin });
+      return;
+    }
+    setCred(null);
+    (async () => {
+      const codigo = await generarCodigoComercioUnico(comercio.nombre);
+      setCred({
         usuario: `${(comercio.nombre||"").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,12)}@comercios.${((m.codigo||m.id)||"").toLowerCase().replace(/[^a-z0-9]/g,"")}.joi360.pe`,
         password: generarPassword(),
-        codigo: comercio.codigo || generarCodigoComercio(comercio.nombre),
-        posPin: usaPosOperador ? (comercio.posPin || generarPin4()) : null,
+        codigo,
+        posPin: usaPosOperador ? generarPin4() : null,
       });
-    }
+    })();
   }, [open, comercio.id]);
 
-  if (!cred) return null;
+  if (!cred) return (
+    <Drawer open={open} onClose={onClose} icon="local_shipping" title="Entregar Panel al Merchant" subtitle={`${comercio.nombre} · ${m.nombre}`}>
+      <p className="text-sm text-on-surface-variant py-8 text-center">Generando código único de comercio…</p>
+    </Drawer>
+  );
 
   const url = `${window.location.origin}${window.location.pathname}#/comercio/${comercio.id}`;
   // App Operador (=Tap2Phone: el celular del comercio como POS) reusa la
@@ -62,7 +91,18 @@ Equipo RedPontis · JOI 360`;
     notify("Mensaje de entrega copiado. Pégalo en el correo o WhatsApp al merchant.", "info");
   };
 
-  const entregar = () => {
+  const entregar = async () => {
+    setEntregando(true);
+    try {
+      // El código y el PIN tienen que llegar a Supabase — son lo único que
+      // le permite a un operador en OTRO dispositivo (el mostrador real, no
+      // este navegador) entrar sin conocer la URL exacta del comercio.
+      await actualizarMerchantRemote(comercio.supabaseId || comercio.id, { ...comercio, codigo: cred.codigo, posPin: cred.posPin });
+    } catch (e) {
+      notify(`No se pudo guardar el código en Supabase: ${e.message}`, "error");
+      setEntregando(false);
+      return;
+    }
     update(s => {
       const c = s.comercios.find(x => x.id === comercio.id);
       if (c) {
@@ -75,6 +115,7 @@ Equipo RedPontis · JOI 360`;
       }
     });
     notify(`Panel de "${comercio.nombre}" entregado.${emailEntrega ? ` Copia el mensaje para enviar a ${emailEntrega}.` : ""}`);
+    setEntregando(false);
     onClose();
   };
 
@@ -94,8 +135,8 @@ Equipo RedPontis · JOI 360`;
               <BtnPrimary onClick={onClose}>Cerrar</BtnPrimary>
             </div>
           : <><BtnOutline onClick={onClose}>Cancelar</BtnOutline>
-             <BtnPrimary disabled={!confirm} onClick={entregar}>
-               <Icon n="rocket_launch" className="text-[16px]" /> Ejecutar entrega
+             <BtnPrimary disabled={!confirm || entregando} onClick={entregar}>
+               <Icon n="rocket_launch" className="text-[16px]" /> {entregando ? "Entregando…" : "Ejecutar entrega"}
              </BtnPrimary></>
       }>
       <div className="space-y-6">

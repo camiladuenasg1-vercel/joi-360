@@ -173,6 +173,9 @@ export function Login() {
             Ingresar al ecosistema
           </button>
         </form>
+        <a href="#/pos" className="mt-4 flex items-center justify-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors">
+          <Icon n="storefront" className="text-[16px]" /> ¿Eres operador de un comercio o mundo? Entra con tu código y PIN
+        </a>
       </div>
     </div>
   );

@@ -29,11 +29,15 @@ export function WorldOperadorApp() {
 function WorldGate({ m }) {
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
-  const handleLogin = (e) => {
+  const [busy, setBusy] = useState(false);
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!m.posPin) { setErr("Este mundo todavía no tiene clave de operador. Pídesela a RedPontis."); return; }
-    const ok = worldOperatorLogin(m.id, pin);
-    if (!ok) setErr("Clave incorrecta.");
+    if (!m.codigo) { setErr("Este mundo todavía no tiene código de operador. Pídeselo a RedPontis."); return; }
+    setErr(""); setBusy(true);
+    try {
+      const ok = await worldOperatorLogin(m.id, pin);
+      if (!ok) setErr("Clave incorrecta.");
+    } finally { setBusy(false); }
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -52,7 +56,7 @@ function WorldGate({ m }) {
             <input className={`${inputCls} font-mono`} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="••••" autoFocus />
           </div>
           {err && <p className="text-xs text-error">{err}</p>}
-          <BtnPrimary type="submit" className="w-full"><Icon n="login" className="text-[18px]" /> Ingresar</BtnPrimary>
+          <BtnPrimary type="submit" disabled={busy} className="w-full"><Icon n="login" className="text-[18px]" /> {busy ? "Verificando…" : "Ingresar"}</BtnPrimary>
         </form>
         <p className="text-center text-xs text-on-surface-variant mt-4">Vincular pulseras, validar accesos — no cobra saldo. Para cobrar, entra como comercio.</p>
       </div>

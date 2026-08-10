@@ -6,9 +6,9 @@
  * Solicitud BNPL / Control de Accesos.
  */
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
-import { merchantLogout, rubroNombre } from "./store";
+import { merchantLogout, rubroNombre, update } from "./store";
 import { Icon, BtnPrimary, BtnOutline, notify, inputCls } from "./ui";
 import { MerchantGate, CobrarPanel, bnplLimitesDelMundo } from "./Fronts.jsx";
 import {
@@ -18,7 +18,72 @@ import {
   buscarNfcBandPorCodigo, vincularNfcBandRemote,
   fetchReservasMenuMerchant, marcarMenuReservaEntregadaRemote,
   fetchTurnoAbiertoRemote, iniciarTurnoRemote, cerrarTurnoRemote,
+  verificarPinOperadorRemote,
 } from "./supabase.js";
+
+// Puerta de entrada genérica al POS (ruta /pos, sin id en la URL) — hasta
+// ahora el operador de un comercio o de un mundo solo podía entrar con un
+// link /operador/:comercioId o /operador-mundo/:worldId ya conocido; no
+// había forma de "entrar desde cero" tipeando el código del comercio o del
+// mundo, que es justo lo que un mostrador físico necesita. Usa la misma RPC
+// verificar_pin_operador que MerchantGate/WorldGate — nunca compara el PIN
+// en el cliente — y detecta sola si el código es de un comercio o de un mundo.
+export function PosEntryGate() {
+  const nav = useNavigate();
+  const [codigo, setCodigo] = useState("");
+  const [pin, setPin] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const entrar = async (e) => {
+    e.preventDefault();
+    setErr(""); setBusy(true);
+    try {
+      const r = await verificarPinOperadorRemote(codigo.trim().toUpperCase(), pin);
+      if (!r) { setErr("Código o PIN incorrecto."); return; }
+      if (r.tipo === "comercio") {
+        update(st => { st.merchantSession = { comercioId: r.id, usuario: null }; });
+        nav(`/operador/${r.id}`);
+      } else {
+        update(st => { st.worldOperatorSession = { worldId: r.id }; });
+        nav(`/operador-mundo/${r.id}`);
+      }
+    } catch {
+      setErr("No se pudo verificar. Intenta de nuevo.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#0035b9 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
+      <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl p-8 relative z-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xl"><Icon n="storefront" /></div>
+          <div>
+            <h1 className="text-lg font-black">Entrar al POS</h1>
+            <p className="font-mono text-[10px] text-on-surface-variant uppercase">Con el código del comercio o del mundo</p>
+          </div>
+        </div>
+        <form onSubmit={entrar} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-on-surface-variant mb-1">Código</label>
+            <input className={`${inputCls} font-mono uppercase`} value={codigo} onChange={e => setCodigo(e.target.value)} placeholder="Ej. NONSOL385" autoFocus />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-on-surface-variant mb-1">PIN (4 dígitos)</label>
+            <input className={`${inputCls} font-mono text-center text-2xl tracking-[0.5em]`} type="password" inputMode="numeric" maxLength={4}
+              value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} />
+          </div>
+          {err && <p className="text-xs text-error">{err}</p>}
+          <BtnPrimary type="submit" disabled={!codigo.trim() || pin.length !== 4 || busy} className="w-full">
+            <Icon n="login" className="text-[18px]" /> {busy ? "Verificando…" : "Entrar"}
+          </BtnPrimary>
+        </form>
+        <p className="text-center text-xs text-on-surface-variant mt-4">Pídele el código y el PIN al administrador de tu mundo o comercio.</p>
+      </div>
+    </div>
+  );
+}
 
 export function OperadorApp() {
   const { comercioId } = useParams();

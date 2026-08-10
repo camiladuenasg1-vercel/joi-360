@@ -439,9 +439,28 @@ export async function addMerchantRemote(mundoId, comercio) {
       apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
       contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
       banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
+      codigo: comercio.codigo || null, pos_pin: comercio.posPin || null,
     }),
   });
   return rows?.[0]?.id || null;
+}
+// El código es único por comercio (sin guión, fácil de tipear en el POS) —
+// generarCodigoComercio() solo tiene ~900 combinaciones por slug de nombre,
+// así que antes de aceptarlo hay que verificar que nadie más lo tenga.
+export async function existeCodigoComercioRemote(codigo) {
+  const rows = await rest(`merchants?codigo=eq.${encodeURIComponent(codigo)}&select=id&limit=1`);
+  return (rows || []).length > 0;
+}
+// PIN de comercio o de mundo: nunca se compara en el cliente contra un valor
+// leído de Supabase (eso es justo el hallazgo que exponía worlds.pos_pin en
+// texto plano vía la llave anónima). Esta RPC hace la comparación server-side
+// contra el hash y devuelve solo id/tipo/nombre — nunca el PIN.
+export async function verificarPinOperadorRemote(codigo, pin) {
+  const rows = await rest("rpc/verificar_pin_operador", {
+    method: "POST",
+    body: JSON.stringify({ p_codigo: codigo, p_pin: pin }),
+  });
+  return rows?.[0] || null;
 }
 export async function fetchMerchantsRemote(worldId) {
   return rest(`merchants?world_id=eq.${worldId}&select=*&order=created_at`);
@@ -474,6 +493,7 @@ export async function actualizarMerchantRemote(merchantId, comercio) {
       apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
       contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
       banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
+      codigo: comercio.codigo || null, pos_pin: comercio.posPin || null,
     }),
   });
 }
