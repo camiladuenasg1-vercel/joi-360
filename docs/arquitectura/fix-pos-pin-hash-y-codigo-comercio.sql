@@ -30,6 +30,8 @@ create unique index if not exists merchants_codigo_key on public.merchants (codi
 -- Migra lo que ya está expuesto en texto plano, luego lo borra.
 update public.worlds set pos_pin_hash = crypt(pos_pin, gen_salt('bf')), pos_pin = null
   where pos_pin is not null and pos_pin_hash is null;
+update public.merchants set pos_pin_hash = crypt(pos_pin, gen_salt('bf')), pos_pin = null
+  where pos_pin is not null and pos_pin_hash is null;
 
 create or replace function public.hash_pos_pin() returns trigger
 language plpgsql set search_path = public, extensions as $$
