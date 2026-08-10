@@ -945,7 +945,17 @@ export async function comprarProductosLive(userId, worldId, merchantId, items) {
     }),
   }))?.[0];
   exigirAutorizacionWallet(r);
-  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  if (!r?.ok) {
+    // Task #181: el RPC ahora también rechaza por restricciones del
+    // dependiente (horario/límite diario), aplicadas server-side además del
+    // pre-check que ya hace la pantalla — sin este mapeo, ese rechazo caía
+    // en "sin_wallet" (billetera no encontrada), un mensaje falso.
+    const motivo = r?.motivo === "SALDO_INSUFICIENTE" ? "saldo"
+      : r?.motivo === "FUERA_DE_HORARIO" ? "restriccion_horario"
+      : r?.motivo === "LIMITE_DIARIO_EXCEDIDO" ? "restriccion_limite_diario"
+      : "sin_wallet";
+    return { ok: false, motivo, balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  }
   const nuevoSaldo = +r.nuevo_saldo;
 
   for (const it of items) {

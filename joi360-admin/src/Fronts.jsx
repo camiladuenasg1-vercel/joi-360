@@ -798,7 +798,15 @@ export function CobrarPanel({ comercio, m }) {
       const referencia = `${comercio.nombre}${productoSel ? " · " + productoSel.name : ""}`;
       const r = await cobrarPOSRemote(cliente.user_id, m.id, merchantId, m2, referencia, turnoId);
       if (!r.ok) {
-        const code = r.motivo === "saldo" ? "saldo_insuficiente" : "wallet_no_encontrada";
+        // Task #181: el RPC ahora también puede rechazar por restricciones
+        // del dependiente (horario/límite diario) — antes cualquier motivo
+        // que no fuera "saldo" caía en "wallet_no_encontrada", un mensaje
+        // engañoso ("no se encontró la billetera") para un rechazo que en
+        // realidad sí encontró la wallet y la bloqueó a propósito.
+        const code = r.motivo === "saldo" ? "saldo_insuficiente"
+          : r.motivo === "FUERA_DE_HORARIO" ? "restriccion_horario"
+          : r.motivo === "LIMITE_DIARIO_EXCEDIDO" ? "restriccion_limite_diario"
+          : "wallet_no_encontrada";
         const err = await errorControlado(code);
         logErrorControlado(code, `pos-cobrar:${merchantId}`, m.id);
         r.mensaje = [err.mensaje, err.accion].filter(Boolean).join(" ");

@@ -1684,6 +1684,13 @@ function MenuTemplate({ cfg, u }) {
         setCart([]); setEnCheckout(false); refreshWallet(); refrescarSaldoBeneficiario();
       } else if (r.motivo === "limite_excedido") {
         setResultado({ ok: false, titulo: "Límite diario alcanzado", mensaje: `${beneficiario.nombre} ya tiene S/ ${r.gastadoFecha.toFixed(2)} reservado el ${fecha}. El límite diario de este mundo es S/ ${r.limite.toFixed(2)}. Se avisó al padre/superusuario.`, accion: null });
+      } else if (r.motivo === "restriccion_horario" || r.motivo === "restriccion_limite_diario") {
+        // Rechazo del RPC server-side (Task #181) — normalmente ya lo evita
+        // bloqueadoPorRestriccion/fueraDeHorario antes de llegar acá, pero si
+        // la config cambió a mitad de sesión, este es el mensaje real.
+        const err = await errorControlado(r.motivo);
+        logErrorControlado(r.motivo, `menu-checkout:${cartMerchant}`, worldId);
+        setResultado({ ok: false, titulo: err.titulo, mensaje: err.mensaje, accion: err.accion });
       } else {
         const err = await errorControlado("saldo_insuficiente");
         logErrorControlado("saldo_insuficiente", `menu-checkout:${cartMerchant}`, worldId);
@@ -4280,6 +4287,13 @@ function MarketplaceTemplate({ cfg, u }) {
         setCart([]); setEnCheckout(false); refreshWallet(); refrescarSaldoBeneficiario();
       } else if (r.motivo === "stock") {
         setResultado({ ok: false, titulo: "Sin stock suficiente", mensaje: `"${r.producto}" solo tiene ${r.stockDisponible} disponible(s) — ajusta la cantidad en tu carrito.`, accion: null });
+      } else if (r.motivo === "restriccion_horario" || r.motivo === "restriccion_limite_diario") {
+        // Rechazo del RPC server-side (Task #181) — normalmente ya lo evita
+        // el chequeo de fueraDeHorario()/bloqueadoPorRestriccion de arriba,
+        // pero si la config cambió a mitad de sesión, este es el mensaje real.
+        const err = await errorControlado(r.motivo);
+        logErrorControlado(r.motivo, `marketplace-checkout:${cartMerchant}`, worldId);
+        setResultado({ ok: false, titulo: err.titulo, mensaje: err.mensaje, accion: err.accion });
       } else {
         const err = await errorControlado("saldo_insuficiente");
         logErrorControlado("saldo_insuficiente", `marketplace-checkout:${cartMerchant}`, worldId);
