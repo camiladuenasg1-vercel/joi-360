@@ -5,8 +5,12 @@
 // Mismo patrón fetch-plano que joi360-app/src/supabaseClient.js.
 // ============================================================================
 
-const SUPA_URL = "https://kobtxrhycaloyjkeyspv.supabase.co";
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvYnR4cmh5Y2Fsb3lqa2V5c3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzAwMjksImV4cCI6MjA5NzkwNjAyOX0.MlyyXGnsyMeVXaRfRbmFqwVhsh4FUFNztQoBaECd_i0";
+// Antes hardcodeado (funcionaba igual — la anon key es pública por diseño,
+// no un secreto), pero sin variables de entorno el dashboard de Vercel no
+// mostraba la integración con Supabase como conectada. El fallback queda
+// para que un clone local siga corriendo sin pedir un .env primero.
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || "https://kobtxrhycaloyjkeyspv.supabase.co";
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvYnR4cmh5Y2Fsb3lqa2V5c3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzAwMjksImV4cCI6MjA5NzkwNjAyOX0.MlyyXGnsyMeVXaRfRbmFqwVhsh4FUFNztQoBaECd_i0";
 
 const headers = {
   apikey: ANON_KEY,

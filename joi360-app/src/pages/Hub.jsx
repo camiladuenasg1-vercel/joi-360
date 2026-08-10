@@ -1,9 +1,94 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore, useWalletLive, useWorldConfig, useMerchantsLive, useCatalogLive } from "../hooks.js";
 import { useUser } from "../userStore.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
+import { getSyntheticUserId, fetchMisDependientes, fetchMisReservasMenu } from "../supabaseClient.js";
+
+// "Qué te toca hoy" — auto-generado solo si el mundo tiene Menú activo y
+// hay algo programado para hoy (titular o algún dependiente). Sin reserva
+// hoy, la sección no existe: nada de banner vacío ocupando espacio.
+function MenuHoyWidget({ mundoId, nav }) {
+  const [reservas, setReservas] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    const userId = getSyntheticUserId();
+    fetchMisDependientes(userId, mundoId).then(async deps => {
+      const ids = [userId, ...(deps || []).map(d => d.dependent_user_id)];
+      const r = await fetchMisReservasMenu(ids, mundoId).catch(() => []);
+      if (vivo) setReservas(r || []);
+    }).catch(() => { if (vivo) setReservas([]); });
+    return () => { vivo = false; };
+  }, [mundoId]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const deHoy = (reservas || []).filter(r => r.fecha === hoy);
+  if (deHoy.length === 0) return null;
+
+  return (
+    <div className="px-5 mb-5">
+      <button onClick={() => nav("/module/menu")} className="w-full glass-card rounded-2xl p-4 flex items-center gap-3 tap-active text-left" style={{ background: "rgba(232,245,233,0.7)" }}>
+        <div className="w-11 h-11 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+          <span className="material-symbols-outlined fill text-green-700 text-xl">today</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Hoy te toca</p>
+          {deHoy.map((r, i) => (
+            <p key={r.id} className="text-sm font-bold text-[#1b1b24] truncate">
+              {r.beneficiario_nombre} · {(r.items || []).map(it => it.nombre).join(", ")}
+            </p>
+          ))}
+        </div>
+        <span className="material-symbols-outlined text-[#777587]">chevron_right</span>
+      </button>
+    </div>
+  );
+}
+
+// Mi código — antes no existía ningún QR en el home: cada módulo (Billetera,
+// Accesos, Perfil Pro) tenía el suyo por separado. Este es el único que
+// importa para el portero o el comercio: sirve para accesos siempre, y
+// también para pagar si el mundo tiene el saldo activado — nunca al revés
+// (un mundo sin saldo simplemente no tiene wallet, así que un intento de
+// cobro cae en el error controlado "sin_wallet" ya existente del lado del
+// POS, esto solo evita prometer algo que el mundo no ofrece).
+function MiCodigoWidget({ mundoId, verSaldo }) {
+  const [abierto, setAbierto] = useState(false);
+  const myCode = getSyntheticUserId();
+  return (
+    <>
+      <div className="px-5 mb-5">
+        <button onClick={() => setAbierto(true)} className="w-full glass-card rounded-2xl p-4 flex items-center gap-3 tap-active text-left">
+          <div className="w-11 h-11 rounded-full bg-[#e2dfff] flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined fill text-[#3525cd] text-xl">qr_code_2</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-[#1b1b24]">Mi código</p>
+            <p className="text-[11px] text-[#777587]">{verSaldo ? "Para pagos y accesos en este mundo" : "Para accesos en este mundo"}</p>
+          </div>
+          <span className="material-symbols-outlined text-[#777587]">chevron_right</span>
+        </button>
+      </div>
+      {abierto && (
+        <div className="fixed inset-0 z-[300] flex flex-col justify-end items-center" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }} onClick={() => setAbierto(false)}>
+          <div className="w-full max-w-[430px] bg-white rounded-t-[28px]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#e4e1ee]" /></div>
+            <div className="px-6 pb-10 pt-3 text-center">
+              <div className="w-44 h-44 mx-auto rounded-2xl bg-white border-2 border-[#e4e1ee] mb-3 flex items-center justify-center overflow-hidden">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${encodeURIComponent(myCode)}`}
+                  alt="Mi código QR" className="w-full h-full object-contain p-2" />
+              </div>
+              <p className="font-black text-[#1b1b24]">Muestra este código</p>
+              <p className="text-xs text-[#777587] mt-0.5">{verSaldo ? "El comercio lo escanea para cobrarte o para registrar tu acceso." : "Se usa para registrar tu acceso en este mundo."}</p>
+              <button onClick={() => setAbierto(false)} className="w-full mt-6 py-3.5 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active">Listo</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 // Module icon button
 function ModuleBtn({ id, onClick }) {
@@ -48,6 +133,7 @@ export default function HubPage() {
   // Ahora la tile exige ambos: el flag Y que el mundo realmente use NFC.
   const tieneBandita  = wc.flag("wallet", "bandita") && wc.cfg("wallet")?.usaPulseraNfc !== false;
   const verSaldo      = wc.flag("wallet", "balance");
+  const hasMenu       = wc.activo("menu");
 
   // ── Acciones rápidas: UNA entrada por acción, solo si el mundo la tiene.
   // "Pagar" NO va aquí: su única entrada es el CTA central del BottomNav.
@@ -134,6 +220,9 @@ export default function HubPage() {
             </button>
           )}
         </div>
+
+        <MiCodigoWidget mundoId={activeMundo.id} verSaldo={verSaldo}/>
+        {hasMenu && <MenuHoyWidget mundoId={activeMundo.id} nav={nav}/>}
 
         {/* Módulos del mundo — driven by admin config. Justo debajo del saldo. */}
         {modulos.length > 0 && (

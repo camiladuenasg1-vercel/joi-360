@@ -96,15 +96,26 @@ export function OperadorApp() {
   return <OperadorShell comercio={comercio} m={m} />;
 }
 
-const MODOS = [
-  { id: "qr", nombre: "Venta QR", icon: "qr_code_scanner", desc: "Cobrar identificando al cliente por su código JOI." },
-  { id: "bnpl", nombre: "Solicitud BNPL", icon: "calendar_clock", desc: "Financiar una compra en el punto de venta." },
-  { id: "accesos", nombre: "Control de Accesos", icon: "door_open", desc: "Registrar entrada o salida por código." },
-  { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
-  { id: "menu", nombre: "Entregar Menú", icon: "restaurant", desc: "Marcar como entregadas las reservas de menú de hoy, ya pagadas." },
-  { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "Asociar una pulsera física a la cuenta de un usuario." },
-  { id: "ficha", nombre: "Consultar Ficha", icon: "medical_information", desc: "Ver alergias, tipo de sangre y contacto de emergencia por DNI o bandita." },
+// Agrupado por lo que el operador va a buscar, no por orden de cuándo se
+// construyó cada flujo — "Cobrar" ya no es solo "identificar por código":
+// desde ahí también se recarga billetera y se genera un QR de cobro que el
+// cliente paga desde su propio teléfono, sin que el mostrador le pida nada.
+const GRUPOS_MODOS = [
+  { titulo: "Cobros", items: [
+    { id: "qr", nombre: "Cobrar / Recargar", icon: "point_of_sale", desc: "Por código o pulsera, o genera un QR para que el cliente pague desde su celular." },
+    { id: "bnpl", nombre: "Solicitud BNPL", icon: "calendar_clock", desc: "Financiar una compra en el punto de venta." },
+    { id: "reserva", nombre: "Confirmar Reserva", icon: "event_available", desc: "Cerrar el cobro del saldo de una reserva." },
+  ]},
+  { titulo: "Identificación y accesos", items: [
+    { id: "accesos", nombre: "Control de Accesos", icon: "door_open", desc: "Registrar entrada o salida por código." },
+    { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "DNI o código JOI para identificar, luego acercar la bandita." },
+    { id: "ficha", nombre: "Consultar Ficha", icon: "medical_information", desc: "Alergias, tipo de sangre y contacto de emergencia por DNI o bandita." },
+  ]},
+  { titulo: "Menú", items: [
+    { id: "menu", nombre: "Entregar Menú", icon: "restaurant", desc: "Validar por DNI o ver todas las reservas de hoy, ya pagadas." },
+  ]},
 ];
+const MODOS = GRUPOS_MODOS.flatMap(g => g.items);
 
 function OperadorShell({ comercio, m }) {
   const [modo, setModo] = useState(null);
@@ -166,20 +177,31 @@ function OperadorShell({ comercio, m }) {
 
       <div className="max-w-md mx-auto p-4">
         {!modo && (
-          <div className="space-y-3">
-            {disponibles.map(md => (
-              <button key={md.id} onClick={() => setModo(md.id)}
-                className="w-full flex items-center gap-4 p-4 bg-surface-container-lowest border border-outline-variant rounded-2xl text-left hover:border-primary/40 tap-active transition-colors">
-                <div className="w-11 h-11 rounded-xl bg-primary-fixed flex items-center justify-center flex-shrink-0">
-                  <Icon n={md.icon} className="text-primary text-[22px]" />
+          <div className="space-y-6">
+            {GRUPOS_MODOS.map(grupo => {
+              const items = grupo.items.filter(md => disponibles.some(d => d.id === md.id));
+              if (!items.length) return null;
+              return (
+                <div key={grupo.titulo}>
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-outline mb-2 px-1">{grupo.titulo}</p>
+                  <div className="space-y-3">
+                    {items.map(md => (
+                      <button key={md.id} onClick={() => setModo(md.id)}
+                        className="w-full flex items-center gap-4 p-4 bg-surface-container-lowest border border-outline-variant rounded-2xl text-left hover:border-primary/40 tap-active transition-colors">
+                        <div className="w-11 h-11 rounded-xl bg-primary-fixed flex items-center justify-center flex-shrink-0">
+                          <Icon n={md.icon} className="text-primary text-[22px]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm">{md.nombre}</p>
+                          <p className="text-xs text-on-surface-variant">{md.desc}</p>
+                        </div>
+                        <Icon n="chevron_right" className="text-outline text-[20px] flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm">{md.nombre}</p>
-                  <p className="text-xs text-on-surface-variant">{md.desc}</p>
-                </div>
-                <Icon n="chevron_right" className="text-outline text-[20px] flex-shrink-0" />
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
         {modo === "qr" && <CobrarPanel comercio={comercio} m={m} />}
