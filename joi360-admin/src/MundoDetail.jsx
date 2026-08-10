@@ -1091,29 +1091,44 @@ const PERIODO_LABEL = { mensual: "Mensual", anual: "Anual" };
 function PlanesSuscripcionPanel({ worldId, moneda }) {
   const [planes, setPlanes] = useState(null);
   const [creando, setCreando] = useState(false);
-  const [nuevo, setNuevo] = useState({ nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "" });
+  const BLANK_PLAN = { nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "" };
+  const [nuevo, setNuevo] = useState(BLANK_PLAN);
   const [guardando, setGuardando] = useState(false);
+  const [editingId, setEditingId] = useState(null); // id del plan en edición, null = alta
 
   const load = () => fetchPlanesSuscripcion(worldId).then(setPlanes).catch(() => setPlanes([]));
   React.useEffect(() => { load(); }, [worldId]);
+
+  const editar = (p) => {
+    setEditingId(p.id);
+    setNuevo({ nombre: p.nombre, descripcion: p.descripcion || "", precio: String(p.precio), periodo: p.periodo, descuento_pct: p.descuento_pct != null ? String(p.descuento_pct) : "" });
+    setCreando(true);
+  };
+  const cancelar = () => { setCreando(false); setEditingId(null); setNuevo(BLANK_PLAN); };
 
   const crear = async () => {
     if (!nuevo.nombre.trim() || !(+nuevo.precio > 0)) return;
     setGuardando(true);
     try {
-      await crearPlanSuscripcion(worldId, {
+      const payload = {
         nombre: nuevo.nombre.trim(), descripcion: nuevo.descripcion.trim() || null,
         precio: +nuevo.precio, periodo: nuevo.periodo,
-        descuento_pct: nuevo.descuento_pct ? +nuevo.descuento_pct : null, activo: true,
-      });
-      setNuevo({ nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "" });
-      setCreando(false);
+        descuento_pct: nuevo.descuento_pct ? +nuevo.descuento_pct : null,
+      };
+      if (editingId) await actualizarPlanSuscripcion(editingId, payload);
+      else await crearPlanSuscripcion(worldId, { ...payload, activo: true });
+      cancelar();
       load();
     } finally { setGuardando(false); }
   };
   const toggleActivo = async (p) => { await actualizarPlanSuscripcion(p.id, { activo: !p.activo }); load(); };
   const eliminar = async (p) => {
-    if (!confirm(`¿Eliminar el plan "${p.nombre}"?`)) return;
+    // Los planes son una cuota única al momento de vincular un dependiente —
+    // no hay una relación persistente "N dependientes suscritos a este plan"
+    // en el esquema (confirmado: dependents no tiene plan_id, y no existe
+    // ningún mecanismo de recobro recurrente todavía pese al campo "periodo").
+    // Borrar un plan solo lo saca de la lista de opciones futuras.
+    if (!confirm(`¿Eliminar el plan "${p.nombre}"? Ya no aparecerá como opción al vincular un nuevo dependiente. No afecta a quienes ya se vincularon con este plan.`)) return;
     await eliminarPlanSuscripcion(p.id);
     load();
   };
@@ -1122,7 +1137,7 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
     <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-on-surface">Planes de suscripción</p>
-        <button onClick={()=>setCreando(v=>!v)} className="text-[10px] text-primary font-bold underline">{creando ? "Cancelar" : "+ Nuevo plan"}</button>
+        <button onClick={()=> creando ? cancelar() : setCreando(true)} className="text-[10px] text-primary font-bold underline">{creando ? "Cancelar" : "+ Nuevo plan"}</button>
       </div>
       <p className="text-[10px] text-on-surface-variant">El usuario elige entre estos planes al vincular un dependiente. Si no hay ninguno activo, se usa el monto fijo de "Monto de la suscripción por perfil" de arriba.</p>
 
@@ -1142,7 +1157,10 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
             <input type="number" min="0" max="100" className="w-24 h-8 px-2 border border-outline-variant rounded-lg text-xs" placeholder="% desc."
               value={nuevo.descuento_pct} onChange={e=>setNuevo(n=>({...n, descuento_pct: e.target.value}))}/>
           </div>
-          <BtnPrimary className="!py-1.5 !px-3 !text-xs" loading={guardando} loadingLabel="Creando…" onClick={crear}>Crear plan</BtnPrimary>
+          <div className="flex gap-2">
+            {editingId && <BtnOutline className="!py-1.5 !px-3 !text-xs" onClick={cancelar}>Cancelar</BtnOutline>}
+            <BtnPrimary className="!py-1.5 !px-3 !text-xs" loading={guardando} loadingLabel={editingId ? "Guardando…" : "Creando…"} onClick={crear}>{editingId ? "Guardar cambios" : "Crear plan"}</BtnPrimary>
+          </div>
         </div>
       )}
 
@@ -1162,7 +1180,10 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
                 </p>
               </div>
               <button onClick={()=>toggleActivo(p)} className={`font-mono text-[8px] uppercase px-1.5 py-0.5 rounded-full border font-bold ${p.activo?"bg-green-100 text-green-700 border-green-200":"bg-surface-container-low text-outline border-outline-variant"}`}>{p.activo?"Activo":"Inactivo"}</button>
-              <button onClick={()=>eliminar(p)} className="w-6 h-6 flex items-center justify-center text-error hover:bg-error-container/40 rounded-full">
+              <button onClick={()=>editar(p)} className="w-6 h-6 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low rounded-full" title="Editar">
+                <Icon n="edit" className="text-[14px]"/>
+              </button>
+              <button onClick={()=>eliminar(p)} className="w-6 h-6 flex items-center justify-center text-error hover:bg-error-container/40 rounded-full" title="Eliminar">
                 <Icon n="delete" className="text-[14px]"/>
               </button>
             </div>
