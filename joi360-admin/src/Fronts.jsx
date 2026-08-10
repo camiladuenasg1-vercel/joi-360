@@ -326,8 +326,18 @@ function MiCatalogoPanel({ comercio }) {
     setSubiendoImg(null);
   };
   const eliminar = async (p) => {
-    try { await deleteProductRemote(p.id); notify("Producto eliminado."); load(); }
-    catch (e) {
+    try {
+      const campanas = await fetchCampanasBNPL(comercio.mundoId, merchantId).catch(() => []);
+      const hoy = new Date().toISOString().slice(0, 10);
+      const vigente = c => (!c.fecha_inicio || c.fecha_inicio <= hoy) && (!c.fecha_fin || c.fecha_fin >= hoy);
+      const enCampana = (campanas || []).find(c => vigente(c) && (c.productos || []).includes(p.id));
+      if (enCampana) {
+        notify(`No se puede eliminar "${p.name}": está incluido en la campaña BNPL vigente "${enCampana.nombre}". Quítalo de la campaña primero.`, "error");
+        return;
+      }
+      if (!window.confirm(`¿Eliminar "${p.name}" del catálogo? Esta acción no se puede deshacer.`)) return;
+      await deleteProductRemote(p.id); notify("Producto eliminado."); load();
+    } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", `catalogo-eliminar:${merchantId}`, comercio.mundoId);
       notify(`${err.mensaje} ${err.accion}`, "error");
@@ -1445,7 +1455,8 @@ function CampanasBNPLPanel({ worldId, merchantId, catalogo, productosPuntuales, 
       notify(`Campaña "${saved.nombre}" creada.`);
     } catch { notify("No se pudo crear la campaña.", "error"); }
   };
-  const eliminar = async id => {
+  const eliminar = async (id, nombre) => {
+    if (!window.confirm(`¿Eliminar la campaña "${nombre}"? Los productos vuelven a su financiamiento base.`)) return;
     try { await eliminarCampanaBNPL(id); setCampanas(c => c.filter(x => x.id !== id)); }
     catch { notify("No se pudo eliminar la campaña.", "error"); }
   };
@@ -1469,7 +1480,7 @@ function CampanasBNPLPanel({ worldId, merchantId, catalogo, productosPuntuales, 
               {vigente(c) && <span className="ml-2 font-mono text-[9px] uppercase bg-ok/20 text-ok px-1.5 py-0.5 rounded">vigente</span>}
               <span className="block text-[10px] text-outline">{c.fecha_inicio || "sin inicio"} → {c.fecha_fin || "sin fin"} · {(c.productos || []).length} producto(s)</span>
             </span>
-            <button onClick={() => eliminar(c.id)} className="text-error"><Icon n="close" className="text-[16px]" /></button>
+            <button onClick={() => eliminar(c.id, c.nombre)} className="text-error"><Icon n="close" className="text-[16px]" /></button>
           </div>
         ))}
       </div>

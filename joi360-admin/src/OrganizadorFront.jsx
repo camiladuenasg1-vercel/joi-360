@@ -354,12 +354,12 @@ function TabEventosOrganizador({ m, eventos, ticketsMap, onRefresh, onNew, onEdi
       return;
     }
     if (!window.confirm(`¿Eliminar el evento "${ev.nombre}"? No tiene entradas vendidas. Esta acción es irreversible.`)) return;
-    update(s => { s.eventos = (s.eventos || []).filter(x => x.id !== ev.id); });
     try {
       await deleteEventoRemote(ev.supabaseId || ev.id);
+      update(s => { s.eventos = (s.eventos || []).filter(x => x.id !== ev.id); });
       notify(`Evento "${ev.nombre}" eliminado.`);
     } catch (e) {
-      notify(`Se eliminó localmente, pero no se pudo eliminar en el servidor: ${e.message}`, "error");
+      notify(`No se pudo eliminar: ${e.message}`, "error");
     }
   };
 
@@ -1294,11 +1294,14 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
     // Publicación remota: el evento y sus entradas quedan comprables en la superapp.
     try {
       await upsertEventoRemote(adminEvToRemote({ ...payload, id: evId }, mundoId));
-      const tiposSynced = await syncTicketTypesRemote(evId, f.tiposEntrada);
+      const { tipos: tiposSynced, bloqueados } = await syncTicketTypesRemote(evId, f.tiposEntrada);
       update(s => { const e = (s.eventos||[]).find(x => x.id === evId); if (e) e.tiposEntrada = tiposSynced; });
       notify(estadoFinal === "PENDIENTE_APROBACION"
         ? `Evento "${f.nombre}" enviado a la cola de aprobación de RedPontis. Se publicará en la app tras el visto bueno.`
         : `Evento "${f.nombre}" actualizado en la superapp.`);
+      if (bloqueados?.length) {
+        notify(`No se pudo quitar ${bloqueados.map(b => `"${b.nombre}" (${b.vendidos} entrada${b.vendidos !== 1 ? "s" : ""} vendida${b.vendidos !== 1 ? "s" : ""})`).join(", ")}: ya tiene entradas emitidas. Se mantiene en el evento.`, "error");
+      }
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", `evento-guardar:${evId}`, mundoId);

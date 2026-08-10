@@ -322,6 +322,7 @@ function PosDevicesTab() {
       notify("Este modelo tiene unidades registradas — no se puede quitar del catálogo.", "error");
       return;
     }
+    if (!window.confirm(`¿Quitar "${m.marca} ${m.modelo}" del catálogo de modelos?`)) return;
     await desactivarHardwareModeloCustom(m.id);
     notify(`Modelo "${m.marca} ${m.modelo}" quitado del catálogo.`);
     loadModelos();

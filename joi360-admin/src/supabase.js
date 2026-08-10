@@ -531,11 +531,13 @@ export async function eliminarMerchantRemote(merchantId) {
 // vez de fingir una verificación que el sistema no puede hacer de verdad.
 const BNPL_ESTADOS_TERMINALES = new Set(["cerrado", "incobrable", "rechazado"]);
 export async function verificarBloqueosEliminacionMerchant(worldId, merchantId, ultimoCorteISO) {
-  const [contratos, ventas, reservas, hardware] = await Promise.all([
+  const [contratos, ventas, reservas, hardware, productos, menuItems] = await Promise.all([
     rest(`bnpl_contratos?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=id,estado`).catch(() => []),
     rest(`transactions?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&type=eq.compra&created_at=gte.${ultimoCorteISO}&select=id,amount`).catch(() => []),
     rest(`menu_reservas?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&estado=eq.CONFIRMADA&fecha=gte.${ultimoCorteISO.slice(0, 10)}&select=id,monto`).catch(() => []),
     rest(`pos_devices?world_id=eq.${worldId}&merchant_id=eq.${merchantId}&select=id,estado`).catch(() => []),
+    rest(`products?merchant_id=eq.${merchantId}&select=id`).catch(() => []),
+    rest(`menu_items?merchant_id=eq.${merchantId}&select=id`).catch(() => []),
   ]);
   const bnplActivos = (contratos || []).filter(c => !BNPL_ESTADOS_TERMINALES.has(c.estado));
   const montoVentasPendientes = (ventas || []).reduce((a, t) => a + (+t.amount || 0), 0);
@@ -545,7 +547,9 @@ export async function verificarBloqueosEliminacionMerchant(worldId, merchantId, 
     ventasPendientes: { count: (ventas || []).length, monto: montoVentasPendientes },
     reservasFuturas: { count: (reservas || []).length, monto: montoReservas },
     hardwareAsignado: (hardware || []).length,
-    bloqueaDuro: bnplActivos.length > 0 || montoVentasPendientes > 0 || (reservas || []).length > 0,
+    catalogoProductos: (productos || []).length,
+    catalogoMenu: (menuItems || []).length,
+    bloqueaDuro: bnplActivos.length > 0 || montoVentasPendientes > 0 || (reservas || []).length > 0 || (productos || []).length > 0 || (menuItems || []).length > 0,
   };
 }
 
@@ -697,15 +701,33 @@ export async function fetchEventoPublico(eventId) {
 }
 
 export async function syncTicketTypesRemote(eventId, tipos) {
-  // Reemplazo completo: la edición del drawer define el set vigente.
-  const existentes = await rest(`event_ticket_types?event_id=eq.${eventId}&select=id`);
+  // Reemplazo completo: la edición del drawer define el set vigente — salvo
+  // un tipo con entradas ya vendidas, que no se borra (invalidaría esos
+  // tickets): se conserva y se avisa al organizador vía `bloqueados`.
+  const existentes = await rest(`event_ticket_types?event_id=eq.${eventId}&select=*`);
   const keep = new Set((tipos || []).map(t => t.supabaseId).filter(Boolean));
+  const bloqueados = [];
+  const conservados = [];
   for (const row of existentes || []) {
     if (!keep.has(row.id)) {
+      const vendidos = await rest(`event_tickets?ticket_type_id=eq.${row.id}&select=id`).catch(() => []);
+      if ((vendidos || []).length > 0) {
+        bloqueados.push({ nombre: row.nombre, vendidos: vendidos.length });
+        conservados.push({
+          supabaseId: row.id, nombre: row.nombre, descripcion: row.descripcion,
+          precio: row.precio, moneda: row.moneda, cupos: row.cupos,
+          minPorCompra: row.min_por_compra, maxPorCompra: row.max_por_compra,
+          ventaDesde: row.venta_desde, ventaHasta: row.venta_hasta,
+          permiteReingreso: row.permite_reingreso, vigenciaHasta: row.vigencia_hasta,
+          preventa: row.preventa, precompra: row.precompra, prereserva: row.prereserva,
+          cuposVendidos: vendidos.length,
+        });
+        continue;
+      }
       await rest(`event_ticket_types?id=eq.${row.id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
     }
   }
-  const out = [];
+  const out = [...conservados];
   for (const t of tipos || []) {
     const body = {
       event_id: eventId, nombre: t.nombre, descripcion: t.descripcion || t.incluye || null,
@@ -729,7 +751,7 @@ export async function syncTicketTypesRemote(eventId, tipos) {
       out.push({ ...t, supabaseId: rows[0].id });
     }
   }
-  return out;
+  return { tipos: out, bloqueados };
 }
 
 export async function fetchTicketsDeEvento(eventId) {
@@ -758,7 +780,27 @@ export async function fetchTicketTypesDeEvento(eventId) {
 // borrador o rechazado, con 0 entradas vendidas, no tenía forma de
 // eliminarse; solo quedaba "editar y reenviar" o pausado para siempre.
 // Tragaba el error en silencio, igual que deleteWorldRemote antes de su fix.
+// El chequeo de "sin ventas" antes vivía solo en el cliente (ticketsMap ya
+// cargado, potencialmente desactualizado) — acá se repite del lado del
+// servidor con la tabla real, y de paso se limpian a mano las filas que
+// referencian el evento (event_ticket_types, event_merchants, agenda,
+// productos exclusivos del evento) y se liberan los POS prestados, porque
+// un DELETE simple sobre `events` las dejaba huérfanas.
 export async function deleteEventoRemote(eventId) {
+  const vendidos = await rest(`event_tickets?event_id=eq.${eventId}&select=id`).catch(() => []);
+  if ((vendidos || []).length > 0) {
+    throw new Error(`Tiene ${vendidos.length} entrada(s) vendida(s) — no se puede eliminar.`);
+  }
+  await Promise.all([
+    rest(`event_ticket_types?event_id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+    rest(`event_merchants?event_id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+    rest(`event_agenda_items?event_id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+    rest(`products?event_id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+    rest(`pos_devices?event_id=eq.${eventId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ estado: "disponible", world_id: null, merchant_id: null, event_id: null, assigned_at: null }),
+    }).catch(() => {}),
+  ]);
   await rest(`events?id=eq.${eventId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 

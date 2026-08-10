@@ -2273,6 +2273,10 @@ function EliminarComercioDialog({ m, comercio, onClose }) {
                   label={`Ventas desde el corte de las ${horaCorte} aún no liquidadas: ${check.ventasPendientes.count} (${m.moneda} ${check.ventasPendientes.monto.toFixed(2)})`} />
                 <ChequeoRow ok={check.reservasFuturas.count === 0}
                   label={`Reservas de Menú confirmadas a futuro: ${check.reservasFuturas.count}`} />
+                <ChequeoRow ok={check.catalogoProductos === 0}
+                  label={`Productos en el catálogo: ${check.catalogoProductos}${check.catalogoProductos ? " — vacía el catálogo primero" : ""}`} />
+                <ChequeoRow ok={check.catalogoMenu === 0}
+                  label={`Platos en Menú: ${check.catalogoMenu}${check.catalogoMenu ? " — vacía el Menú primero" : ""}`} />
                 <ChequeoRow ok warn={check.hardwareAsignado > 0}
                   label={`Equipos POS asignados: ${check.hardwareAsignado}${check.hardwareAsignado ? " (reasignar aparte — no bloquea la eliminación)" : ""}`} />
                 <button onClick={correrChequeo} className="text-[10px] text-primary font-semibold">↻ Volver a verificar</button>
