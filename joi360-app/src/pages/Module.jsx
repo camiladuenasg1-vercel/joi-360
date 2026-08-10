@@ -12,7 +12,6 @@ import {
   fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, actualizarDependientePerfilRemote, fetchDependienteBalance,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
-  fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
   transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
@@ -1537,14 +1536,24 @@ function diasStripDe(cantidad) {
   });
 }
 
+// Borrador de reserva (día + para quién + carrito) sobrevive a la navegación
+// fuera de Menú — el caso real es "no tengo saldo, voy a Recargar, vuelvo":
+// sin esto, el carrito armado se perdía apenas se salía de la pantalla.
+function draftKey(worldId) { return `joi360:menu-draft:${worldId}`; }
+function leerDraft(worldId) {
+  try { return JSON.parse(sessionStorage.getItem(draftKey(worldId)) || "null"); } catch { return null; }
+}
+
 function MenuTemplate({ cfg, u }) {
   const worldId = cfg.mundo.id;
+  const nav = useNavigate();
   const userId = getSyntheticUserId();
   const nombreTitular = u?.auth?.nombre || "Yo";
   const { saldo: saldoTitular, refresh: refreshWallet } = useWalletLive(worldId);
   const comercios = useMerchantsLive(worldId);
   const controlCfg = useModuleConfig("control");
   const limiteDiarioDefault = controlCfg?.config?.limiteDiarioPerfil ?? null;
+  const draftInicial = leerDraft(worldId);
 
   const [vista, setVista] = useState("calendario"); // calendario | reservas
   // metodoReserva ("saldo" | "qr") es una decisión real del admin que antes no
@@ -1554,25 +1563,32 @@ function MenuTemplate({ cfg, u }) {
   const metodoReserva = cfg.config.metodoReserva || "saldo";
   const dias = cfg.config.diasAnticipacion || 7;
   const strip = diasStripDe(Math.min(Math.max(dias, 1), 14));
-  const [fecha, setFecha] = useState(strip[0].fecha);
+  const [fecha, setFecha] = useState(draftInicial?.fecha || strip[0].fecha);
   const diaActivo = strip.find(d => d.fecha === fecha) || strip[0];
 
   const [menuDelDia, setMenuDelDia] = useState(null);
   const [misReservas, setMisReservas] = useState(null);
   const [filtroComercio, setFiltroComercio] = useState("todos");
   const [dependientes, setDependientes] = useState(null);
-  const [membresias, setMembresias] = useState(null);
   const [miPerfilExt, setMiPerfilExt] = useState(null); // alergias propias del titular (Perfil Extendido)
   const [restricciones, setRestricciones] = useState({}); // { [dependent_user_id]: dependent_restrictions row }
-  const [beneficiarioId, setBeneficiarioId] = useState(null); // null = todavía no se eligió a propósito
+  const [beneficiarioId, setBeneficiarioId] = useState(draftInicial?.beneficiarioId ?? null); // null = todavía no se eligió a propósito
   const [saldoBeneficiario, setSaldoBeneficiario] = useState(null);
-  const [gestionAbierta, setGestionAbierta] = useState(false);
-  const [actualizandoMembresia, setActualizandoMembresia] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(draftInicial?.cart || []);
   const [enCheckout, setEnCheckout] = useState(false);
   const [pagando, setPagando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [avisoMixto, setAvisoMixto] = useState(false);
+
+  // Guarda el borrador en cada cambio real — así "Recargar saldo y volver"
+  // (o cualquier otra salida sin querer, como una llamada) no borra lo que
+  // ya se había armado.
+  useEffect(() => {
+    try {
+      if (cart.length) sessionStorage.setItem(draftKey(worldId), JSON.stringify({ fecha, beneficiarioId, cart }));
+      else sessionStorage.removeItem(draftKey(worldId));
+    } catch {}
+  }, [worldId, fecha, beneficiarioId, cart]);
 
   useEffect(() => {
     let vivo = true;
@@ -1582,14 +1598,18 @@ function MenuTemplate({ cfg, u }) {
       const rest = await fetchRestriccionesDependientesBulk((r || []).map(d => d.dependent_user_id), worldId).catch(() => []);
       if (vivo) setRestricciones(Object.fromEntries((rest || []).map(x => [x.dependent_user_id, x])));
     }).catch(() => { if (vivo) setDependientes([]); });
-    fetchMenuMembresias(userId, worldId).then(r => { if (vivo) setMembresias(r || []); }).catch(() => { if (vivo) setMembresias([]); });
     fetchMiPerfilExtendido(userId, worldId).then(r => { if (vivo) setMiPerfilExt(r); }).catch(() => { if (vivo) setMiPerfilExt(null); });
     return () => { vivo = false; };
   }, [worldId]);
 
+  // El carrito es por día — cambiar de día empieza una selección nueva. La
+  // única excepción es el primer render: si venimos de un borrador
+  // restaurado (sessionStorage) para este mismo día, no hay que vaciarlo.
+  const primerRenderMenu = React.useRef(true);
   useEffect(() => {
     let vivo = true;
-    setMenuDelDia(null); setCart([]); setResultado(null);
+    setMenuDelDia(null); setResultado(null);
+    if (primerRenderMenu.current) primerRenderMenu.current = false; else setCart([]);
     fetchMenuDelDia(worldId, diaActivo.diaSemana).then(r => { if (vivo) setMenuDelDia(r || []); }).catch(() => { if (vivo) setMenuDelDia([]); });
     return () => { vivo = false; };
   }, [worldId, diaActivo.diaSemana]);
@@ -1603,55 +1623,45 @@ function MenuTemplate({ cfg, u }) {
 
   const nombreDe = id => comercios.find(c => c.id === id)?.nombre || "Comercio";
 
-  // Beneficiarios elegibles: el titular siempre, + dependientes con membresía de Menú activa.
-  // Las alergias del titular vienen de su propio Perfil Extendido — antes
-  // quedaban fuera del bloqueo de platos, solo se aplicaba a dependientes.
+  // Beneficiarios: el titular + TODOS sus dependientes reales, directo — sin
+  // un paso previo de "activar membresía" por familiar. Ese toggle mezclaba
+  // dos cosas que no tienen relación: membresía/suscripción es un concepto
+  // de pago del mundo (planes, Task #174), y elegir para quién es un menú es
+  // solo identificar al beneficiario, igual que ya funciona en Billetera y
+  // Restricciones. Las alergias del titular vienen de su propio Perfil
+  // Extendido — antes quedaban fuera del bloqueo de platos, solo se aplicaba
+  // a dependientes.
   const beneficiarios = [
     { id: userId, nombre: nombreTitular, tipo: "titular", alergias: miPerfilExt?.alergias || null,
       alergiasArr: (miPerfilExt?.alergias || "").split(",").map(a => a.trim()).filter(Boolean), restriccion: null },
     ...(dependientes || [])
-      .filter(d => (membresias || []).some(m => m.beneficiario_user_id === d.dependent_user_id && m.activo))
       .map(d => ({ id: d.dependent_user_id, nombre: d.nombre, tipo: "dependiente", alergias: d.alergias, alergiasArr: (d.alergias || "").split(",").map(a => a.trim()).filter(Boolean), restriccion: restricciones[d.dependent_user_id] || null })),
   ];
-  // Sin fallback automático al titular: si hay dependientes elegibles, la
-  // usuaria SIEMPRE debe elegir a propósito para quién es el menú — pedido
-  // explícito para no reservar/cobrar por accidente al perfil equivocado.
-  // Solo se auto-selecciona cuando no hay ninguna elección real que hacer
-  // (titular sin dependientes con membresía de Menú activa).
+  // Sin fallback automático al titular: si hay dependientes, la usuaria
+  // SIEMPRE debe elegir a propósito para quién es el menú — pedido explícito
+  // para no reservar/cobrar por accidente al perfil equivocado. Solo se
+  // auto-selecciona cuando no hay ninguna elección real que hacer (titular
+  // sin dependientes registrados).
   const beneficiario = beneficiarios.find(b => b.id === beneficiarioId);
   useEffect(() => {
     if (beneficiarioId !== null) return;
-    if (dependientes === null || membresias === null) return;
+    if (dependientes === null) return;
     if (beneficiarios.length <= 1) setBeneficiarioId(userId);
-  }, [dependientes, membresias]);
+  }, [dependientes]);
 
+  // Se trae siempre (no solo en la vista "Mis reservas") — el strip calendar
+  // y el resumen "Hoy" en la vista de calendario también necesitan saber
+  // qué días ya tienen reserva.
   const idsBeneficiarios = beneficiarios.map(b => b.id);
   useEffect(() => {
-    if (vista !== "reservas") return;
     let vivo = true;
-    setMisReservas(null);
     fetchMisReservasMenu(idsBeneficiarios, worldId).then(r => { if (vivo) setMisReservas(r || []); }).catch(() => { if (vivo) setMisReservas([]); });
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vista, worldId, idsBeneficiarios.join(",")]);
-
-  const toggleMembresia = async (dep, activar) => {
-    setActualizandoMembresia(dep.dependent_user_id);
-    try {
-      const existente = (membresias || []).find(m => m.beneficiario_user_id === dep.dependent_user_id);
-      if (existente) {
-        await setMenuMembresiaActivaRemote(existente.id, activar);
-        setMembresias(ms => ms.map(m => m.id === existente.id ? { ...m, activo: activar } : m));
-      } else {
-        const creadas = await crearMenuMembresiaRemote(worldId, userId, dep.dependent_user_id, dep.nombre);
-        setMembresias(ms => [...(ms || []), ...(creadas || [])]);
-      }
-    } catch (e) {
-      const err = await mensajeDeError(e, "operacion_no_completada");
-      logErrorControlado("operacion_no_completada", "menu-membresia", worldId);
-      showToast({ titulo: "No se pudo actualizar la membresía", mensaje: err.mensaje, accion: err.accion }, "error");
-    } finally { setActualizandoMembresia(null); }
-  };
+  }, [worldId, idsBeneficiarios.join(",")]);
+  // Cuando se confirma una reserva nueva (pagar()) hay que refrescar esta
+  // lista para que el punto del día recién reservado aparezca sin recargar.
+  const recargarMisReservas = () => fetchMisReservasMenu(idsBeneficiarios, worldId).then(setMisReservas).catch(() => {});
 
   const visibles = (menuDelDia || []).filter(p => filtroComercio === "todos" || p.merchant_id === filtroComercio);
   const cartMerchant = cart[0]?.item.merchant_id || null;
@@ -1686,7 +1696,7 @@ function MenuTemplate({ cfg, u }) {
       });
       if (r.ok) {
         setResultado({ ok: true, total: r.total, comercio: nombreDe(cartMerchant) });
-        setCart([]); setEnCheckout(false); refreshWallet(); refrescarSaldoBeneficiario();
+        setCart([]); setEnCheckout(false); refreshWallet(); refrescarSaldoBeneficiario(); recargarMisReservas();
       } else if (r.motivo === "limite_excedido") {
         setResultado({ ok: false, titulo: "Límite diario alcanzado", mensaje: `${beneficiario.nombre} ya tiene S/ ${r.gastadoFecha.toFixed(2)} reservado el ${fecha}. El límite diario de este mundo es S/ ${r.limite.toFixed(2)}. Se avisó al padre/superusuario.`, accion: null });
       } else if (r.motivo === "restriccion_horario" || r.motivo === "restriccion_limite_diario") {
@@ -1766,6 +1776,16 @@ function MenuTemplate({ cfg, u }) {
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl">
             <p className="text-xs text-amber-800"><b>Este mundo reserva con pago por QR en el punto de venta</b>, no con saldo de la billetera — ese flujo de canje aún no está construido. Por ahora no se puede confirmar esta reserva desde la app.</p>
           </div>
+        ) : beneficiario.tipo === "titular" && (saldoBeneficiario ?? 0) < total ? (
+          // Saldo insuficiente del propio titular: en vez de solo mostrar el
+          // error, se manda directo a Recargar. El carrito ya queda guardado
+          // (sessionStorage) así que al volver sigue exactamente donde estaba.
+          <div className="space-y-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+              <p className="text-xs text-red-700">Te falta saldo: tienes S/ {(saldoBeneficiario ?? 0).toFixed(2)} y necesitas S/ {total.toFixed(2)}.</p>
+            </div>
+            <PrimaryBtn label="Recargar saldo" icon="add_card" onClick={() => nav("/pay?tab=recargar")}/>
+          </div>
         ) : (
           <PrimaryBtn label={pagando ? "Procesando…" : `Reservar S/ ${total.toFixed(2)} con el saldo de ${beneficiario.nombre}`} icon="event_available"
             disabled={!cart.length || pagando} onClick={pagar}/>
@@ -1818,18 +1838,45 @@ function MenuTemplate({ cfg, u }) {
         ))}
       </div>
 
-      {/* Strip calendar — selección de día, respeta diasAnticipacion */}
+      {/* Strip calendar — selección de día, respeta diasAnticipacion. El punto
+          bajo el día marca que ya hay una reserva confirmada ahí, para poder
+          ver de un vistazo la programación completa sin entrar día por día. */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-        {strip.map(d => (
-          <button key={d.fecha} onClick={() => setFecha(d.fecha)}
-            className={`flex-shrink-0 w-14 py-2.5 rounded-2xl text-center transition-all ${fecha === d.fecha ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
-            <p className="text-[9px] font-bold uppercase">{d.esHoy ? "Hoy" : d.diaLabel}</p>
-            <p className="font-black text-base">{d.numLabel}</p>
-          </button>
-        ))}
+        {strip.map(d => {
+          const tieneReserva = (misReservas || []).some(r => r.fecha === d.fecha);
+          return (
+            <button key={d.fecha} onClick={() => setFecha(d.fecha)}
+              className={`flex-shrink-0 w-14 py-2.5 rounded-2xl text-center transition-all relative ${fecha === d.fecha ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
+              <p className="text-[9px] font-bold uppercase">{d.esHoy ? "Hoy" : d.diaLabel}</p>
+              <p className="font-black text-base">{d.numLabel}</p>
+              {tieneReserva && (
+                <span className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${fecha === d.fecha ? "bg-white" : "bg-[#3525cd]"}`}/>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ¿Para quién? — selector de membresía */}
+      {/* Qué toca hoy — resumen rápido, sin tener que navegar el strip */}
+      {(() => {
+        const hoy = strip.find(d => d.esHoy);
+        const reservaHoy = hoy && (misReservas || []).find(r => r.fecha === hoy.fecha);
+        if (!hoy || !reservaHoy) return null;
+        return (
+          <SectionCard className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+              <Icon name="today" fill size="text-lg" color="text-green-600"/>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Hoy te toca</p>
+              <p className="text-sm font-bold text-[#1b1b24] truncate">{reservaHoy.beneficiario_nombre} · {(reservaHoy.items || []).map(it => it.nombre).join(", ")}</p>
+              <p className="text-[10px] text-[#777587]">{reservaHoy.merchant_nombre}</p>
+            </div>
+          </SectionCard>
+        );
+      })()}
+
+      {/* ¿Para quién? */}
       <div>
         <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest mb-2">Reservar para</p>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -1840,10 +1887,6 @@ function MenuTemplate({ cfg, u }) {
               {b.nombre}
             </button>
           ))}
-          <button onClick={() => setGestionAbierta(o => !o)}
-            className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold glass-card text-[#3525cd] flex items-center gap-1">
-            <Icon name="family_restroom" size="text-sm" color="text-[#3525cd]"/> Familiares
-          </button>
         </div>
         {beneficiario?.alergias && (
           <p className="text-[10px] text-amber-700 mt-2 flex items-center gap-1">
@@ -1851,39 +1894,6 @@ function MenuTemplate({ cfg, u }) {
           </p>
         )}
       </div>
-
-      {/* Gestión de membresías — reservar el módulo Menú a un familiar */}
-      {gestionAbierta && (
-        <SectionCard className="p-4">
-          <div className="flex justify-between items-center mb-3">
-            <p className="font-bold text-sm text-[#1b1b24]">Membresía de Menú por familiar</p>
-            <button onClick={() => setGestionAbierta(false)}><Icon name="close" size="text-base" color="text-[#777587]"/></button>
-          </div>
-          {dependientes === null ? (
-            <p className="text-xs text-[#777587]">Cargando familiares…</p>
-          ) : dependientes.length === 0 ? (
-            <p className="text-xs text-[#777587]">Aún no tienes familiares registrados. Agrégalos desde Familia.</p>
-          ) : (
-            <div className="space-y-2">
-              {dependientes.map(d => {
-                const activa = (membresias || []).some(m => m.beneficiario_user_id === d.dependent_user_id && m.activo);
-                return (
-                  <div key={d.id} className="flex items-center justify-between py-1.5">
-                    <div>
-                      <p className="text-sm font-semibold text-[#1b1b24]">{d.nombre}</p>
-                      {d.alergias && <p className="text-[10px] text-[#777587]">Alergias: {d.alergias}</p>}
-                    </div>
-                    <button disabled={actualizandoMembresia === d.dependent_user_id} onClick={() => toggleMembresia(d, !activa)}
-                      className={`text-[10px] font-bold px-3 py-1.5 rounded-xl tap-active disabled:opacity-50 ${activa ? "bg-green-100 text-green-700" : "bg-[#f0ecf9] text-[#3525cd]"}`}>
-                      {actualizandoMembresia === d.dependent_user_id ? "…" : activa ? "Reservado ✓" : "Reservar Menú"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </SectionCard>
-      )}
 
       {!beneficiario ? (
         <SectionCard className="p-6 text-center">

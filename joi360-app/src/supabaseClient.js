@@ -507,24 +507,6 @@ export async function fetchPlanesSuscripcionLive(worldId) {
   return rest(`subscription_plans?world_id=eq.${worldId}&activo=eq.true&select=*&order=precio`);
 }
 
-// ── Membresías de Menú — a qué perfil (titular o dependiente) se le reserva
-// el módulo Menú, para el selector "¿Para quién?" del checkout (Caso Raimondi) ──
-export async function fetchMenuMembresias(guardianUserId, worldId) {
-  return rest(`menu_membresias?guardian_user_id=eq.${guardianUserId}&world_id=eq.${worldId}&select=*&order=created_at`);
-}
-export async function crearMenuMembresiaRemote(worldId, guardianUserId, beneficiarioUserId, beneficiarioNombre) {
-  return rest("menu_membresias", {
-    method: "POST", headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, beneficiario_user_id: beneficiarioUserId, beneficiario_nombre: beneficiarioNombre, activo: true }),
-  });
-}
-export async function setMenuMembresiaActivaRemote(id, activo) {
-  return rest(`menu_membresias?id=eq.${id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ activo }),
-  });
-}
-
 // ── Menú — strip calendar + reservas por día (Gantt nuevo, genérico) ──────
 // Antes MenuTemplate reusaba `products` (vitrina de compras puntuales, sin
 // día ni alérgenos). Ahora el calendario lee `menu_programacion` (qué platos
