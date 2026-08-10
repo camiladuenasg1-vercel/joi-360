@@ -395,14 +395,19 @@ export async function registrarAccesoRemote(worldId, userId, tipo, zona) {
 }
 
 // ── Comercios (merchants) ────────────────────────────────────────────────────
+// "+v || null" convertía un 0% (tarifa/fijo legítimamente cero, ej. un
+// comercio sin comisión) en null ("sin override, usa el default del mundo")
+// — un merchant configurado a propósito en 0% terminaba heredando la tarifa
+// del mundo en su lugar. Solo null/"" cuentan como "sin definir".
+const numOrNull = v => (v === "" || v == null ? null : +v);
 export async function addMerchantRemote(mundoId, comercio) {
   const rows = await rest("merchants", {
     method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({
       world_id: mundoId, name: comercio.nombre,
       status: "activo",
-      mdr_override: +comercio.tarifa || null,
-      fixed_fee_override: +comercio.fijoTx || null,
+      mdr_override: numOrNull(comercio.tarifa),
+      fixed_fee_override: numOrNull(comercio.fijoTx),
       ruc: comercio.ruc || null, razon_social: comercio.razonSocial || null,
       direccion_fiscal: comercio.direccionFiscal || null,
       apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
@@ -436,8 +441,8 @@ export async function actualizarMerchantRemote(merchantId, comercio) {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
       name: comercio.nombre,
-      mdr_override: +comercio.tarifa || null,
-      fixed_fee_override: +comercio.fijoTx || null,
+      mdr_override: numOrNull(comercio.tarifa),
+      fixed_fee_override: numOrNull(comercio.fijoTx),
       ruc: comercio.ruc || null, razon_social: comercio.razonSocial || null,
       direccion_fiscal: comercio.direccionFiscal || null,
       apoderado_nombre: comercio.apoderadoNombre || null, apoderado_documento: comercio.apoderadoDocumento || null, apoderado_correo: comercio.apoderadoCorreo || null,
