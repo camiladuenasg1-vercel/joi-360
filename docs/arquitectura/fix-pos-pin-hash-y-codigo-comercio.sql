@@ -16,7 +16,11 @@
 -- De paso: merchants.codigo (único, sin guión) + merchants.pos_pin_hash, para
 -- el alta real del código de comercio que hoy solo vive en localStorage.
 
-create extension if not exists pgcrypto;
+-- pgcrypto en Supabase suele instalarse en el schema "extensions", no en
+-- "public" — si el search_path de la sesión no lo incluye, crypt()/gen_salt()
+-- fallan con "function does not exist" aunque la extensión sí esté instalada.
+create extension if not exists pgcrypto with schema extensions;
+set search_path = public, extensions;
 
 alter table public.worlds add column if not exists pos_pin_hash text;
 alter table public.merchants add column if not exists codigo text;
@@ -28,7 +32,7 @@ update public.worlds set pos_pin_hash = crypt(pos_pin, gen_salt('bf')), pos_pin 
   where pos_pin is not null and pos_pin_hash is null;
 
 create or replace function public.hash_pos_pin() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public, extensions as $$
 begin
   if new.pos_pin is not null and new.pos_pin <> '' then
     new.pos_pin_hash := crypt(new.pos_pin, gen_salt('bf'));
@@ -50,7 +54,7 @@ for each row execute function public.hash_pos_pin();
 -- por su código corto — nunca por id interno, y nunca devuelve el secreto.
 create or replace function public.verificar_pin_operador(p_codigo text, p_pin text)
 returns table(tipo text, id text, world_id text, nombre text)
-language sql security definer set search_path = public as $$
+language sql security definer set search_path = public, extensions as $$
   select 'comercio'::text, m.id::text, m.world_id::text, m.name
   from public.merchants m
   where m.codigo = p_codigo and m.status = 'activo'
