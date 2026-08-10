@@ -143,12 +143,18 @@ export function Login() {
   const nav = useNavigate();
   const [f, setF] = React.useState({ email: "", password: "" });
   const [err, setErr] = React.useState("");
+  const [entrando, setEntrando] = React.useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const ok = doLogin(f.email, f.password);
-    if (ok) nav("/admin");
-    else setErr("Credenciales inválidas.");
+    setErr(""); setEntrando(true);
+    try {
+      const ok = await doLogin(f.email, f.password);
+      if (ok) nav("/admin");
+      else setErr("Credenciales inválidas.");
+    } catch {
+      setErr("No se pudo verificar. Intenta de nuevo.");
+    } finally { setEntrando(false); }
   };
 
   return (
@@ -169,8 +175,8 @@ export function Login() {
           <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Email</label><input className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} placeholder="tucorreo@redpontis.com" /></div>
           <div><label className="block text-xs font-medium text-on-surface-variant mb-1">Password</label><input type="password" className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder="••••••••" /></div>
           {err && <p className="text-xs text-error">{err}</p>}
-          <button type="submit" className="w-full py-2.5 bg-primary text-white rounded-lg font-medium text-sm hover:bg-on-primary-fixed-variant transition-colors shadow-sm">
-            Ingresar al ecosistema
+          <button type="submit" disabled={entrando} className="w-full py-2.5 bg-primary text-white rounded-lg font-medium text-sm hover:bg-on-primary-fixed-variant transition-colors shadow-sm disabled:opacity-60">
+            {entrando ? "Verificando…" : "Ingresar al ecosistema"}
           </button>
         </form>
         <a href="#/pos" className="mt-4 flex items-center justify-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors">

@@ -17,7 +17,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, Pill, BtnPrimary, BtnOutline, notify, Field, inputCls } from "./ui";
 import { useStore } from "./hooks";
-import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal } from "./supabase";
+import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote } from "./supabase";
 
 export function Gobierno() {
   const st = useStore();
@@ -35,6 +35,7 @@ export function Gobierno() {
   const [rechazando, setRechazando] = useState(null); // { item, kind: 'evento'|'comercio' }
   const [motivo, setMotivo] = useState("");
   const [viendoMotivo, setViendoMotivo] = useState(null);
+  const [adminUsers, setAdminUsers] = useState(null);
 
   useEffect(() => {
     let vivo = true;
@@ -57,6 +58,7 @@ export function Gobierno() {
     let vivo = true;
     fetchEventosGlobalTodos().then(rows => { if (vivo) setEventosTodos(rows || []); }).catch(() => { if (vivo) setEventosTodos([]); });
     fetchTicketsGlobalTodos().then(rows => { if (vivo) setTicketsTodos(rows || []); }).catch(() => { if (vivo) setTicketsTodos([]); });
+    fetchAdminUsersRemote().then(rows => { if (vivo) setAdminUsers(rows || []); }).catch(() => { if (vivo) setAdminUsers([]); });
     return () => { vivo = false; };
   }, []);
 
@@ -382,8 +384,10 @@ export function Gobierno() {
                 <Icon n="add" className="text-[14px]" /> Invitar
               </BtnPrimary>
             </div>
-            {(st.users || [{email:"admin@redpontis.com", name:"Admin RedPontis"}]).map((u, i) => (
-              <div key={i} className="px-5 py-3.5 flex items-center gap-3">
+            {adminUsers === null ? (
+              <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
+            ) : (adminUsers.map(u => (
+              <div key={u.id} className="px-5 py-3.5 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {(u.name||u.email)[0].toUpperCase()}
                 </div>
@@ -393,7 +397,7 @@ export function Gobierno() {
                 </div>
                 <Pill color="bg-primary-fixed text-primary">Platform Admin</Pill>
               </div>
-            ))}
+            )))}
           </div>
           <div className="p-4 border border-dashed border-outline-variant rounded-xl text-center">
             <Icon n="group_add" className="text-outline text-[28px] mb-2" />

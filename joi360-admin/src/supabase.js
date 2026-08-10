@@ -462,6 +462,23 @@ export async function verificarPinOperadorRemote(codigo, pin) {
   });
   return rows?.[0] || null;
 }
+// Login del admin RedPontis — antes las credenciales vivían solo en el
+// código (users: [{email,password,name}] en el seed de store.js), nunca en
+// Supabase. Mismo patrón que el PIN: nunca se compara la contraseña en el
+// cliente, la RPC compara contra el hash y devuelve solo lo necesario para
+// abrir sesión.
+export async function verificarAdminLoginRemote(email, password) {
+  const rows = await rest("rpc/verificar_admin_login", {
+    method: "POST",
+    body: JSON.stringify({ p_email: email, p_password: password }),
+  });
+  return rows?.[0] || null;
+}
+// Listado para Gobierno → "Administradores de plataforma" — nunca trae
+// password_hash, solo lo necesario para mostrar quién tiene acceso.
+export async function fetchAdminUsersRemote() {
+  return rest("admin_users?select=id,email,name&order=created_at");
+}
 export async function fetchMerchantsRemote(worldId) {
   return rest(`merchants?world_id=eq.${worldId}&select=*&order=created_at`);
 }

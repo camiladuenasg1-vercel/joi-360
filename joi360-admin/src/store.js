@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -516,7 +516,6 @@ export function modosDeMundo(m) {
 function seed() {
   const now = Date.now();
   return {
-    users: [{ email: "camila.duenas@redpontis.com", password: "RedpontisAdmin2026", name: "Camila Dueñas" }],
     session: null,
     mundos: [
       {
@@ -634,13 +633,10 @@ function load() {
   // abierta cada pestaña.
   if (Array.isArray(state.mundos)) state.mundos = state.mundos.filter(m => m.id !== "mundo-promos-rp");
 
-  // ── auto-cura: la cuenta admin demo (admin@redpontis.com / demo) ya
-  // quedó persistida en browsers viejos — se reemplaza por la real, igual
-  // que la purga de ids demo de arriba. No se toca si ya es la real o si
-  // el admin ya creó otras cuentas reales por su cuenta (signup).
-  if (Array.isArray(state.users) && state.users.length === 1 && state.users[0].email === "admin@redpontis.com") {
-    state.users = [{ email: "camila.duenas@redpontis.com", password: "RedpontisAdmin2026", name: "Camila Dueñas" }];
-  }
+  // ── auto-cura: state.users (localStorage de sesiones viejas) ya no se usa
+  // — el login pasa por admin_users en Supabase (ver login() en este mismo
+  // archivo). Se descarta si quedó de un browser anterior a la migración.
+  if (state.users) delete state.users;
 
   // ── auto-cura: anunciantes con esquema viejo (nombre/estado) → esquema actual (razonSocial/credenciales) ──
   // Si no hacemos esto, el localStorage que ya quedó guardado en el navegador
@@ -967,10 +963,11 @@ export function getPromos(mundoId) {
 
 // --- Auth ---
 // Sin alta de cuenta propia: solo se ingresa con credenciales asignadas
-// por RedPontis (ver users en seed()).
-export function login(email, password) {
-  const s = load();
-  const u = s.users.find(u => u.email === email && u.password === password);
+// por RedPontis. Antes vivían solo en el código (users en seed()) — ahora
+// están en admin_users (Supabase), hasheadas, verificadas por RPC. Nunca se
+// compara la contraseña en el cliente.
+export async function login(email, password) {
+  const u = await verificarAdminLoginRemote(email, password).catch(() => null);
   if (!u) return null;
   update(st => { st.session = { email: u.email, name: u.name }; });
   return u;
