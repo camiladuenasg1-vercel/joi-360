@@ -14,7 +14,7 @@ import { useParams } from "react-router-dom";
 import { useStore } from "./hooks";
 import { worldOperatorLogin, worldOperatorLogout } from "./store";
 import { Icon, BtnPrimary, notify, inputCls } from "./ui";
-import { AccesosOperador, VincularBanditaOperador } from "./OperadorApp.jsx";
+import { AccesosOperador, VincularBanditaOperador, ConsultarFichaOperador } from "./OperadorApp.jsx";
 
 export function WorldOperadorApp() {
   const { worldId } = useParams();
@@ -63,6 +63,7 @@ function WorldGate({ m }) {
 const MODOS = [
   { id: "bandita", nombre: "Vincular Pulsera NFC", icon: "sensors", desc: "Asociar una pulsera física a la cuenta de un usuario." },
   { id: "accesos", nombre: "Validar Acceso", icon: "door_open", desc: "Registrar entrada o salida por código." },
+  { id: "ficha", nombre: "Consultar Ficha", icon: "medical_information", desc: "Ver alergias, tipo de sangre y contacto de emergencia por DNI o bandita." },
 ];
 
 function WorldOperadorShell({ m }) {
@@ -70,9 +71,11 @@ function WorldOperadorShell({ m }) {
   const walletMod = (m?.modulos || []).find(x => x.id === "wallet" && x.enabled);
   const banditaOn = !!walletMod && walletMod.config?.usaPulseraNfc !== false;
   const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
+  const fichaOn = (m?.modulos || []).some(x => x.id === "perfil_ext" && x.enabled);
   const disponibles = MODOS.filter(md => {
     if (md.id === "bandita") return banditaOn;
     if (md.id === "accesos") return accesosOn;
+    if (md.id === "ficha") return fichaOn;
     return true;
   });
 
@@ -137,6 +140,7 @@ function WorldOperadorShell({ m }) {
         )}
         {modo === "bandita" && <VincularBanditaOperador comercio={null} m={m} />}
         {modo === "accesos" && <AccesosOperador comercio={null} m={m} />}
+        {modo === "ficha" && <ConsultarFichaOperador comercio={null} m={m} />}
       </div>
     </div>
   );

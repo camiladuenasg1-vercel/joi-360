@@ -577,7 +577,13 @@ export function VincularBanditaOperador({ comercio, m }) {
 // VincularBanditaOperador solo usaba el campo alergias de esa misma
 // respuesta; acá se muestra entera, con el titular/apoderado siempre visible
 // cuando la persona es un dependiente.
-function ConsultarFichaOperador({ comercio, m }) {
+// Exportado (antes no lo estaba) para que WorldOperadorApp.jsx también
+// pueda ofrecerlo — el cuerpo entero ya opera solo sobre `m` (el mundo), el
+// prop `comercio` nunca se usa acá, así que reusarlo tal cual desde el
+// operador de mundo (mesa de ayuda / portero) es seguro sin duplicar nada.
+// Antes solo el comercio tenía este modo: mesa de ayuda de un colegio no
+// podía consultar alergias/contacto de emergencia de un alumno.
+export function ConsultarFichaOperador({ comercio, m }) {
   const [modoIdent, setModoIdent] = useState("codigo"); // "codigo" | "dni"
   const [codigoUsuario, setCodigoUsuario] = useState("");
   const [dniInput, setDniInput] = useState("");
