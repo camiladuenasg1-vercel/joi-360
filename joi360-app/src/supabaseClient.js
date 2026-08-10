@@ -651,6 +651,41 @@ export async function transferirP2PRemote(fromUserId, toUserId, worldId, monto) 
   return { ok: true, balance: +r.nuevo_saldo_origen };
 }
 
+// ── Código JOI del titular — corto y digerible para compartir de palabra o
+// por WhatsApp al recibir una transferencia. Antes "mi código JOI" era el
+// UUID crudo de getSyntheticUserId(). Es información pública (como un alias
+// de transferencia, no un secreto), así que se lee/busca directo con la
+// llave anónima — igual que el código de un comercio o de un mundo. ─────────
+export async function fetchMiCodigoJoi(userId) {
+  const rows = await rest(`app_profiles?id=eq.${userId}&select=codigo`);
+  return rows?.[0]?.codigo || null;
+}
+export async function buscarPorCodigoJoiRemote(codigo) {
+  const rows = await rest(`app_profiles?codigo=eq.${encodeURIComponent(codigo.trim().toUpperCase())}&select=id,nombres,apellidos`);
+  const c = rows?.[0];
+  if (!c) return null;
+  return { userId: c.id, nombre: [c.nombres, c.apellidos].filter(Boolean).join(" ") || null };
+}
+// El DNI sí necesita pasar por el backend: no se guarda en ninguna columna
+// que la llave anónima pueda leer (mismo mecanismo que titular-dni.js).
+const POS_BACKEND_URL = "https://joi-pos-backend.vercel.app";
+export async function buscarPorDniRemote(dni) {
+  const res = await fetch(`${POS_BACKEND_URL}/api/pos/v1/p2p-dni/${encodeURIComponent(dni.trim())}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return { userId: data.userId, nombre: data.nombre, codigo: data.codigo };
+}
+
+// Ticket a RedPontis/mundo — mismo support_tickets que ya usa el admin
+// (SponsorSoporte), origen "usuario" para distinguir de dónde vino.
+export async function crearTicketSoporteRemote(payload) {
+  const rows = await rest("support_tickets", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ origen: "usuario", estado: "ABIERTO", ...payload }),
+  });
+  return rows?.[0] || null;
+}
+
 // ── Solicitud de pulsera NFC (antes: botones decorativos sin backend) ─────
 // nombre es opcional pero recomendado: sin él, RedPontis solo ve el user_id
 // crudo en su cola de solicitudes — con él, ve el nombre real de quien pidió.

@@ -238,7 +238,7 @@ export default function ProfilePage() {
           </button>
 
           <div className="glass-card rounded-2xl py-3 text-center">
-            <p className="text-[#c7c4d8] text-xs font-mono">JOI 360 · RedPontis S.A.C. · Lima, Perú · v2.0</p>
+            <p className="text-[#c7c4d8] text-xs font-mono">v2.0</p>
           </div>
         </div>
       </div>

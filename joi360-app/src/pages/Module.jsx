@@ -13,6 +13,7 @@ import {
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
   transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
+  fetchMiCodigoJoi, buscarPorCodigoJoiRemote, buscarPorDniRemote, crearTicketSoporteRemote,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
 } from "../supabaseClient.js";
@@ -101,6 +102,20 @@ function WalletTemplate({ cfg, u }) {
   const currency = cfg.config.monedaPermitida || "S/";
   const myCode = getSyntheticUserId();
 
+  // Código JOI corto (app_profiles.codigo) — el UUID de myCode sigue siendo
+  // la identidad interna real (wallets, transacciones, todo cuelga de él),
+  // pero nadie debería tener que dictar un UUID de memoria para recibir una
+  // transferencia. Mientras carga o si la cuenta todavía no tiene código
+  // generado, se cae al UUID como antes (nunca deja a la usuaria sin nada
+  // que compartir).
+  const [miCodigoJoi, setMiCodigoJoi] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    fetchMiCodigoJoi(myCode).then(r => { if (vivo) setMiCodigoJoi(r); }).catch(() => { if (vivo) setMiCodigoJoi(null); });
+    return () => { vivo = false; };
+  }, []);
+  const codigoParaCompartir = miCodigoJoi || myCode;
+
   // Dependientes reales del titular — para poder pedir la bandita NFC (o
   // cualquier otra acción del módulo) A NOMBRE de un hijo, no solo del padre.
   const [dependientes, setDependientes] = useState([]);
@@ -110,12 +125,48 @@ function WalletTemplate({ cfg, u }) {
     return () => { vivo = false; };
   }, [mundoId]);
 
-  // P2P real: transferir a otro usuario del mismo mundo por su código JOI.
+  // P2P real: transferir a otro usuario por su código JOI o por su DNI.
+  // Antes solo aceptaba el código, y encima el input se mandaba TAL CUAL
+  // como el userId destino — funcionaba solo porque el código ERA el UUID.
+  // Ahora hay que resolver primero (código corto o DNI) a un userId real
+  // antes de poder mostrar a quién le estás mandando el dinero.
   const [p2pOpen, setP2pOpen] = useState(false);
-  const [p2pCodigo, setP2pCodigo] = useState("");
+  const [p2pModo, setP2pModo] = useState("codigo"); // "codigo" | "dni"
+  const [p2pInput, setP2pInput] = useState("");
+  const [p2pBuscando, setP2pBuscando] = useState(false);
+  const [p2pBusquedaError, setP2pBusquedaError] = useState("");
+  const [p2pDestino, setP2pDestino] = useState(null); // { userId, nombre }
+  const [p2pConfirmoIrreversible, setP2pConfirmoIrreversible] = useState(false);
   const [p2pMonto, setP2pMonto] = useState("");
   const [p2pSending, setP2pSending] = useState(false);
   const [p2pResult, setP2pResult] = useState(null);
+
+  const buscarDestinoP2P = async () => {
+    const valor = p2pInput.trim();
+    if (!valor) return;
+    setP2pBuscando(true); setP2pBusquedaError(""); setP2pDestino(null);
+    try {
+      const r = p2pModo === "dni" ? await buscarPorDniRemote(valor) : await buscarPorCodigoJoiRemote(valor);
+      if (!r) { setP2pBusquedaError(p2pModo === "dni" ? "No encontramos ninguna cuenta con ese DNI." : "No encontramos ninguna cuenta con ese código."); return; }
+      if (r.userId === myCode) { setP2pBusquedaError("Ese código es el tuyo — no puedes transferirte a ti mismo."); return; }
+      setP2pDestino(r);
+    } catch {
+      setP2pBusquedaError("No se pudo buscar. Intenta de nuevo.");
+    } finally { setP2pBuscando(false); }
+  };
+
+  const enviarSoporteP2P = async () => {
+    try {
+      await crearTicketSoporteRemote({
+        world_id: mundoId, tipo: "P2P",
+        asunto: "Problema con una transferencia",
+        detalle: p2pResult?.ok ? `Transferencia enviada por S/ ${p2pMonto} — la usuaria reporta un problema.` : "Consulta iniciada desde el modal de transferencia.",
+      });
+      showToast({ titulo: "Enviado a soporte", mensaje: "El mundo o RedPontis te contactará." }, "success");
+    } catch {
+      showToast({ titulo: "No se pudo enviar", mensaje: "Intenta de nuevo en unos minutos." }, "error");
+    }
+  };
 
   // Solicitud real de bandita NFC — antes esta tarjeta mostraba "Vinculada"
   // fijo sin importar el estado real, y solo para el titular: un padre con
@@ -190,7 +241,7 @@ function WalletTemplate({ cfg, u }) {
   const maxPorDiaP2P = cfg.config.transferencia_maxPorDia;
   const enviarP2P = async () => {
     const monto = +p2pMonto;
-    if (!(monto > 0) || !p2pCodigo.trim()) return;
+    if (!(monto > 0) || !p2pDestino || !p2pConfirmoIrreversible) return;
     setP2pSending(true); setP2pResult(null);
     if (maxPorTxP2P != null && monto > +maxPorTxP2P) {
       setP2pResult({ ok: false, mensaje: `Este mundo permite transferir hasta S/ ${(+maxPorTxP2P).toFixed(2)} por transacción.` });
@@ -204,7 +255,7 @@ function WalletTemplate({ cfg, u }) {
       }
     }
     try {
-      const r = await transferirP2PRemote(myCode, p2pCodigo.trim(), mundoId, monto);
+      const r = await transferirP2PRemote(myCode, p2pDestino.userId, mundoId, monto);
       if (!r.ok) {
         const code = r.motivo === "saldo" ? "saldo_insuficiente" : "transferencia_no_valida";
         const err = await errorControlado(code);
@@ -223,7 +274,10 @@ function WalletTemplate({ cfg, u }) {
       setP2pResult({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
     } finally { setP2pSending(false); }
   };
-  const cerrarP2P = () => { setP2pOpen(false); setP2pCodigo(""); setP2pMonto(""); setP2pResult(null); };
+  const cerrarP2P = () => {
+    setP2pOpen(false); setP2pModo("codigo"); setP2pInput(""); setP2pDestino(null);
+    setP2pBusquedaError(""); setP2pConfirmoIrreversible(false); setP2pMonto(""); setP2pResult(null);
+  };
 
   return (
     <div className="px-5 space-y-4 pb-8">
@@ -270,15 +324,24 @@ function WalletTemplate({ cfg, u }) {
         )}
       </div>
 
-      {/* Mi código JOI — para que otros (o el POS de un comercio) me identifiquen */}
+      {/* Mi código JOI — compártelo para recibir transferencias, o que un
+          comercio te identifique en el POS. */}
       <SectionCard className="p-4 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Mi código JOI</p>
-          <p className="font-mono text-xs text-[#1b1b24] mt-0.5">{myCode}</p>
+          <p className="font-mono text-base font-black text-[#3525cd] mt-0.5">{codigoParaCompartir}</p>
+          <p className="text-[10px] text-[#777587] mt-0.5">Compártelo para recibir una transferencia</p>
         </div>
-        <button onClick={() => navigator.clipboard?.writeText(myCode)} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
-          <Icon name="content_copy" size="text-base" color="text-[#3525cd]"/>
-        </button>
+        <div className="flex gap-1.5">
+          {navigator.share && (
+            <button onClick={() => navigator.share({ title: "Mi código JOI", text: `Mi código JOI es ${codigoParaCompartir}` }).catch(() => {})} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
+              <Icon name="share" size="text-base" color="text-[#3525cd]"/>
+            </button>
+          )}
+          <button onClick={() => navigator.clipboard?.writeText(codigoParaCompartir)} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
+            <Icon name="content_copy" size="text-base" color="text-[#3525cd]"/>
+          </button>
+        </div>
       </SectionCard>
 
       {/* Modal P2P */}
@@ -297,34 +360,72 @@ function WalletTemplate({ cfg, u }) {
                 <div className="text-center py-4">
                   <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
                   <p className="font-black text-[#1b1b24] mt-2">Transferencia enviada</p>
-                  <PrimaryBtn label="Listo" onClick={cerrarP2P}/>
+                  <p className="text-xs text-[#777587] mt-1">A {p2pDestino?.nombre || "el destinatario"}</p>
+                  <div className="mt-4 space-y-2">
+                    <PrimaryBtn label="Listo" onClick={cerrarP2P}/>
+                    <button onClick={enviarSoporteP2P} className="w-full py-2 text-xs font-bold text-[#777587] tap-active">¿Algo salió mal? Contactar soporte</button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Código JOI del destinatario</label>
-                    <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm font-mono outline-none focus:ring-2 focus:ring-[#3525cd]/20"
-                      value={p2pCodigo} onChange={e=>setP2pCodigo(e.target.value)} placeholder="Código del otro usuario"/>
+                  <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1">
+                    {[["codigo", "Código JOI"], ["dni", "DNI"]].map(([v, l]) => (
+                      <button key={v} onClick={() => { setP2pModo(v); setP2pInput(""); setP2pDestino(null); setP2pBusquedaError(""); }}
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${p2pModo === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Monto ({currency})</label>
-                    <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-4">
-                      <span className="text-[#777587] font-bold mr-2 text-lg">{currency}</span>
-                      <input className="flex-1 text-xl font-black text-[#1b1b24] bg-transparent py-3 outline-none" type="number"
-                        value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
+
+                  {!p2pDestino ? (
+                    <div>
+                      <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{p2pModo === "dni" ? "DNI del destinatario" : "Código JOI del destinatario"}</label>
+                      <div className="flex gap-2">
+                        <input className="flex-1 bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm font-mono outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+                          value={p2pInput} inputMode={p2pModo === "dni" ? "numeric" : "text"}
+                          onChange={e=>setP2pInput(p2pModo === "dni" ? e.target.value.replace(/\D/g,"").slice(0,8) : e.target.value)}
+                          onKeyDown={e => e.key === "Enter" && buscarDestinoP2P()}
+                          placeholder={p2pModo === "dni" ? "8 dígitos" : "Ej. CAMIL385"}/>
+                        <button onClick={buscarDestinoP2P} disabled={!p2pInput.trim() || p2pBuscando}
+                          className="px-4 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active disabled:opacity-40">
+                          {p2pBuscando ? "…" : "Buscar"}
+                        </button>
+                      </div>
+                      {p2pBusquedaError && <p className="text-xs text-red-600 mt-2">{p2pBusquedaError}</p>}
                     </div>
-                    {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
-                      <p className="text-[10px] text-[#777587] mt-1.5">
-                        {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
-                        {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
-                        {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
-                      </p>
-                    )}
-                  </div>
-                  {p2pResult && !p2pResult.ok && (
-                    <p className="text-xs text-red-600">{p2pResult.mensaje}</p>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Le vas a transferir a</p>
+                          <p className="text-sm font-bold text-[#1b1b24]">{p2pDestino.nombre || "Usuario JOI"}</p>
+                        </div>
+                        <button onClick={() => { setP2pDestino(null); setP2pInput(""); }} className="text-[11px] font-bold text-[#3525cd] tap-active">Cambiar</button>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Monto ({currency})</label>
+                        <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-4">
+                          <span className="text-[#777587] font-bold mr-2 text-lg">{currency}</span>
+                          <input className="flex-1 text-xl font-black text-[#1b1b24] bg-transparent py-3 outline-none" type="number"
+                            value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
+                        </div>
+                        {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
+                          <p className="text-[10px] text-[#777587] mt-1.5">
+                            {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
+                            {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
+                            {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
+                          </p>
+                        )}
+                      </div>
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={p2pConfirmoIrreversible} onChange={e=>setP2pConfirmoIrreversible(e.target.checked)} className="mt-0.5 rounded text-[#3525cd]"/>
+                        <span className="text-xs text-[#464555]">Entiendo que, una vez enviada, esta transferencia <b>no se puede revertir</b>.</span>
+                      </label>
+                      {p2pResult && !p2pResult.ok && (
+                        <p className="text-xs text-red-600">{p2pResult.mensaje}</p>
+                      )}
+                      <PrimaryBtn label={p2pSending ? "Enviando…" : "Transferir"} icon="swap_horiz" disabled={!p2pMonto || !p2pConfirmoIrreversible || p2pSending} onClick={enviarP2P}/>
+                    </>
                   )}
-                  <PrimaryBtn label={p2pSending ? "Enviando…" : "Transferir"} icon="swap_horiz" disabled={!p2pCodigo.trim() || !p2pMonto || p2pSending} onClick={enviarP2P}/>
+                  <button onClick={enviarSoporteP2P} className="w-full py-1 text-[11px] font-bold text-[#777587] tap-active">¿Tienes un problema? Contactar soporte</button>
                 </div>
               )}
             </div>
