@@ -371,7 +371,12 @@ function WalletTemplate({ cfg, u }) {
                     <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? cfg.mundo.nombre : b.nombre}</p>
+                    {/* Antes mostraba el nombre del MUNDO en la card de la
+                        cuenta principal (confuso fuera de Educación: leía
+                        como si la pulsera fuera del colegio, no tuya) —
+                        ahora usa tu propio nombre, igual que ya hacían las
+                        cards de cada dependiente. */}
+                    <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? (nombreParaAcciones || "Mi cuenta") : b.nombre}</p>
                     {solicitud === undefined ? (
                       <p className="text-[10px] text-[#777587]">Cargando…</p>
                     ) : solicitud?.status === "entregada" ? (
