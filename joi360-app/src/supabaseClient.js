@@ -182,6 +182,11 @@ export async function crearEventoB2CRemote(worldId, datos) {
       aforo_total: +datos.aforo || 0, aforo_tipo: "general", privado: false,
       estado: "PENDIENTE_APROBACION", moneda: "PEN",
       modo: "b2c", organizador_id: null,
+      // Antes esto siempre quedaba null — sin este dato es estructuralmente
+      // imposible construir "mis eventos" (no hay por dónde filtrar "los que
+      // yo publiqué"). getSyntheticUserId() es el mismo id que ya identifica
+      // al usuario en todo lo demás del módulo Eventos (tickets, Activity...).
+      creado_por_user_id: getSyntheticUserId(),
       ux_components: ["hero", "entradas", "agenda", "marketplace"],
     }]),
   });
@@ -199,6 +204,13 @@ export async function crearEventoB2CRemote(worldId, datos) {
 // Rules Engine: evento privado → oculto del marketplace (se filtra aquí).
 export async function fetchEventosLive(worldId) {
   return rest(`events?world_id=eq.${worldId}&estado=eq.PUBLICADO&privado=eq.false&select=*&order=fecha`);
+}
+// "Mis eventos" — los que YO publiqué como usuario B2C, en cualquier estado
+// (incluye PENDIENTE_APROBACION/RECHAZADO, no solo los ya publicados: el
+// creador necesita ver el estado real de su propio evento).
+export async function fetchMisEventosCreados(worldId) {
+  const userId = getSyntheticUserId();
+  return rest(`events?world_id=eq.${worldId}&creado_por_user_id=eq.${userId}&select=*&order=created_at.desc`);
 }
 export async function fetchTicketTypesLive(eventId) {
   return rest(`event_ticket_types?event_id=eq.${eventId}&select=*&order=precio`);

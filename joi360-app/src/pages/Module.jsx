@@ -13,7 +13,7 @@ import {
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
   fetchMenuMembresias, crearMenuMembresiaRemote, setMenuMembresiaActivaRemote,
-  transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchAgendaEventoLive, fetchPromocionesLive,
+  transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
 } from "../supabaseClient.js";
@@ -2435,6 +2435,116 @@ function MisEntradasList({ mundo, refreshKey }) {
   );
 }
 
+/**
+ * "Mis eventos" — gestión real del evento que el propio usuario B2C publicó.
+ *
+ * Antes de esto no existía forma de responder: un usuario publicaba su
+ * evento (crearEventoB2CRemote) y quedaba a ciegas — sin saber si RedPontis
+ * ya lo aprobó, cuántas entradas se vendieron, o cómo compartirlo. El botón
+ * "Crear y publicar" era una puerta de un solo sentido.
+ *
+ * El check-in en puerta sigue siendo responsabilidad de quien recibe a la
+ * gente en el evento (POS/operador), no de esta pantalla — acá el creador ve
+ * estado, ventas reales e invita gente, no escanea entradas.
+ */
+function MisEventosCreadosList({ worldId, refreshKey }) {
+  const [eventos, setEventos] = useState(null);
+  const [stats, setStats] = useState({}); // { [eventId]: { vendidas, ingresos, aforo } }
+  const [copiadoId, setCopiadoId] = useState(null);
+
+  useEffect(() => {
+    let vivo = true;
+    fetchMisEventosCreados(worldId).then(async rows => {
+      if (!vivo) return;
+      setEventos(rows || []);
+      const entries = await Promise.all((rows || []).map(async ev => {
+        try {
+          const [tipos, vendidasPorTipo] = await Promise.all([fetchTicketTypesLive(ev.id), fetchVendidasPorTipo(ev.id)]);
+          const ingresos = (tipos || []).reduce((a, t) => a + (+t.precio || 0) * (vendidasPorTipo[t.id] || 0), 0);
+          return [ev.id, { vendidas: vendidasPorTipo.__total || 0, ingresos, aforo: ev.aforo_total || 0 }];
+        } catch { return [ev.id, { vendidas: 0, ingresos: 0, aforo: ev.aforo_total || 0 }]; }
+      }));
+      if (vivo) setStats(Object.fromEntries(entries));
+    }).catch(() => { if (vivo) setEventos([]); });
+    return () => { vivo = false; };
+  }, [worldId, refreshKey]);
+
+  const compartir = (ev) => {
+    // La ficha pública real vive en la Landing Page (joi360-admin), no en el
+    // superapp — /evento-publico/:id nunca existió como ruta acá.
+    const url = `https://joi360-admin.vercel.app/#/landing/eventos/${ev.id}`;
+    navigator.clipboard?.writeText(url);
+    setCopiadoId(ev.id);
+    setTimeout(() => setCopiadoId(null), 2000);
+  };
+
+  const ESTADO_INFO = {
+    PENDIENTE_APROBACION: { label: "En revisión de RedPontis", color: "text-amber-600 bg-amber-50", icon: "hourglass_top" },
+    PUBLICADO: { label: "Publicado", color: "text-green-700 bg-green-50", icon: "check_circle" },
+    PAUSADO: { label: "Pausado", color: "text-[#777587] bg-[#f0ecf9]", icon: "pause_circle" },
+    RECHAZADO: { label: "Rechazado", color: "text-red-600 bg-red-50", icon: "cancel" },
+  };
+
+  if (eventos === null) return (
+    <div className="py-10 flex flex-col items-center gap-2">
+      <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
+      <p className="text-xs text-[#777587]">Cargando tus eventos…</p>
+    </div>
+  );
+
+  if (eventos.length === 0) return (
+    <SectionCard className="p-8 text-center">
+      <Icon name="event_note" size="text-4xl" color="text-[#c7c4d8]"/>
+      <p className="text-[#464555] font-bold text-sm mt-3">Todavía no publicaste ningún evento</p>
+      <p className="text-[#777587] text-xs mt-1">Usa "Crear y publicar mi evento" arriba para empezar.</p>
+    </SectionCard>
+  );
+
+  return (
+    <div className="space-y-3">
+      {eventos.map(ev => {
+        const info = ESTADO_INFO[ev.estado] || ESTADO_INFO.PENDIENTE_APROBACION;
+        const s = stats[ev.id] || { vendidas: 0, ingresos: 0, aforo: ev.aforo_total || 0 };
+        return (
+          <SectionCard key={ev.id} className="p-4">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="font-black text-[#1b1b24] text-sm leading-tight">{ev.titulo}</p>
+              <span className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${info.color}`}>
+                <Icon name={info.icon} size="text-[11px]"/>{info.label}
+              </span>
+            </div>
+            <p className="text-[#777587] text-xs">{ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} {ev.lugar ? `· ${ev.lugar}` : ""}</p>
+
+            {ev.estado === "RECHAZADO" && ev.motivo_rechazo && (
+              <p className="text-red-600 text-xs mt-2 bg-red-50 rounded-xl px-3 py-2">{ev.motivo_rechazo}</p>
+            )}
+
+            {(ev.estado === "PUBLICADO" || ev.estado === "PAUSADO") && (
+              <>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="bg-[#f0ecf9] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#777587] uppercase tracking-widest">Vendidas</p>
+                    <p className="text-base font-black text-[#1b1b24]">{s.vendidas}{s.aforo > 0 ? ` / ${s.aforo}` : ""}</p>
+                  </div>
+                  <div className="bg-[#f0ecf9] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#777587] uppercase tracking-widest">Ingresos</p>
+                    <p className="text-base font-black text-[#1b1b24]">S/ {s.ingresos.toFixed(2)}</p>
+                  </div>
+                </div>
+                <button onClick={() => compartir(ev)}
+                  className="w-full mt-3 py-2.5 rounded-xl bg-[#3525cd] text-white text-xs font-bold flex items-center justify-center gap-1.5 tap-active">
+                  <Icon name={copiadoId === ev.id ? "check" : "link"} size="text-sm" color="text-white"/>
+                  {copiadoId === ev.id ? "Enlace copiado" : "Copiar enlace para invitar"}
+                </button>
+              </>
+            )}
+          </SectionCard>
+        );
+      })}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // TEMPLATE: EVENTOS — marketplace en vivo (Supabase) + creación B2C
 //   allowB2C → usuario puede crear evento
@@ -2857,9 +2967,9 @@ function EventosTemplate({ cfg, u }) {
           <Icon name="add_circle" fill size="text-base" color="text-white"/>Crear y publicar mi evento
         </button>
       )}
-      {/* Tabs: marketplace / mis entradas */}
+      {/* Tabs: marketplace / mis entradas / (si puede publicar) mis eventos */}
       <div className="flex gap-2">
-        {[["eventos","Eventos"],["mis_entradas","Mis entradas"]].map(([t,l])=>(
+        {[["eventos","Eventos"],["mis_entradas","Mis entradas"],...(canCreate ? [["mis_eventos","Mis eventos"]] : [])].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#3525cd] text-white":"glass-card text-[#464555]"}`}>
             {l}
@@ -2868,6 +2978,8 @@ function EventosTemplate({ cfg, u }) {
       </div>
 
       {tab === "mis_entradas" && <MisEntradasList mundo={cfg.mundo} refreshKey={reloadKey}/>}
+
+      {tab === "mis_eventos" && <MisEventosCreadosList worldId={worldId} refreshKey={reloadKey}/>}
 
       {tab === "eventos" && (
         <>
