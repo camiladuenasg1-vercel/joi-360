@@ -864,6 +864,38 @@ function AlertasConsumoBanner({ guardianId, worldId, reload, onLeida }) {
   );
 }
 
+function ReglasMundoBanner({ montoAprobacion, horario, limiteDiario }) {
+  const [abierto, setAbierto] = useState(false);
+  const reglas = [
+    montoAprobacion && { icon: "approval", label: `Compras sobre S/ ${montoAprobacion} requieren tu aprobación antes de procesarse.` },
+    horario && { icon: "schedule", label: `Horario por defecto del mundo: ${horario}.` },
+    limiteDiario != null && { icon: "speed", label: `Límite diario por defecto: S/ ${Number(limiteDiario).toFixed(2)}.` },
+  ].filter(Boolean);
+  if (!reglas.length) return null;
+  return (
+    <div className="rounded-2xl bg-[#f0ecf9] overflow-hidden">
+      <button onClick={() => setAbierto(a => !a)} className="w-full flex items-center justify-between gap-2 p-3.5 tap-active">
+        <div className="flex items-center gap-2.5">
+          <Icon name="rule" fill size="text-base" color="text-[#3525cd]" />
+          <p className="text-xs font-bold text-[#3525cd]">Reglas de este mundo</p>
+        </div>
+        <Icon name={abierto ? "expand_less" : "expand_more"} size="text-base" color="text-[#3525cd]" />
+      </button>
+      {abierto && (
+        <div className="px-3.5 pb-3.5 space-y-2.5">
+          {reglas.map((r, i) => (
+            <div key={i} className="flex items-start gap-2.5">
+              <Icon name={r.icon} fill size="text-sm" color="text-[#777587]" />
+              <p className="text-xs text-[#4b4a58] leading-relaxed">{r.label}</p>
+            </div>
+          ))}
+          <p className="text-[10px] text-[#9c9ab0]">Puedes darle a cada dependiente su propio límite, horario y productos bloqueados desde "Configurar restricciones" en su tarjeta.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RestriccionesTemplate({ cfg, u }) {
   const nav = useNavigate();
   const worldId = cfg.mundo.id;
@@ -1168,15 +1200,7 @@ function RestriccionesTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       <AlertasConsumoBanner guardianId={guardianId} worldId={worldId} reload={reload} onLeida={() => setReload(k => k + 1)} />
 
-      {montoAprobacionPadre && (
-        <ConfigBanner icon="approval" message={`Transacciones sobre S/ ${montoAprobacionPadre} requieren tu aprobación antes de procesarse.`} color="blue" />
-      )}
-      {horarioConsumo && (
-        <ConfigBanner icon="schedule" message={`Horario por defecto del mundo: ${horarioConsumo}. Puedes darle a cada dependiente su propio horario desde "Configurar restricciones" en su tarjeta.`} color="amber" />
-      )}
-      {limiteDiarioPerfil != null && (
-        <ConfigBanner icon="speed" message={`Límite diario por defecto: S/ ${Number(limiteDiarioPerfil).toFixed(2)}. Puedes darle a cada dependiente su propio límite y bloquearle productos específicos del catálogo desde "Configurar restricciones".`} color="blue" />
-      )}
+      <ReglasMundoBanner montoAprobacion={montoAprobacionPadre} horario={horarioConsumo} limiteDiario={limiteDiarioPerfil} />
 
       <div className="flex justify-between items-center">
         <div>
@@ -1344,7 +1368,7 @@ function RestriccionesTemplate({ cfg, u }) {
                       <button onClick={()=>setRestriccionesDraft(d=>({...d, horario_inicio: "", horario_fin: ""}))}
                         className="text-[9px] font-bold text-[#3525cd] tap-active">Quitar restricción</button>
                     ) : (
-                      <span className="text-[9px] font-bold text-green-700">Sin restricción de horario</span>
+                      <span className="text-[9px] font-bold text-green-700">{horarioConsumo ? `Usa el del mundo: ${horarioConsumo}` : "Sin restricción de horario"}</span>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
