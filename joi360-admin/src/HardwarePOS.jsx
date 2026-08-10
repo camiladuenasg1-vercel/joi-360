@@ -1012,14 +1012,19 @@ function BanditasNfcTab() {
     } finally { setBulkBusy(false); }
   };
 
+  // nfc_bands.lote es NOT NULL en la base — una bandita de verdad "suelta"
+  // (sin lote real, para probar un tag físico puntual) no puede mandar lote
+  // vacío. En vez de forzar a inventar un nombre de lote cada vez, el campo
+  // es opcional acá y cae a un bucket fijo "Sueltas" si se deja en blanco.
+  const LOTE_SUELTAS = "Sueltas";
   const confirmarQuickAdd = async () => {
     const normalizado = normalizarUid(quickCodigo);
     if (!normalizado) { notify("Código UID inválido — debe ser hexadecimal (ej. 04:D6:01:5A:68:19:94 o el mismo texto corrido, sin separadores).", "error"); return; }
-    if (!quickLote.trim()) { notify("Ponle un nombre de lote — puede ser uno ya existente o uno nuevo solo para pruebas.", "error"); return; }
+    const lote = quickLote.trim() || LOTE_SUELTAS;
     setQuickBusy(true);
     try {
-      await registerNfcBandsBulkRemote([{ codigo: normalizado, lote: quickLote.trim(), valido: true }]);
-      notify(`Bandita ${normalizado} registrada en el lote "${quickLote.trim()}".`);
+      await registerNfcBandsBulkRemote([{ codigo: normalizado, lote, valido: true }]);
+      notify(`Bandita ${normalizado} registrada${lote === LOTE_SUELTAS ? " como suelta (sin lote)." : ` en el lote "${lote}".`}`);
       setShowQuickAdd(false); setQuickCodigo(""); setQuickLote("");
       load(); loadStockAlmacen();
     } catch (e) {
@@ -1232,13 +1237,13 @@ function BanditasNfcTab() {
                 <input className={`${inputCls} font-mono`} placeholder="04:D6:01:5A:68:19:94" value={quickCodigo} onChange={e=>setQuickCodigo(e.target.value)} autoFocus/>
               </div>
               <div>
-                <label className="text-xs font-medium text-on-surface-variant block mb-1">Lote</label>
-                <input className={inputCls} placeholder="ej. pruebas-t6" value={quickLote} onChange={e=>setQuickLote(e.target.value)}/>
+                <label className="text-xs font-medium text-on-surface-variant block mb-1">Lote (opcional)</label>
+                <input className={inputCls} placeholder={`Vacío = "${LOTE_SUELTAS}"`} value={quickLote} onChange={e=>setQuickLote(e.target.value)}/>
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <BtnOutline onClick={()=>setShowQuickAdd(false)}>Cancelar</BtnOutline>
-              <BtnPrimary disabled={!quickCodigo.trim() || !quickLote.trim() || quickBusy} onClick={confirmarQuickAdd}>
+              <BtnPrimary disabled={!quickCodigo.trim() || quickBusy} onClick={confirmarQuickAdd}>
                 {quickBusy ? "Registrando…" : "Registrar"}
               </BtnPrimary>
             </div>
