@@ -1965,8 +1965,20 @@ export async function updateUbicacionEventoComercio(id, ubicacion) {
 // Busca la wallet por su código (user_id completo o de un dependiente),
 // debita, e inscribe la venta con merchant_id (antes: transactions no
 // distinguía qué comercio cobró → imposible aislar "mis ventas").
+// BUG REAL encontrado en vivo (10-ago), probando "Vincular Pulsera" con una
+// cuenta real de Jockey Plaza: esto comparaba el código corto de la persona
+// (app_profiles.codigo, ej. "CAMILA788" — lo que un operador tipea a mano)
+// directo contra wallets.user_id, que siempre es un uuid. Nunca podía
+// matchear — cualquier identificación por código en el Operador web (Cobrar,
+// Vincular Pulsera, Accesos) fallaba con un error genérico. Mismo bug
+// encontrado y corregido por separado en joi-pos-backend/lib/bandResolver.js
+// (usado por el T6 nativo), replicado acá porque el panel web tiene su
+// propio camino de identificación que nunca pasa por ese backend.
 export async function buscarWalletPorCodigo(codigo, worldId) {
-  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(codigo.trim())}&world_id=eq.${worldId}&select=id,user_id,balance`);
+  const v = String(codigo || "").trim();
+  const porCodigo = await rest(`app_profiles?codigo=eq.${encodeURIComponent(v.toUpperCase())}&select=id`).catch(() => []);
+  const userId = porCodigo?.[0]?.id || v;
+  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${worldId}&select=id,user_id,balance`);
   return rows?.[0] || null;
 }
 // Bug real #114: hasta acá el balance se leía y se volvía a escribir con un
