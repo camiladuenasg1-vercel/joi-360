@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useUser } from "./userStore.js";
+import { useUser, updateUser } from "./userStore.js";
 import { refreshWorldsLive } from "./store.js";
+import { getSyntheticUserId, fetchMembershipsReales } from "./supabaseClient.js";
 import AuthPage from "./pages/Auth.jsx";
 import HubPage from "./pages/Hub.jsx";
 import MundosPage from "./pages/Mundos.jsx";
@@ -28,6 +29,7 @@ function Root() {
 }
 
 export default function App() {
+  const u = useUser();
   // Fase 0 — mundos en vivo: al abrir la app y al volver a la pestaña se
   // refresca la lista de mundos desde Supabase (alta en admin → aparece aquí).
   useEffect(() => {
@@ -36,6 +38,20 @@ export default function App() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
+
+  // Membresías reales: "unirse a un mundo" vive en localStorage, así que si
+  // esta pestaña la perdió (caché limpiado, otro dispositivo) la cuenta podía
+  // tener wallets reales en Supabase y aun así la app mandaba a "Elige tu
+  // comunidad" como si fuera nueva. Se reconcilia una vez al loguear.
+  useEffect(() => {
+    if (!u?.auth) return;
+    fetchMembershipsReales(getSyntheticUserId()).then(worldIds => {
+      if (!worldIds.length) return;
+      updateUser(s => {
+        worldIds.forEach(id => { if (!s.memberships.includes(id)) s.memberships.push(id); });
+      });
+    }).catch(() => {});
+  }, [u?.auth]);
 
   return (
     <HashRouter>

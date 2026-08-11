@@ -120,6 +120,19 @@ export function getSyntheticUserId() {
 // Sin esto, un logout + nuevo registro en el mismo dispositivo heredaba la
 // identidad (wallet, entradas, actividad) de la cuenta anterior porque
 // SYNTH_KEY vivía fuera de joi360_user_v3 y nunca se limpiaba.
+
+// Membresías reales (a qué mundos pertenece esta persona) vía sus wallets —
+// "unirse a un mundo" solo vivía en joi360_user_v3.memberships (localStorage),
+// nunca en Supabase. Si ese estado local se pierde (caché limpiado, un bug
+// de sync, "BORRA DATA" de prueba) la cuenta sigue teniendo wallets reales
+// mundo por mundo, pero la app la manda a "Elige tu comunidad" como si fuera
+// nueva — la pantalla de Explorar mostraba "no tienes ningún mundo" con una
+// cuenta que en Supabase sí pertenece a uno. Se reconstruye desde la fuente
+// real en vez de confiar solo en el localStorage.
+export async function fetchMembershipsReales(userId) {
+  const rows = await rest(`wallets?user_id=eq.${userId}&select=world_id`).catch(() => []);
+  return [...new Set((rows || []).map(r => r.world_id))];
+}
 export function resetSyntheticUserId() {
   localStorage.removeItem(SYNTH_KEY);
   clearSession();
