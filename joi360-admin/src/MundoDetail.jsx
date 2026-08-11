@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, entregarMundoRemote } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, actualizarPosPinMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, entregarMundoRemote } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -172,14 +172,23 @@ function TarjetaEntrega({ icon, titulo, subtitulo, descripcion, estado, estadoCo
 function TarjetaOperadorMundo({ m }) {
   const [pin, setPin] = useState(m.posPin || "");
   const [ver, setVer] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const dirty = pin !== (m.posPin || "");
 
-  const guardar = () => {
-    update(s => {
-      const mu = (s.mundos||[]).find(x => x.id === m.id);
-      if (mu) mu.posPin = pin.trim() || null;
-    });
-    notify(pin.trim() ? "Clave de operador del mundo guardada." : "Clave de operador del mundo eliminada.");
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      await actualizarPosPinMundoRemote(m.id, pin.trim() || null);
+      update(s => {
+        const mu = (s.mundos||[]).find(x => x.id === m.id);
+        if (mu) mu.posPin = pin.trim() || null;
+      });
+      notify(pin.trim() ? "Clave de operador del mundo guardada." : "Clave de operador del mundo eliminada.");
+    } catch (e) {
+      notify("No se pudo guardar la clave. Intenta de nuevo.", "error");
+    } finally {
+      setGuardando(false);
+    }
   };
   const generar = () => setPin(String(Math.floor(1000 + Math.random() * 9000)));
 
@@ -204,7 +213,7 @@ function TarjetaOperadorMundo({ m }) {
       </div>
       <div className="flex gap-1.5">
         <BtnOutline onClick={generar} className="flex-1 !px-2 !py-2 text-xs"><Icon n="casino" className="text-[14px]"/> Generar</BtnOutline>
-        <BtnPrimary onClick={guardar} disabled={!dirty} className="flex-1 !px-2 !py-2 text-xs"><Icon n="save" className="text-[14px]"/> Guardar</BtnPrimary>
+        <BtnPrimary onClick={guardar} disabled={!dirty} loading={guardando} loadingLabel="Guardando…" className="flex-1 !px-2 !py-2 text-xs"><Icon n="save" className="text-[14px]"/> Guardar</BtnPrimary>
       </div>
       <a href={`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`} target="_blank" rel="noreferrer"
         className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary text-xs font-medium transition-colors">

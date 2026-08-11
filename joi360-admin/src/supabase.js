@@ -374,6 +374,17 @@ export async function actualizarLogoMundoRemote(worldId, logoUrl) {
   });
 }
 
+// Clave de operador del mundo (Task #128) — TarjetaOperadorMundo solo
+// escribía en el store local; el siguiente refreshWorldsLive() la pisaba
+// con el pos_pin remoto (null) y la clave "guardada" desaparecía. Mismo
+// patrón PATCH directo que actualizarLogoMundoRemote.
+export async function actualizarPosPinMundoRemote(worldId, posPin) {
+  await rest(`worlds?id=eq.${worldId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ pos_pin: posPin || null, updated_at: new Date().toISOString() }),
+  });
+}
+
 // ── Errores controlados — catálogo en tabla, no mensajes genéricos ──────────
 // error_catalog define título/mensaje/acción por código; error_log registra
 // ocurrencias para monitoreo. Fallback local si la tabla aún no existe.
