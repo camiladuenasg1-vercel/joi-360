@@ -108,6 +108,66 @@ function MapaDelEvento({ eventoId, url, nombre, onCambio }) {
   );
 }
 
+// Banner de portada. Antes era un campo de texto libre para pegar una URL
+// pública — en la práctica nadie tenía dónde alojar una imagen, así que el
+// campo quedaba vacío o roto. Ahora sube el archivo directo al bucket
+// joi360-media (mismo patrón que MapaDelEvento) y el resultado se refleja
+// solo en el superapp: la app lee `events.imagen_url` tal cual, sin
+// transformación adicional.
+function BannerDelEvento({ eventoId, url, onCambio }) {
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState("");
+
+  const subir = async e => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("El banner tiene que ser una imagen (JPG, PNG o WEBP).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen pesa más de 5 MB. Comprímela antes de subirla.");
+      return;
+    }
+    setError("");
+    setSubiendo(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const ruta = `eventos/${eventoId || uid("ev")}/banner-${Date.now()}.${ext}`;
+      const publica = await uploadArchivo("joi360-media", ruta, file);
+      onCambio(publica);
+    } catch (err) {
+      setError(`No se pudo subir el banner: ${err.message}`);
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <Field label="Imagen de portada" hint="Se ve como banner en el app del mundo y en el detalle del evento.">
+      {url ? (
+        <div className="relative">
+          <img src={url} alt="Banner del evento" className="w-full h-32 object-cover rounded-lg border border-outline-variant" />
+          <button type="button" onClick={() => onCambio("")}
+            className="absolute top-2 right-2 bg-surface-container-lowest/90 hover:bg-error hover:text-white text-on-surface-variant rounded-full w-7 h-7 flex items-center justify-center transition-colors">
+            <Icon n="close" className="text-[16px]" />
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-outline-variant rounded-lg cursor-pointer hover:border-primary/40 transition-colors">
+          <Icon n={subiendo ? "hourglass_empty" : "add_photo_alternate"} className="text-on-surface-variant text-[20px]" />
+          <span className="text-sm text-on-surface-variant">
+            {subiendo ? "Subiendo…" : "Subir imagen de portada"}
+          </span>
+          <input type="file" accept="image/*" className="hidden" onChange={subir} disabled={subiendo} />
+        </label>
+      )}
+      {error && <p className="text-xs text-error mt-2">{error}</p>}
+    </Field>
+  );
+}
+
 // Tickets reales por evento desde Supabase — base del aforo en tiempo real.
 // No hay SDK/websockets en este proyecto (fetch plano contra PostgREST), así
 // que "tiempo real" acá es polling: refresca sola cada 6s sin que nadie
@@ -1356,10 +1416,11 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
           <Field label="Descripción del evento">
             <textarea className={`${inputCls} h-20 py-2`} value={f.descripcion} onChange={e => setF({ ...f, descripcion: e.target.value })} placeholder="Descripción visible en el app y landing del mundo..." />
           </Field>
-          <Field label="Imagen de portada (URL pública)">
-            <input className={inputCls} value={f.imagenUrl} onChange={e => setF({ ...f, imagenUrl: e.target.value })} placeholder="https://..." />
-            {f.imagenUrl && <img src={f.imagenUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-outline-variant" onError={e => e.target.style.display = 'none'} />}
-          </Field>
+          <BannerDelEvento
+            eventoId={f.id}
+            url={f.imagenUrl}
+            onCambio={imagenUrl => setF({ ...f, imagenUrl })}
+          />
           <MapaDelEvento
             eventoId={f.id}
             url={f.mapaUrl}
