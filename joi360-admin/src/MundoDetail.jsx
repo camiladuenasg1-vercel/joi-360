@@ -36,12 +36,19 @@ export function MundoDetail() {
     // dentro del updater (no el snapshot) es lo que hace el push idempotente;
     // sin esto, dos montajes del mismo componente duplicaban cada comercio ya
     // reconciliado (hallado en vivo, 11-ago: Adidas y Aruma aparecían 2 veces).
-    reconciliarComerciosMundo(id, st.comercios).then(nuevos => {
-      if (!nuevos.length) return;
+    reconciliarComerciosMundo(id, st.comercios).then(({ nuevos, remotos }) => {
       update(s => {
-        const existingIds = new Set((s.comercios || []).map(c => c.id));
+        if (!s.comercios) s.comercios = [];
+        const existingIds = new Set(s.comercios.map(c => c.id));
         const trulyNuevos = nuevos.filter(c => !existingIds.has(c.id));
-        if (trulyNuevos.length) s.comercios = [...(s.comercios || []), ...trulyNuevos];
+        if (trulyNuevos.length) s.comercios.push(...trulyNuevos);
+        // codigo es público y sponsor-inmutable (solo Supabase lo asigna) —
+        // seguro sincronizarlo siempre en comercios que ya existían localmente.
+        const porId = new Map(remotos.map(r => [r.id, r]));
+        for (const c of s.comercios) {
+          const r = porId.get(c.supabaseId || c.id);
+          if (r?.codigo && c.codigo !== r.codigo) c.codigo = r.codigo;
+        }
       });
     }).catch(() => {});
   }, [id]);

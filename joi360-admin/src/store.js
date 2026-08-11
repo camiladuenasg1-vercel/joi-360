@@ -941,16 +941,24 @@ export function moduleCat(id) { return MODULE_CATALOG.find(m => m.id === id); }
 export async function reconciliarComerciosGlobal() {
   const mundos = (load().mundos || []).filter(m => !m.redpontis);
   for (const m of mundos) {
-    let nuevos;
-    try { nuevos = await reconciliarComerciosMundo(m.id, load().comercios); } catch { continue; }
-    if (!nuevos || !nuevos.length) continue;
+    let nuevos, remotos;
+    try { ({ nuevos, remotos } = await reconciliarComerciosMundo(m.id, load().comercios)); } catch { continue; }
     // Filtrar otra vez contra el estado vivo dentro del updater (no el
     // snapshot con el que se calculó "nuevos") evita duplicados si otra
     // pestaña/sesión reconcilió los mismos comercios en el mismo momento.
+    // También sincroniza `codigo` en comercios ya conocidos localmente —
+    // Supabase es la única fuente que lo asigna, así que es seguro pisarlo.
     update(st => {
-      const existingIds = new Set((st.comercios || []).map(c => c.id));
+      if (!st.comercios) st.comercios = [];
+      const existingIds = new Set(st.comercios.map(c => c.id));
       const trulyNuevos = nuevos.filter(c => !existingIds.has(c.id));
-      if (trulyNuevos.length) st.comercios = [...(st.comercios || []), ...trulyNuevos];
+      if (trulyNuevos.length) st.comercios.push(...trulyNuevos);
+      const porId = new Map(remotos.map(r => [r.id, r]));
+      for (const c of st.comercios) {
+        if (c.mundoId !== m.id) continue;
+        const r = porId.get(c.supabaseId || c.id);
+        if (r?.codigo && c.codigo !== r.codigo) c.codigo = r.codigo;
+      }
     });
   }
 }

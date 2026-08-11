@@ -704,7 +704,15 @@ export async function reconciliarComerciosMundo(worldId, comerciosLocales) {
       // (no un secreto), a diferencia del PIN, que nunca sale de Supabase.
       codigo: r.codigo || null,
     }));
-  return nuevos;
+  // Se devuelve también `remotos` completo (no solo los nuevos) para que el
+  // caller pueda sincronizar `codigo` en comercios YA conocidos localmente:
+  // un comercio creado antes de que Supabase le asignara código (o abierto
+  // acá antes del fix de arriba) se quedaba con codigo=null para siempre,
+  // porque este reconciliador nunca vuelve a tocar lo que ya existe
+  // localmente — mismo patrón de bug que refreshEventosLive con `estado`
+  // (hallado en vivo, 11-ago: Aruma tenía codigo real en Supabase pero
+  // seguía sin código en el panel).
+  return { nuevos, remotos: remotos || [] };
 }
 
 // ── Motor de Eventos (Caso 3) ────────────────────────────────────────────────
