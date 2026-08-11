@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MODULE_CATALOG, update, actualizarModuloCatalogo, getModuloCatalogo, getFlagDev, setFlagDev, DEV_STATUS_META, getFlagUx, MODULOS_PROXIMAMENTE } from "./store";
 import { Icon, BtnPrimary, BtnOutline, Pill, Toggle, notify, InfoTip } from "./ui";
+import { errorControlado, logErrorControlado } from "./supabase.js";
 
 const inputCls = "w-full px-3 py-2.5 rounded-lg border border-outline-variant text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30";
 const inputLabel = "block text-[10px] font-mono uppercase tracking-wider text-on-surface-variant mb-1.5";
@@ -168,16 +169,24 @@ function EditDrawer({ modId, onClose }) {
     nuevoServicio: "",
   });
   const [tab, setTab] = useState("servicios");
+  const [guardando, setGuardando] = useState(false);
 
   if (!m) return null;
 
   const normSv = (sv) => typeof sv === "string" ? { id: sv, nombre: sv, desc: "" } : sv;
   const svLabel = (sv) => typeof sv === "string" ? sv : sv.nombre;
 
-  const save = () => {
-    actualizarModuloCatalogo(modId, { servicios: f.servicios });
-    notify(`Catálogo de "${m.name}" actualizado.`);
-    onClose();
+  const save = async () => {
+    setGuardando(true);
+    try {
+      await actualizarModuloCatalogo(modId, { servicios: f.servicios });
+      notify(`Catálogo de "${m.name}" actualizado y publicado en la app.`);
+      onClose();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `catalogo-guardar:${modId}`, null);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setGuardando(false); }
   };
 
   const addSv = () => {
@@ -345,9 +354,9 @@ function EditDrawer({ modId, onClose }) {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-outline-variant flex gap-3 bg-surface-container-lowest">
-          <BtnOutline className="flex-1" onClick={onClose}>Cancelar</BtnOutline>
-          <BtnPrimary className="flex-1" onClick={save}>
-            <Icon n="save" className="text-[16px]" /> Guardar catálogo
+          <BtnOutline className="flex-1" onClick={onClose} disabled={guardando}>Cancelar</BtnOutline>
+          <BtnPrimary className="flex-1" onClick={save} loading={guardando} loadingLabel="Publicando…">
+            <Icon n="save" className="text-[16px]" /> Guardar y publicar
           </BtnPrimary>
         </div>
       </div>

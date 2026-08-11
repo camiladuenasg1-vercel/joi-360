@@ -2908,7 +2908,7 @@ function EventosTemplate({ cfg, u }) {
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo:"", fecha:"", hora:"18:00", lugar:"", descripcion:"",
     categoria:"General", precio:0, gratis:true, aforo:100,
-    entidad: { tipo:"existente", nombre:"", ruc:"" }
+    entidad: { tipo:"personal", nombre:"", ruc:"" }
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -3004,8 +3004,9 @@ function EventosTemplate({ cfg, u }) {
       {step===2 && (
         <div className="space-y-4">
           <h2 className="text-2xl font-black text-[#1b1b24]">Entidad organizadora</h2>
-          <p className="text-sm text-[#777587]">Debes asociar tu evento a una entidad legal. Puedes usar una existente o registrar una nueva.</p>
+          <p className="text-sm text-[#777587]">Es opcional: solo hace falta si publicas a nombre de una empresa o entidad legal. Si es un evento personal, puedes saltarlo.</p>
           {[
+            {k:"personal",l:"Evento personal",d:"Publicas a título propio, sin empresa ni RUC"},
             {k:"existente",l:"Entidad existente",d:"Asocia tu RUC o el de tu empresa ya registrada"},
             {k:"nueva",l:"Nueva entidad",d:"Registra una nueva entidad legal para este evento"},
           ].map(op=>(
@@ -3015,27 +3016,31 @@ function EventosTemplate({ cfg, u }) {
               <p className="text-xs text-[#777587] mt-0.5">{op.d}</p>
             </button>
           ))}
-          <div>
-            <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
-              {nuevoEvento.entidad.tipo==="existente"?"Nombre de la entidad / empresa":"Razón social de la nueva entidad"}
-            </label>
-            <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="Ej. Jazz Garage Lima S.R.L."
-              value={nuevoEvento.entidad.nombre} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,nombre:e.target.value}}))}/>
-          </div>
-          <div>
-            <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
-              {nuevoEvento.entidad.tipo==="existente"?"RUC":"RUC (si ya tienes) o dejalo vacío"}
-            </label>
-            <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="20XXXXXXXXX"
-              value={nuevoEvento.entidad.ruc} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,ruc:e.target.value}}))}/>
-          </div>
+          {nuevoEvento.entidad.tipo!=="personal" && (
+            <>
+              <div>
+                <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
+                  {nuevoEvento.entidad.tipo==="existente"?"Nombre de la entidad / empresa":"Razón social de la nueva entidad"}
+                </label>
+                <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="Ej. Jazz Garage Lima S.R.L."
+                  value={nuevoEvento.entidad.nombre} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,nombre:e.target.value}}))}/>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
+                  {nuevoEvento.entidad.tipo==="existente"?"RUC":"RUC (si ya tienes) o dejalo vacío"}
+                </label>
+                <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="20XXXXXXXXX"
+                  value={nuevoEvento.entidad.ruc} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,ruc:e.target.value}}))}/>
+              </div>
+            </>
+          )}
           <ConfigBanner icon="approval" message="Tu evento será revisado por RedPontis antes de publicarse. Recibirás una notificación." color="blue"/>
           {!monetizacion && (
             <ConfigBanner icon="volunteer_activism" message="Fase 0 — RedPontis no cobra comisión sobre tus entradas." color="green"/>
           )}
           <div className="flex gap-2">
             <button onClick={()=>setStep(1)} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active">Atrás</button>
-            <PrimaryBtn label="Revisar →" onClick={()=>setStep(3)} disabled={!nuevoEvento.entidad.nombre} full={false}/>
+            <PrimaryBtn label="Revisar →" onClick={()=>setStep(3)} disabled={nuevoEvento.entidad.tipo!=="personal" && !nuevoEvento.entidad.nombre} full={false}/>
           </div>
         </div>
       )}
@@ -3048,7 +3053,7 @@ function EventosTemplate({ cfg, u }) {
               {l:"Título",v:nuevoEvento.titulo},{l:"Fecha",v:`${nuevoEvento.fecha} ${nuevoEvento.hora}`},
               {l:"Lugar",v:nuevoEvento.lugar},{l:"Categoría",v:nuevoEvento.categoria},
               {l:"Aforo",v:`${nuevoEvento.aforo} personas`},{l:"Precio",v:nuevoEvento.gratis?"Gratuito":`S/ ${nuevoEvento.precio}`},
-              {l:"Organizador",v:`${nuevoEvento.entidad.nombre} · ${nuevoEvento.entidad.tipo==="nueva"?"Nueva entidad":"Entidad existente"}`},
+              {l:"Organizador",v:nuevoEvento.entidad.tipo==="personal"?"Evento personal (sin entidad legal)":`${nuevoEvento.entidad.nombre} · ${nuevoEvento.entidad.tipo==="nueva"?"Nueva entidad":"Entidad existente"}`},
             ].map((r,i)=>(
               <div key={i} className="flex justify-between items-start">
                 <p className="text-[11px] font-bold text-[#777587] uppercase w-24 flex-shrink-0">{r.l}</p>

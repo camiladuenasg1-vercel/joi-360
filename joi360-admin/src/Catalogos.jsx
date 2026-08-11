@@ -16,12 +16,10 @@ export function CatalogosGlobales() {
 
   // Publica el Catálogo Global (Nivel 1) a Supabase: capacities + flags.
   // La superapp renderiza cualquier capacidad nueva sin tocar su código.
-  // Bug real encontrado 29-jul: esto pasaba el MODULE_CATALOG estático crudo,
-  // ignorando st.catalogoOverrides — un admin editaba servicios/config en
-  // Catalogo.jsx (EditDrawer), veía "actualizado", pero la publicación nunca
-  // reflejaba esa edición. Ahora se resuelve el catálogo EFECTIVO (con
-  // overrides aplicados, mismo merge que ya usa getModuloCatalogo en cualquier
-  // otro lugar del admin) antes de publicar.
+  // Desde el fix de #202, cada edición en Catalogo.jsx (EditDrawer) ya se
+  // publica sola al guardar — este botón queda como resync manual completo
+  // de respaldo (por si Supabase quedó desalineado por alguna razón), no
+  // como el único camino para que la app vea los cambios.
   const publicarCatalogo = async () => {
     setPublicando(true);
     try {
@@ -80,7 +78,7 @@ export function CatalogosGlobales() {
             </div>
           </div>
           <BtnPrimary onClick={publicarCatalogo} disabled={publicando} className="flex-shrink-0 self-start">
-            <Icon n="cloud_upload" className="text-[16px]"/> {publicando ? "Publicando…" : "Publicar catálogo en la app"}
+            <Icon n="cloud_upload" className="text-[16px]"/> {publicando ? "Publicando…" : "Re-sincronizar todo (respaldo manual)"}
           </BtnPrimary>
         </div>
       </div>

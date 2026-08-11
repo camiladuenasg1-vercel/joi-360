@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote, verificarLoginSponsorRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote, verificarLoginSponsorRemote, syncCatalogRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -1472,12 +1472,19 @@ export const REDES_PAGO = [
 ];
 
 // --- Catálogo ---
-export function actualizarModuloCatalogo(id, patch) {
-  // En MVP el catálogo vive en memoria por mundo; este helper actualiza overrides globales
+// Antes de esto, editar un módulo acá (EditDrawer) solo tocaba el override
+// local: la publicación real a Supabase (capacities + feature flags, lo que
+// la superapp de verdad lee) era un botón aparte en Catálogos Globales que
+// había que recordar apretar — fácil de olvidar, y mientras tanto la app
+// seguía sirviendo la versión vieja sin ningún aviso. Ahora cada edición se
+// publica sola; el botón de Catálogos Globales queda como resync manual de
+// respaldo, no como el único camino.
+export async function actualizarModuloCatalogo(id, patch) {
   update(st => {
     if (!st.catalogoOverrides) st.catalogoOverrides = {};
     st.catalogoOverrides[id] = { ...(st.catalogoOverrides[id] || {}), ...patch };
   });
+  await syncCatalogRemote([getModuloCatalogo(id)], FLAG_UX_MAP);
 }
 export function getModuloCatalogo(id) {
   const st = load();
