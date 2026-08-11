@@ -3615,7 +3615,15 @@ function MerchantDashboard({ comercio, m, st }) {
   const [tab, setTab] = useState("hoy");
   const merchantId = comercio.supabaseId || comercio.id;
   const [txsHoy, setTxsHoy] = useState(null);
-  useEffect(() => { fetchVentasComercioHoy(merchantId).then(setTxsHoy).catch(() => setTxsHoy([])); }, [merchantId]);
+  // Antes solo se pedía al montar MerchantDashboard (dependencia = solo
+  // merchantId) — un merchant que cobraba desde la pestaña "Cobrar" y volvía
+  // a "Resumen del día" seguía viendo los KPIs congelados en cero, aunque
+  // "Mis ventas" (que sí refresca) ya mostrara la venta real (hallado en
+  // vivo, 11-ago). Se vuelve a pedir cada vez que se entra a esta pestaña.
+  useEffect(() => {
+    if (tab !== "hoy" && tab !== "liquidacion") return;
+    fetchVentasComercioHoy(merchantId).then(setTxsHoy).catch(() => setTxsHoy([]));
+  }, [merchantId, tab]);
   const aprobadas = (txsHoy || []).filter(t => t.status === "completada");
   const totalHoy = aprobadas.reduce((a, t) => a + (+t.amount || 0), 0);
   const mdrEfectivo = comercio.mdrOverride ? comercio.tarifa : ((st.adqChannels || [])[0]?.mdr || 1.5);
