@@ -234,12 +234,14 @@ export async function refreshWorldsLive() {
           color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
           estado: (w.status || "activo").toUpperCase(),
           logoUrl: w.logo_url || null,
+          // Derivada 100% de nombre/vertical (no hay columna propia en worlds)
+          // — se regenera siempre para no quedar obsoleta tras un rename.
+          descripcion: `Comunidad ${w.name} · vertical ${w.vertical}.`,
         };
         const base = byId.get(w.id);
         if (base) Object.assign(base, patch);
         else s.mundos.push({
           ...patch, fixed: false, redpontis: false, type: "standard",
-          descripcion: `Comunidad ${w.name} · vertical ${w.vertical}.`,
           eventosConfig: null, modulos: [], createdAt: Date.parse(w.created_at) || Date.now(),
         });
       }
