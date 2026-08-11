@@ -750,7 +750,11 @@ export function CobrarPanel({ comercio, m }) {
   // "Alumno" venía fijo acá aunque el mundo no fuera un colegio — un
   // operador de Jockey Plaza (Retail) viendo "identificar al alumno" al
   // cobrar es confuso, no un detalle cosmético (hallado en vivo, 11-ago).
-  const nomCliente = nomenclaturaFamiliar(m?.vertical).dependiente.toLowerCase();
+  // nomenclaturaFamiliar solo devuelve dos valores posibles ("Alumno" en
+  // colegios, "Cuenta dependiente" en el resto) — el artículo se resuelve acá
+  // a mano porque son géneros distintos ("el alumno" vs "la cuenta...").
+  const nomClienteRaw = nomenclaturaFamiliar(m?.vertical).dependiente.toLowerCase();
+  const nomCliente = { texto: nomClienteRaw, articulo: nomClienteRaw.startsWith("cuenta") ? "la" : "el" };
   const [modo, setModo] = useState("cobrar"); // "cobrar" | "recargar" | "qr"
   const [codigo, setCodigo] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -953,9 +957,9 @@ export function CobrarPanel({ comercio, m }) {
       <div className="max-w-xl bg-surface-container-lowest border border-outline-variant rounded-xl p-6 space-y-5">
         {/* Paso 1: identificar */}
         <div>
-          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar al {nomCliente}</p>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Paso 1 · Identificar {nomCliente.articulo === "la" ? "a la" : "al"} {nomCliente.texto}</p>
           <div className="flex gap-2">
-            <input className={`${inputCls} font-mono`} placeholder={`Código JOI (del QR o pulsera del ${nomCliente})`}
+            <input className={`${inputCls} font-mono`} placeholder={`Código JOI (del QR o pulsera de${nomCliente.articulo === "la" ? " la" : "l"} ${nomCliente.texto})`}
               value={codigo} onChange={e => setCodigo(e.target.value)} disabled={!!cliente}
               onKeyDown={e => e.key === "Enter" && identificar()} autoFocus />
             {!cliente ? (
@@ -1034,7 +1038,7 @@ export function CobrarPanel({ comercio, m }) {
               <NumInput className="text-2xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" step="0.10"
                 value={monto} onChange={v => setMonto(v)} placeholder="0.00" disabled={!canalRecarga} />
             </div>
-            {canalRecarga && <p className="text-[10px] text-on-surface-variant mt-2">Recarga presencial — confirma solo después de recibir el {canalRecarga.nombre.toLowerCase()} del {nomCliente}. Se acredita a su billetera al instante.</p>}
+            {canalRecarga && <p className="text-[10px] text-on-surface-variant mt-2">Recarga presencial — confirma solo después de recibir el {canalRecarga.nombre.toLowerCase()} de{nomCliente.articulo === "la" ? " la" : "l"} {nomCliente.texto}. Se acredita a su billetera al instante.</p>}
           </div>
         )}
 
@@ -1055,7 +1059,7 @@ export function CobrarPanel({ comercio, m }) {
           <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
             <Icon n="check_circle" fill className="text-green-600 text-[32px] block mx-auto mb-1" />
             <p className="font-bold text-green-800">{modo === "cobrar" ? "Cobro aprobado" : "Recarga aprobada"}</p>
-            <p className="text-xs text-green-700">Nuevo saldo del {nomCliente}: S/ {resultado.balance.toFixed(2)}</p>
+            <p className="text-xs text-green-700">Nuevo saldo de{nomCliente.articulo === "la" ? " la" : "l"} {nomCliente.texto}: S/ {resultado.balance.toFixed(2)}</p>
             <BtnOutline className="mt-3" onClick={reset}>{modo === "cobrar" ? "Nueva venta" : "Nueva recarga"}</BtnOutline>
           </div>
         )}
