@@ -28,8 +28,21 @@ export function MundoDetail() {
     // Reconciliación: comercios creados/renombrados directo en Supabase (otra
     // sesión/otro panel) no viven en el store local — sin esto sus paneles
     // (Cobrar, Mi catálogo) no serían alcanzables desde este admin.
+    //
+    // "nuevos" se calculó contra el snapshot de st.comercios que tenía este
+    // efecto AL MONTAR — si la pestaña ya estaba abierta en otra sesión, o el
+    // usuario vuelve a esta página (remount), ese snapshot queda desactualizado
+    // para cuando la promesa resuelve. Filtrar otra vez contra el estado VIVO
+    // dentro del updater (no el snapshot) es lo que hace el push idempotente;
+    // sin esto, dos montajes del mismo componente duplicaban cada comercio ya
+    // reconciliado (hallado en vivo, 11-ago: Adidas y Aruma aparecían 2 veces).
     reconciliarComerciosMundo(id, st.comercios).then(nuevos => {
-      if (nuevos.length) update(s => { s.comercios = [...(s.comercios || []), ...nuevos]; });
+      if (!nuevos.length) return;
+      update(s => {
+        const existingIds = new Set((s.comercios || []).map(c => c.id));
+        const trulyNuevos = nuevos.filter(c => !existingIds.has(c.id));
+        if (trulyNuevos.length) s.comercios = [...(s.comercios || []), ...trulyNuevos];
+      });
     }).catch(() => {});
   }, [id]);
 

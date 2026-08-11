@@ -903,7 +903,14 @@ export async function refreshEventosLive(worldId) {
   const porId = new Map(rows.map(r => [r.id, r]));
   update(st => {
     if (!st.eventos) st.eventos = [];
-    st.eventos.push(...nuevos);
+    // "nuevos" se decidió contra localIds tomado al principio de la función —
+    // entre eso y acá hubo awaits (tipos/tickets por evento), así que otra
+    // sesión pudo haber agregado el mismo evento mientras tanto. Revalidar
+    // contra el estado vivo evita duplicarlo (mismo bug encontrado en
+    // reconciliarComerciosMundo/MundoDetail.jsx, 11-ago).
+    const existingIds = new Set(st.eventos.map(e => e.id));
+    const trulyNuevos = nuevos.filter(e => !existingIds.has(e.id));
+    st.eventos.push(...trulyNuevos);
     for (const e of st.eventos) {
       const r = porId.get(e.id);
       if (!r) continue;
@@ -936,7 +943,15 @@ export async function reconciliarComerciosGlobal() {
   for (const m of mundos) {
     let nuevos;
     try { nuevos = await reconciliarComerciosMundo(m.id, load().comercios); } catch { continue; }
-    if (nuevos && nuevos.length) update(st => { st.comercios = [...(st.comercios || []), ...nuevos]; });
+    if (!nuevos || !nuevos.length) continue;
+    // Filtrar otra vez contra el estado vivo dentro del updater (no el
+    // snapshot con el que se calculó "nuevos") evita duplicados si otra
+    // pestaña/sesión reconcilió los mismos comercios en el mismo momento.
+    update(st => {
+      const existingIds = new Set((st.comercios || []).map(c => c.id));
+      const trulyNuevos = nuevos.filter(c => !existingIds.has(c.id));
+      if (trulyNuevos.length) st.comercios = [...(st.comercios || []), ...trulyNuevos];
+    });
   }
 }
 
