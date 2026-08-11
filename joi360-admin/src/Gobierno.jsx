@@ -17,7 +17,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, Pill, BtnPrimary, BtnOutline, notify, Field, inputCls } from "./ui";
 import { useStore } from "./hooks";
-import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote } from "./supabase";
+import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote, crearAdminUserRemote, actualizarPasswordAdminRemote } from "./supabase";
 
 export function Gobierno() {
   const st = useStore();
@@ -36,6 +36,9 @@ export function Gobierno() {
   const [motivo, setMotivo] = useState("");
   const [viendoMotivo, setViendoMotivo] = useState(null);
   const [adminUsers, setAdminUsers] = useState(null);
+  const [nuevoAdmin, setNuevoAdmin] = useState(null); // { email, name, password } | null = cerrado
+  const [cambiandoClave, setCambiandoClave] = useState(null); // { id, nombre, password } | null
+  const [guardandoAdmin, setGuardandoAdmin] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -109,6 +112,33 @@ export function Gobierno() {
       logErrorControlado("operacion_admin_fallida", "gobierno-aprobacion-comercio", sol.world_id);
       notify(`${err.mensaje} ${err.accion}`, "error");
     } finally { setBusy(null); }
+  };
+
+  const confirmarNuevoAdmin = async () => {
+    if (!nuevoAdmin?.email.trim() || !nuevoAdmin?.name.trim() || !nuevoAdmin?.password.trim()) {
+      notify("Completa correo, nombre y contraseña.", "error"); return;
+    }
+    setGuardandoAdmin(true);
+    try {
+      const creado = await crearAdminUserRemote(nuevoAdmin.email, nuevoAdmin.name, nuevoAdmin.password);
+      setAdminUsers(u => [...(u || []), creado]);
+      setNuevoAdmin(null);
+      notify(`Admin "${creado.name}" creado — ya puede entrar con su correo y contraseña.`);
+    } catch (e) {
+      notify("No se pudo crear el admin: " + e.message, "error");
+    } finally { setGuardandoAdmin(false); }
+  };
+
+  const confirmarCambioClave = async () => {
+    if (!cambiandoClave?.password.trim()) { notify("Escribe la nueva contraseña.", "error"); return; }
+    setGuardandoAdmin(true);
+    try {
+      await actualizarPasswordAdminRemote(cambiandoClave.id, cambiandoClave.password);
+      notify(`Contraseña de "${cambiandoClave.nombre}" actualizada.`);
+      setCambiandoClave(null);
+    } catch (e) {
+      notify("No se pudo cambiar la contraseña: " + e.message, "error");
+    } finally { setGuardandoAdmin(false); }
   };
 
   const confirmarRechazo = async () => {
@@ -380,12 +410,14 @@ export function Gobierno() {
                 <p className="font-semibold text-sm">Administradores de plataforma</p>
                 <p className="text-xs text-on-surface-variant">Acceso total al panel central JOI 360</p>
               </div>
-              <BtnPrimary className="!py-1.5 !px-3 text-xs opacity-50 cursor-not-allowed" disabled>
-                <Icon n="add" className="text-[14px]" /> Invitar
+              <BtnPrimary className="!py-1.5 !px-3 text-xs" onClick={() => setNuevoAdmin({ email: "", name: "", password: "" })}>
+                <Icon n="add" className="text-[14px]" /> Nuevo admin
               </BtnPrimary>
             </div>
             {adminUsers === null ? (
               <p className="px-5 py-4 text-sm text-on-surface-variant">Cargando…</p>
+            ) : adminUsers.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-on-surface-variant">Sin administradores todavía.</p>
             ) : (adminUsers.map(u => (
               <div key={u.id} className="px-5 py-3.5 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -396,14 +428,47 @@ export function Gobierno() {
                   <p className="text-xs text-on-surface-variant">{u.email}</p>
                 </div>
                 <Pill color="bg-primary-fixed text-primary">Platform Admin</Pill>
+                <BtnOutline className="!py-1 !px-2.5 !text-xs" onClick={() => setCambiandoClave({ id: u.id, nombre: u.name || u.email, password: "" })}>
+                  <Icon n="key" className="text-[13px]" /> Cambiar clave
+                </BtnOutline>
               </div>
             )))}
           </div>
           <div className="p-4 border border-dashed border-outline-variant rounded-xl text-center">
             <Icon n="group_add" className="text-outline text-[28px] mb-2" />
-            <p className="text-sm font-medium text-on-surface-variant">Multi-usuario disponible en R1</p>
-            <p className="text-xs text-outline mt-0.5">En la siguiente fase podrás invitar admins de comunidad, merchants y organizadores con acceso limitado.</p>
+            <p className="text-sm font-medium text-on-surface-variant">Multi-usuario con roles llega en R1</p>
+            <p className="text-xs text-outline mt-0.5">Por ahora todo admin creado acá tiene acceso total (Platform Admin). Roles limitados por comunidad/merchant/organizador llegan en la siguiente fase.</p>
           </div>
+
+          {nuevoAdmin && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-on-surface/30 backdrop-blur-sm" onClick={() => setNuevoAdmin(null)}></div>
+              <div className="relative bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-sm p-6 z-10 space-y-3">
+                <h3 className="font-semibold mb-1">Nuevo admin de plataforma</h3>
+                <input className={inputCls} placeholder="Correo" type="email" value={nuevoAdmin.email} onChange={e => setNuevoAdmin(a => ({ ...a, email: e.target.value }))} />
+                <input className={inputCls} placeholder="Nombre" value={nuevoAdmin.name} onChange={e => setNuevoAdmin(a => ({ ...a, name: e.target.value }))} />
+                <input className={inputCls} placeholder="Contraseña" type="password" value={nuevoAdmin.password} onChange={e => setNuevoAdmin(a => ({ ...a, password: e.target.value }))} />
+                <div className="flex gap-2 pt-1">
+                  <BtnOutline className="flex-1" onClick={() => setNuevoAdmin(null)}>Cancelar</BtnOutline>
+                  <BtnPrimary className="flex-1" disabled={guardandoAdmin} onClick={confirmarNuevoAdmin}>{guardandoAdmin ? "Creando…" : "Crear admin"}</BtnPrimary>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {cambiandoClave && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-on-surface/30 backdrop-blur-sm" onClick={() => setCambiandoClave(null)}></div>
+              <div className="relative bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-sm p-6 z-10 space-y-3">
+                <h3 className="font-semibold mb-1">Cambiar clave — {cambiandoClave.nombre}</h3>
+                <input className={inputCls} placeholder="Nueva contraseña" type="password" value={cambiandoClave.password} onChange={e => setCambiandoClave(c => ({ ...c, password: e.target.value }))} />
+                <div className="flex gap-2 pt-1">
+                  <BtnOutline className="flex-1" onClick={() => setCambiandoClave(null)}>Cancelar</BtnOutline>
+                  <BtnPrimary className="flex-1" disabled={guardandoAdmin} onClick={confirmarCambioClave}>{guardandoAdmin ? "Guardando…" : "Guardar"}</BtnPrimary>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../hooks.js";
 import { useUser, joinMundo, setActiveMundo, logoutUser } from "../userStore.js";
+import { getSyntheticUserId, getOrCreateWallet } from "../supabaseClient.js";
 import MundoInfoModal from "../components/MundoInfoModal.jsx";
 
 export default function LandingPage() {
@@ -40,14 +41,23 @@ export default function LandingPage() {
 
   const abrirPreview = (m) => setPreview({ mundo: m, mode: "preview" });
 
-  const confirmarUnion = () => {
+  const confirmarUnion = async () => {
     const m = preview.mundo;
     setJoining(m.id);
-    setTimeout(() => {
-      joinMundo(m.id); setActiveMundo(m.id);
-      setJoining(null);
-      setPreview({ mundo: m, mode: "success" });
-    }, 700);
+    // Antes "unirse" era 100% local (memberships en localStorage) — la
+    // wallet recién se creaba la primera vez que la persona abría la
+    // pestaña Wallet de ese mundo. Si nunca la abría (o lo hacía desde otro
+    // dispositivo), el POS no encontraba ninguna fila en `wallets` al
+    // buscarla por su código JOI y respondía "usuario no reconocido",
+    // aunque la cuenta y la membresía fueran reales. Se crea acá, al
+    // momento de unirse, para que exista desde el primer instante.
+    const walletMod = (m.modulos || []).find(x => x.id === "wallet" && x.enabled);
+    if (walletMod) {
+      await getOrCreateWallet(getSyntheticUserId(), m.id).catch(() => {});
+    }
+    joinMundo(m.id); setActiveMundo(m.id);
+    setJoining(null);
+    setPreview({ mundo: m, mode: "success" });
   };
 
   const irAlHub = () => nav("/hub");

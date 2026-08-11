@@ -483,6 +483,25 @@ export async function verificarAdminLoginRemote(email, password) {
 export async function fetchAdminUsersRemote() {
   return rest("admin_users?select=id,email,name&order=created_at");
 }
+// No existía ninguna forma real de crear/editar un admin_user desde el panel
+// — el botón "Invitar" estaba deshabilitado y quien necesitaba dar de alta
+// uno terminaba escribiendo directo en el editor de tablas de Supabase, que
+// SÍ hashea bien (el trigger real ya corría) pero deja el campo `password`
+// en NULL después de guardar por diseño (el texto plano nunca se persiste),
+// lo que se leía como "no guardó la contraseña" sin serlo.
+export async function crearAdminUserRemote(email, name, password) {
+  const rows = await rest("admin_users", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ email: email.trim().toLowerCase(), name: name.trim(), password }),
+  });
+  return rows?.[0] || null;
+}
+export async function actualizarPasswordAdminRemote(id, password) {
+  await rest(`admin_users?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ password }),
+  });
+}
 export async function fetchMerchantsRemote(worldId) {
   return rest(`merchants?world_id=eq.${worldId}&select=*&order=created_at`);
 }
