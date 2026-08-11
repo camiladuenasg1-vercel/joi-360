@@ -312,6 +312,7 @@ function Step1Contexto({ f, set }) {
   const subirLogo = async (file) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { notify("El logo debe ser una imagen (PNG/JPG).", "error"); return; }
+    if (file.size > 5 * 1024 * 1024) { notify("El logo pesa más de 5 MB. Comprímelo antes de subirlo.", "error"); return; }
     setSubiendoLogo(true);
     try {
       const path = `mundos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -422,6 +423,7 @@ function Step3Representantes({ f, set }) {
   const subirContrato = async (file) => {
     if (!file) return;
     if (file.type !== "application/pdf") { notify("El contrato debe ser un archivo PDF.", "error"); return; }
+    if (file.size > 15 * 1024 * 1024) { notify("El contrato pesa más de 15 MB. Comprímelo antes de subirlo.", "error"); return; }
     setSubiendo(true);
     try {
       const path = `contratos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -438,6 +440,11 @@ function Step3Representantes({ f, set }) {
   const subirFichaRuc = async (file) => {
     if (!file) return;
     if (file.type !== "application/pdf") { notify("La ficha RUC debe ser un archivo PDF.", "error"); return; }
+    // Gap real (hallado en vivo, 11-ago): sin este chequeo, un PDF que
+    // superaba el límite del bucket de Supabase Storage tiraba el error crudo
+    // del servidor (HTTP 413 "EntityTooLarge") directo a la usuaria en vez de
+    // un mensaje entendible. 15 MB es holgado para una ficha RUC escaneada.
+    if (file.size > 15 * 1024 * 1024) { notify("La ficha RUC pesa más de 15 MB. Comprímela antes de subirla.", "error"); return; }
     setSubiendoRuc(true);
     try {
       const path = `fichas-ruc/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;

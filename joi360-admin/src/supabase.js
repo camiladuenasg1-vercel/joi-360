@@ -281,7 +281,18 @@ export async function uploadArchivo(bucket, path, file) {
     headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
     body: file,
   });
-  if (!res.ok) throw new Error(`Storage upload → HTTP ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    // El límite de tamaño del bucket lo tiene Supabase, no este código — cada
+    // llamador ya valida un tope razonable antes de subir, pero si el archivo
+    // igual pasa ese chequeo y el bucket lo rechaza, mejor un mensaje claro
+    // que el JSON crudo de Storage (hallado en vivo, 11-ago: "EntityTooLarge"
+    // llegaba tal cual a la usuaria al subir una ficha RUC).
+    if (res.status === 413 || body.includes("EntityTooLarge") || body.includes("exceeded the maximum allowed size")) {
+      throw new Error("El archivo es muy pesado para el límite configurado en Supabase Storage. Pide a alguien con acceso al dashboard que suba el límite del bucket joi360-media, o comprime el archivo.");
+    }
+    throw new Error(`Storage upload → HTTP ${res.status}: ${body}`);
+  }
   return `${SUPA_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
