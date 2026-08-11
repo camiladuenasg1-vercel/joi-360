@@ -140,7 +140,7 @@ export async function registrarUsuario({ nombres, apellidos, docTipo, docNumero,
 // tabla legible. Esa huella lleva un secreto que no puede viajar en el bundle.
 const API = "https://joi-pos-backend.vercel.app";
 
-async function guardarPerfil({ id, nombres, apellidos, docTipo, docNumero, email }) {
+export async function guardarPerfil({ id, nombres, apellidos, docTipo, docNumero, email }) {
   await fetch(`${API}/api/pos/v1/perfiles`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

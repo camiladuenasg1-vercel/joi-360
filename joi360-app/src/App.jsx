@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-d
 import { useUser, updateUser } from "./userStore.js";
 import { refreshWorldsLive } from "./store.js";
 import { getSyntheticUserId, fetchMembershipsReales } from "./supabaseClient.js";
+import { guardarPerfil } from "./auth.js";
 import AuthPage from "./pages/Auth.jsx";
 import HubPage from "./pages/Hub.jsx";
 import MundosPage from "./pages/Mundos.jsx";
@@ -51,6 +52,22 @@ export default function App() {
         worldIds.forEach(id => { if (!s.memberships.includes(id)) s.memberships.push(id); });
       });
     }).catch(() => {});
+  }, [u?.auth]);
+
+  // Auto-sanación del perfil visible (app_profiles): guardarPerfil() se
+  // dispara al registrarse y en cada login explícito, pero una sesión que
+  // sigue con el token guardado (sin volver a pasar por iniciarSesion) nunca
+  // reintentaba si esa llamada falló una vez — se confirmó en vivo (10-ago)
+  // que varias cuentas reales con wallet activa en Jockey Plaza no tenían
+  // ninguna fila en app_profiles, así que "Usuarios" en el admin las mostraba
+  // sin nombre ni ningún dato. Se repite acá, con lo que hay disponible en la
+  // sesión local, cada vez que la app arranca ya logueada.
+  useEffect(() => {
+    if (!u?.auth?.nombre) return;
+    const partes = u.auth.nombre.trim().split(/\s+/);
+    const nombres = partes[0];
+    const apellidos = partes.slice(1).join(" ") || partes[0];
+    guardarPerfil({ id: getSyntheticUserId(), nombres, apellidos, email: u.auth.email }).catch(() => {});
   }, [u?.auth]);
 
   return (
