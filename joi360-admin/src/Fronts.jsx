@@ -1445,15 +1445,17 @@ function ProgramaBNPLPanel({ comercio, m }) {
 // mientras estén vigentes.
 function CampanasBNPLPanel({ worldId, merchantId, catalogo, productosPuntuales, campanas, setCampanas, campDraft, setCampDraft }) {
   const opcionesProducto = (catalogo && catalogo.length ? catalogo.map(p => ({ id: p.id, nombre: p.name })) : (productosPuntuales || []).map(p => ({ id: p.id, nombre: p.nombre })));
+  const [creandoCampana, setCreandoCampana] = useState(false);
 
   const crear = async () => {
     if (!campDraft.nombre.trim()) return;
+    setCreandoCampana(true);
     try {
       const saved = await crearCampanaBNPL(worldId, merchantId, { ...campDraft, productos: campDraft.productoIds });
       setCampanas(c => [saved, ...(c || [])]);
       setCampDraft({ nombre: "", fechaInicio: "", fechaFin: "", productoIds: [] });
       notify(`Campaña "${saved.nombre}" creada.`);
-    } catch { notify("No se pudo crear la campaña.", "error"); }
+    } catch { notify("No se pudo crear la campaña.", "error"); } finally { setCreandoCampana(false); }
   };
   const eliminar = async (id, nombre) => {
     if (!window.confirm(`¿Eliminar la campaña "${nombre}"? Los productos vuelven a su financiamiento base.`)) return;
@@ -1501,7 +1503,7 @@ function CampanasBNPLPanel({ worldId, merchantId, catalogo, productosPuntuales, 
             ))}
           </div>
         )}
-        <BtnOutline className="!py-1.5 !px-3 !text-xs" disabled={!campDraft.nombre.trim()} onClick={crear}>
+        <BtnOutline className="!py-1.5 !px-3 !text-xs" disabled={!campDraft.nombre.trim()} loading={creandoCampana} loadingLabel="Creando…" onClick={crear}>
           <Icon n="add" className="text-[16px]" /> Crear campaña
         </BtnOutline>
       </div>
@@ -3457,7 +3459,7 @@ function SponsorSoporte({ m, tickets, preview }) {
         ))}
       </div>
       <Drawer open={open} onClose={() => setOpen(false)} icon="support_agent" title="Nueva solicitud a RedPontis" subtitle={m.nombre}
-        footer={<><BtnOutline onClick={() => setOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!f.asunto || enviando} onClick={save}>{enviando ? "Enviando…" : "Enviar solicitud"}</BtnPrimary></>}>
+        footer={<><BtnOutline onClick={() => setOpen(false)} disabled={enviando}>Cancelar</BtnOutline><BtnPrimary disabled={!f.asunto} loading={enviando} loadingLabel="Enviando…" onClick={save}>Enviar solicitud</BtnPrimary></>}>
         <div className="space-y-5">
           <Field label="Tipo">
             <select className={inputCls} value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value })}>
@@ -3614,6 +3616,7 @@ function MerchantDashboard({ comercio, m, st }) {
   const tickets = (st.tickets || []).filter(t => t.mundoId === m?.id && t.origen === "merchant" && t.comercioId === comercio.id);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [tf, setTf] = useState({ asunto: "", detalle: "", tipo: "Operativo" });
+  const [enviandoTicket, setEnviandoTicket] = useState(false);
   const modulosActivos = m?.modulos?.filter(x => x.enabled).map(x => x.id) || [];
 
   // Programa BNPL / Menú: la pestaña aparece solo si el Mundo habilitó la
@@ -3633,6 +3636,7 @@ function MerchantDashboard({ comercio, m, st }) {
   ];
 
   const sendTicket = async () => {
+    setEnviandoTicket(true);
     const localId = uid("tk");
     update(s => { if(!s.tickets)s.tickets=[]; s.tickets.push({ id: localId, mundoId: m?.id, comercioId: comercio.id, origen: "merchant", tipo: tf.tipo, asunto: tf.asunto, detalle: tf.detalle, prioridad: "Media", estado: "ABIERTO", asignado: null, createdAt: Date.now() }); });
     try {
@@ -3642,7 +3646,7 @@ function MerchantDashboard({ comercio, m, st }) {
       setTf({ asunto: "", detalle: "", tipo: "Operativo" }); setTicketOpen(false);
     } catch (e) {
       notify(`No se pudo enviar la solicitud: ${e.message}`, "error");
-    }
+    } finally { setEnviandoTicket(false); }
   };
 
   return (
@@ -3759,7 +3763,7 @@ function MerchantDashboard({ comercio, m, st }) {
                 ))}
               </div>
               <Drawer open={ticketOpen} onClose={() => setTicketOpen(false)} icon="support_agent" title="Nueva solicitud de soporte" subtitle={comercio.nombre}
-                footer={<><BtnOutline onClick={() => setTicketOpen(false)}>Cancelar</BtnOutline><BtnPrimary disabled={!tf.asunto} onClick={sendTicket}>Enviar solicitud</BtnPrimary></>}>
+                footer={<><BtnOutline onClick={() => setTicketOpen(false)} disabled={enviandoTicket}>Cancelar</BtnOutline><BtnPrimary disabled={!tf.asunto} loading={enviandoTicket} loadingLabel="Enviando…" onClick={sendTicket}>Enviar solicitud</BtnPrimary></>}>
                 <div className="space-y-4">
                   <Field label="Tipo"><select className={inputCls} value={tf.tipo} onChange={e => setTf({ ...tf, tipo: e.target.value })}>
                     {["Operativo", "POS / Hardware", "Incidencia de cobro", "Inventario", "Otro"].map(t => <option key={t}>{t}</option>)}

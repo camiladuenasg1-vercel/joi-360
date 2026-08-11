@@ -450,7 +450,7 @@ export function Gobierno() {
                 <input className={inputCls} placeholder="Contraseña" type="password" value={nuevoAdmin.password} onChange={e => setNuevoAdmin(a => ({ ...a, password: e.target.value }))} />
                 <div className="flex gap-2 pt-1">
                   <BtnOutline className="flex-1" onClick={() => setNuevoAdmin(null)}>Cancelar</BtnOutline>
-                  <BtnPrimary className="flex-1" disabled={guardandoAdmin} onClick={confirmarNuevoAdmin}>{guardandoAdmin ? "Creando…" : "Crear admin"}</BtnPrimary>
+                  <BtnPrimary className="flex-1" loading={guardandoAdmin} loadingLabel="Creando…" onClick={confirmarNuevoAdmin}>Crear admin</BtnPrimary>
                 </div>
               </div>
             </div>
@@ -464,7 +464,7 @@ export function Gobierno() {
                 <input className={inputCls} placeholder="Nueva contraseña" type="password" value={cambiandoClave.password} onChange={e => setCambiandoClave(c => ({ ...c, password: e.target.value }))} />
                 <div className="flex gap-2 pt-1">
                   <BtnOutline className="flex-1" onClick={() => setCambiandoClave(null)}>Cancelar</BtnOutline>
-                  <BtnPrimary className="flex-1" disabled={guardandoAdmin} onClick={confirmarCambioClave}>{guardandoAdmin ? "Guardando…" : "Guardar"}</BtnPrimary>
+                  <BtnPrimary className="flex-1" loading={guardandoAdmin} loadingLabel="Guardando…" onClick={confirmarCambioClave}>Guardar</BtnPrimary>
                 </div>
               </div>
             </div>

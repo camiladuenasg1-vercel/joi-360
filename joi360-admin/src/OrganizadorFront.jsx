@@ -1272,6 +1272,7 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
   };
   const [f, setF] = useState(blank);
   const [step, setStep] = useState(1);
+  const [guardando, setGuardando] = useState(false);
   // Cronograma real (Gantt #66/#78) — solo disponible editando un evento ya
   // publicado (necesita un event_id real para el FK); un evento nuevo se
   // guarda primero y el cronograma se carga reabriendo en modo edición.
@@ -1281,6 +1282,7 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
   React.useEffect(() => {
     if (open) {
       setStep(1);
+      setGuardando(false);
       if (editing) {
         setF({
           ...blank,
@@ -1328,6 +1330,7 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
   const canPublish = f.nombre && f.fecha && (!requiereOrganizador || f.organizadorId);
 
   const save = async () => {
+    setGuardando(true);
     const evId = editing?.id || uid("ev");
     // Release gate: todo evento nuevo (o rechazado que se reenvía) pasa por la
     // cola de aprobación de RedPontis antes de publicarse en la superapp.
@@ -1366,7 +1369,7 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", `evento-guardar:${evId}`, mundoId);
       notify(`Evento guardado localmente, pero sin publicar en la app: ${err.mensaje}`, "error");
-    }
+    } finally { setGuardando(false); }
   };
 
   const addTipoEntrada = () => {
@@ -1395,7 +1398,7 @@ export function EventoDrawer({ open, onClose, mundoId, editing, modosPermitidos 
         {step < 3
           ? <BtnPrimary disabled={!canNext} onClick={() => setStep(step + 1)}>Siguiente <Icon n="arrow_forward" className="text-[16px]" /></BtnPrimary>
           : step === 3
-          ? <BtnPrimary disabled={!canPublish} onClick={save}><Icon n="rocket_launch" className="text-[16px]" /> {editing ? "Guardar cambios" : "Publicar evento"}</BtnPrimary>
+          ? <BtnPrimary disabled={!canPublish} loading={guardando} loadingLabel={editing ? "Guardando…" : "Publicando…"} onClick={save}><Icon n="rocket_launch" className="text-[16px]" /> {editing ? "Guardar cambios" : "Publicar evento"}</BtnPrimary>
           : <BtnPrimary onClick={onClose}><Icon n="check" className="text-[16px]" /> Listo</BtnPrimary>}
         {step === 3 && editing && <BtnOutline onClick={() => setStep(4)}>Cronograma <Icon n="arrow_forward" className="text-[16px]" /></BtnOutline>}
       </>}>

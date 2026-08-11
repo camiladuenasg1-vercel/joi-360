@@ -283,6 +283,8 @@ function PosDevicesTab() {
   const [showModelos, setShowModelos] = useState(false);
   const [nuevoModelo, setNuevoModelo] = useState({ marca:"", modelo:"", tipo:"POS Físico", icon:ICONOS_MODELO_HW[0], conexion:"", nfc:false, precio:"" });
   const [guardandoModelo, setGuardandoModelo] = useState(false);
+  const [registrandoUnit, setRegistrandoUnit] = useState(false);
+  const [asignando, setAsignando] = useState(false);
 
   const mundos  = st.mundos || [];
   const comercios = st.comercios || [];
@@ -335,6 +337,7 @@ function PosDevicesTab() {
 
   const addUnit = async () => {
     if(!newUnit.serial.trim()) return;
+    setRegistrandoUnit(true);
     try {
       await registerPosDeviceRemote(newUnit.modelo_id, newUnit.serial.trim(), newUnit.tipoIngreso);
       notify(`Unidad "${newUnit.serial}" registrada en stock.`);
@@ -345,7 +348,7 @@ function PosDevicesTab() {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", "hardware-registrar", null);
       notify(`${err.mensaje} ${err.accion}`, "error");
-    }
+    } finally { setRegistrandoUnit(false); }
   };
 
   // Carga masiva vía archivo (Gantt #53): CSV/Excel con una unidad por línea
@@ -442,6 +445,7 @@ function PosDevicesTab() {
 
   const confirmAssign = async (d) => {
     if (!assignForm.worldId || !assignForm.merchantId) return;
+    setAsignando(true);
     try {
       await assignPosDeviceRemote(d.id, assignForm.worldId, assignForm.merchantId, assignForm.eventId || null);
       const merchant = comercios.find(c => (c.supabaseId || c.id) === assignForm.merchantId);
@@ -453,7 +457,7 @@ function PosDevicesTab() {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", "hardware-asignar", assignForm.worldId || null);
       notify(`${err.mensaje} ${err.accion}`, "error");
-    }
+    } finally { setAsignando(false); }
   };
 
   // Stats por modelo
@@ -628,7 +632,7 @@ function PosDevicesTab() {
                             <option value="">Sin evento (asignación permanente)</option>
                             {eventosDelMundo(assignForm.worldId).map(ev=><option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                           </select>
-                          <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!assignForm.merchantId} onClick={()=>confirmAssign(d)}>
+                          <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={!assignForm.merchantId} loading={asignando} loadingLabel="Asignando…" onClick={()=>confirmAssign(d)}>
                             Confirmar asignación
                           </BtnPrimary>
                           <button onClick={()=>setAssigningId(null)} className="text-xs text-on-surface-variant">Cancelar</button>
@@ -686,8 +690,8 @@ function PosDevicesTab() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <BtnOutline className="flex-1" onClick={()=>setShowAddUnit(false)}>Cancelar</BtnOutline>
-              <BtnPrimary className="flex-1" onClick={addUnit} disabled={!newUnit.serial.trim()}>
+              <BtnOutline className="flex-1" onClick={()=>setShowAddUnit(false)} disabled={registrandoUnit}>Cancelar</BtnOutline>
+              <BtnPrimary className="flex-1" onClick={addUnit} disabled={!newUnit.serial.trim()} loading={registrandoUnit} loadingLabel="Registrando…">
                 <Icon n="add" className="text-[16px]"/> Registrar
               </BtnPrimary>
             </div>
@@ -861,6 +865,7 @@ function BanditasNfcTab() {
   const [quickLote, setQuickLote] = useState("");
   const [quickBusy, setQuickBusy] = useState(false);
   const [renombrandoLote, setRenombrandoLote] = useState(null); // nombre viejo del lote en edición
+  const [renombrandoLoteBusy, setRenombrandoLoteBusy] = useState(false);
   const [nombreLoteNuevo, setNombreLoteNuevo] = useState("");
   const [eliminandoLote, setEliminandoLote] = useState(null); // nombre del lote con confirmación de borrado abierta
   const [eliminandoLoteBusy, setEliminandoLoteBusy] = useState(false);
@@ -1149,6 +1154,7 @@ function BanditasNfcTab() {
   const confirmarRenombrarLote = async (loteViejo) => {
     const nuevo = nombreLoteNuevo.trim();
     if (!nuevo || nuevo === loteViejo) { setRenombrandoLote(null); return; }
+    setRenombrandoLoteBusy(true);
     try {
       await renombrarLoteNfcRemote(loteViejo, nuevo);
       notify(`Lote renombrado a "${nuevo}".`);
@@ -1159,7 +1165,7 @@ function BanditasNfcTab() {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", "nfc-lote-renombrar", null);
       notify(`${err.mensaje} ${err.accion}`, "error");
-    }
+    } finally { setRenombrandoLoteBusy(false); }
   };
 
   // Borrar un lote es para deshacer una carga mala. Si tiene banditas ya
@@ -1484,8 +1490,8 @@ function BanditasNfcTab() {
           <input className="h-8 px-2 bg-surface border border-outline-variant rounded-lg text-xs flex-1 min-w-[140px]"
             value={nombreLoteNuevo} onChange={e=>setNombreLoteNuevo(e.target.value)}
             onKeyDown={e=>e.key==="Enter" && confirmarRenombrarLote(renombrandoLote)} autoFocus/>
-          <BtnPrimary className="!py-1.5 !px-3 !text-xs" onClick={()=>confirmarRenombrarLote(renombrandoLote)}>Guardar</BtnPrimary>
-          <button onClick={()=>setRenombrandoLote(null)} className="text-xs text-on-surface-variant">Cancelar</button>
+          <BtnPrimary className="!py-1.5 !px-3 !text-xs" loading={renombrandoLoteBusy} loadingLabel="Guardando…" onClick={()=>confirmarRenombrarLote(renombrandoLote)}>Guardar</BtnPrimary>
+          <button onClick={()=>setRenombrandoLote(null)} disabled={renombrandoLoteBusy} className="text-xs text-on-surface-variant disabled:opacity-40">Cancelar</button>
         </div>
       )}
 

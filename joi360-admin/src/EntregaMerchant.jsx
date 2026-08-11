@@ -134,9 +134,9 @@ Equipo RedPontis · JOI 360`;
               <BtnOutline onClick={copiarMensaje} className="flex-1"><Icon n="content_copy" className="text-[16px]" /> Copiar mensaje de entrega</BtnOutline>
               <BtnPrimary onClick={onClose}>Cerrar</BtnPrimary>
             </div>
-          : <><BtnOutline onClick={onClose}>Cancelar</BtnOutline>
-             <BtnPrimary disabled={!confirm || entregando} onClick={entregar}>
-               <Icon n="rocket_launch" className="text-[16px]" /> {entregando ? "Entregando…" : "Ejecutar entrega"}
+          : <><BtnOutline onClick={onClose} disabled={entregando}>Cancelar</BtnOutline>
+             <BtnPrimary disabled={!confirm} loading={entregando} loadingLabel="Entregando…" onClick={entregar}>
+               <Icon n="rocket_launch" className="text-[16px]" /> Ejecutar entrega
              </BtnPrimary></>
       }>
       <div className="space-y-6">

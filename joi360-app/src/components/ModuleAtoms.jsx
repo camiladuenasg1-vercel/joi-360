@@ -154,15 +154,16 @@ export function ConfigBanner({ icon = "info", message, color = "amber" }) {
   );
 }
 
-export function PrimaryBtn({ label, icon, onClick, disabled, full = true }) {
+export function PrimaryBtn({ label, icon, onClick, disabled, full = true, loading, loadingLabel }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={`${full ? "w-full" : ""} py-4 rounded-2xl text-white font-black text-sm tap-active disabled:opacity-30 flex items-center justify-center gap-2`}
       style={{ background: "linear-gradient(135deg,#3525cd,#4f46e5)", boxShadow: "0 6px 20px rgba(53,37,205,0.28)" }}>
-      {icon && <Icon name={icon} fill size="text-base" color="text-white" />}
-      {label}
+      {loading
+        ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-hidden="true" />{loadingLabel || label}</>
+        : <>{icon && <Icon name={icon} fill size="text-base" color="text-white" />}{label}</>}
     </button>
   );
 }
