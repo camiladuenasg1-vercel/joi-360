@@ -855,16 +855,21 @@ export async function refreshMundosLive() {
 }
 
 // Eventos creados directo en Supabase (u otro browser/sesión admin) eran
-// invisibles en OrganizadorFront — mismo gap que refreshMundosLive(). Solo
-// AGREGA eventos remotos ausentes; nunca pisa uno que ya exista localmente
-// (podría tener ediciones locales aún no sincronizadas).
+// invisibles en OrganizadorFront — mismo gap que refreshMundosLive(). AGREGA
+// eventos remotos ausentes y además sincroniza `estado`/`motivoRechazo` en
+// los que ya existen localmente: esos dos campos solo cambian vía el flujo
+// de Aprobaciones/Gobierno (nunca por edición local del sponsor), así que
+// siempre es seguro pisarlos con el valor real de Supabase — mismo criterio
+// que el fix de `codigo` en reconciliarComerciosMundo. Sin esto, un evento
+// aprobado por RedPontis se quedaba "EN REVISIÓN" para siempre en el propio
+// dashboard del sponsor que lo creó (hallado en vivo, 11-ago).
 export async function refreshEventosLive(worldId) {
   let rows;
   try { rows = await fetchEventosDeMundo(worldId); } catch (e) { console.warn("[eventos-live]", e); return; }
   if (!rows || !rows.length) return;
-  const localIds = new Set((load().eventos || []).map(e => e.id));
+  const locales = load().eventos || [];
+  const localIds = new Set(locales.map(e => e.id));
   const faltantes = rows.filter(r => !localIds.has(r.id));
-  if (!faltantes.length) return;
 
   const nuevos = [];
   for (const r of faltantes) {
@@ -894,7 +899,19 @@ export async function refreshEventosLive(worldId) {
       tiposEntrada, createdAt: Date.parse(r.created_at) || Date.now(),
     });
   }
-  update(st => { if (!st.eventos) st.eventos = []; st.eventos.push(...nuevos); });
+
+  const porId = new Map(rows.map(r => [r.id, r]));
+  update(st => {
+    if (!st.eventos) st.eventos = [];
+    st.eventos.push(...nuevos);
+    for (const e of st.eventos) {
+      const r = porId.get(e.id);
+      if (!r) continue;
+      if (r.estado && e.estado !== r.estado) e.estado = r.estado;
+      const motivo = r.motivo_rechazo || null;
+      if (e.motivoRechazo !== motivo) e.motivoRechazo = motivo;
+    }
+  });
 }
 
 export function getMundo(id) { return (load().mundos||[]).find(m => m.id === id); }
