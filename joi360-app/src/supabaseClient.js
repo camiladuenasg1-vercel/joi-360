@@ -481,6 +481,26 @@ export async function crearDependienteRemote(worldId, guardianUserId, nombre, dn
 export async function fetchDependienteBalance(dependentUserId, worldId) {
   return fetchWalletBalance(dependentUserId, worldId);
 }
+// No existía forma de eliminar un dependiente ya creado — solo de crearlo y
+// editarle el perfil/alergias. Bloquea si todavía tiene saldo real en su
+// wallet (ese dinero es del titular, no se puede simplemente desaparecer)
+// y, si no, limpia también su bandita vinculada antes de borrar la fila.
+export async function verificarBloqueoEliminarDependiente(dependentUserId, worldId) {
+  const rows = await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${worldId}&select=balance`).catch(() => []);
+  return { balance: rows?.[0]?.balance != null ? +rows[0].balance : 0 };
+}
+export async function eliminarDependienteRemote(dependentUserId, worldId) {
+  await rest(`nfc_bands?linked_user_id=eq.${dependentUserId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ linked_user_id: null, estado: "disponible" }),
+  }).catch(() => {});
+  await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${worldId}`, {
+    method: "DELETE", headers: { Prefer: "return=minimal" },
+  }).catch(() => {});
+  await rest(`dependents?dependent_user_id=eq.${dependentUserId}&world_id=eq.${worldId}`, {
+    method: "DELETE", headers: { Prefer: "return=minimal" },
+  });
+}
 // Antes las alergias solo se fijaban una vez, al crear el dependiente — un
 // dato médico que sí cambia con el tiempo y quedaba sin forma de corregir.
 export async function actualizarDependienteAlergiasRemote(dependentUserId, alergias) {

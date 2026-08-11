@@ -10,6 +10,7 @@ import {
   errorControlado, logErrorControlado, mensajeDeError, fetchProductosMundoLive, comprarProductosLive, fetchMisAccesos,
   fetchMiPerfilExtendido, guardarPerfilExtendido,
   fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, actualizarDependientePerfilRemote, fetchDependienteBalance,
+  verificarBloqueoEliminarDependiente, eliminarDependienteRemote,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
   transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
@@ -932,6 +933,9 @@ function RestriccionesTemplate({ cfg, u }) {
   const [planesSuscripcion, setPlanesSuscripcion] = useState(null);
   const [planSeleccionadoId, setPlanSeleccionadoId] = useState(null);
   const [codigoAbierto, setCodigoAbierto] = useState(null); // dependent_user_id con QR/código visible
+  const [eliminandoId, setEliminandoId] = useState(null); // dependent_user_id con confirmación de borrado abierta
+  const [borrandoDep, setBorrandoDep] = useState(false);
+  const [errorEliminarDep, setErrorEliminarDep] = useState(null);
   const [editandoAlergiasId, setEditandoAlergiasId] = useState(null); // dependent_user_id en edición
   const [editAlergiasArr, setEditAlergiasArr] = useState([]);
   const [guardandoAlergias, setGuardandoAlergias] = useState(false);
@@ -1291,6 +1295,31 @@ function RestriccionesTemplate({ cfg, u }) {
                       setReload(k=>k+1);
                     } catch { setPerfilError("No se pudo guardar. Intenta de nuevo."); } finally { setGuardandoPerfil(false); }
                   }} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoPerfil?"Guardando…":"Guardar"}</button>
+                </div>
+                <button onClick={()=>{setEditandoPerfilId(null); setEliminandoId(c.dependent_user_id); setErrorEliminarDep(null);}}
+                  className="w-full py-2 text-xs font-bold text-red-600 tap-active">Eliminar dependiente</button>
+              </div>
+            )}
+            {eliminandoId === c.dependent_user_id && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
+                <p className="text-sm font-bold text-red-700">¿Eliminar a {c.nombre}?</p>
+                <p className="text-xs text-red-700/80 leading-relaxed">Se borra su perfil, restricciones y se libera su bandita vinculada (si tiene). Esta acción no se puede deshacer.</p>
+                {errorEliminarDep && <p className="text-xs font-bold text-red-700">{errorEliminarDep}</p>}
+                <div className="flex gap-2">
+                  <button onClick={()=>setEliminandoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] bg-white tap-active">Cancelar</button>
+                  <button disabled={borrandoDep} onClick={async()=>{
+                    setBorrandoDep(true); setErrorEliminarDep(null);
+                    try {
+                      const { balance } = await verificarBloqueoEliminarDependiente(c.dependent_user_id, worldId);
+                      if (balance > 0) {
+                        setErrorEliminarDep(`Tiene S/ ${balance.toFixed(2)} en su billetera — transfiérelo antes de eliminarlo.`);
+                        return;
+                      }
+                      await eliminarDependienteRemote(c.dependent_user_id, worldId);
+                      setEliminandoId(null);
+                      setReload(k=>k+1);
+                    } catch { setErrorEliminarDep("No se pudo eliminar. Intenta de nuevo."); } finally { setBorrandoDep(false); }
+                  }} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{borrandoDep?"Eliminando…":"Sí, eliminar"}</button>
                 </div>
               </div>
             )}
