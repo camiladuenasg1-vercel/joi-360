@@ -18,6 +18,7 @@ export function MundoDetail() {
   const m = (st.mundos||[]).find(x => x.id === id);
   const [tab, setTab] = useState("resumen");
   const [entregaOpen, setEntregaOpen] = useState(false);
+  const [entregaHubOpen, setEntregaHubOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [actorJump, setActorJump] = useState(null);
   const jumpToActores = subtab => { setTab("comercios"); setActorJump(subtab); };
@@ -80,9 +81,9 @@ export function MundoDetail() {
           <BtnOutline onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/mundo/${m.id}`, "_blank")}>
             <Icon n="open_in_new" className="text-[16px]" /> Vista previa Dashboard
           </BtnOutline>
-          <EntregaPanelMenu m={m} readyForDelivery={readyForDelivery}
-            onEntregarMundo={() => setEntregaOpen(true)}
-            onJumpActores={jumpToActores} />
+          <BtnPrimary onClick={() => setEntregaHubOpen(true)}>
+            <Icon n="local_shipping" className="text-[16px]" /> Entrega de panel
+          </BtnPrimary>
           {!m.fixed && (
             <button onClick={() => setDeleteOpen(true)} className="p-2.5 rounded-lg border border-error/40 text-error hover:bg-error-container/20 transition-colors" title="Eliminar mundo">
               <Icon n="delete" className="text-[18px]" />
@@ -107,18 +108,48 @@ export function MundoDetail() {
       {tab === "acuerdo" && <TabAcuerdo m={m} />}
       {tab === "eventos" && <TabEventos m={m} st={st} goto={setTab} />}
       {tab === "promos" && <TabPromos m={m} st={st} />}
+      <EntregaHubDrawer m={m} open={entregaHubOpen} onClose={() => setEntregaHubOpen(false)} readyForDelivery={readyForDelivery}
+        onEntregarMundo={() => setEntregaOpen(true)} onJumpActores={jumpToActores} />
       <EntregaDrawer m={m} open={entregaOpen} onClose={() => setEntregaOpen(false)} />
       <DeleteMundoDialog m={m} open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </div>
   );
 }
 
-/* ── OperadorMundoCard — clave del POS para "Soy Mundo" (Task #128). Un
+/* ── TarjetaEntrega — card compacta y reutilizable dentro del hub de
+   entrega: icono, título, descripción, estado opcional y un único botón que
+   lleva a la entrega específica de esa identidad. ── */
+function TarjetaEntrega({ icon, titulo, subtitulo, descripcion, estado, estadoColor, accionLabel, onAccion, disabled, disabledTitle }) {
+  return (
+    <div className="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col gap-3 min-w-0">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-lg bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
+          <Icon n={icon} className="text-[18px]" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight truncate">{titulo}</p>
+          {subtitulo && <p className="font-mono text-[9px] uppercase text-on-surface-variant tracking-wider">{subtitulo}</p>}
+        </div>
+      </div>
+      <p className="text-xs text-on-surface-variant flex-1">{descripcion}</p>
+      {estado && <Pill color={estadoColor || "bg-tertiary"}>{estado}</Pill>}
+      <BtnOutline onClick={onAccion} disabled={disabled} title={disabledTitle} className="w-full justify-center !py-2 text-xs">
+        {accionLabel} <Icon n="arrow_forward" className="text-[14px]" />
+      </BtnOutline>
+    </div>
+  );
+}
+
+/* ── TarjetaOperadorMundo — clave del POS para "Soy Mundo" (Task #128). Un
    operador de mundo (portero, punto de entrega de banditas, mesa de
    ayuda) no representa a ningún comercio — por eso necesita su propia
    clave, separada de la de cada comercio, para entrar al POS/T6 y ver
-   Vincular Pulsera / Validar Acceso / Validar Entrada / Consultar. ── */
-function OperadorMundoCard({ m }) {
+   Vincular Pulsera / Validar Acceso / Validar Entrada / Consultar. Vive
+   dentro del hub de entrega (antes era una tarjeta suelta en Resumen, sin
+   ninguna relación visible con "entregar accesos") porque, igual que las
+   otras 3 tarjetas, ES una entrega de acceso — la única que no necesita
+   una segunda pantalla porque cabe entera aquí mismo. ── */
+function TarjetaOperadorMundo({ m }) {
   const [pin, setPin] = useState(m.posPin || "");
   const [ver, setVer] = useState(false);
   const dirty = pin !== (m.posPin || "");
@@ -130,110 +161,79 @@ function OperadorMundoCard({ m }) {
     });
     notify(pin.trim() ? "Clave de operador del mundo guardada." : "Clave de operador del mundo eliminada.");
   };
-  const generar = () => {
-    const nueva = String(Math.floor(1000 + Math.random() * 9000));
-    setPin(nueva);
-  };
+  const generar = () => setPin(String(Math.floor(1000 + Math.random() * 9000)));
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-wrap items-end gap-4">
-      <div className="flex-1 min-w-[220px]">
-        <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
-          <Icon n="badge" className="text-[16px] text-secondary"/> Clave de operador del Mundo (POS)
-        </p>
-        <p className="text-[11px] text-on-surface-variant">
-          Código: <b className="font-mono">{m.codigo}</b> · para entrar al POS eligiendo "Soy Mundo" — vincular pulseras, validar accesos/entradas y consultar, sin cobrar saldo.
-        </p>
+    <div className="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col gap-3 min-w-0">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-lg bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
+          <Icon n="badge" className="text-[18px]" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight">POS / Operador del Mundo</p>
+          <p className="font-mono text-[9px] uppercase text-on-surface-variant tracking-wider">Código {m.codigo}</p>
+        </div>
       </div>
+      <p className="text-xs text-on-surface-variant">Clave para portero, banditas o mesa de ayuda — sin cobrar saldo.</p>
       <div className="flex items-center gap-1">
-        <input className={`${inputCls} w-32 font-mono`} type={ver ? "text" : "password"} value={pin}
+        <input className={`${inputCls} font-mono text-xs`} type={ver ? "text" : "password"} value={pin}
           onChange={e => setPin(e.target.value)} placeholder="Sin clave"/>
-        <button type="button" onClick={() => setVer(v => !v)} className="p-2.5 text-on-surface-variant hover:text-primary" title={ver ? "Ocultar" : "Ver"}>
-          <Icon n={ver ? "visibility_off" : "visibility"} className="text-[18px]"/>
+        <button type="button" onClick={() => setVer(v => !v)} className="p-2 text-on-surface-variant hover:text-primary flex-shrink-0" title={ver ? "Ocultar" : "Ver"}>
+          <Icon n={ver ? "visibility_off" : "visibility"} className="text-[16px]"/>
         </button>
       </div>
-      <BtnOutline onClick={generar}><Icon n="casino" className="text-[16px]"/> Generar</BtnOutline>
-      <BtnPrimary onClick={guardar} disabled={!dirty}><Icon n="save" className="text-[16px]"/> Guardar</BtnPrimary>
+      <div className="flex gap-1.5">
+        <BtnOutline onClick={generar} className="flex-1 !px-2 !py-2 text-xs"><Icon n="casino" className="text-[14px]"/> Generar</BtnOutline>
+        <BtnPrimary onClick={guardar} disabled={!dirty} className="flex-1 !px-2 !py-2 text-xs"><Icon n="save" className="text-[14px]"/> Guardar</BtnPrimary>
+      </div>
       <a href={`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`} target="_blank" rel="noreferrer"
-        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary text-sm font-medium transition-colors">
-        <Icon n="open_in_new" className="text-[16px]"/> Abrir POS del Mundo
+        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary text-xs font-medium transition-colors">
+        <Icon n="open_in_new" className="text-[14px]"/> Abrir POS del Mundo
       </a>
     </div>
   );
 }
 
-/* ── EntregaPanelMenu — antes había 3 botones sueltos en el header (uno para
+/* ── EntregaHubDrawer — antes había 3 botones sueltos en el header (uno para
    el dashboard del sponsor, otro condicional para el organizador B2B, y la
-   entrega de cada merchant vivía escondida dentro de Actores) sin ningún
-   punto único de entrada. "Entrega de panel" agrupa las 4 identidades que
-   este mundo puede repartir, discriminando panel de MUNDO (categoría, para
-   cualquier comunidad con entidad legal) de panel de ORGANIZADOR (solo
-   aparece si el mundo activó Motor de Eventos en modo B2B — no se mezclan). */
-function EntregaPanelMenu({ m, readyForDelivery, onEntregarMundo, onJumpActores }) {
-  const [open, setOpen] = useState(false);
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const onDocClick = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
-
+   entrega de cada merchant vivía escondida dentro de Actores) más una
+   cuarta tarjeta de clave de operador flotando sin relación visible con
+   "entrega" en Resumen — 4 identidades entregables, ningún punto único de
+   entrada. Este modal las agrupa en tarjetas de izquierda a derecha; cada
+   una lleva a su propia entrega específica (Mundo abre su drawer de
+   credenciales, Merchant/Organizador saltan a Actores, POS se resuelve acá
+   mismo). Discrimina panel de MUNDO (categoría, para cualquier comunidad
+   con entidad legal) de panel de ORGANIZADOR (solo aparece si el mundo
+   activó Motor de Eventos en modo B2B — no se mezclan). */
+function EntregaHubDrawer({ m, open, onClose, readyForDelivery, onEntregarMundo, onJumpActores }) {
   const eventosActivo = (m.modulos||[]).some(x => x.id === "eventos" && x.enabled);
   const esOrganizador = eventosActivo && modosDeMundo(m).includes("b2b");
   const mundoBloqueado = !readyForDelivery && !m.entrega?.entregado;
-  const abrirPosMundo = () => window.open(`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`, "_blank");
-
-  const items = [
-    {
-      key: "mundo", icon: m.entrega?.entregado ? "key" : "public",
-      label: m.entrega?.entregado ? "Panel de Mundo — credenciales entregadas" : "Panel de Mundo (Sponsor)",
-      desc: m.entrega?.entregado ? "Ver o reenviar las credenciales ya entregadas." : "Genera credenciales y activa el dashboard del sponsor.",
-      disabled: mundoBloqueado,
-      title: mundoBloqueado ? "Carga al menos 1 comercio y configura los módulos core para poder entregar" : "",
-      onClick: () => { onEntregarMundo(); setOpen(false); },
-    },
-    {
-      key: "merchant", icon: "storefront",
-      label: "Panel de Merchant",
-      desc: "Elige un comercio en Actores y entrega su acceso al POS.",
-      onClick: () => { onJumpActores("comercios"); setOpen(false); },
-    },
-    ...(esOrganizador ? [{
-      key: "organizador", icon: "confirmation_number",
-      label: "Panel de Organizador B2B",
-      desc: "Registra al organizador del evento — su código queda ligado a este mundo.",
-      onClick: () => { onJumpActores("organizadores"); setOpen(false); },
-    }] : []),
-    {
-      key: "pos", icon: "badge",
-      label: "POS / Operador del Mundo",
-      desc: "Clave para portero, punto de banditas o mesa de ayuda.",
-      onClick: () => { abrirPosMundo(); setOpen(false); },
-    },
-  ];
+  const mundoEntregado = !!m.entrega?.entregado;
 
   return (
-    <span className="relative inline-flex" ref={ref}>
-      <BtnPrimary onClick={() => setOpen(o => !o)}>
-        <Icon n="local_shipping" className="text-[16px]" /> Entrega de panel
-        <Icon n={open ? "expand_less" : "expand_more"} className="text-[16px]" />
-      </BtnPrimary>
-      {open && (
-        <div className="absolute z-40 top-11 right-0 w-80 bg-surface border border-outline-variant rounded-xl shadow-lg overflow-hidden">
-          {items.map(it => (
-            <button key={it.key} onClick={it.onClick} disabled={it.disabled} title={it.title}
-              className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-outline-variant/40 last:border-0 transition-colors ${it.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-surface-container-low"}`}>
-              <Icon n={it.icon} className="text-[18px] text-primary mt-0.5" />
-              <span>
-                <span className="block text-sm font-semibold">{it.label}</span>
-                <span className="block text-xs text-on-surface-variant mt-0.5">{it.desc}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </span>
+    <Drawer open={open} onClose={onClose} icon="local_shipping" title="Entrega de panel" subtitle={`${m.nombre} · ${m.codigo}`} width="w-[900px]">
+      <p className="text-sm text-on-surface-variant mb-5">
+        Este mundo puede entregar acceso a distintas identidades. Elige cuál — cada una lleva a su propia entrega.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <TarjetaEntrega icon={mundoEntregado ? "key" : "public"} titulo="Panel de Mundo" subtitulo="Sponsor"
+          descripcion={mundoEntregado ? "Ver o reenviar las credenciales ya entregadas." : "Genera credenciales y activa el dashboard del sponsor."}
+          estado={mundoEntregado ? "Entregado" : "Pendiente"} estadoColor={mundoEntregado ? "bg-secondary-container" : "bg-tertiary"}
+          accionLabel={mundoEntregado ? "Ver credenciales" : "Entregar"}
+          disabled={mundoBloqueado} disabledTitle={mundoBloqueado ? "Carga al menos 1 comercio y configura los módulos core para poder entregar" : ""}
+          onAccion={() => { onEntregarMundo(); onClose(); }} />
+        <TarjetaEntrega icon="storefront" titulo="Panel de Merchant"
+          descripcion="Elige un comercio en Actores y entrega su acceso al POS."
+          accionLabel="Ir a Actores" onAccion={() => { onJumpActores("comercios"); onClose(); }} />
+        {esOrganizador && (
+          <TarjetaEntrega icon="confirmation_number" titulo="Panel de Organizador" subtitulo="B2B"
+            descripcion="Registra al organizador del evento — su código queda ligado a este mundo."
+            accionLabel="Ir a Actores" onAccion={() => { onJumpActores("organizadores"); onClose(); }} />
+        )}
+        <TarjetaOperadorMundo m={m} />
+      </div>
+    </Drawer>
   );
 }
 
@@ -675,10 +675,6 @@ function TabResumen({ m, comercios, st, goto }) {
           </div>
         )}
       </div>
-
-      {/* OPERADOR DE MUNDO (POS) — clave para "Soy Mundo": bandita, accesos,
-          eventos, consultar. No cobra saldo — eso sigue siendo del comercio. */}
-      <OperadorMundoCard m={m} />
 
       {/* STATS ROW */}
       <div className="grid grid-cols-4 gap-4">
