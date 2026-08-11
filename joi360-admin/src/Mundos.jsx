@@ -153,6 +153,7 @@ export function Mundos() {
 export function MundoWizard({ open, onClose }) {
   const nav = useNavigate();
   const [step, setStep] = useState(1);
+  const [creando, setCreando] = useState(false);
   const blank = {
     // Paso 1: contexto
     nombre: "", vertical: "Educación", giro: GIROS_POR_VERTICAL["Educación"][0], color: COLORS[0], descripcion: "", codigo: "",
@@ -209,7 +210,14 @@ export function MundoWizard({ open, onClose }) {
     else setStep(step - 1);
   };
 
+  // Sin guarda contra doble-click/doble-tap, dos clics rápidos en "Habilitar
+  // Mundo" empujaban DOS mundos reales a Supabase (update() es síncrono, pero
+  // el botón seguía habilitado hasta que React re-renderizara) — así apareció
+  // un duplicado vacío de Colegio Raimondi en vivo (10-ago). Mismo patrón que
+  // ya se corrigió en crear()/activar() de MundoDetail.jsx y OrganizadorFront.jsx.
   const habilitar = () => {
+    if (creando) return;
+    setCreando(true);
     const id = uid("mundo");
     update(st => {
       (st.mundos||(st.mundos=[])); st.mundos.push({
@@ -267,7 +275,7 @@ export function MundoWizard({ open, onClose }) {
         {step > 1 && <BtnOutline onClick={back}>Atrás</BtnOutline>}
         {step < 7
           ? <BtnPrimary disabled={!canNext} onClick={next}>Siguiente <Icon n="arrow_forward" className="text-[16px]" /></BtnPrimary>
-          : <BtnPrimary disabled={!canNext} onClick={habilitar}><Icon n="rocket_launch" className="text-[16px]" /> Habilitar Mundo</BtnPrimary>}
+          : <BtnPrimary disabled={!canNext || creando} loading={creando} loadingLabel="Habilitando…" onClick={habilitar}><Icon n="rocket_launch" className="text-[16px]" /> Habilitar Mundo</BtnPrimary>}
       </>}>
 
       <div className="flex items-center gap-1.5 mb-6">

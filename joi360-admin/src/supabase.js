@@ -340,6 +340,16 @@ export async function deleteWorldRemote(worldId) {
   // notificaba "eliminado" aunque el DELETE remoto hubiera fallado de verdad
   // (ver DeleteMundoDialog en MundoDetail.jsx), dejando el mundo local
   // borrado pero el remoto intacto, sin ningún aviso real del desfase.
+  //
+  // Tampoco limpiaba sus filas dependientes (world_capacity_configs,
+  // world_feature_flags) — un mundo real borrado (verificarBloqueosEliminacionMundo
+  // ya garantiza que no tiene saldo/BNPL/liquidaciones/reservas/tickets reales)
+  // dejaba config huérfana en Supabase para siempre. Encontrado en vivo
+  // limpiando un duplicado vacío de Colegio Raimondi (10-ago).
+  await Promise.all([
+    rest(`world_feature_flags?world_id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+    rest(`world_capacity_configs?world_id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {}),
+  ]);
   await rest(`worlds?id=eq.${worldId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 
