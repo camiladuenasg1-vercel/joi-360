@@ -4,7 +4,7 @@ import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
-import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion } from "./supabase.js";
+import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, entregarMundoRemote } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
@@ -386,6 +386,7 @@ function EntregaDrawer({ m, open, onClose }) {
   const [cred, setCred] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [emailEntrega, setEmailEntrega] = useState("");
+  const [entregando, setEntregando] = useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -427,10 +428,19 @@ Equipo RedPontis · JOI 360`;
     notify("Mensaje de entrega copiado. Pégalo en el correo o WhatsApp al sponsor.", "info");
   };
 
-  const entregar = () => {
-    ejecutarEntrega(m.id, { ...cred, emailEntrega });
-    notify(`Dashboard del mundo "${m.nombre}" entregado.${emailEntrega ? ` Copia el mensaje para enviarlo a ${emailEntrega}.` : ""}`);
-    onClose();
+  const entregar = async () => {
+    if (entregando) return;
+    setEntregando(true);
+    try {
+      await entregarMundoRemote(m.id, { ...cred, emailEntrega });
+      ejecutarEntrega(m.id, { ...cred, emailEntrega });
+      notify(`Dashboard del mundo "${m.nombre}" entregado.${emailEntrega ? ` Copia el mensaje para enviarlo a ${emailEntrega}.` : ""}`);
+      onClose();
+    } catch (e) {
+      notify("No se pudo ejecutar la entrega: " + e.message, "error");
+    } finally {
+      setEntregando(false);
+    }
   };
 
   const copiar = (txt, label) => {
@@ -448,7 +458,7 @@ Equipo RedPontis · JOI 360`;
             <BtnPrimary onClick={onClose}>Cerrar</BtnPrimary>
           </div>
         : <><BtnOutline onClick={onClose}>Cancelar</BtnOutline>
-           <BtnPrimary disabled={!confirm} onClick={entregar}><Icon n="rocket_launch" className="text-[16px]" /> Ejecutar entrega</BtnPrimary></>}>
+           <BtnPrimary disabled={!confirm || entregando} loading={entregando} loadingLabel="Entregando…" onClick={entregar}><Icon n="rocket_launch" className="text-[16px]" /> Ejecutar entrega</BtnPrimary></>}>
       <div className="space-y-6">
 
         {/* Banner */}

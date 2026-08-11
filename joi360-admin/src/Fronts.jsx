@@ -2597,13 +2597,20 @@ export function MundoFront() {
 function SponsorGate({ m }) {
   const [f, setF] = useState({ usuario: "", password: "" });
   const [err, setErr] = useState("");
+  const [entrando, setEntrando] = useState(false);
   const entregado = m.entrega?.entregado;
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!entregado) { setErr("Este dashboard aún no ha sido entregado por RedPontis."); return; }
-    if (sponsorLogin(m.id, f.usuario, f.password)) notify(`Bienvenido al Dashboard del Mundo ${m.nombre}.`);
-    else setErr("Credenciales inválidas. Solicítalas a RedPontis.");
+    if (entrando) return;
+    setEntrando(true);
+    try {
+      if (await sponsorLogin(m.id, f.usuario, f.password)) notify(`Bienvenido al Dashboard del Mundo ${m.nombre}.`);
+      else setErr("Credenciales inválidas. Solicítalas a RedPontis.");
+    } finally {
+      setEntrando(false);
+    }
   };
 
   return (
@@ -2626,7 +2633,7 @@ function SponsorGate({ m }) {
             <Field label="Usuario sponsor"><input className={`${inputCls} font-mono text-xs`} value={f.usuario} onChange={e => setF({ ...f, usuario: e.target.value })} placeholder="sponsor@..." /></Field>
             <Field label="Password"><input className={inputCls} type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /></Field>
             {err && <p className="text-xs text-error">{err}</p>}
-            <BtnPrimary type="submit" className="w-full"><Icon n="login" className="text-[18px]" /> Ingresar al mundo</BtnPrimary>
+            <BtnPrimary type="submit" disabled={entrando} loading={entrando} loadingLabel="Ingresando…" className="w-full"><Icon n="login" className="text-[18px]" /> Ingresar al mundo</BtnPrimary>
           </form>
         )}
         {err && !entregado && <p className="text-xs text-error mt-3">{err}</p>}

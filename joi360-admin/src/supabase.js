@@ -488,6 +488,30 @@ export async function verificarAdminLoginRemote(email, password) {
   });
   return rows?.[0] || null;
 }
+// Entrega del Dashboard de Mundo (sponsor) — antes las credenciales solo se
+// guardaban en el localStorage de la pestaña que ejecutaba la entrega, así
+// que el sponsor entrando desde su propio dispositivo nunca las encontraba.
+// Mismo patrón que el PIN de POS: la contraseña en texto plano viaja UNA vez,
+// un trigger la hashea server-side y la limpia (ver sql_sponsor_login.sql).
+export async function entregarMundoRemote(mundoId, { usuario, password, emailEntrega }) {
+  await rest(`worlds?id=eq.${mundoId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      sponsor_usuario: usuario, sponsor_password: password,
+      entregado: true, fecha_entrega: new Date().toISOString(),
+      email_entrega: emailEntrega || null,
+    }),
+  });
+}
+// Login real del sponsor — nunca compara la contraseña en el cliente, la RPC
+// compara contra el hash y devuelve solo lo necesario para abrir sesión.
+export async function verificarLoginSponsorRemote(mundoId, usuario, password) {
+  const rows = await rest("rpc/verificar_login_sponsor", {
+    method: "POST",
+    body: JSON.stringify({ p_world_id: mundoId, p_usuario: usuario, p_password: password }),
+  });
+  return rows?.[0] || null;
+}
 // Listado para Gobierno → "Administradores de plataforma" — nunca trae
 // password_hash, solo lo necesario para mostrar quién tiene acceso.
 export async function fetchAdminUsersRemote() {

@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote, verificarLoginSponsorRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -792,6 +792,14 @@ export async function refreshMundosLive() {
     };
   };
 
+  // Entrega del Dashboard de Mundo: desde que las credenciales viajan a
+  // `worlds` (sponsor_usuario/entregado/fecha_entrega), Supabase es la única
+  // fuente real — antes m.entrega solo existía en el localStorage de la
+  // pestaña que ejecutó la entrega, invisible para cualquier otra sesión.
+  const entregaDe = w => w.entregado
+    ? { entregado: true, credenciales: { usuario: w.sponsor_usuario || null }, fechaEntrega: w.fecha_entrega ? Date.parse(w.fecha_entrega) : null, emailEntrega: w.email_entrega || null }
+    : { entregado: false, credenciales: null, fechaEntrega: null };
+
   update(st => {
     if (!st.mundos) st.mundos = [];
     const byId = new Map(st.mundos.map(m => [m.id, m]));
@@ -802,6 +810,7 @@ export async function refreshMundosLive() {
         estado: (w.status || "activo").toUpperCase(),
         posPin: w.pos_pin || null,
         logoUrl: w.logo_url || null,
+        entrega: entregaDe(w),
       };
       const base = byId.get(w.id);
       if (base) {
@@ -823,7 +832,6 @@ export async function refreshMundosLive() {
         ...patch, fixed: false, redpontis: false, type: "standard",
         descripcion: `Comunidad ${w.name} · vertical ${w.vertical}.`,
         modulos: modulosDe(w.id),
-        entrega: { entregado: false, credenciales: null, fechaEntrega: null },
         sponsorConfig: { bienvenida: `¡Hola, {nombre}! Bienvenido al ecosistema ${w.name}.`, bannerTitulo: "", bannerActivo: false, comerciosOcultos: [] },
         eventosConfig: eventosConfigDe(w.id) || null,
         // acuerdo va en null y no en {}: generarLiquidacionMundo hace
@@ -1143,11 +1151,14 @@ export function ejecutarEntrega(mundoId, credenciales) {
   });
 }
 
-export function sponsorLogin(mundoId, usuario, password) {
-  const m = getMundo(mundoId);
-  const c = m?.entrega?.credenciales;
-  if (c && c.usuario === usuario && c.password === password) {
-    update(st => { st.sponsorSession = { mundoId, usuario }; });
+// Antes comparaba la contraseña en texto plano contra lo que hubiera en el
+// localStorage de esta pestaña (nunca sincronizado a Supabase — ver
+// entregarMundoRemote) — mismo defecto ya corregido para admin/PIN de POS.
+// La RPC compara contra el hash server-side; el cliente nunca ve la clave.
+export async function sponsorLogin(mundoId, usuario, password) {
+  const r = await verificarLoginSponsorRemote(mundoId, usuario, password).catch(() => null);
+  if (r) {
+    update(st => { st.sponsorSession = { mundoId, usuario: r.usuario }; });
     return true;
   }
   return false;
