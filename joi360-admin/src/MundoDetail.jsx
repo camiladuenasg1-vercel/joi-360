@@ -19,6 +19,8 @@ export function MundoDetail() {
   const [tab, setTab] = useState("resumen");
   const [entregaOpen, setEntregaOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [actorJump, setActorJump] = useState(null);
+  const jumpToActores = subtab => { setTab("comercios"); setActorJump(subtab); };
 
   React.useEffect(() => {
     if (!m) return;
@@ -74,20 +76,13 @@ export function MundoDetail() {
           {m.entrega?.entregado
             ? <Pill color="bg-secondary-container">ENTREGADO</Pill>
             : !m.redpontis && <Pill color="bg-tertiary">PENDIENTE</Pill>}
-          {(m.modulos||[]).find(x => x.id === "eventos" && x.enabled) &&
-           modosDeMundo(m).includes("b2b") && (
-            <BtnOutline onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/organizador/${m.id}`, "_blank")}>
-              <Icon n="business_center" className="text-[16px]" /> Dashboard B2B Organizador
-            </BtnOutline>
-          )}
           <ContratoControl m={m} />
           <BtnOutline onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/mundo/${m.id}`, "_blank")}>
             <Icon n="open_in_new" className="text-[16px]" /> Vista previa Dashboard
           </BtnOutline>
-          <BtnPrimary onClick={() => setEntregaOpen(true)} disabled={!readyForDelivery && !m.entrega?.entregado}
-            title={!readyForDelivery && !m.entrega?.entregado ? "Carga al menos 1 comercio y configura los módulos core para poder entregar" : ""}>
-            <Icon n={m.entrega?.entregado ? "key" : "local_shipping"} className="text-[16px]" /> {m.entrega?.entregado ? "Credenciales entregadas" : "Entregar Dashboard"}
-          </BtnPrimary>
+          <EntregaPanelMenu m={m} readyForDelivery={readyForDelivery}
+            onEntregarMundo={() => setEntregaOpen(true)}
+            onJumpActores={jumpToActores} />
           {!m.fixed && (
             <button onClick={() => setDeleteOpen(true)} className="p-2.5 rounded-lg border border-error/40 text-error hover:bg-error-container/20 transition-colors" title="Eliminar mundo">
               <Icon n="delete" className="text-[18px]" />
@@ -108,7 +103,7 @@ export function MundoDetail() {
       {tab === "resumen" && <TabResumen m={m} comercios={comercios} st={st} goto={setTab} />}
       {tab === "perfil" && <PerfilMundoPanel m={m} />}
       {tab === "modulos" && <TabModulos m={m} />}
-      {tab === "comercios" && <TabComercios m={m} comercios={comercios} st={st} />}
+      {tab === "comercios" && <TabComercios m={m} comercios={comercios} st={st} jumpTo={actorJump} onConsumeJump={() => setActorJump(null)} />}
       {tab === "acuerdo" && <TabAcuerdo m={m} />}
       {tab === "eventos" && <TabEventos m={m} st={st} goto={setTab} />}
       {tab === "promos" && <TabPromos m={m} st={st} />}
@@ -164,6 +159,81 @@ function OperadorMundoCard({ m }) {
         <Icon n="open_in_new" className="text-[16px]"/> Abrir POS del Mundo
       </a>
     </div>
+  );
+}
+
+/* ── EntregaPanelMenu — antes había 3 botones sueltos en el header (uno para
+   el dashboard del sponsor, otro condicional para el organizador B2B, y la
+   entrega de cada merchant vivía escondida dentro de Actores) sin ningún
+   punto único de entrada. "Entrega de panel" agrupa las 4 identidades que
+   este mundo puede repartir, discriminando panel de MUNDO (categoría, para
+   cualquier comunidad con entidad legal) de panel de ORGANIZADOR (solo
+   aparece si el mundo activó Motor de Eventos en modo B2B — no se mezclan). */
+function EntregaPanelMenu({ m, readyForDelivery, onEntregarMundo, onJumpActores }) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const onDocClick = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const eventosActivo = (m.modulos||[]).some(x => x.id === "eventos" && x.enabled);
+  const esOrganizador = eventosActivo && modosDeMundo(m).includes("b2b");
+  const mundoBloqueado = !readyForDelivery && !m.entrega?.entregado;
+  const abrirPosMundo = () => window.open(`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`, "_blank");
+
+  const items = [
+    {
+      key: "mundo", icon: m.entrega?.entregado ? "key" : "public",
+      label: m.entrega?.entregado ? "Panel de Mundo — credenciales entregadas" : "Panel de Mundo (Sponsor)",
+      desc: m.entrega?.entregado ? "Ver o reenviar las credenciales ya entregadas." : "Genera credenciales y activa el dashboard del sponsor.",
+      disabled: mundoBloqueado,
+      title: mundoBloqueado ? "Carga al menos 1 comercio y configura los módulos core para poder entregar" : "",
+      onClick: () => { onEntregarMundo(); setOpen(false); },
+    },
+    {
+      key: "merchant", icon: "storefront",
+      label: "Panel de Merchant",
+      desc: "Elige un comercio en Actores y entrega su acceso al POS.",
+      onClick: () => { onJumpActores("comercios"); setOpen(false); },
+    },
+    ...(esOrganizador ? [{
+      key: "organizador", icon: "confirmation_number",
+      label: "Panel de Organizador B2B",
+      desc: "Registra al organizador del evento — su código queda ligado a este mundo.",
+      onClick: () => { onJumpActores("organizadores"); setOpen(false); },
+    }] : []),
+    {
+      key: "pos", icon: "badge",
+      label: "POS / Operador del Mundo",
+      desc: "Clave para portero, punto de banditas o mesa de ayuda.",
+      onClick: () => { abrirPosMundo(); setOpen(false); },
+    },
+  ];
+
+  return (
+    <span className="relative inline-flex" ref={ref}>
+      <BtnPrimary onClick={() => setOpen(o => !o)}>
+        <Icon n="local_shipping" className="text-[16px]" /> Entrega de panel
+        <Icon n={open ? "expand_less" : "expand_more"} className="text-[16px]" />
+      </BtnPrimary>
+      {open && (
+        <div className="absolute z-40 top-11 right-0 w-80 bg-surface border border-outline-variant rounded-xl shadow-lg overflow-hidden">
+          {items.map(it => (
+            <button key={it.key} onClick={it.onClick} disabled={it.disabled} title={it.title}
+              className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-outline-variant/40 last:border-0 transition-colors ${it.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-surface-container-low"}`}>
+              <Icon n={it.icon} className="text-[18px] text-primary mt-0.5" />
+              <span>
+                <span className="block text-sm font-semibold">{it.label}</span>
+                <span className="block text-xs text-on-surface-variant mt-0.5">{it.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -1929,8 +1999,13 @@ function ConfigFieldInput({ cf, value, onChange, moneda = "PEN" }) {
 }
 
 /* ── TabActores (Merchants + Organizadores + Sponsors) ────────────── */
-function TabComercios({ m, comercios }) {
-  const [actorTab, setActorTab] = useState("comercios");
+function TabComercios({ m, comercios, jumpTo, onConsumeJump }) {
+  const [actorTab, setActorTab] = useState(jumpTo || "comercios");
+  React.useEffect(() => {
+    if (!jumpTo) return;
+    setActorTab(jumpTo);
+    onConsumeJump?.();
+  }, [jumpTo]);
   const ACTOR_TABS = [
     { id:"comercios",    label:"Merchants",     icon:"storefront",          count:comercios.length },
     { id:"organizadores",label:"Organizadores", icon:"confirmation_number", count:0 },
