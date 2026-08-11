@@ -259,9 +259,26 @@ export default function AuthPage() {
  * sola. Así la persona toca el enlace en su correo, vuelve a la app y ya está,
  * sin tener que adivinar qué hacer al regresar.
  */
+// Sin límite, cada tap en "Reenviar" mandaba un enlace de confirmación más —
+// varios en simultáneo (uno pisando el token del anterior, buzones con 3-4
+// correos idénticos). 2 minutos de espera entre reenvíos, igual que el resto
+// de "reenviar código" del ecosistema.
+const COOLDOWN_REENVIO_MS = 2 * 60 * 1000;
+
 function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
   const [estado, setEstado] = useState("esperando"); // esperando | reenviando | reenviado
   const [err, setErr] = useState("");
+  const [proximoReenvio, setProximoReenvio] = useState(0); // timestamp ms, 0 = sin cooldown
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!proximoReenvio) return;
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [proximoReenvio]);
+
+  const segundosRestantes = proximoReenvio ? Math.max(0, Math.ceil((proximoReenvio - ahora) / 1000)) : 0;
+  const enCooldown = segundosRestantes > 0;
 
   const revisar = useCallback(async () => {
     try {
@@ -290,11 +307,14 @@ function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
   }, [revisar]);
 
   async function reenviar() {
+    if (enCooldown) return;
     setEstado("reenviando");
     setErr("");
     try {
       await reenviarConfirmacion(datos.email);
       setEstado("reenviado");
+      setProximoReenvio(Date.now() + COOLDOWN_REENVIO_MS);
+      setAhora(Date.now());
     } catch (e) {
       setErr(e.message);
       setEstado("esperando");
@@ -325,10 +345,10 @@ function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
           Ya confirmé mi correo
         </button>
 
-        <button onClick={reenviar} disabled={estado === "reenviando"}
+        <button onClick={reenviar} disabled={estado === "reenviando" || enCooldown}
           className="w-full rounded-2xl py-3.5 font-bold text-sm text-white/70 transition-all disabled:opacity-40"
           style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}>
-          {estado === "reenviando" ? "Enviando…" : "Reenviar el correo"}
+          {estado === "reenviando" ? "Enviando…" : enCooldown ? `Reenviar en ${Math.floor(segundosRestantes / 60)}:${String(segundosRestantes % 60).padStart(2, "0")}` : "Reenviar el correo"}
         </button>
 
         <button onClick={onVolver}
