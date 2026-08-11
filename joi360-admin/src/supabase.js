@@ -698,6 +698,11 @@ export async function reconciliarComerciosMundo(worldId, comerciosLocales) {
       rubro: "otro", tarifa: r.mdr_override ?? 1.5, fijoTx: r.fixed_fee_override ?? 0.10,
       pos: 0, posSolicitados: 0, estado: "ACTIVO", visibleEnApp: r.visible_en_app !== false,
       createdAt: Date.parse(r.created_at) || Date.now(),
+      // Gap real (hallado en vivo, 11-ago): sin esto, un comercio abierto
+      // desde un navegador que no lo creó localmente (el caso normal en
+      // producción) nunca ve la pestaña "PIN rápido" — el código es público
+      // (no un secreto), a diferencia del PIN, que nunca sale de Supabase.
+      codigo: r.codigo || null,
     }));
   return nuevos;
 }
