@@ -772,6 +772,55 @@ export async function fetchMiBanditaVigencia(worldId, userId) {
   const rows = await rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=eq.${userId}&select=codigo,estado,activada_at,vence_at&order=activada_at.desc&limit=1`);
   return rows?.[0] || null;
 }
+// El UID real de una bandita siempre viene en formato de bytes hex
+// separados por dos puntos (ej. 04:D6:01:5A:68:19:94) -- mismo normalizador
+// que ya usa el admin (supabase.js) para que un mismo tag lea igual sin
+// importar si lo escaneó un operador o el propio usuario desde su celular.
+export function normalizarUidBandita(raw) {
+  const limpio = String(raw || "").trim().toUpperCase();
+  if (!limpio) return null;
+  const soloHex = limpio.replace(/[:\-\s.]/g, "");
+  if (!/^[0-9A-F]+$/.test(soloHex) || soloHex.length < 8 || soloHex.length % 2 !== 0) return null;
+  return soloHex.match(/.{2}/g).join(":");
+}
+
+// Vinculación directa desde el celular del usuario vía Web NFC (Task #230)
+// -- antes la única forma de vincular una bandita era pedirla y esperar a
+// que un operador la entregara físicamente con su propio lector. Con un
+// celular Android con NFC, el usuario puede leer el tag él mismo y
+// vincularlo al instante, sin pasar por la cola de solicitud. Mismas
+// validaciones que vincular() en el POS Operador (OperadorApp.jsx): la
+// banda debe existir en este mundo, estar "asignada" (disponible, no
+// vinculada a nadie), y la cuenta destino no debe tener ya otra activa.
+export async function vincularBanditaDirectoRemote(worldId, userId, codigoRaw, vigenciaMeses = null) {
+  const normalizado = normalizarUidBandita(codigoRaw) || String(codigoRaw || "").trim().toUpperCase();
+  const band = (await rest(`nfc_bands?codigo=eq.${encodeURIComponent(normalizado)}&world_id=eq.${worldId}&select=*`))?.[0];
+  if (!band) throw new Error("No se encontró esta pulsera en el inventario de este mundo. Pide ayuda al mundo si el problema persiste.");
+  if (band.linked_user_id) throw new Error(band.linked_user_id === userId ? "Esta pulsera ya está vinculada a tu cuenta." : "Esta pulsera ya está vinculada a otra persona.");
+  if (band.estado !== "asignada") throw new Error(`Esta pulsera está en estado "${band.estado}" — no está lista para vincular todavía.`);
+  const yaActiva = (await rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=eq.${userId}&estado=eq.activa&select=id,codigo&limit=1`))?.[0];
+  if (yaActiva) throw new Error(`Ya tienes la pulsera ${yaActiva.codigo} vinculada y activa en este mundo. Repórtala como perdida antes de vincular una nueva.`);
+
+  const now = new Date();
+  const vence = vigenciaMeses ? new Date(now.setMonth(now.getMonth() + Number(vigenciaMeses))).toISOString() : null;
+  await rest(`nfc_bands?id=eq.${band.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "activa", linked_user_id: userId, activada_at: new Date().toISOString(), vence_at: vence }),
+  });
+
+  // Si había una solicitud pendiente para esta persona, se cierra sola --
+  // vincular de verdad ES lo que marca "entregada", igual que ya hace el
+  // operador (mismo patrón que vincularNfcBandRemote en el admin).
+  const pendientes = await rest(`nfc_requests?world_id=eq.${worldId}&user_id=eq.${userId}&status=eq.pendiente&select=id&order=created_at.asc&limit=1`).catch(() => []);
+  if (pendientes?.[0]?.id) {
+    await rest(`nfc_requests?id=eq.${pendientes[0].id}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "entregada" }),
+    }).catch(() => {});
+  }
+  return band.codigo;
+}
+
 // Pérdida/robo: bloquea la bandita vinculada (nadie puede reactivarla — el
 // operador exige estado "asignada" para vincular) y abre una solicitud de
 // reposición nueva, con motivo real para que RedPontis y el operador de

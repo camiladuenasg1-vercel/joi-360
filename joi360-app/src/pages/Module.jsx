@@ -13,7 +13,7 @@ import {
   verificarBloqueoEliminarDependiente, eliminarDependienteRemote,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
   fetchPlanesSuscripcionLive,
-  transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
+  transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, vincularBanditaDirectoRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMiCodigoJoi, buscarPorCodigoJoiRemote, buscarPorDniRemote, crearTicketSoporteRemote,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
@@ -178,6 +178,10 @@ function WalletTemplate({ cfg, u }) {
     { id: myCode, nombre: u?.auth?.nombre || "Tú", esTitular: true },
     ...(dependientes || []).map(d => ({ id: d.dependent_user_id, nombre: d.nombre, esTitular: false })),
   ];
+  // Web NFC (NDEFReader) solo existe en Chrome/Android sobre HTTPS -- en
+  // iOS/desktop no hay soporte del navegador, así que el botón de vincular
+  // directo ni se muestra ahí; esos casos siguen usando "Solicitar" como antes.
+  const nfcSoportado = typeof window !== "undefined" && "NDEFReader" in window;
   const [solicitudesNfc, setSolicitudesNfc] = useState({}); // { [beneficiarioId]: request | null | undefined }
   const [solicitandoNfcId, setSolicitandoNfcId] = useState(null);
   const [vigenciasNfc, setVigenciasNfc] = useState({}); // { [beneficiarioId]: {vence_at, estado} | null }
@@ -233,6 +237,21 @@ function WalletTemplate({ cfg, u }) {
     } catch (e) {
       showToast({ titulo: "No se pudo enviar el reporte", mensaje: "Intenta de nuevo en unos minutos." }, "error");
     } finally { setReportandoPerdidaId(null); }
+  };
+
+  // Vincular directo con el celular (Task #230) — antes la única forma de
+  // vincular una pulsera era pedirla y esperar a que un operador la
+  // entregara con su propio lector. Con Web NFC (Android/Chrome) el usuario
+  // lee el tag él mismo y queda vinculado al instante.
+  const [vinculandoDirecto, setVinculandoDirecto] = useState(null); // {id, nombre} | null
+  const onVinculadoDirecto = async (beneficiarioId) => {
+    const [solicitud, vigencia] = await Promise.all([
+      fetchMiSolicitudNfc(mundoId, beneficiarioId),
+      fetchMiBanditaVigencia(mundoId, beneficiarioId),
+    ]);
+    setSolicitudesNfc(prev => ({ ...prev, [beneficiarioId]: solicitud }));
+    setVigenciasNfc(prev => ({ ...prev, [beneficiarioId]: vigencia }));
+    setVinculandoDirecto(null);
   };
 
   // Límites de Transferencia (P2P) que el mundo fija en el microservicio del
@@ -507,6 +526,13 @@ function WalletTemplate({ cfg, u }) {
                     </button>
                   )}
                 </div>
+                {nfcSoportado && (solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
+                  <button onClick={() => setVinculandoDirecto({ id: b.id, nombre: nombreParaAcciones })}
+                    className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-[#673ab7] tap-active">
+                    <Icon name="nfc" size="text-sm" color="text-[#673ab7]" />
+                    ¿Ya tienes la pulsera en mano? Vincúlala ahora con tu celular
+                  </button>
+                )}
                 {b.esTitular && (solicitud === null || solicitud?.status === "rechazada") && (
                   <label className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 flex items-start gap-2 text-[10px] text-[#777587] cursor-pointer">
                     <input type="checkbox" className="mt-0.5" checked={universalTitular} onChange={e=>setUniversalTitular(e.target.checked)}/>
@@ -549,6 +575,99 @@ function WalletTemplate({ cfg, u }) {
             />
           ))}
       </SectionCard>
+
+      {vinculandoDirecto && (
+        <VincularBanditaWebNfcModal
+          mundoId={mundoId}
+          beneficiarioId={vinculandoDirecto.id}
+          beneficiarioNombre={vinculandoDirecto.nombre}
+          vigenciaMeses={cfg.config?.vigenciaBanditasMeses ?? null}
+          onClose={() => setVinculandoDirecto(null)}
+          onVinculado={() => onVinculadoDirecto(vinculandoDirecto.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Vincular una bandita leyéndola directo con el celular (Task #230) vía Web
+// NFC (NDEFReader) -- solo Chrome/Android. scan() exige un gesto real del
+// usuario (el botón "Empezar a leer"), por eso no arranca solo al abrir el
+// modal.
+function VincularBanditaWebNfcModal({ mundoId, beneficiarioId, beneficiarioNombre, vigenciaMeses, onClose, onVinculado }) {
+  const [estado, setEstado] = useState("listo"); // listo | leyendo | vinculando | error | exito
+  const [errorMsg, setErrorMsg] = useState("");
+  const [codigoLeido, setCodigoLeido] = useState("");
+
+  const vincular = async (codigo) => {
+    setCodigoLeido(codigo);
+    setEstado("vinculando");
+    try {
+      await vincularBanditaDirectoRemote(mundoId, beneficiarioId, codigo, vigenciaMeses);
+      setEstado("exito");
+      showToast({ titulo: "Pulsera vinculada", mensaje: `Lista para usar ${beneficiarioNombre ? `— ${beneficiarioNombre}` : ""}.` }, "success");
+      onVinculado();
+    } catch (e) {
+      setEstado("error");
+      setErrorMsg(e.message || "No se pudo vincular la pulsera.");
+    }
+  };
+
+  const empezarLectura = async () => {
+    setEstado("leyendo"); setErrorMsg("");
+    try {
+      const ndef = new window.NDEFReader();
+      await ndef.scan();
+      ndef.onreading = (event) => {
+        if (event.serialNumber) vincular(event.serialNumber);
+      };
+      ndef.onreadingerror = () => { setEstado("error"); setErrorMsg("No se pudo leer la pulsera. Acércala bien al celular e inténtalo de nuevo."); };
+    } catch (e) {
+      setEstado("error");
+      setErrorMsg(e.name === "NotAllowedError" ? "Necesitas dar permiso de NFC para vincular la pulsera." : "No se pudo activar el lector NFC de tu celular.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+      <div className="w-full max-w-[430px] bg-white rounded-t-3xl p-6 pb-8" onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-[#e4e1ee] rounded-full mx-auto mb-5" />
+        <div className="text-center mb-5">
+          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 ${estado === "exito" ? "bg-green-50" : estado === "error" ? "bg-red-50" : "bg-[#ede7f6]"}`}>
+            <Icon name={estado === "exito" ? "check_circle" : estado === "error" ? "error" : "nfc"} fill
+              size="text-4xl" color={estado === "exito" ? "text-green-600" : estado === "error" ? "text-red-500" : "text-[#673ab7]"} />
+          </div>
+          <h3 className="text-[#1b1b24] font-black text-xl">
+            {estado === "exito" ? "¡Pulsera vinculada!" : estado === "error" ? "No se pudo vincular" : `Vincular pulsera${beneficiarioNombre ? ` de ${beneficiarioNombre}` : ""}`}
+          </h3>
+          {estado === "listo" && <p className="text-[#777587] text-xs mt-1.5">Acerca la parte trasera de tu celular a la pulsera y mantenla ahí unos segundos.</p>}
+          {estado === "leyendo" && <p className="text-[#777587] text-xs mt-1.5">Buscando la pulsera… acércala al celular.</p>}
+          {estado === "vinculando" && <p className="text-[#777587] text-xs mt-1.5 font-mono">{codigoLeido} — vinculando…</p>}
+          {estado === "error" && <p className="text-red-600 text-xs mt-1.5">{errorMsg}</p>}
+          {estado === "exito" && <p className="text-[#777587] text-xs mt-1.5">Ya puedes usarla para pagar.</p>}
+        </div>
+        {estado === "listo" && (
+          <button onClick={empezarLectura} className="w-full py-3.5 bg-[#673ab7] text-white rounded-2xl font-bold text-sm tap-active">
+            Empezar a leer
+          </button>
+        )}
+        {estado === "leyendo" && (
+          <div className="flex justify-center py-2">
+            <span className="w-8 h-8 border-2 border-[#e4e1ee] border-t-[#673ab7] rounded-full animate-spin" />
+          </div>
+        )}
+        {estado === "error" && (
+          <button onClick={() => setEstado("listo")} className="w-full py-3.5 bg-[#673ab7] text-white rounded-2xl font-bold text-sm tap-active">
+            Reintentar
+          </button>
+        )}
+        {(estado === "listo" || estado === "error") && (
+          <button onClick={onClose} className="w-full py-3 mt-2 text-[#777587] text-xs font-bold tap-active">Cancelar</button>
+        )}
+        {estado === "exito" && (
+          <button onClick={onClose} className="w-full py-3.5 bg-[#3525cd] text-white rounded-2xl font-bold text-sm tap-active">Listo</button>
+        )}
+      </div>
     </div>
   );
 }
