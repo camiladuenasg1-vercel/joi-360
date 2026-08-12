@@ -2373,10 +2373,14 @@ export async function probeDemoInfra() {
     // La escritura del admin requiere las políticas RLS de la migración:
     rest("worlds?select=id&limit=1").then(async () => {
       try {
+        // Canary sintético, nunca un id de mundo real — un mundo real
+        // resucitaba acá con un upsert silencioso si esta prueba se corría
+        // después de borrarlo (pasó con mundo-eventos-rp). Se limpia solo.
         await rest("worlds?on_conflict=id", {
           method: "POST", headers: upsertHeaders,
-          body: JSON.stringify([{ id: "mundo-eventos-rp", name: "JOI Eventos", code: "EV-RP-000", vertical: "Especial RedPontis", status: "activo", currency: "PEN", color_primary: "#722ce3" }]),
+          body: JSON.stringify([{ id: "zz-probe-write-test", name: "(probe)", code: "PROBE-000", vertical: "Especial RedPontis", status: "activo", currency: "PEN", color_primary: "#722ce3" }]),
         });
+        await rest("worlds?id=eq.zz-probe-write-test", { method: "DELETE", headers: { Prefer: "return=minimal" } });
         return true;
       } catch { return false; }
     }).catch(() => false),

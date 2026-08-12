@@ -521,61 +521,27 @@ function seed() {
   const now = Date.now();
   return {
     session: null,
-    mundos: [
-      {
-        id: "mundo-eventos-rp",
-        fixed: true,
-        redpontis: true,
-        type: "eventos_rp",
-        nombre: "JOI Eventos",
-        codigo: "EV-RP-000",
-        vertical: "Especial RedPontis",
-        entidadLegal: "RedPontis S.A.C.",
-        ruc: "20612345678",
-        moneda: "PEN",
-        estado: "ACTIVO",
-        color: "#722ce3",
-        descripcion: "Mundo RedPontis de eventos: usuarios B2C pueden registrar, publicar y gestionar su propio evento desde el app. RedPontis monitorea. Fase 0: sin monetización.",
-        // Configuración del Motor de Eventos para este mundo — B2C se deriva
-        // de m.type==="eventos_rp" (ver modosDeMundo). Embebido activo porque
-        // RedPontis también publica eventos propios directo en este mundo.
-        eventosConfig: {
-          embebidoActivo: true,
-          monetizacion: false,  // fase 0: sin comisión, sin cobro (lo lee la superapp)
-          comisionEntrada: 1,
-        },
-        modulos: (() => {
-          const mods = ["wallet", "eventos", "comercios", "accesos"].map(defaultModuleState);
-          const evMod = mods.find(m => m.id === "eventos");
-          if (evMod) {
-            evMod.config.allowB2C = true;
-            evMod.config.comisionEntrada = 1;   // 1% en JOI Eventos
-            evMod.config.ventanaPickup = 30;
-            // Servicios iniciales
-            evMod.serviciosActivos = {
-              "Crear evento": true, "Crear entrada (tipos y precios)": true,
-              "Gestión de aforo": true, "Monitoreo de evento en tiempo real": true,
-              "Monitoreo de venta de entradas": true, "Identificación del usuario con TAQ o QR": true,
-              "Consulta en POS": false, "Pre-orden / preventa de entradas": true,
-              "Pago anticipado": true, "Pickup QR para retiro": true,
-            };
-          }
-          return mods;
-        })(),
-        acuerdo: { tipo: "transaccional", revShare: 1, fijoMensual: 0, setup: 0, vigencia: "indefinida", nota: "Fase 0 — 1% rev-share sobre entradas vendidas" },
-        createdAt: now,
-      },
-      // JOI Promos (mundo-promos-rp) existió como segundo mundo especial de
-      // RedPontis pero se sacó del alcance activo por pedido explícito de la
-      // usuaria: "solo vamos a manejar un mundo propio de JOI, JOI Eventos".
-      // Antes había 2 mundos demo horneados aquí (Jockey Plaza, Colegio
-      // Raimondi con ids fijos mundo-jockey-plaza/mundo-raimondi) — el mismo
-      // problema que comercios/tickets/liquidaciones: si state.mundos se
-      // reseedeaba por CUALQUIER motivo (origen nuevo, guard de state vacío),
-      // el siguiente update() los empujaba a Supabase vía scheduleSync,
-      // reintroduciendo mundos fantasma en producción. seed() ya no crea
-      // mundos que no sean plataforma real (JOI Eventos/JOI Promos, fixed).
-    ],
+    // Pivot a piloto Jockey Plaza (12-ago-2026): Camila confirmó el borrado
+    // permanente de todos los demás mundos (Raimondi, Universidad de Lima,
+    // JOI Eventos, JOI Promos) — "empezamos netamente con Jockey Plaza como
+    // entidad". JOI Eventos (mundo-eventos-rp) era el segundo mundo especial
+    // horneado acá con fixed:true — mismo problema que JOI Promos abajo: si
+    // seed() lo sigue creando, el siguiente update() lo empuja de vuelta a
+    // Supabase vía scheduleSync en cuanto se borre con SQL, resucitando un
+    // mundo que se pidió explícitamente eliminar. seed() ya no crea ningún
+    // mundo especial de plataforma — Jockey Plaza es un mundo normal, creado
+    // por el wizard como cualquier otro, no vive horneado acá.
+    //
+    // JOI Promos (mundo-promos-rp) existió como segundo mundo especial de
+    // RedPontis pero se sacó del alcance activo por pedido explícito de la
+    // usuaria: "solo vamos a manejar un mundo propio de JOI, JOI Eventos".
+    // Antes había 2 mundos demo horneados aquí (Jockey Plaza, Colegio
+    // Raimondi con ids fijos mundo-jockey-plaza/mundo-raimondi) — el mismo
+    // problema que comercios/tickets/liquidaciones: si state.mundos se
+    // reseedeaba por CUALQUIER motivo (origen nuevo, guard de state vacío),
+    // el siguiente update() los empujaba a Supabase vía scheduleSync,
+    // reintroduciendo mundos fantasma en producción.
+    mundos: [],
     // Sin data mock horneada: liquidación, eventos, promos, comercios,
     // tickets y anunciantes arrancan reales en 0 y se llenan solo con lo
     // que sincroniza Supabase o crea el admin — mismo mandato del borrado
@@ -629,13 +595,16 @@ function load() {
   ["comercios", "tickets", "anunciantes", "liquidaciones", "promos", "eventos"].forEach(key => {
     if (Array.isArray(state[key])) state[key] = state[key].filter(x => !IDS_DEMO.test(x.id));
   });
-  // mundo-promos-rp (#139): eliminado de Supabase y ya no lo crea seed(),
-  // pero una pestaña vieja con este mundo cacheado en localStorage lo
-  // reintroducía a Supabase en su próxima mutación (mismo mecanismo del
-  // incidente de mundo-raimondi/mundo-jockey-plaza) — se purga acá para que
-  // eso no pueda volver a pasar sin importar qué versión del bundle tenga
+  // mundo-promos-rp (#139) y, desde el pivot a piloto Jockey Plaza (12-ago),
+  // mundo-eventos-rp/mundo-raimondi/mundo-rbufxr (Universidad de Lima):
+  // eliminados de Supabase y ya no los crea seed(), pero una pestaña vieja
+  // con alguno de estos mundos cacheado en localStorage lo reintroducía a
+  // Supabase en su próxima mutación (mismo mecanismo del incidente de
+  // mundo-raimondi/mundo-jockey-plaza original) — se purgan acá para que eso
+  // no pueda volver a pasar sin importar qué versión del bundle tenga
   // abierta cada pestaña.
-  if (Array.isArray(state.mundos)) state.mundos = state.mundos.filter(m => m.id !== "mundo-promos-rp");
+  const MUNDOS_RETIRADOS = new Set(["mundo-promos-rp", "mundo-eventos-rp", "mundo-raimondi", "mundo-rbufxr"]);
+  if (Array.isArray(state.mundos)) state.mundos = state.mundos.filter(m => !MUNDOS_RETIRADOS.has(m.id));
 
   // ── auto-cura: state.users (localStorage de sesiones viejas) ya no se usa
   // — el login pasa por admin_users en Supabase (ver login() en este mismo
