@@ -416,6 +416,7 @@ function EntregaDrawer({ m, open, onClose }) {
   const [confirm, setConfirm] = useState(false);
   const [emailEntrega, setEmailEntrega] = useState("");
   const [entregando, setEntregando] = useState(false);
+  const [regenerando, setRegenerando] = useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -475,6 +476,27 @@ Equipo RedPontis · JOI 360`;
   const copiar = (txt, label) => {
     navigator.clipboard?.writeText(txt);
     notify(`${label} copiado al portapapeles.`, "info");
+  };
+
+  // Regenerar contraseña de un mundo YA entregado — antes esto solo existía
+  // antes de la primera entrega; si el sponsor perdía la contraseña no había
+  // forma de resetearla desde la UI (el campo queda readOnly una vez
+  // entregado). Genera y persiste en el mismo paso, no deja un estado "sucio"
+  // a medio guardar.
+  const regenerar = async () => {
+    if (regenerando) return;
+    setRegenerando(true);
+    const nueva = { ...cred, password: generarPassword() };
+    try {
+      await entregarMundoRemote(m.id, { ...nueva, emailEntrega: m.entrega?.emailEntrega || emailEntrega });
+      ejecutarEntrega(m.id, { ...nueva, emailEntrega: m.entrega?.emailEntrega || emailEntrega });
+      setCred(nueva);
+      notify("Contraseña regenerada y guardada. Copia el mensaje para reenviarla al sponsor.", "success");
+    } catch (e) {
+      notify("No se pudo regenerar la contraseña: " + e.message, "error");
+    } finally {
+      setRegenerando(false);
+    }
   };
 
   return (
@@ -567,11 +589,14 @@ Equipo RedPontis · JOI 360`;
                 <BtnOutline className="!px-3" onClick={() => copiar(cred.usuario, "Usuario")}><Icon n="content_copy" className="text-[16px]" /></BtnOutline>
               </div>
             </Field>
-            <Field label="Contraseña">
+            <Field label="Contraseña" hint={entregado ? "Esta es la contraseña real ya guardada — \"Regenerar\" crea una nueva y la guarda al toque." : undefined}>
               <div className="flex gap-2">
-                <input className={`${inputCls} font-mono text-xs`} value={cred.password} readOnly={entregado} onChange={e => setCred({ ...cred, password: e.target.value })} />
+                <input className={`${inputCls} font-mono text-xs`} value={cred.password || ""}
+                  placeholder={entregado && !cred.password ? "Sin contraseña guardada — regenera una" : undefined}
+                  readOnly={entregado} onChange={e => setCred({ ...cred, password: e.target.value })} />
                 {!entregado && <BtnOutline className="!px-3" onClick={() => { setCred({ ...cred, password: generarPassword() }); notify("Contraseña regenerada.", "info"); }}><Icon n="autorenew" className="text-[16px]" /></BtnOutline>}
-                <BtnOutline className="!px-3" onClick={() => copiar(cred.password, "Contraseña")}><Icon n="content_copy" className="text-[16px]" /></BtnOutline>
+                {entregado && <BtnOutline className="!px-3" disabled={regenerando} loading={regenerando} onClick={regenerar}><Icon n="autorenew" className="text-[16px]" /></BtnOutline>}
+                <BtnOutline className="!px-3" disabled={!cred.password} onClick={() => copiar(cred.password, "Contraseña")}><Icon n="content_copy" className="text-[16px]" /></BtnOutline>
               </div>
             </Field>
           </div>

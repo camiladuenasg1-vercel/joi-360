@@ -783,8 +783,13 @@ export async function refreshMundosLive() {
   // `worlds` (sponsor_usuario/entregado/fecha_entrega), Supabase es la única
   // fuente real — antes m.entrega solo existía en el localStorage de la
   // pestaña que ejecutó la entrega, invisible para cualquier otra sesión.
+  // Bug real (12-ago): la contraseña se guardaba bien en `worlds.sponsor_password`
+  // (entregarMundoRemote) pero acá nunca se leía de vuelta — cred.password
+  // quedaba `undefined` en cualquier sesión que no fuera la que ejecutó la
+  // entrega, y como el campo es readOnly una vez entregado, no había forma
+  // de verla ni de corregirla desde la UI.
   const entregaDe = w => w.entregado
-    ? { entregado: true, credenciales: { usuario: w.sponsor_usuario || null }, fechaEntrega: w.fecha_entrega ? Date.parse(w.fecha_entrega) : null, emailEntrega: w.email_entrega || null }
+    ? { entregado: true, credenciales: { usuario: w.sponsor_usuario || null, password: w.sponsor_password || null }, fechaEntrega: w.fecha_entrega ? Date.parse(w.fecha_entrega) : null, emailEntrega: w.email_entrega || null }
     : { entregado: false, credenciales: null, fechaEntrega: null };
 
   update(st => {
