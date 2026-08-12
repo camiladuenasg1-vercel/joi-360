@@ -17,7 +17,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, Pill, BtnPrimary, BtnOutline, notify, Field, inputCls } from "./ui";
 import { useStore } from "./hooks";
-import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote, crearAdminUserRemote, actualizarPasswordAdminRemote } from "./supabase";
+import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote, crearAdminUserRemote, actualizarPasswordAdminRemote, fetchTicketTypesDeEvento, fetchEventMerchants, fetchMerchantsRemote } from "./supabase";
 
 export function Gobierno() {
   const st = useStore();
@@ -35,6 +35,7 @@ export function Gobierno() {
   const [rechazando, setRechazando] = useState(null); // { item, kind: 'evento'|'comercio' }
   const [motivo, setMotivo] = useState("");
   const [viendoMotivo, setViendoMotivo] = useState(null);
+  const [viendoDetalleEvento, setViendoDetalleEvento] = useState(null);
   const [adminUsers, setAdminUsers] = useState(null);
   const [nuevoAdmin, setNuevoAdmin] = useState(null); // { email, name, password } | null = cerrado
   const [cambiandoClave, setCambiandoClave] = useState(null); // { id, nombre, password } | null
@@ -286,7 +287,9 @@ export function Gobierno() {
                     <Pill color="bg-amber-100 text-amber-700">Pendiente</Pill>
                   </div>
                   <div className="px-5 py-3 bg-surface-container-low flex items-center justify-between">
-                    <p className="text-xs text-on-surface-variant">Revisa los detalles antes de publicar en el app y el landing.</p>
+                    <button onClick={() => setViendoDetalleEvento(p)} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                      <Icon n="visibility" className="text-[14px]" /> Ver detalles
+                    </button>
                     <div className="flex gap-2">
                       <BtnOutline className="!py-1.5 !px-3 text-xs text-error border-error/30 hover:bg-error/5" disabled={busy === p.id} onClick={() => setRechazando({ item: p, kind: "evento" })}>
                         Rechazar
@@ -371,6 +374,14 @@ export function Gobierno() {
             <BtnOutline className="w-full mt-5" onClick={() => setViendoMotivo(null)}>Cerrar</BtnOutline>
           </div>
         </div>
+      )}
+
+      {/* Detalle completo del evento pendiente — antes se aprobaba/rechazaba
+          viendo solo título/fecha/lugar/organizador, aunque el resto (descripción,
+          banner, mapa, tipos de entrada, comercios afiliados) ya se traía completo
+          al estado (select=*) y nunca se mostraba. */}
+      {viendoDetalleEvento && (
+        <DetalleEventoPendienteModal ev={viendoDetalleEvento} mundoNombre={mundoNombre} onClose={() => setViendoDetalleEvento(null)} />
       )}
 
       {/* REPORTES — RedPontis cross-mundo: eventos, entradas, recaudación (Gantt #81).
@@ -479,6 +490,106 @@ const ESTADO_LABEL = {
   BORRADOR: "Borrador", PENDIENTE_APROBACION: "Pendiente", PUBLICADO: "Publicado",
   FINALIZADO: "Finalizado", RECHAZADO: "Rechazado",
 };
+
+// Todo lo que el mundo cargó al crear el evento pero que la cola de
+// aprobación nunca mostraba: descripción completa, banner, mapa PDF, tipos
+// de entrada con precio/cupos, y comercios afiliados (con foto cuando el
+// comercio la tiene — event_merchants no guarda foto propia, se cruza con
+// el registro real del comercio en el mundo).
+function DetalleEventoPendienteModal({ ev, mundoNombre, onClose }) {
+  const [tipos, setTipos] = useState(null);
+  const [comercios, setComercios] = useState(null);
+
+  useEffect(() => {
+    let vivo = true;
+    Promise.all([
+      fetchTicketTypesDeEvento(ev.id).catch(() => []),
+      fetchEventMerchants(ev.id).catch(() => []),
+      fetchMerchantsRemote(ev.world_id).catch(() => []),
+    ]).then(([tiposEntrada, afiliados, merchantsDelMundo]) => {
+      if (!vivo) return;
+      const fotoPorId = Object.fromEntries((merchantsDelMundo || []).map(m => [m.id, m.photo_url]));
+      setTipos(tiposEntrada || []);
+      setComercios((afiliados || []).map(a => ({ ...a, foto: a.logo_url || fotoPorId[a.merchant_id] || null })));
+    });
+    return () => { vivo = false; };
+  }, [ev.id, ev.world_id]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {ev.imagen_url ? (
+          <div className="h-40 rounded-t-2xl overflow-hidden">
+            <img src={ev.imagen_url} alt="" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="h-24 rounded-t-2xl flex items-center justify-center bg-secondary-fixed">
+            <Icon n="confirmation_number" className="text-secondary text-[32px]" />
+          </div>
+        )}
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-[9px] uppercase text-outline">{ev.modo === "b2b" ? "Evento B2B" : ev.modo === "embebido" ? "Evento embebido" : "Evento B2C"}</span>
+            <span className="font-mono text-[9px] text-outline">·</span>
+            <span className="font-mono text-[9px] uppercase text-outline">{mundoNombre(ev.world_id)}</span>
+          </div>
+          <h3 className="font-bold text-xl mb-1">{ev.titulo}</h3>
+          <p className="text-sm text-on-surface-variant mb-3">
+            {ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} · {ev.lugar || "sin lugar"} · Organiza: {ev.organizador || "—"}
+          </p>
+          {ev.descripcion && <p className="text-sm mb-4 whitespace-pre-wrap">{ev.descripcion}</p>}
+
+          {ev.mapa_url && (
+            <a href={ev.mapa_url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-surface-container-low tap-active">
+              <Icon n="map" className="text-primary text-[18px]" />
+              <span className="text-sm font-semibold text-primary">{ev.mapa_nombre || "Ver mapa del evento (PDF)"}</span>
+            </a>
+          )}
+
+          <h4 className="font-semibold text-xs uppercase tracking-wider text-on-surface-variant mb-2">Tipos de entrada</h4>
+          {tipos === null ? (
+            <p className="text-sm text-on-surface-variant mb-4">Cargando…</p>
+          ) : tipos.length === 0 ? (
+            <p className="text-sm text-on-surface-variant mb-4">Sin tipos de entrada configurados.</p>
+          ) : (
+            <div className="space-y-1.5 mb-4">
+              {tipos.map(t => (
+                <div key={t.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-low text-sm">
+                  <span className="font-medium">{t.nombre}</span>
+                  <span className="font-mono text-xs text-on-surface-variant">{t.precio > 0 ? `S/ ${Number(t.precio).toFixed(2)}` : "Gratis"} · {t.cupos ?? "∞"} cupos</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <h4 className="font-semibold text-xs uppercase tracking-wider text-on-surface-variant mb-2">Comercios afiliados</h4>
+          {comercios === null ? (
+            <p className="text-sm text-on-surface-variant">Cargando…</p>
+          ) : comercios.length === 0 ? (
+            <p className="text-sm text-on-surface-variant">Ninguno afiliado todavía.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {comercios.map(c => (
+                <div key={c.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-full bg-surface-container-low">
+                  {c.foto ? (
+                    <img src={c.foto} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-bold text-primary">{(c.merchant_nombre || "?")[0]}</div>
+                  )}
+                  <span className="text-xs font-medium">{c.merchant_nombre}{c.ubicacion ? ` · ${c.ubicacion}` : ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="px-6 pb-6">
+          <BtnOutline className="w-full" onClick={onClose}>Cerrar</BtnOutline>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ReportesEventosRP({ mundos, eventos, tickets, mundoNombre }) {
   if (eventos === null || tickets === null) return <p className="text-on-surface-variant py-8 text-center">Cargando reportes…</p>;

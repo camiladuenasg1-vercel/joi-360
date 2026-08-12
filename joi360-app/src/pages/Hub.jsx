@@ -71,7 +71,7 @@ function EventosMundoWidget({ mundoId, mundo, nav }) {
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
         {top5.map(ev => (
-          <button key={ev.id} onClick={() => nav("/module/eventos")}
+          <button key={ev.id} onClick={() => nav(`/module/eventos?evento=${ev.id}`)}
             className="flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-white border border-[#e4e1ee] text-left tap-active">
             <div className="h-20 relative" style={{
               background: ev.imagen_url ? `url(${ev.imagen_url}) center/cover` : `linear-gradient(135deg,${mundo.color || "#3525cd"},#4f46e5)`,

@@ -2026,6 +2026,16 @@ export async function afiliarComercioEvento(eventId, merchantId, merchantNombre)
 export async function desafiliarComercioEvento(id) {
   await rest(`event_merchants?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
+// Comercio ad-hoc solo para este evento (no es un merchant permanente del
+// mundo) — merchant_id nunca tuvo FK real hacia merchants(id), así que un id
+// sintético generado acá no rompe nada existente. Ver fix-event-merchants-ad-hoc.sql.
+export async function crearComercioAdHocEvento(eventId, nombre, logoUrl) {
+  const rows = await rest("event_merchants", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify([{ event_id: eventId, merchant_id: crypto.randomUUID(), merchant_nombre: nombre, logo_url: logoUrl || null, es_ad_hoc: true }]),
+  });
+  return rows?.[0] || null;
+}
 export async function updateUbicacionEventoComercio(id, ubicacion) {
   await rest(`event_merchants?id=eq.${id}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },

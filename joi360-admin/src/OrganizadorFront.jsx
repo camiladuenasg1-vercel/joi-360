@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, session, organizadorLogin, organizadorLogout, organizadorSession, generarPassword, refreshEventosLive } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
-import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo, importarInvitadosEventoRemote, fetchEventGuests, buscarInvitadoPorDocumentoRemote, activarBanditaEventoRemote, recargarBanditaEventoRemote, deleteEventoRemote } from "./supabase.js";
+import { upsertEventoRemote, syncTicketTypesRemote, fetchTicketsDeEvento, setTicketEstado, fetchOrganizadoresRemote, fetchMerchantsRemote, fetchEventMerchants, afiliarComercioEvento, desafiliarComercioEvento, updateUbicacionEventoComercio, crearComercioAdHocEvento, fetchProductsRemote, upsertProductRemote, deleteProductRemote, errorControlado, logErrorControlado, logCheckinEvento, fetchCheckinLogEvento, fetchAgendaEvento, upsertAgendaItem, deleteAgendaItem, fetchTicketTypesDeEvento, fetchPosDevicesDeEvento, uploadArchivo, importarInvitadosEventoRemote, fetchEventGuests, buscarInvitadoPorDocumentoRemote, activarBanditaEventoRemote, recargarBanditaEventoRemote, deleteEventoRemote } from "./supabase.js";
 
 const TIPO_ENTRADA_BLANK = { id: "", nombre: "General", precio: 0, cupos: 100, descripcion: "", incluye: "" };
 
@@ -612,6 +612,11 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
   const [busyId, setBusyId] = useState(null);
   const [catalogoAbierto, setCatalogoAbierto] = useState(null); // merchant_id
   const [hardwareEvento, setHardwareEvento] = useState(null);
+  const [agregandoAdHoc, setAgregandoAdHoc] = useState(false);
+  const [adHocNombre, setAdHocNombre] = useState("");
+  const [adHocLogoUrl, setAdHocLogoUrl] = useState("");
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [guardandoAdHoc, setGuardandoAdHoc] = useState(false);
 
   const cargar = () => fetchEventMerchants(ev.id).then(r => setAfiliados(r || [])).catch(() => setAfiliados([]));
   React.useEffect(() => { cargar(); }, [ev.id]);
@@ -636,7 +641,41 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
     try { await updateUbicacionEventoComercio(afiliado.id, ubicacion); } catch {}
   };
 
+  const subirLogoAdHoc = async (file) => {
+    if (!file) return;
+    setSubiendoLogo(true);
+    try {
+      const path = `eventos-comercios-adhoc/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      setAdHocLogoUrl(await uploadArchivo("joi360-media", path, file));
+    } catch (e) {
+      notify("No se pudo subir el logo: " + e.message, "error");
+    } finally { setSubiendoLogo(false); }
+  };
+
+  const guardarAdHoc = async () => {
+    if (!adHocNombre.trim()) return;
+    setGuardandoAdHoc(true);
+    try {
+      await crearComercioAdHocEvento(ev.id, adHocNombre.trim(), adHocLogoUrl || null);
+      notify(`"${adHocNombre.trim()}" agregado solo para "${ev.nombre}".`);
+      setAdHocNombre(""); setAdHocLogoUrl(""); setAgregandoAdHoc(false);
+      await cargar();
+    } catch (e) {
+      const err = await errorControlado("operacion_admin_fallida");
+      logErrorControlado("operacion_admin_fallida", `comercio-adhoc-evento:${ev.id}`, worldId);
+      notify(`${err.mensaje} ${err.accion}`, "error");
+    } finally { setGuardandoAdHoc(false); }
+  };
+
+  const quitarAdHoc = async (afiliado) => {
+    setBusyId(afiliado.id);
+    try { await desafiliarComercioEvento(afiliado.id); await cargar(); }
+    finally { setBusyId(null); }
+  };
+
   if (!Array.isArray(merchants)) return null;
+
+  const afiliadosAdHoc = (afiliados || []).filter(a => a.es_ad_hoc);
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm mb-6">
@@ -696,6 +735,61 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
           })}
         </div>
       )}
+
+      {/* Comercios ad-hoc: marcas que solo participan de ESTE evento (ej. un
+          food-truck invitado), sin registrarse como comercio permanente del
+          mundo. Distinto de la lista de arriba, que solo afilia merchants
+          que ya existen en el directorio del mundo. */}
+      <div className="px-6 py-4 border-t border-outline-variant/60">
+        <p className="font-mono text-[10px] uppercase text-outline mb-3">Comercios solo para este evento</p>
+        {afiliadosAdHoc.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {afiliadosAdHoc.map(a => (
+              <div key={a.id} className="flex items-center gap-3">
+                {a.logo_url ? (
+                  <img src={a.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{(a.merchant_nombre || "?")[0]}</div>
+                )}
+                <input className={`${inputCls} !flex-1 !py-1.5 text-sm`} placeholder="Ubicación / stand"
+                  defaultValue={a.ubicacion || ""} onBlur={e => setUbicacion(a, e.target.value)} />
+                <button onClick={() => quitarAdHoc(a)} disabled={busyId === a.id} className="text-xs font-bold text-error flex-shrink-0">Quitar</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {agregandoAdHoc ? (
+          <div className="bg-surface-container-low rounded-xl p-4 space-y-3">
+            <Field label="Nombre de la marca">
+              <input className={inputCls} value={adHocNombre} onChange={e => setAdHocNombre(e.target.value)} placeholder="Ej. Food Truck Don Beto" autoFocus />
+            </Field>
+            <div>
+              <label className="text-[10px] font-mono uppercase text-outline block mb-1.5">Logo (opcional)</label>
+              {adHocLogoUrl ? (
+                <div className="flex items-center gap-2">
+                  <img src={adHocLogoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                  <button onClick={() => setAdHocLogoUrl("")} className="text-[11px] text-error hover:underline">Quitar</button>
+                </div>
+              ) : (
+                <label className="text-[11px] text-primary font-semibold cursor-pointer hover:underline">
+                  {subiendoLogo ? "Subiendo…" : "Adjuntar logo"}
+                  <input type="file" accept="image/*" className="hidden" disabled={subiendoLogo} onChange={e => subirLogoAdHoc(e.target.files?.[0])} />
+                </label>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <BtnOutline className="!py-1.5 !px-3 text-xs" onClick={() => { setAgregandoAdHoc(false); setAdHocNombre(""); setAdHocLogoUrl(""); }}>Cancelar</BtnOutline>
+              <BtnPrimary className="!py-1.5 !px-3 text-xs" disabled={!adHocNombre.trim() || guardandoAdHoc} onClick={guardarAdHoc}>
+                {guardandoAdHoc ? "Agregando…" : "Agregar"}
+              </BtnPrimary>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setAgregandoAdHoc(true)} className="text-xs font-bold text-primary flex items-center gap-1">
+            <Icon n="add_business" className="text-[16px]" /> Agregar comercio solo para este evento
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -2178,6 +2178,15 @@ function EventoHeroSection({ ev, vendidas, mundo }) {
             <ProgressBar value={vendidas} max={ev.aforo_total}/>
           </div>
         )}
+        {/* El link al mapa solo vivía en la tarjeta de la lista -- al entrar al
+            detalle (donde de verdad se decide comprar) desaparecía. */}
+        {ev.mapa_url && (
+          <a href={ev.mapa_url} target="_blank" rel="noreferrer"
+            className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl bg-[#f0ecf9] tap-active">
+            <Icon name="map" size="text-base" color="text-[#3525cd]"/>
+            <span className="text-xs font-bold text-[#3525cd]">{ev.mapa_nombre || "Ver mapa del evento"}</span>
+          </a>
+        )}
       </div>
     </SectionCard>
   );
@@ -2224,7 +2233,7 @@ function EventoAgendaSection({ ev }) {
   );
 }
 
-function EventoMarketplaceSection({ ev, mundo }) {
+function EventoMarketplaceSection({ ev, mundo, comercios }) {
   const [afiliados, setAfiliados] = useState(null);
   useEffect(() => {
     let vivo = true;
@@ -2232,14 +2241,21 @@ function EventoMarketplaceSection({ ev, mundo }) {
     return () => { vivo = false; };
   }, [ev.id]);
   if (!afiliados || !afiliados.length) return null;
+  // event_merchants no guarda foto propia -- se cruza por merchant_id contra
+  // el directorio real de comercios del mundo (ya trae fotoUrl).
+  const fotoPorId = Object.fromEntries((comercios || []).map(c => [c.id, c.fotoUrl]));
   return (
     <SectionCard>
       <SectionHeader label="Comercios en el evento" icon="storefront"/>
       <div className="px-4 pb-4 flex gap-3 overflow-x-auto scrollbar-hide">
         {afiliados.map(c => (
           <div key={c.id} className="flex-shrink-0 flex flex-col items-center gap-1.5 bg-[#f0ecf9] rounded-2xl p-3 w-20">
-            <div className="w-10 h-10 rounded-xl bg-[#3525cd] flex items-center justify-center">
-              <span className="text-white font-black text-base">{(c.merchant_nombre || "?")[0]}</span>
+            <div className="w-10 h-10 rounded-xl bg-[#3525cd] flex items-center justify-center overflow-hidden">
+              {(c.logo_url || fotoPorId[c.merchant_id]) ? (
+                <img src={c.logo_url || fotoPorId[c.merchant_id]} alt="" className="w-full h-full object-cover"/>
+              ) : (
+                <span className="text-white font-black text-base">{(c.merchant_nombre || "?")[0]}</span>
+              )}
             </div>
             <span className="text-[9px] font-semibold text-[#464555] text-center leading-tight">{(c.merchant_nombre || "Comercio").split(" ").slice(0,2).join(" ")}</span>
             {c.ubicacion && <span className="text-[8px] text-[#9a97ab] text-center leading-tight">{c.ubicacion}</span>}
@@ -2743,7 +2759,7 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
  * que había más para ver. En columna todas quedan visibles, sin límite,
  * simplemente scrolleando hacia abajo con el resto de la pantalla.
  */
-function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
+function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas, comercios }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-3">
@@ -2764,6 +2780,7 @@ function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
             mundo={mundo}
             vendidas={vendidasMap[ev.id] || 0}
             onVerEntradas={onVerEntradas}
+            comerciosDelMundo={comercios}
           />
         ))}
       </div>
@@ -2771,17 +2788,20 @@ function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
   );
 }
 
-function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas }) {
-  const [comercios, setComercios] = useState(null);
+function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMundo }) {
+  const [afiliados, setAfiliados] = useState(null);
   const lleno = ev.aforo_total > 0 && vendidas >= ev.aforo_total;
 
   useEffect(() => {
     let vivo = true;
     fetchEventMerchantsLive(ev.id)
-      .then(r => { if (vivo) setComercios(r || []); })
-      .catch(() => { if (vivo) setComercios([]); });
+      .then(r => { if (vivo) setAfiliados(r || []); })
+      .catch(() => { if (vivo) setAfiliados([]); });
     return () => { vivo = false; };
   }, [ev.id]);
+  // event_merchants no guarda foto propia -- se cruza por merchant_id contra
+  // el directorio real de comercios del mundo (ya trae fotoUrl).
+  const fotoPorId = Object.fromEntries((comerciosDelMundo || []).map(c => [c.id, c.fotoUrl]));
 
   return (
     <div className="w-full rounded-2xl overflow-hidden bg-white border border-[#e4e1ee]">
@@ -2836,20 +2856,25 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas }) {
 
         {/* Comercios del evento: quién va a estar vendiendo adentro. Es de las
             primeras cosas que se preguntan antes de comprar una entrada. */}
-        {Array.isArray(comercios) && comercios.length > 0 && (
+        {Array.isArray(afiliados) && afiliados.length > 0 && (
           <div className="mb-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#777587] mb-1.5">
               Comercios en el evento
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {comercios.slice(0, 4).map(c => (
-                <span key={c.id} className="text-[10px] px-2 py-1 rounded-full bg-[#f0ecf9] text-[#3525cd] font-semibold">
+              {afiliados.slice(0, 4).map(c => (
+                <span key={c.id} className="flex items-center gap-1 text-[10px] pl-1 pr-2 py-1 rounded-full bg-[#f0ecf9] text-[#3525cd] font-semibold">
+                  {(c.logo_url || fotoPorId[c.merchant_id]) ? (
+                    <img src={c.logo_url || fotoPorId[c.merchant_id]} alt="" className="w-4 h-4 rounded-full object-cover"/>
+                  ) : (
+                    <span className="w-4 h-4 rounded-full bg-[#3525cd] text-white flex items-center justify-center text-[8px] font-black">{(c.merchant_nombre||"?")[0]}</span>
+                  )}
                   {c.merchant_nombre}
                 </span>
               ))}
-              {comercios.length > 4 && (
+              {afiliados.length > 4 && (
                 <span className="text-[10px] px-2 py-1 text-[#777587] font-semibold">
-                  +{comercios.length - 4}
+                  +{afiliados.length - 4}
                 </span>
               )}
             </div>
@@ -2885,6 +2910,9 @@ function EventosTemplate({ cfg, u }) {
   const pickup = cfg.config.ventanaPickup || 30;
   const monetizacion = evCfg.monetizacion !== false;
   const worldId = cfg.mundo.id;
+  // event_merchants no guarda foto propia -- se cruza por merchant_id contra
+  // el directorio real de comercios del mundo (ya trae fotoUrl).
+  const comerciosDelMundo = useMerchantsLive(worldId);
 
   // ── Marketplace en vivo: eventos publicados (no privados) desde Supabase ──
   const [liveEvents, setLiveEvents] = useState(null); // null=cargando
@@ -2892,6 +2920,19 @@ function EventosTemplate({ cfg, u }) {
   const [vendidasMap, setVendidasMap] = useState({});
   const [detalle, setDetalle] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // Deep-link a un evento específico (?evento=<id>) — el carrusel del Home
+  // antes mandaba a todos los eventos por igual al listado genérico, sin
+  // importar cuál se tocó. Se abre el detalle apenas cargan los eventos.
+  const location = useLocation();
+  const eventoDeepLinkId = new URLSearchParams(location.search).get("evento");
+  const [deepLinkAbierto, setDeepLinkAbierto] = useState(false);
+  useEffect(() => {
+    if (deepLinkAbierto || !eventoDeepLinkId || !liveEvents) return;
+    const match = liveEvents.find(e => e.id === eventoDeepLinkId);
+    if (match) setDetalle(match);
+    setDeepLinkAbierto(true);
+  }, [eventoDeepLinkId, liveEvents, deepLinkAbierto]);
 
   useEffect(() => {
     let vivo = true;
@@ -3102,7 +3143,7 @@ function EventosTemplate({ cfg, u }) {
           const Section = EVENT_SECTION_REGISTRY[k];
           if (!Section) return null;
           return <React.Fragment key={k}>{Section({
-            ev: detalle, vendidas, mundo: cfg.mundo,
+            ev: detalle, vendidas, mundo: cfg.mundo, comercios: comerciosDelMundo,
             onComprado: () => { setDetalle(null); setTab("mis_entradas"); setReloadKey(x => x + 1); },
           })}</React.Fragment>;
         })}
@@ -3194,6 +3235,7 @@ function EventosTemplate({ cfg, u }) {
               mundo={cfg.mundo}
               vendidasMap={vendidasMap}
               onVerEntradas={setDetalle}
+              comercios={comerciosDelMundo}
             />
           )}
 
