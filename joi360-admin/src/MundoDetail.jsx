@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, moduleCat, MODULE_CATALOG, DEPENDENCY_MAP, MODULOS_PROXIMAMENTE, CANALES_EMISION, CANALES_ADQUIRENCIA, PSP_PROVIDERS, promoVigente, generarPassword, ejecutarEntrega, listSponsorOptions, crearAnunciante, HARDWARE_CATALOG, hardwareModelById, listPosStock, asignarPos, liberarPos, rubrosDeVertical, rubroNombre, getFlagDev, DEV_STATUS_META, getFlagUx, modosDeMundo, liquidacionConfigDe } from "./store";
@@ -10,6 +10,10 @@ import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
 // cross-mundo y también cubre solicitudes de alta de comercio, con filtros,
 // motivo de rechazo y alerta real al mundo — ver Gobierno.jsx.
+
+// Mismo catálogo que el selector del wizard (Mundos.jsx#PAISES) — duplicado
+// acá porque no vale la pena exportarlo por una sola constante compartida.
+const PAISES_FICHA = ["Perú", "Chile", "Colombia", "México", "Ecuador", "Bolivia"];
 
 export function MundoDetail() {
   const { id } = useParams();
@@ -680,6 +684,115 @@ function PerfilMundoPanel({ m }) {
 }
 
 /* ---------------- Resumen ---------------- */
+// Campos de la ficha que se pueden editar post-creación (Task: "botón que
+// permita la edición de ficha de mundo con autoguardado"). Código, Vertical
+// y Moneda quedan fuera a propósito: otras partes del sistema (giro/rubro,
+// wallet, QR de identificación) asumen que no cambian después de creado el
+// mundo, cambiarlos acá sin auditar esos consumidores sería un riesgo nuevo,
+// no el que se pidió cerrar.
+function FichaMundoCard({ m, ws }) {
+  const [editando, setEditando] = useState(false);
+  const [f, setF] = useState({
+    nombre: m.nombre || "", pais: m.pais || PAISES_FICHA[0],
+    entidadLegal: m.entidadLegal || "", ruc: m.ruc || "", descripcion: m.descripcion || "",
+  });
+  const [guardado, setGuardado] = useState(true);
+  const saveTimer = useRef(null);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    if (!editando) return;
+    if (firstRun.current) { firstRun.current = false; return; }
+    setGuardado(false);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      update(st => {
+        const w = st.mundos.find(x => x.id === m.id);
+        if (!w) return;
+        w.nombre = f.nombre.trim() || w.nombre;
+        w.pais = f.pais;
+        w.entidadLegal = f.entidadLegal.trim();
+        w.ruc = f.ruc;
+        w.descripcion = f.descripcion;
+      });
+      setGuardado(true);
+    }, 600);
+    return () => clearTimeout(saveTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f, editando]);
+
+  const set = patch => setF(prev => ({ ...prev, ...patch }));
+  const salir = () => { firstRun.current = true; setEditando(false); };
+
+  const camposObligatoriosOk = f.entidadLegal.trim() && f.ruc.length === 11;
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+      <div className="px-6 py-4 border-b border-outline-variant bg-surface-container-low flex items-center justify-between">
+        <h3 className="font-semibold flex items-center gap-2"><Icon n="public" className="text-primary" /> Ficha del mundo</h3>
+        <div className="flex items-center gap-3">
+          {editando && (
+            <span className="text-[10px] font-mono text-on-surface-variant flex items-center gap-1">
+              {guardado ? <><Icon n="check_circle" className="text-ok text-[13px]" fill/> Guardado</> : <>Guardando…</>}
+            </span>
+          )}
+          <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${ws.k==="ENTREGADO"?"bg-ok text-white":"bg-amber-100 text-amber-700"}`}>{ws.label}</span>
+          <button
+            onClick={() => editando ? salir() : setEditando(true)}
+            className="flex items-center gap-1 text-[10px] font-mono uppercase text-primary hover:underline">
+            <Icon n={editando ? "check" : "edit"} className="text-[14px]" /> {editando ? "Listo" : "Editar ficha"}
+          </button>
+        </div>
+      </div>
+
+      {!editando ? (
+        <div className="p-6 grid md:grid-cols-3 gap-5">
+          {[
+            {l:"Nombre",       v:m.nombre,                  i:"badge"},
+            {l:"Código",       v:m.codigo,                  i:"tag"},
+            {l:"Vertical",     v:m.vertical,                i:"category"},
+            {l:"País",         v:m.pais||"—",               i:"flag"},
+            {l:"Entidad legal",v:m.entidadLegal||"—",       i:"business"},
+            {l:"RUC",          v:m.ruc||"—",                i:"receipt"},
+            {l:"Moneda",       v:m.moneda,                  i:"payments"},
+            {l:"Estado",       v:m.estado,                  i:"radio_button_checked"},
+            {l:"Creado",       v:m.createdAt?new Date(m.createdAt).toLocaleDateString("es-PE"):"—", i:"calendar_today"},
+            {l:"Acuerdo",      v:(m.acuerdo||{}).tipo?`${m.acuerdo.tipo}${m.acuerdo.revShare?` · ${m.acuerdo.revShare}%`:""}`:"Pendiente", i:"handshake"},
+          ].map((r,i) => (
+            <div key={i} className="flex items-start gap-2">
+              <Icon n={r.i} className="text-outline text-[16px] mt-0.5 flex-shrink-0"/>
+              <div>
+                <p className="font-mono text-[8px] uppercase text-outline tracking-wider">{r.l}</p>
+                <p className="text-sm font-medium text-on-surface mt-0.5">{r.v}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="p-6 grid md:grid-cols-3 gap-5">
+          <Field label="Nombre"><input className={inputCls} value={f.nombre} onChange={e=>set({nombre:e.target.value})} /></Field>
+          <div><p className="font-mono text-[8px] uppercase text-outline tracking-wider mb-1">Código</p><p className="text-sm font-medium text-on-surface-variant mt-0.5 px-3 py-2">{m.codigo} <span className="text-[10px] italic">(no editable)</span></p></div>
+          <div><p className="font-mono text-[8px] uppercase text-outline tracking-wider mb-1">Vertical</p><p className="text-sm font-medium text-on-surface-variant mt-0.5 px-3 py-2">{m.vertical} <span className="text-[10px] italic">(no editable)</span></p></div>
+          <Field label="País">
+            <select className={inputCls} value={f.pais} onChange={e=>set({pais:e.target.value})}>
+              {PAISES_FICHA.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </Field>
+          <Field label="Entidad legal *"><input className={inputCls} value={f.entidadLegal} onChange={e=>set({entidadLegal:e.target.value})} placeholder="Razón social completa" /></Field>
+          <Field label="RUC *"><input className={`${inputCls} font-mono`} value={f.ruc} onChange={e=>set({ruc:e.target.value.replace(/\D/g,"").slice(0,11)})} placeholder="20XXXXXXXXX" /></Field>
+          <div className="md:col-span-3">
+            <p className="font-mono text-[8px] uppercase text-outline tracking-wider mb-1">Descripción</p>
+            <textarea className={`${inputCls} h-20 py-2`} value={f.descripcion} onChange={e=>set({descripcion:e.target.value})} placeholder="Qué verá el usuario en el app, qué problema resuelve…" />
+          </div>
+          {!camposObligatoriosOk && (
+            <p className="md:col-span-3 text-[11px] text-error flex items-center gap-1"><Icon n="warning" className="text-[14px]"/> Entidad legal y RUC (11 dígitos) son obligatorios para operar el mundo.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabResumen({ m, comercios, st, goto }) {
   const ws = worldStatus(m, comercios);
   const tickets = (st.tickets||[]).filter(t => t.mundoId === m.id);
@@ -700,41 +813,7 @@ function TabResumen({ m, comercios, st, goto }) {
 
   return (
     <div className="space-y-6">
-      {/* WORLD INFO CARD */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant bg-surface-container-low flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2"><Icon n="public" className="text-primary" /> Ficha del mundo</h3>
-          <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${ws.k==="ENTREGADO"?"bg-ok text-white":"bg-amber-100 text-amber-700"}`}>{ws.label}</span>
-        </div>
-        <div className="p-6 grid md:grid-cols-3 gap-5">
-          {[
-            {l:"Nombre",       v:m.nombre,                  i:"badge"},
-            {l:"Código",       v:m.codigo,                  i:"tag"},
-            {l:"Vertical",     v:m.vertical,                i:"category"},
-            {l:"País",         v:m.pais||"—",               i:"flag"},
-            {l:"Entidad legal",v:m.entidadLegal||"—",       i:"business"},
-            {l:"RUC",          v:m.ruc||"—",                i:"receipt"},
-            {l:"Moneda",       v:m.moneda,                  i:"payments"},
-            {l:"Estado",       v:m.estado,                  i:"radio_button_checked"},
-            {l:"Creado",       v:m.createdAt?new Date(m.createdAt).toLocaleDateString("es-PE"):"—", i:"calendar_today"},
-            {l:"Acuerdo",      v:ac.tipo?`${ac.tipo}${ac.revShare?` · ${ac.revShare}%`:""}`:"Pendiente", i:"handshake"},
-          ].map((r,i) => (
-            <div key={i} className="flex items-start gap-2">
-              <Icon n={r.i} className="text-outline text-[16px] mt-0.5 flex-shrink-0"/>
-              <div>
-                <p className="font-mono text-[8px] uppercase text-outline tracking-wider">{r.l}</p>
-                <p className="text-sm font-medium text-on-surface mt-0.5">{r.v}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        {m.descripcion && (
-          <div className="px-6 pb-5">
-            <p className="font-mono text-[8px] uppercase text-outline tracking-wider mb-1">Descripción</p>
-            <p className="text-sm text-on-surface-variant">{m.descripcion}</p>
-          </div>
-        )}
-      </div>
+      <FichaMundoCard m={m} ws={ws} />
 
       {/* STATS ROW */}
       <div className="grid grid-cols-4 gap-4">

@@ -103,6 +103,20 @@ function worldRow(m) {
     // al grupo -- ver docs/arquitectura/fix-grupos-sucursales.sql.
     grupo_id: m.grupoId || null,
     comparte_saldo_grupo: !!m.compartesaldoGrupo,
+    // RUC/Entidad legal/País/Dirección/Descripción: el wizard de creación de
+    // mundo (Mundos.jsx) ya los capturaba y ya los validaba como obligatorios
+    // (paso 2), pero worldRow() nunca los incluía en el upsert -- vivían solo
+    // en el localStorage de la pestaña que creó el mundo. Cualquier otra
+    // sesión, o el mismo mundo tras un "reiniciar caché local", los perdía
+    // para siempre. Ver también FichaMundoCard (MundoDetail.jsx) -- la
+    // edición post-creación de estos mismos campos depende de que viajen acá.
+    entidad_legal: m.entidadLegal || null,
+    ruc: m.ruc || null,
+    pais: m.pais || null,
+    direccion_legal: m.direccionLegal || null,
+    descripcion: m.descripcion || null,
+    banco: m.banco || null,
+    cci: m.cci || null,
     updated_at: new Date().toISOString(),
   };
 }

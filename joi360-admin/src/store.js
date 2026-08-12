@@ -805,6 +805,16 @@ export async function refreshMundosLive() {
         entrega: entregaDe(w),
         grupoId: w.grupo_id || null,
         compartesaldoGrupo: !!w.comparte_saldo_grupo,
+        // Mismo gap que el resto de esta función documenta: worldRow() no subía
+        // estos campos, así que tampoco había nada que releer -- ahora que sí
+        // viajan, se reconcilian igual que el resto de la ficha.
+        entidadLegal: w.entidad_legal || "",
+        ruc: w.ruc || "",
+        pais: w.pais || "",
+        direccionLegal: w.direccion_legal || "",
+        descripcion: w.descripcion || "",
+        banco: w.banco || "",
+        cci: w.cci || "",
       };
       const base = byId.get(w.id);
       if (base) {
