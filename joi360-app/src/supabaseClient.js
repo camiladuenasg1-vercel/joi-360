@@ -381,7 +381,7 @@ export async function pagarCuotaBNPLUsuario(userId, contrato, n) {
     body: JSON.stringify({
       p_wallet_id: wallet.id, p_delta: -Math.abs(+cuota.monto), p_tipo: "bnpl_cuota",
       p_world_id: contrato.world_id, p_merchant_id: contrato.merchant_id,
-      p_reference: `Cuota ${n}/${contrato.cuotas} · ${contrato.producto}`.slice(0, 120),
+      p_reference: (`Cuota ${n}/${contrato.cuotas} · ${contrato.producto}`.slice(0, 90) + ` · ${Date.now()}`),
     }),
   }))?.[0];
   exigirAutorizacionWallet(r);
@@ -1036,7 +1036,7 @@ export async function comprarProductosLive(userId, worldId, merchantId, items) {
     method: "POST",
     body: JSON.stringify({
       p_wallet_id: wallet.id, p_delta: -Math.abs(total), p_tipo: "compra",
-      p_world_id: worldId, p_merchant_id: merchantId, p_reference: `Compra app · ${detalle}`.slice(0, 120),
+      p_world_id: worldId, p_merchant_id: merchantId, p_reference: (`Compra app · ${detalle}`.slice(0, 90) + ` · ${Date.now()}`),
     }),
   }))?.[0];
   exigirAutorizacionWallet(r);

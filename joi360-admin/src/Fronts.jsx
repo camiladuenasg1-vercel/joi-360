@@ -795,7 +795,7 @@ export function CobrarPanel({ comercio, m }) {
     if (!m2) return;
     setQrGenerando(true);
     try {
-      const r = await crearChargeRequestRemote(m.id, merchantId, comercio.nombre, m2, comercio.nombre, turnoId);
+      const r = await crearChargeRequestRemote(m.id, merchantId, comercio.nombre, m2, `${comercio.nombre} · ${Date.now()}`, turnoId);
       if (!r) throw new Error("sin respuesta");
       setQrRequest(r);
     } catch {
@@ -850,7 +850,12 @@ export function CobrarPanel({ comercio, m }) {
     if (!m2 || !cliente) return;
     setCobrando(true);
     try {
-      const referencia = `${comercio.nombre}${productoSel ? " · " + productoSel.name : ""}`;
+      // El nonce evita que dos cobros con la misma descripcion (ej. dos
+      // ventas de "Adidas" sin producto seleccionado) choquen contra la
+      // restriccion de unicidad real de transactions.reference en Supabase
+      // -- sin esto, el segundo cobro con el mismo texto siempre rechazaba
+      // con HTTP 409 sin importar el cliente (hallado en vivo, 11/12-ago).
+      const referencia = `${comercio.nombre}${productoSel ? " · " + productoSel.name : ""} · ${Date.now()}`;
       const r = await cobrarPOSRemote(cliente.user_id, m.id, merchantId, m2, referencia, turnoId);
       if (!r.ok) {
         // Task #181: el RPC ahora también puede rechazar por restricciones
@@ -879,7 +884,7 @@ export function CobrarPanel({ comercio, m }) {
     if (!m2 || !cliente || !canalRecarga) return;
     setCobrando(true);
     try {
-      const referencia = `Recarga presencial · ${canalRecarga.nombre} · ${comercio.nombre}`;
+      const referencia = `Recarga presencial · ${canalRecarga.nombre} · ${comercio.nombre} · ${Date.now()}`;
       const r = await recargarPOSRemote(cliente.user_id, m.id, merchantId, m2, canalRecarga.id, referencia, turnoId);
       if (!r.ok) {
         const err = await errorControlado("wallet_no_encontrada");
