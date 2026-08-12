@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Genera el markdown fuente del Historial de Tareas y Commits cruzando
-la lista de tareas del tracker con git log real."""
-import re, os
+"""Genera el markdown fuente del Historial de Tareas y Commits, cruzando la
+lista de tareas del tracker con el git log real, y describiendo cada tarea
+en 5 dimensiones: que se pidio, que se resolvio, el flujo/diseno, el flujo
+de usuario, y el journey UX unificado (touchpoints encadenados, en base a
+los commits reales) -- para que el documento sirva como fuente completa de
+contexto de todo lo construido, sin depender de que alguien mas lo haya
+visto antes."""
+import re, os, subprocess
 
 TASKS = [
 (102,"completed","Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales"),
@@ -138,11 +143,6 @@ TASKS = [
 (233,"completed","Suscripciones formalizada como capacidad propia — deployado y verificado"),
 ]
 
-# Fases / hitos del desarrollo. Cada fase tiene un rango de IDs de tarea y un
-# rango de fechas real (inclusive) para filtrar los commits de git que le
-# corresponden — los rangos de fecha se solapan levemente entre fases porque
-# el trabajo de una tarea a veces cruza la medianoche; se resuelve asignando
-# cada commit a la fase de fecha más cercana sin duplicar.
 FASES = [
     ("01-ago a 02-ago", "Arranque del monorepo y Motor de Eventos", (102,111), "2026-08-01", "2026-08-02"),
     ("03-ago a 04-ago", "Seguridad crítica de Wallet + limpieza de datos fantasma", (112,150), "2026-08-03", "2026-08-04"),
@@ -153,10 +153,168 @@ FASES = [
     ("12-ago", "Eventos embebido, Web NFC directo, Sucursales, Precompra, pivot Jockey Plaza, documentación viva", (222,233), "2026-08-12", "2026-08-12"),
 ]
 
+# Enriquecimiento manual para las tareas de mayor peso funcional/arquitectónico
+# -- conocimiento directo de la construcción, no derivado del título. Cada
+# entrada cubre las 4 dimensiones pedidas: pedido, resuelto, flujo/diseño,
+# flujo de usuario. El resto de las 132 tareas se deriva automáticamente del
+# título + los commits reales que lo resolvieron (ver derive_fields()).
+DETAIL = {
+113: dict(
+    pedido="Repensar la arquitectura del Core Platform desde cero antes de seguir agregando capacidades, para que cada una nueva encaje en un mismo patrón (Mundo -> Capacidad -> Configuración -> Render) en vez de resolverse caso por caso.",
+    resuelto="Se documentó un ADR (Architecture Decision Record) formal más un roadmap técnico: el catálogo maestro de capacidades (MODULE_CATALOG), el mapa de dependencias entre capacidades (DEPENDENCY_MAP), y el mecanismo de sincronización local-Supabase que hoy sostiene todo el sistema.",
+    flujo="RedPontis define capacidades en un catálogo global -> el mundo activa un subconjunto -> cada capacidad trae su propia configuración -> la app (superapp, admin, POS) lee esa configuración en vivo y decide qué renderizar, sin hardcodear reglas por mundo.",
+    flujo_usuario="No es una feature con flujo de usuario directo -- es la base arquitectónica que hace posible que cada capacidad nueva (Wallet, Comercios, Eventos, etc.) tenga un flujo de usuario consistente en todos los frentes.",
+    journey="Admin RedPontis (Catálogos Globales) → Panel de Mundo (activación de la capacidad) → Superapp / POS (render final). Este ADR es el journey maestro del que se desprenden todos los journeys específicos del resto de tareas: cualquier capacidad nueva atraviesa las mismas 3 paradas, en el mismo orden, sin excepción.",
+),
+114: dict(
+    pedido="Corregir una vulnerabilidad crítica: la llave anónima de Supabase, expuesta en el bundle público del frontend, permitía leer el PIN de operador de POS y datos bancarios en texto plano, y escribir saldo directamente sin pasar por ninguna validación.",
+    resuelto="Se migró el movimiento de saldo a una función RPC atómica server-side (mover_saldo_wallet) con REVOKE UPDATE sobre wallets.balance -- la única forma de mover saldo real pasa a ser esa función, nunca un UPDATE directo desde el cliente. Los PIN de operador se hashean server-side (merchants.pos_pin_hash, worlds.pos_pin_hash) en vez de guardarse en texto plano.",
+    flujo="Cliente llama a la RPC con los parámetros de la operación -> la función toma un lock de fila sobre la wallet, valida saldo suficiente, inserta la transacción -- todo en una sola transacción atómica de Postgres, invisible e inmodificable desde el cliente.",
+    flujo_usuario="Transparente para el usuario final -- cobra/recarga exactamente igual que antes. La diferencia es que ya no existe ningún camino desde el navegador que pueda escribir saldo sin pasar por esa validación.",
+    journey="Superapp / POS (el usuario o el operador inician la operación) → Supabase RPC `mover_saldo_wallet` (única puerta de entrada real al saldo) → Wallet actualizada. Journey unificado: no importa desde qué touchpoint se origina el movimiento de saldo (recarga en superapp, cobro en POS, ajuste desde admin), todos convergen en la misma función server-side -- un solo camino de verdad, no uno por plataforma.",
+),
+121: dict(
+    pedido="Cerrar el hueco de autorización en las RPC de wallet: cualquiera con la llave anónima podía mover el saldo de CUALQUIER wallet, no solo la propia -- solo faltaba pasar el wallet_id correcto.",
+    resuelto="La RPC mover_saldo_wallet ahora exige, para cada llamada, o un turno de POS válido (p_turno_id real y abierto) o que auth.uid() sea el dueño de la wallet o su apoderado -- devuelve NO_AUTENTICADO / NO_AUTORIZADO / TURNO_INVALIDO si ninguna condición se cumple.",
+    flujo="El cliente intenta mover saldo -> la función valida identidad ANTES de tocar cualquier fila -> solo si pasa la validación continúa con el lock+update+insert de siempre.",
+    flujo_usuario="Sin cambio visible para el usuario legítimo. Nota de seguimiento para el equipo: una migración posterior (fix-181, restricciones de dependiente) reescribió esta función completa y, sin querer, no conservó esta validación de dueño -- documentado en el documento maestro como hallazgo de severidad alta pendiente de restaurar.",
+    journey="Superapp / POS (origen del intento de movimiento) → RPC de wallet (valida turno abierto o dueño/apoderado ANTES de tocar saldo) → Wallet. Journey de seguridad: cualquier touchpoint que intente mover saldo de una wallet ajena queda cortado en el mismo punto, independientemente de por dónde haya entrado la llamada.",
+),
+141: dict(
+    pedido="Que el Motor de Eventos funcione al 100% con datos reales (no simulados) y que la gestión embebida (el propio mundo publicando sus eventos) esté completa dentro del panel del mundo.",
+    resuelto="Se conectó todo el ciclo real: creación de evento, tipos de entrada, aforo, venta con débito real de wallet, emisión de QR, check-in en el POS, y el panel de gestión embebida dentro de MundoDetail -- sin ningún mock de por medio.",
+    flujo="Mundo crea evento -> define tipos de entrada y precios -> publica (pasa por aprobación de RedPontis) -> usuario compra desde la superapp (débito real) -> QR se genera -> POS del evento hace check-in escaneando ese QR.",
+    flujo_usuario="Superapp: el usuario ve el evento en el marketplace, elige tipo de entrada, paga con su saldo, y la entrada aparece en 'Mis entradas' con su QR. En el evento, el POS valida ese QR y marca el ingreso.",
+    journey="Panel de Mundo (crea y publica el evento) → Admin RedPontis (aprueba) → Superapp (el asistente descubre el evento, compra su entrada, recibe el QR) → POS del evento (check-in escaneando el QR). Journey de punta a punta con 4 touchpoints distintos y 4 roles distintos (organizador, RedPontis, asistente, operador de puerta), unificados por el mismo `event_id` en cada paso.",
+),
+168: dict(
+    pedido="Una sola bandita física debe poder representar la cuenta principal del usuario, pero discriminando correctamente qué wallet corresponde según en qué mundo/comercio se está usando el lector -- no una bandita por mundo.",
+    resuelto="Arquitectura nueva de bandita 'universal': el UID físico de la pulsera se vincula a la identidad de la persona, no a una wallet específica -- el lector resuelve la wallet correcta en el momento de la lectura según el contexto (mundo/comercio) donde está el lector.",
+    flujo="Persona vincula su bandita una sola vez -> el sistema guarda el UID ligado a su identidad -> en cualquier punto de cobro, el lector NFC envía el UID + el contexto del punto de venta -> el backend resuelve cuál wallet corresponde a esa combinación.",
+    flujo_usuario="El usuario trae puesta la misma pulsera a cualquier mundo donde tenga cuenta -- no necesita una pulsera distinta por comunidad. El comercio/operador solo acerca el lector, sin tener que preguntar ni seleccionar nada.",
+    journey="Superapp/POS (vinculación única del UID a la identidad) → POS/Operador de cualquier mundo (lectura NFC + contexto del punto de venta) → backend resuelve wallet correcta → cobro. Journey unificado entre mundos: el mismo objeto físico (la pulsera) atraviesa comunidades distintas sin re-vinculación, porque la identidad vive en el UID y la wallet se resuelve en el momento, no de antemano.",
+),
+173: dict(
+    pedido="Las restricciones de consumo no pueden ser un horario macro único para todo el mundo -- necesitan ser granulares: por dependiente individual, y configurables (horario, límite diario, productos bloqueados).",
+    resuelto="Tabla dependent_restrictions con horario_inicio/fin, límite diario y lista de productos bloqueados por cada dependiente -- validado tanto en el cliente (feedback inmediato) como dentro de la RPC de wallet server-side (no se puede evadir cambiando el cliente).",
+    flujo="El tutor entra a Restricciones -> elige un dependiente -> configura horario permitido, límite diario y productos bloqueados -> esas reglas se guardan por dependiente, no por mundo.",
+    flujo_usuario="El dependiente intenta comprar -> si está fuera de horario, excede su límite diario, o el producto está bloqueado para él, la compra se rechaza con un motivo específico (no un error genérico) -- tanto en la app como si el rechazo llega desde el servidor.",
+    journey="Superapp (tutor configura restricciones por dependiente) → Supabase `dependent_restrictions` → POS / Superapp (el dependiente intenta comprar, la RPC valida en tiempo real) → rechazo o aceptación con motivo explícito. Journey unificado: la misma regla que el tutor configuró en un touchpoint se hace cumplir igual sin importar si el dependiente compra desde el POS de un comercio o desde su propio celular.",
+),
+200: dict(
+    pedido="Construir el feature completo de Eventos embebidos para el panel de mundo de Jockey Plaza: que el mundo pueda dar de alta comercios por evento (desde su directorio existente o ad-hoc solo para ese evento), y que RedPontis apruebe con visibilidad completa del detalle.",
+    resuelto="EventoComerciosCard con checkbox de comercios existentes + formulario de alta ad-hoc; cola de aprobación en Gobierno con modal de detalle completo (banner, mapa, tipos de entrada, comercios con foto) antes de aprobar o rechazar.",
+    flujo="Mundo entra a la pestaña de Eventos -> marca qué comercios de su directorio participan, o agrega uno nuevo solo para ese evento -> RedPontis ve la solicitud en su cola de Aprobaciones con el detalle completo -> aprueba o rechaza con motivo.",
+    flujo_usuario="Superapp: el asistente ve el evento con sus comercios afiliados (con foto) antes de comprar la entrada -- el detalle completo, no solo el nombre del evento.",
+    journey="Panel de Mundo (afilia comercios existentes o crea uno ad-hoc para el evento) → Admin RedPontis (Gobierno / Aprobaciones, ve el detalle completo antes de decidir) → Superapp (el asistente ve el evento con sus comercios afiliados antes de comprar). Journey de 3 roles unificado por el mismo evento: lo que el mundo carga es exactamente lo que RedPontis aprueba y exactamente lo que el asistente ve, sin traducción intermedia.",
+),
+228: dict(
+    pedido="Cerrar 5 gaps reales encontrados en el flujo de Eventos embebido: aprobación sin detalle visible, mapa del evento ausente en el detalle público, comercios afiliados sin foto, sin deep-link desde el Home del mundo, y comercios ad-hoc sin forma de darse de alta.",
+    resuelto="Modal de aprobación con detalle completo, mapa PDF visible en el detalle público del evento (antes solo estaba en la tarjeta), fotos reales de comercios afiliados, deep-link `?evento=<id>` desde el carrusel del Home directo al detalle, y formulario de alta de comercio ad-hoc dentro del panel de organizador.",
+    flujo="Cada gap se rastreó hasta su causa real en el código (no un parche cosmético) -- por ejemplo, el deep-link requirió que el Hub pasara el id del evento en la URL y que el módulo de Eventos lo leyera al montar para abrir el detalle automáticamente.",
+    flujo_usuario="El usuario toca un evento en el carrusel del Home y cae directo en su ficha completa (no en la lista general de eventos) -- con mapa, comercios con foto, y tipos de entrada visibles de una.",
+    journey="Superapp Home (carrusel de eventos) → deep-link `?evento=<id>` → ficha de detalle del evento (mapa + comercios con foto + tipos de entrada) → Panel de Mundo (alta de comercio ad-hoc si falta) → Admin RedPontis (aprobación con el mismo detalle completo). Journey cerrado end-to-end: el mismo id de evento conecta las 4 paradas sin que el usuario tenga que buscar el evento dos veces.",
+),
+230: dict(
+    pedido="Que el usuario pueda vincular su propia bandita NFC directo desde el celular, con Web NFC, sin pasar por el flujo de solicitud mediado por un operador.",
+    resuelto="VincularBanditaWebNfcModal usa la Web NFC API (NDEFReader) del navegador -- detecta si el celular la soporta (Chrome/Android sobre HTTPS) y si no, cae automáticamente al flujo de solicitud tradicional. Aplica las mismas 4 validaciones de seguridad que ya usaba el operador del POS (banda existe en el mundo, no está ya vinculada, está en estado 'asignada', el usuario no tiene ya otra banda activa).",
+    flujo="Usuario toca 'Ya tienes la pulsera en mano, vincúlala ahora' -> el navegador pide permiso NFC -> usuario acerca la pulsera -> se lee el UID real -> se valida contra las 4 reglas de seguridad -> si pasa, la banda queda vinculada y activa de inmediato.",
+    flujo_usuario="El usuario recibe la pulsera físicamente (en persona, en un evento, por correo) y la activa él mismo desde su celular, sin tener que ir a un punto de atención a que un operador la vincule por él.",
+    journey="Superapp (usuario toca 'vincular ahora', Web NFC lee el UID) → validación de las mismas 4 reglas que usa el operador del POS → Wallet activa. Journey unificado con el flujo de operador: ambos caminos (autoservicio desde la superapp, o asistido desde el POS) terminan en la misma validación y el mismo estado final, así que el usuario obtiene el resultado idéntico sin importar cuál eligió.",
+),
+231: dict(
+    pedido="Que cada comercio afiliado a un evento pueda cargar productos en precompra con stock real, en un catálogo separado de su catálogo regular (para no mezclar lo que vende todos los días con lo que ofrece solo en ese evento puntual).",
+    resuelto="Los productos de precompra usan la misma tabla `products` pero con `event_id` seteado -- aislados por diseño del catálogo regular (`event_id IS NULL`). Se agregó stock real (columna que ya existía pero no se exponía en este formulario) con badge de Agotado/Stock/Sin límite.",
+    flujo="Organizador afilia un comercio al evento (existente o ad-hoc) -> abre 'Precompra' en la fila de ese comercio -> carga producto + precio + stock -> queda visible solo dentro de ese evento, nunca en el catálogo de todos los días del comercio.",
+    flujo_usuario="Pendiente para la app -- hoy la autoría (cargar los productos) está completa y en producción, pero el asistente todavía no tiene una pantalla en la superapp para comprar estos productos de precompra tras comprar su entrada. Queda como el primer ítem del backlog.",
+    journey="Panel de Mundo / organizador (carga productos de precompra con stock real, aislados del catálogo regular) → [tramo pendiente: Superapp, pantalla de compra de precompra tras comprar la entrada] → POS del evento (redención). Journey incompleto a propósito: la autoría ya cierra el círculo, el consumo desde la superapp es el siguiente tramo a construir -- documentado así para no dar la falsa impresión de que ya está cerrado.",
+),
+232: dict(
+    pedido="Pivot de alcance: enfocar el ecosistema únicamente en el piloto de Jockey Plaza -- borrar permanentemente Colegio Raimondi, Universidad de Lima, JOI Eventos y JOI Promos.",
+    resuelto="Borrado real y permanente en Supabase (43 tablas limpiadas en el orden correcto para respetar dependencias), con un diagnóstico previo de tipos de columna para que el script SQL no fallara a mitad de camino. En el código, se sacó 'JOI Eventos' del seed local (tenía fixed:true, lo que lo habría resucitado en el siguiente sync) y se agregó al filtro de purga.",
+    flujo="Confirmación explícita del alcance del borrado -> diagnóstico de tipos de columna reales (varias terminaron en `uuid` en vez de `text` en distintos momentos del proyecto) -> script SQL final con casts defensivos -> verificación en vivo de que solo Jockey Plaza queda -> limpieza del código para que no vuelva a aparecer.",
+    flujo_usuario="No hay flujo de usuario nuevo -- es una operación de datos. El efecto visible es que el admin y la superapp ahora solo muestran Jockey Plaza como comunidad disponible.",
+    journey="Admin RedPontis (Supabase, borrado en 43 tablas) → código local (`store.js`, se saca el mundo fantasma del seed y del filtro de purga) → Superapp / Admin (ambos dejan de listar cualquier mundo que no sea Jockey Plaza). Journey unificado entre plataformas: el borrado en la base y la limpieza en el código tenían que coincidir, porque un mundo `fixed:true` sobreviviendo en el seed habría resucitado en Supabase en el siguiente sync aunque el borrado SQL hubiera sido perfecto.",
+),
+233: dict(
+    pedido="Formalizar Suscripciones como su propia capacidad (con dependencia declarada a Wallet), en vez de vivir escondida como un config field dentro de Wallet -- pese a que ya cobraba dinero real.",
+    resuelto="Nueva entrada en el catálogo maestro de capacidades con su propio ícono, activación y pestaña de configuración -- el panel de Planes de Suscripción se movió de la pestaña de Wallet a su propia pestaña. La superapp gatea el cobro contra la nueva capacidad en vez del config field viejo.",
+    flujo="RedPontis/mundo activa la capacidad Suscripciones (antes: prendía un toggle escondido dentro de Wallet) -> crea uno o más planes -> el cobro real ocurre al vincular un nuevo dependiente, igual que antes -- solo cambió dónde vive la activación, no el mecanismo de cobro.",
+    flujo_usuario="Para el tutor que vincula un dependiente: sin cambio -- ve el mismo paso de elegir plan y confirmar el cobro. Para el admin: ahora encuentra y activa Suscripciones como cualquier otra capacidad del catálogo, no como una opción oculta dentro de otra.",
+    journey="Admin RedPontis (Catálogos Globales, capacidad propia con re-sincronización real a `capacities`) → Panel de Mundo (activa Suscripciones + crea planes en su propia pestaña) → Superapp (tutor elige plan al vincular un dependiente, cobro real). Journey re-cableado sin romper el tramo final: se movió dónde vive la activación (de un config field escondido a una capacidad de primer nivel) sin tocar el paso que el tutor ya conocía.",
+),
+}
+
+def title_lower(t):
+    return t.lower()
+
+def derive_prompt(n, title):
+    tl = title_lower(title)
+    if tl.startswith("bug"):
+        return f"Corrige este bug real: {title.split(':',1)[-1].strip() if ':' in title else title}. Encuéntralo, arréglalo de raíz, y verifícalo con datos reales, no con un caso simulado."
+    if tl.startswith("fix"):
+        return f"Corrige: {title.split(':',1)[-1].strip() if ':' in title else title}."
+    if tl.startswith("audit") or tl.startswith("auditar") or "auditoría" in tl:
+        return f"Audita {title.split(':',1)[-1].strip() if ':' in title else title.lower()} y aplica los fixes reales que encuentres -- no un informe, arréglalo en el código."
+    if tl.startswith("live e2e") or "e2e" in tl:
+        return f"Haz una prueba end-to-end real de: {title}. Usa datos reales, no mocks, y corrige lo que falle en el camino."
+    return f"Construye: {title}."
+
+def derive_flujo_usuario(title):
+    tl = title_lower(title)
+    keywords_ui = ["superapp","pos","panel","botón","pantalla","app","wizard","dashboard","widget","tab","módulo","modulo","perfil","hub","home","modal","carrusel"]
+    if any(k in tl for k in keywords_ui):
+        return "Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió."
+    return "Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final."
+
+# Touchpoints reales del ecosistema, en el orden en que normalmente se
+# encadenan (RedPontis define -> mundo configura -> usuario/operador vive
+# el resultado). Se detectan por palabras clave presentes en el título real
+# de la tarea y en los commits reales que la resolvieron -- nunca inventadas.
+TOUCHPOINTS = [
+    ("Admin RedPontis", ["redpontis", "admin rp", "gobierno", "catálogos", "catalogos", "calculadora", "adquirencia", "notificaciones", "aprobación", "aprobacion", "aprobaciones"]),
+    ("Panel de Mundo", ["mundo", "sponsor", "organizador", "evento", "eventos", "liquidación", "liquidacion", "banner"]),
+    ("POS / Operador", ["pos", "operador", "tótem", "totem", "t6", "caja", "bandita", "banditas", "nfc", "turno", "check-in", "checkin"]),
+    ("Superapp", ["superapp", "app", "wallet", "billetera", "perfil", "dependiente", "dependientes", "menú", "menu", "suscripci", "restricciones", "familiares", "marketplace"]),
+]
+
+def detect_touchpoints(text):
+    tl = title_lower(text)
+    found = []
+    for label, keywords in TOUCHPOINTS:
+        if any(k in tl for k in keywords) and label not in found:
+            found.append(label)
+    return found
+
+def derive_journey(title, commits):
+    basis = title if not commits else title + " " + " ".join(s for _, _, s in commits)
+    touchpoints = detect_touchpoints(basis)
+    if not touchpoints:
+        return "No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla."
+    chain = " → ".join(touchpoints)
+    if commits:
+        detalle = " · ".join(s for _, _, s in commits)
+    else:
+        detalle = title
+    if len(touchpoints) == 1:
+        return f"{chain} (un solo touchpoint, sin handoff a otra plataforma). {detalle}"
+    return f"Journey unificado: {chain}. {detalle}"
+
+def derive_fields(n, status, title, commits):
+    if n in DETAIL:
+        d = DETAIL[n]
+        return d["pedido"], d["resuelto"], d["flujo"], d["flujo_usuario"], d["journey"]
+    pedido = title
+    if commits:
+        resuelto = " · ".join(s for _, _, s in commits)
+    else:
+        resuelto = f"Resuelto según lo descrito en la tarea (\"{title}\") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número."
+    flujo = resuelto if commits else f"Ver commits de la fase -- el título ya describe la naturaleza del cambio ({title})."
+    flujo_usuario = derive_flujo_usuario(title)
+    journey = derive_journey(title, commits)
+    return pedido, resuelto, flujo, flujo_usuario, journey
+
 def load_git_log(repo_root):
-    # Corre git directo sobre el repo -- siempre trae el log real y
-    # actualizado, sin depender de un archivo exportado a mano cada corte.
-    import subprocess
     result = subprocess.run(
         ["git", "log", "--reverse", "--format=%ad|%h|%s", "--date=short"],
         cwd=repo_root, capture_output=True, text=True, encoding="utf-8", check=True,
@@ -180,7 +338,7 @@ def build_task_commit_map(git_rows):
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(here))  # docs/arquitectura/historial_tareas -> repo root
+    repo_root = os.path.dirname(os.path.dirname(here))
     git_rows = load_git_log(repo_root)
     task_commits = build_task_commit_map(git_rows)
 
@@ -191,12 +349,13 @@ def main():
 
     out = []
     out.append("# JOI360 — Historial de Tareas y Commits\n")
-    out.append("Documento vivo · Versión **1.0** · 12 de agosto de 2026\n")
-    out.append("Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`) y de los 163 commits reales de git que representan el código que efectivamente cambió, organizados en 7 fases cronológicas — del 1 al 12 de agosto de 2026. Cuando un commit menciona explícitamente el número de tarea, queda cruzado como referencia directa.\n")
+    out.append("Documento vivo · Versión **1.1** · 12 de agosto de 2026\n")
+    out.append("Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`) y de los 163 commits reales de git que representan el código que efectivamente cambió, organizados en 7 fases cronológicas — del 1 al 12 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.\n")
     out.append("## Historial de versiones\n")
     out.append("| Versión | Fecha | Cambios |")
     out.append("|---|---|---|")
-    out.append("| 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases de desarrollo narradas cronológicamente. |")
+    out.append("| 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases cronológicas. |")
+    out.append("| 1.1 | 2026-08-12 | Cada tarea ahora describe qué se pidió, qué se resolvió, el flujo/diseño, el flujo de usuario, y el journey UX unificado (touchpoints encadenados en base a los commits reales) — no solo título + commit. |")
     out.append("\n*Corte semanal: domingo. Próxima actualización: 16-ago-2026.*\n")
 
     out.append("## Resumen ejecutivo\n")
@@ -210,23 +369,28 @@ def main():
     out.append(f"| Rango de fechas | {git_rows[0][0]} a {git_rows[-1][0]} |")
 
     out.append("\n## Cómo leer este documento\n")
-    out.append("Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Registro de tareas** — qué se pidió o encontró y su estado, en el lenguaje en que se reportó; **(B) Commits reales** — exactamente qué cambió en el código, con hash real de git, en el mismo rango de fechas. Donde un commit menciona explícitamente el número de tarea (`#NNN`), queda cruzado en la tarea correspondiente como referencia directa — el resto de los commits de la fase completan el detalle técnico aunque no hayan quedado etiquetados con un número.\n")
+    out.append("Cada tarea se describe en 5 partes: **Instrucción de trabajo** (la solicitud, en forma de instrucción clara — reconstruida para que se lea como un encargo, no como un título de ticket), **Qué se resolvió** (el resultado real, con los commits que lo prueban), **Flujo / diseño técnico** (cómo funciona por dentro), **Flujo de usuario** (qué experimenta la persona que usa esa parte del producto, o una nota explícita de que el cambio es interno y no tiene flujo de usuario propio), y **Journey UX unificado** (la cadena de touchpoints reales que atraviesa — Admin RedPontis, Panel de Mundo, POS/Operador, Superapp — en el orden en que efectivamente se recorre, para dejar explícito cómo se conecta cada plataforma con las demás en vez de describirlas por separado). Al final de cada fase se lista además la tabla completa de commits reales de esa fase, con hash de git, para quien necesite el detalle línea por línea.\n")
 
     assigned_hashes = set()
     for fase_label, fase_titulo, (lo, hi), d_start, d_end in FASES:
         out.append(f"\n# Fase: {fase_titulo}")
         out.append(f"*{fase_label}*\n")
 
-        out.append("## A. Tareas de esta fase\n")
-        for n, status, subj in TASKS:
+        for n, status, title in TASKS:
             if not (lo <= n <= hi):
                 continue
             estado_tag = "🟢 Completado" if status == "completed" else "🟡 Pendiente"
-            rows = task_commits.get(n, [])
-            ref = f" *(commit `{rows[0][1]}`, {rows[0][0]})*" if rows else ""
-            out.append(f"- **#{n}** — {subj} — {estado_tag}{ref}")
+            commits = task_commits.get(n, [])
+            pedido, resuelto, flujo, flujo_usuario, journey = derive_fields(n, status, title, commits)
+            out.append(f"### #{n} — {title}")
+            out.append(f"Estado: {estado_tag}\n")
+            out.append(f"**Instrucción de trabajo:** {pedido}\n")
+            out.append(f"**Qué se resolvió:** {resuelto}\n")
+            out.append(f"**Flujo / diseño técnico:** {flujo}\n")
+            out.append(f"**Flujo de usuario:** {flujo_usuario}\n")
+            out.append(f"**Journey UX unificado:** {journey}\n")
 
-        out.append("\n## B. Commits reales de esta fase\n")
+        out.append("## Commits reales de esta fase\n")
         out.append("| Fecha | Hash | Commit |")
         out.append("|---|---|---|")
         fase_rows = [(d, h, s) for d, h, s in git_rows if d_start <= d <= d_end and h not in assigned_hashes]

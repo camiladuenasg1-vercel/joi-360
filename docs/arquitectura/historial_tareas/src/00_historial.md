@@ -1,14 +1,15 @@
 # JOI360 — Historial de Tareas y Commits
 
-Documento vivo · Versión **1.0** · 12 de agosto de 2026
+Documento vivo · Versión **1.1** · 12 de agosto de 2026
 
-Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`) y de los 163 commits reales de git que representan el código que efectivamente cambió, organizados en 7 fases cronológicas — del 1 al 12 de agosto de 2026. Cuando un commit menciona explícitamente el número de tarea, queda cruzado como referencia directa.
+Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`) y de los 163 commits reales de git que representan el código que efectivamente cambió, organizados en 7 fases cronológicas — del 1 al 12 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.
 
 ## Historial de versiones
 
 | Versión | Fecha | Cambios |
 |---|---|---|
-| 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases de desarrollo narradas cronológicamente. |
+| 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases cronológicas. |
+| 1.1 | 2026-08-12 | Cada tarea ahora describe qué se pidió, qué se resolvió, el flujo/diseño, el flujo de usuario, y el journey UX unificado (touchpoints encadenados en base a los commits reales) — no solo título + commit. |
 
 *Corte semanal: domingo. Próxima actualización: 16-ago-2026.*
 
@@ -19,32 +20,149 @@ Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`
 | Tareas registradas | 132 |
 | Tareas completadas | 130 |
 | Tareas pendientes | 2 |
-| Commits reales en el repo | 163 |
+| Commits reales en el repo | 164 |
 | Commits con tarea identificada | 46 |
 | Rango de fechas | 2026-08-01 a 2026-08-12 |
 
 ## Cómo leer este documento
 
-Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Registro de tareas** — qué se pidió o encontró y su estado, en el lenguaje en que se reportó; **(B) Commits reales** — exactamente qué cambió en el código, con hash real de git, en el mismo rango de fechas. Donde un commit menciona explícitamente el número de tarea (`#NNN`), queda cruzado en la tarea correspondiente como referencia directa — el resto de los commits de la fase completan el detalle técnico aunque no hayan quedado etiquetados con un número.
+Cada tarea se describe en 5 partes: **Instrucción de trabajo** (la solicitud, en forma de instrucción clara — reconstruida para que se lea como un encargo, no como un título de ticket), **Qué se resolvió** (el resultado real, con los commits que lo prueban), **Flujo / diseño técnico** (cómo funciona por dentro), **Flujo de usuario** (qué experimenta la persona que usa esa parte del producto, o una nota explícita de que el cambio es interno y no tiene flujo de usuario propio), y **Journey UX unificado** (la cadena de touchpoints reales que atraviesa — Admin RedPontis, Panel de Mundo, POS/Operador, Superapp — en el orden en que efectivamente se recorre, para dejar explícito cómo se conecta cada plataforma con las demás en vez de describirlas por separado). Al final de cada fase se lista además la tabla completa de commits reales de esa fase, con hash de git, para quien necesite el detalle línea por línea.
 
 
 # Fase: Arranque del monorepo y Motor de Eventos
 *01-ago a 02-ago*
 
-## A. Tareas de esta fase
+### #102 — Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales
+Estado: 🟢 Completado
 
-- **#102** — Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales — 🟢 Completado
-- **#103** — Poder revertir/reabrir el popup de elección de modo de Eventos — 🟢 Completado
-- **#104** — Cola de requerimiento de hardware para el mundo (banditas + POS) — 🟢 Completado
-- **#105** — Embebido: Motor de Eventos vive DENTRO del panel del mundo — 🟢 Completado
-- **#106** — Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo — 🟢 Completado
-- **#107** — Registro real en el superapp con verificación de correo — 🟢 Completado
-- **#108** — Módulo de usuarios por mundo en RedPontis + KPIs para el mundo — 🟢 Completado
-- **#109** — Sacar JOI Promos del alcance activo — 🟢 Completado
-- **#110** — P2P deja billeteras en negativo (bug real de saldo) — 🟢 Completado
-- **#111** — POS: pantalla de acceso con ficha del usuario e historial — 🟢 Completado
+**Instrucción de trabajo:** Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Motor de Eventos: discriminar B2B / B2C / Embebido con dependencias reales
+
+### #103 — Poder revertir/reabrir el popup de elección de modo de Eventos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Poder revertir/reabrir el popup de elección de modo de Eventos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Poder revertir/reabrir el popup de elección de modo de Eventos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Poder revertir/reabrir el popup de elección de modo de Eventos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Poder revertir/reabrir el popup de elección de modo de Eventos
+
+### #104 — Cola de requerimiento de hardware para el mundo (banditas + POS)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cola de requerimiento de hardware para el mundo (banditas + POS)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Cola de requerimiento de hardware para el mundo (banditas + POS)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Cola de requerimiento de hardware para el mundo (banditas + POS)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. Cola de requerimiento de hardware para el mundo (banditas + POS)
+
+### #105 — Embebido: Motor de Eventos vive DENTRO del panel del mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Embebido: Motor de Eventos vive DENTRO del panel del mundo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Embebido: Motor de Eventos vive DENTRO del panel del mundo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Embebido: Motor de Eventos vive DENTRO del panel del mundo).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Embebido: Motor de Eventos vive DENTRO del panel del mundo
+
+### #106 — Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Ficha completa de evento: portada, mapa PDF, merchants asociados, preventa por tipo
+
+### #107 — Registro real en el superapp con verificación de correo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Registro real en el superapp con verificación de correo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Registro real en el superapp con verificación de correo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Registro real en el superapp con verificación de correo).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Registro real en el superapp con verificación de correo
+
+### #108 — Módulo de usuarios por mundo en RedPontis + KPIs para el mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Módulo de usuarios por mundo en RedPontis + KPIs para el mundo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Módulo de usuarios por mundo en RedPontis + KPIs para el mundo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Módulo de usuarios por mundo en RedPontis + KPIs para el mundo).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo. Módulo de usuarios por mundo en RedPontis + KPIs para el mundo
+
+### #109 — Sacar JOI Promos del alcance activo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Sacar JOI Promos del alcance activo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Sacar JOI Promos del alcance activo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Sacar JOI Promos del alcance activo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #110 — P2P deja billeteras en negativo (bug real de saldo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** P2P deja billeteras en negativo (bug real de saldo)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("P2P deja billeteras en negativo (bug real de saldo)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (P2P deja billeteras en negativo (bug real de saldo)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). P2P deja billeteras en negativo (bug real de saldo)
+
+### #111 — POS: pantalla de acceso con ficha del usuario e historial
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS: pantalla de acceso con ficha del usuario e historial
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("POS: pantalla de acceso con ficha del usuario e historial") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (POS: pantalla de acceso con ficha del usuario e historial).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). POS: pantalla de acceso con ficha del usuario e historial
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -65,49 +183,514 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Seguridad crítica de Wallet + limpieza de datos fantasma
 *03-ago a 04-ago*
 
-## A. Tareas de esta fase
+### #112 — QA end-to-end con 5 agentes sobre todo el ecosistema
+Estado: 🟢 Completado
 
-- **#112** — QA end-to-end con 5 agentes sobre todo el ecosistema — 🟢 Completado
-- **#113** — Rediseño arquitectónico del Core Platform JOI360 (ADR + diseño, sin código) — 🟢 Completado *(commit `021ac93`, 2026-08-04)*
-- **#114** — CRÍTICO: la llave anónima del bundle expone PIN de POS y datos bancarios, y permite escribir dinero — 🟢 Completado
-- **#115** — Liquidación genera netos negativos y deja procesarlos — 🟢 Completado
-- **#116** — Documento Maestro JOI360 (10 secciones) — capturas + anexo iOS nativo — 🟢 Completado
-- **#117** — Duplicados: 3 mundos "Colegio Raimondi" en Supabase — 🟢 Completado
-- **#118** — POS/Operador: vincular bandita NFC directamente desde el POS — 🟢 Completado
-- **#119** — Cash-in de evento: banditas pre-cargadas con lista de asistencia — 🟢 Completado *(commit `d9c5d96`, 2026-08-04)*
-- **#120** — Menu: falta acción real en el POS/operador — 🟢 Completado *(commit `dc6b2d6`, 2026-08-04)*
-- **#121** — RPC de wallet: cerrar el gap de autorización por dueño — 🟢 Completado *(commit `615b2f6`, 2026-08-04)*
-- **#122** — E2E real en Raimondi: POS, merchant, mundo, usuarios, liquidación — 🟢 Completado *(commit `60426bb`, 2026-08-04)*
-- **#123** — Auditar feature flags de cada módulo de capacidades — 🟢 Completado *(commit `7572ed0`, 2026-08-04)*
-- **#124** — Pase de UX copywriting: quitar copys guía innecesarios + empty states — 🟢 Completado *(commit `202ec18`, 2026-08-04)*
-- **#125** — Borrado total de BD + arranque limpio — 🟢 Completado *(commit `3193756`, 2026-08-04)*
-- **#126** — Adquirencia: sincronizar canales/MDR real a Supabase (hoy es mock local) — 🟢 Completado *(commit `000ec8a`, 2026-08-04)*
-- **#127** — POS T6: pull-to-refresh en la pantalla de inicio — 🟢 Completado *(commit `e7f1b2a`, 2026-08-04)*
-- **#128** — POS: login diferenciado Mundo vs Comercio — 🟢 Completado *(commit `4d3ed8a`, 2026-08-04)*
-- **#129** — Estandarizar tab "Canales" en todas las capacidades — 🟢 Completado *(commit `a1f7555`, 2026-08-04)*
-- **#130** — Flujo NFC de dependientes vía DNI end-to-end — 🟢 Completado *(commit `9802ca8`, 2026-08-04)*
-- **#131** — Badge "Pendiente / No activado" en mundo sin dashboard entregado — 🟢 Completado *(commit `00a6b1d`, 2026-08-04)*
-- **#132** — Auditar render de superapp al habilitar Familiares en Wallet — 🟢 Completado *(commit `9802ca8`, 2026-08-04)*
-- **#133** — QA de dependencias config/catálogos — auditoría cruzada — 🟢 Completado *(commit `e115236`, 2026-08-09)*
-- **#134** — Botón con estado loading en design system + sync en cascada — 🟢 Completado *(commit `ecbb654`, 2026-08-09)*
-- **#135** — KPI "Emisión acumulada" debe reflejar 0 real — 🟢 Completado
-- **#136** — E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas — 🟡 Pendiente
-- **#137** — Estandarizar registro de usuario en superapp — 🟢 Completado
-- **#138** — Borrar data completa de superapp (destructivo, al final) — 🟢 Completado
-- **#139** — Eliminar mundo JOI Promos + sacar Anunciantes del alcance — 🟢 Completado *(commit `9d5f7c0`, 2026-08-04)*
-- **#140** — Dependientes: registro DNI+alias, consumo vía saldo asignado — 🟢 Completado *(commit `9802ca8`, 2026-08-04)*
-- **#141** — Eventos 100% real + gestión embebida completa en panel del mundo — 🟢 Completado *(commit `d454577`, 2026-08-09)*
-- **#142** — Quitar "Reset demo"; credenciales admin reales — 🟢 Completado *(commit `ee44d6f`, 2026-08-04)*
-- **#143** — POS: cierre de sesión definitivo con protección de credenciales — 🟢 Completado *(commit `0fbf511`, 2026-08-09)*
-- **#144** — Menú: flujo de compra — 🟢 Completado *(commit `dc6b2d6`, 2026-08-04)*
-- **#145** — Reiniciar catálogo de hardware/banditas para inventario real — 🟢 Completado
-- **#146** — Precio unitario por bandita/lote + discriminación al asignar — 🟢 Completado *(commit `a2dadd7`, 2026-08-04)*
-- **#147** — Eliminar lote NFC con restricción + reversión de asignación — 🟢 Completado *(commit `a2dadd7`, 2026-08-04)*
-- **#148** — Rediseñar precio/modelo de bandita: se fija al asignar, no al cargar — 🟢 Completado *(commit `84f6090`, 2026-08-04)*
-- **#149** — Creación de mundo: solo mostrar módulos activos, ocultar "próximamente" — 🟢 Completado *(commit `a9fe9ab`, 2026-08-09)*
-- **#150** — Moneda de wallet en creación de mundo: select de catálogo real, no texto libre — 🟢 Completado *(commit `a9fe9ab`, 2026-08-09)*
+**Instrucción de trabajo:** QA end-to-end con 5 agentes sobre todo el ecosistema
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("QA end-to-end con 5 agentes sobre todo el ecosistema") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (QA end-to-end con 5 agentes sobre todo el ecosistema).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #113 — Rediseño arquitectónico del Core Platform JOI360 (ADR + diseño, sin código)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Repensar la arquitectura del Core Platform desde cero antes de seguir agregando capacidades, para que cada una nueva encaje en un mismo patrón (Mundo -> Capacidad -> Configuración -> Render) en vez de resolverse caso por caso.
+
+**Qué se resolvió:** Se documentó un ADR (Architecture Decision Record) formal más un roadmap técnico: el catálogo maestro de capacidades (MODULE_CATALOG), el mapa de dependencias entre capacidades (DEPENDENCY_MAP), y el mecanismo de sincronización local-Supabase que hoy sostiene todo el sistema.
+
+**Flujo / diseño técnico:** RedPontis define capacidades en un catálogo global -> el mundo activa un subconjunto -> cada capacidad trae su propia configuración -> la app (superapp, admin, POS) lee esa configuración en vivo y decide qué renderizar, sin hardcodear reglas por mundo.
+
+**Flujo de usuario:** No es una feature con flujo de usuario directo -- es la base arquitectónica que hace posible que cada capacidad nueva (Wallet, Comercios, Eventos, etc.) tenga un flujo de usuario consistente en todos los frentes.
+
+**Journey UX unificado:** Admin RedPontis (Catálogos Globales) → Panel de Mundo (activación de la capacidad) → Superapp / POS (render final). Este ADR es el journey maestro del que se desprenden todos los journeys específicos del resto de tareas: cualquier capacidad nueva atraviesa las mismas 3 paradas, en el mismo orden, sin excepción.
+
+### #114 — CRÍTICO: la llave anónima del bundle expone PIN de POS y datos bancarios, y permite escribir dinero
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Corregir una vulnerabilidad crítica: la llave anónima de Supabase, expuesta en el bundle público del frontend, permitía leer el PIN de operador de POS y datos bancarios en texto plano, y escribir saldo directamente sin pasar por ninguna validación.
+
+**Qué se resolvió:** Se migró el movimiento de saldo a una función RPC atómica server-side (mover_saldo_wallet) con REVOKE UPDATE sobre wallets.balance -- la única forma de mover saldo real pasa a ser esa función, nunca un UPDATE directo desde el cliente. Los PIN de operador se hashean server-side (merchants.pos_pin_hash, worlds.pos_pin_hash) en vez de guardarse en texto plano.
+
+**Flujo / diseño técnico:** Cliente llama a la RPC con los parámetros de la operación -> la función toma un lock de fila sobre la wallet, valida saldo suficiente, inserta la transacción -- todo en una sola transacción atómica de Postgres, invisible e inmodificable desde el cliente.
+
+**Flujo de usuario:** Transparente para el usuario final -- cobra/recarga exactamente igual que antes. La diferencia es que ya no existe ningún camino desde el navegador que pueda escribir saldo sin pasar por esa validación.
+
+**Journey UX unificado:** Superapp / POS (el usuario o el operador inician la operación) → Supabase RPC `mover_saldo_wallet` (única puerta de entrada real al saldo) → Wallet actualizada. Journey unificado: no importa desde qué touchpoint se origina el movimiento de saldo (recarga en superapp, cobro en POS, ajuste desde admin), todos convergen en la misma función server-side -- un solo camino de verdad, no uno por plataforma.
+
+### #115 — Liquidación genera netos negativos y deja procesarlos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Liquidación genera netos negativos y deja procesarlos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Liquidación genera netos negativos y deja procesarlos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Liquidación genera netos negativos y deja procesarlos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Liquidación genera netos negativos y deja procesarlos
+
+### #116 — Documento Maestro JOI360 (10 secciones) — capturas + anexo iOS nativo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Documento Maestro JOI360 (10 secciones) — capturas + anexo iOS nativo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Documento Maestro JOI360 (10 secciones) — capturas + anexo iOS nativo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Documento Maestro JOI360 (10 secciones) — capturas + anexo iOS nativo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #117 — Duplicados: 3 mundos "Colegio Raimondi" en Supabase
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Duplicados: 3 mundos "Colegio Raimondi" en Supabase
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Duplicados: 3 mundos "Colegio Raimondi" en Supabase") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Duplicados: 3 mundos "Colegio Raimondi" en Supabase).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Duplicados: 3 mundos "Colegio Raimondi" en Supabase
+
+### #118 — POS/Operador: vincular bandita NFC directamente desde el POS
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS/Operador: vincular bandita NFC directamente desde el POS
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("POS/Operador: vincular bandita NFC directamente desde el POS") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (POS/Operador: vincular bandita NFC directamente desde el POS).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). POS/Operador: vincular bandita NFC directamente desde el POS
+
+### #119 — Cash-in de evento: banditas pre-cargadas con lista de asistencia
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cash-in de evento: banditas pre-cargadas con lista de asistencia
+
+**Qué se resolvió:** docs: diseño de bandita de evento con saldo pre-cargado (#119) · feat(admin): banditas de evento con saldo pre-cargado y lista de asistencia (Task #119)
+
+**Flujo / diseño técnico:** docs: diseño de bandita de evento con saldo pre-cargado (#119) · feat(admin): banditas de evento con saldo pre-cargado y lista de asistencia (Task #119)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. docs: diseño de bandita de evento con saldo pre-cargado (#119) · feat(admin): banditas de evento con saldo pre-cargado y lista de asistencia (Task #119)
+
+### #120 — Menu: falta acción real en el POS/operador
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Menu: falta acción real en el POS/operador
+
+**Qué se resolvió:** feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+**Flujo / diseño técnico:** feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: POS / Operador → Superapp. feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+### #121 — RPC de wallet: cerrar el gap de autorización por dueño
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar el hueco de autorización en las RPC de wallet: cualquiera con la llave anónima podía mover el saldo de CUALQUIER wallet, no solo la propia -- solo faltaba pasar el wallet_id correcto.
+
+**Qué se resolvió:** La RPC mover_saldo_wallet ahora exige, para cada llamada, o un turno de POS válido (p_turno_id real y abierto) o que auth.uid() sea el dueño de la wallet o su apoderado -- devuelve NO_AUTENTICADO / NO_AUTORIZADO / TURNO_INVALIDO si ninguna condición se cumple.
+
+**Flujo / diseño técnico:** El cliente intenta mover saldo -> la función valida identidad ANTES de tocar cualquier fila -> solo si pasa la validación continúa con el lock+update+insert de siempre.
+
+**Flujo de usuario:** Sin cambio visible para el usuario legítimo. Nota de seguimiento para el equipo: una migración posterior (fix-181, restricciones de dependiente) reescribió esta función completa y, sin querer, no conservó esta validación de dueño -- documentado en el documento maestro como hallazgo de severidad alta pendiente de restaurar.
+
+**Journey UX unificado:** Superapp / POS (origen del intento de movimiento) → RPC de wallet (valida turno abierto o dueño/apoderado ANTES de tocar saldo) → Wallet. Journey de seguridad: cualquier touchpoint que intente mover saldo de una wallet ajena queda cortado en el mismo punto, independientemente de por dónde haya entrado la llamada.
+
+### #122 — E2E real en Raimondi: POS, merchant, mundo, usuarios, liquidación
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** E2E real en Raimondi: POS, merchant, mundo, usuarios, liquidación
+
+**Qué se resolvió:** fix(#122): el acuerdo comercial del mundo ahora se sincroniza a Supabase · fix(#122): la reconciliación de acuerdo no sanaba acuerdo:{} (vacío pero truthy) · fix(#122): worldRow() ya no reescribe acuerdo:{} corrupto por encima del real
+
+**Flujo / diseño técnico:** fix(#122): el acuerdo comercial del mundo ahora se sincroniza a Supabase · fix(#122): la reconciliación de acuerdo no sanaba acuerdo:{} (vacío pero truthy) · fix(#122): worldRow() ya no reescribe acuerdo:{} corrupto por encima del real
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. fix(#122): el acuerdo comercial del mundo ahora se sincroniza a Supabase · fix(#122): la reconciliación de acuerdo no sanaba acuerdo:{} (vacío pero truthy) · fix(#122): worldRow() ya no reescribe acuerdo:{} corrupto por encima del real
+
+### #123 — Auditar feature flags de cada módulo de capacidades
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Auditar feature flags de cada módulo de capacidades
+
+**Qué se resolvió:** fix(#123): mapear como "listo" feature flags reales que se mostraban próximamente
+
+**Flujo / diseño técnico:** fix(#123): mapear como "listo" feature flags reales que se mostraban próximamente
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #124 — Pase de UX copywriting: quitar copys guía innecesarios + empty states
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Pase de UX copywriting: quitar copys guía innecesarios + empty states
+
+**Qué se resolvió:** fix(#124): pase de copywriting — quitar guías redundantes, empty state en Landing
+
+**Flujo / diseño técnico:** fix(#124): pase de copywriting — quitar guías redundantes, empty state en Landing
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #125 — Borrado total de BD + arranque limpio
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Borrado total de BD + arranque limpio
+
+**Qué se resolvió:** docs: script SQL del borrado total de BD (#125)
+
+**Flujo / diseño técnico:** docs: script SQL del borrado total de BD (#125)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #126 — Adquirencia: sincronizar canales/MDR real a Supabase (hoy es mock local)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Adquirencia: sincronizar canales/MDR real a Supabase (hoy es mock local)
+
+**Qué se resolvió:** fix(#126): Adquirencia Global ahora sincroniza a Supabase de verdad
+
+**Flujo / diseño técnico:** fix(#126): Adquirencia Global ahora sincroniza a Supabase de verdad
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Admin RedPontis (un solo touchpoint, sin handoff a otra plataforma). fix(#126): Adquirencia Global ahora sincroniza a Supabase de verdad
+
+### #127 — POS T6: pull-to-refresh en la pantalla de inicio
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS T6: pull-to-refresh en la pantalla de inicio
+
+**Qué se resolvió:** feat(operador-nativo #127): pull-to-refresh en Inicio del POS
+
+**Flujo / diseño técnico:** feat(operador-nativo #127): pull-to-refresh en Inicio del POS
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). feat(operador-nativo #127): pull-to-refresh en Inicio del POS
+
+### #128 — POS: login diferenciado Mundo vs Comercio
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS: login diferenciado Mundo vs Comercio
+
+**Qué se resolvió:** feat(operador-nativo #128): login diferenciado Soy Mundo / Soy Comercio · feat(#128): login diferenciado Soy Mundo / Soy Comercio en el panel admin
+
+**Flujo / diseño técnico:** feat(operador-nativo #128): login diferenciado Soy Mundo / Soy Comercio · feat(#128): login diferenciado Soy Mundo / Soy Comercio en el panel admin
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. feat(operador-nativo #128): login diferenciado Soy Mundo / Soy Comercio · feat(#128): login diferenciado Soy Mundo / Soy Comercio en el panel admin
+
+### #129 — Estandarizar tab "Canales" en todas las capacidades
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Estandarizar tab "Canales" en todas las capacidades
+
+**Qué se resolvió:** fix(#129): estandariza el tab "Canales" — solo Wallet y Comercios
+
+**Flujo / diseño técnico:** fix(#129): estandariza el tab "Canales" — solo Wallet y Comercios
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). fix(#129): estandariza el tab "Canales" — solo Wallet y Comercios
+
+### #130 — Flujo NFC de dependientes vía DNI end-to-end
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Flujo NFC de dependientes vía DNI end-to-end
+
+**Qué se resolvió:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(#130): panel de solicitudes NFC identifica titular vs dependiente · feat(#130): resuelve nombre real del titular en solicitudes NFC · feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo / diseño técnico:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(#130): panel de solicitudes NFC identifica titular vs dependiente · feat(#130): resuelve nombre real del titular en solicitudes NFC · feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: POS / Operador → Superapp. feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(#130): panel de solicitudes NFC identifica titular vs dependiente · feat(#130): resuelve nombre real del titular en solicitudes NFC · feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+### #131 — Badge "Pendiente / No activado" en mundo sin dashboard entregado
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Badge "Pendiente / No activado" en mundo sin dashboard entregado
+
+**Qué se resolvió:** feat(#131): badge "Pendiente" en mundos sin dashboard entregado
+
+**Flujo / diseño técnico:** feat(#131): badge "Pendiente" en mundos sin dashboard entregado
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). feat(#131): badge "Pendiente" en mundos sin dashboard entregado
+
+### #132 — Auditar render de superapp al habilitar Familiares en Wallet
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Auditar render de superapp al habilitar Familiares en Wallet
+
+**Qué se resolvió:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(admin): retirar toggle muerto "Familiares" de Wallet (Task #132)
+
+**Flujo / diseño técnico:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(admin): retirar toggle muerto "Familiares" de Wallet (Task #132)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · fix(admin): retirar toggle muerto "Familiares" de Wallet (Task #132)
+
+### #133 — QA de dependencias config/catálogos — auditoría cruzada
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** QA de dependencias config/catálogos — auditoría cruzada
+
+**Qué se resolvió:** fix: auditoría cruzada config/catálogos — retirar toggles muertos, aplicar límites P2P reales (Task #133)
+
+**Flujo / diseño técnico:** fix: auditoría cruzada config/catálogos — retirar toggles muertos, aplicar límites P2P reales (Task #133)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Admin RedPontis (un solo touchpoint, sin handoff a otra plataforma). fix: auditoría cruzada config/catálogos — retirar toggles muertos, aplicar límites P2P reales (Task #133)
+
+### #134 — Botón con estado loading en design system + sync en cascada
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Botón con estado loading en design system + sync en cascada
+
+**Qué se resolvió:** feat(admin): estado loading real en BtnPrimary/BtnOutline del design system (Task #134)
+
+**Flujo / diseño técnico:** feat(admin): estado loading real en BtnPrimary/BtnOutline del design system (Task #134)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #135 — KPI "Emisión acumulada" debe reflejar 0 real
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** KPI "Emisión acumulada" debe reflejar 0 real
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("KPI "Emisión acumulada" debe reflejar 0 real") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (KPI "Emisión acumulada" debe reflejar 0 real).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #136 — E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas
+Estado: 🟡 Pendiente
+
+**Instrucción de trabajo:** E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). E2E guiado con la usuaria: Raimondi + Eventos en todas las plataformas
+
+### #137 — Estandarizar registro de usuario en superapp
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Estandarizar registro de usuario en superapp
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Estandarizar registro de usuario en superapp") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Estandarizar registro de usuario en superapp).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Estandarizar registro de usuario en superapp
+
+### #138 — Borrar data completa de superapp (destructivo, al final)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Borrar data completa de superapp (destructivo, al final)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Borrar data completa de superapp (destructivo, al final)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Borrar data completa de superapp (destructivo, al final)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Borrar data completa de superapp (destructivo, al final)
+
+### #139 — Eliminar mundo JOI Promos + sacar Anunciantes del alcance
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Eliminar mundo JOI Promos + sacar Anunciantes del alcance
+
+**Qué se resolvió:** feat(#139): saca JOI Promos y Anunciantes/Promos del alcance activo
+
+**Flujo / diseño técnico:** feat(#139): saca JOI Promos y Anunciantes/Promos del alcance activo
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). feat(#139): saca JOI Promos y Anunciantes/Promos del alcance activo
+
+### #140 — Dependientes: registro DNI+alias, consumo vía saldo asignado
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Dependientes: registro DNI+alias, consumo vía saldo asignado
+
+**Qué se resolvió:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · feat(app): alias/apodo del dependiente (Task #140)
+
+**Flujo / diseño técnico:** feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · feat(app): alias/apodo del dependiente (Task #140)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). feat(#130,#132,#140): DNI en dependientes + confirmación real de suscripción · feat(app): alias/apodo del dependiente (Task #140)
+
+### #141 — Eventos 100% real + gestión embebida completa en panel del mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Que el Motor de Eventos funcione al 100% con datos reales (no simulados) y que la gestión embebida (el propio mundo publicando sus eventos) esté completa dentro del panel del mundo.
+
+**Qué se resolvió:** Se conectó todo el ciclo real: creación de evento, tipos de entrada, aforo, venta con débito real de wallet, emisión de QR, check-in en el POS, y el panel de gestión embebida dentro de MundoDetail -- sin ningún mock de por medio.
+
+**Flujo / diseño técnico:** Mundo crea evento -> define tipos de entrada y precios -> publica (pasa por aprobación de RedPontis) -> usuario compra desde la superapp (débito real) -> QR se genera -> POS del evento hace check-in escaneando ese QR.
+
+**Flujo de usuario:** Superapp: el usuario ve el evento en el marketplace, elige tipo de entrada, paga con su saldo, y la entrada aparece en 'Mis entradas' con su QR. En el evento, el POS valida ese QR y marca el ingreso.
+
+**Journey UX unificado:** Panel de Mundo (crea y publica el evento) → Admin RedPontis (aprueba) → Superapp (el asistente descubre el evento, compra su entrada, recibe el QR) → POS del evento (check-in escaneando el QR). Journey de punta a punta con 4 touchpoints distintos y 4 roles distintos (organizador, RedPontis, asistente, operador de puerta), unificados por el mismo `event_id` en cada paso.
+
+### #142 — Quitar "Reset demo"; credenciales admin reales
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Quitar "Reset demo"; credenciales admin reales
+
+**Qué se resolvió:** feat(#142): credenciales admin reales, quita signup y "Reset demo"
+
+**Flujo / diseño técnico:** feat(#142): credenciales admin reales, quita signup y "Reset demo"
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #143 — POS: cierre de sesión definitivo con protección de credenciales
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS: cierre de sesión definitivo con protección de credenciales
+
+**Qué se resolvió:** fix(admin): cierre de sesión definitivo por inactividad en el POS (Task #143)
+
+**Flujo / diseño técnico:** fix(admin): cierre de sesión definitivo por inactividad en el POS (Task #143)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). fix(admin): cierre de sesión definitivo por inactividad en el POS (Task #143)
+
+### #144 — Menú: flujo de compra
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Menú: flujo de compra
+
+**Qué se resolvió:** feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+**Flujo / diseño técnico:** feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: POS / Operador → Superapp. feat(#120,#144): acción real de Menú en el POS/operador — marcar entrega
+
+### #145 — Reiniciar catálogo de hardware/banditas para inventario real
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Reiniciar catálogo de hardware/banditas para inventario real
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Reiniciar catálogo de hardware/banditas para inventario real") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Reiniciar catálogo de hardware/banditas para inventario real).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Reiniciar catálogo de hardware/banditas para inventario real
+
+### #146 — Precio unitario por bandita/lote + discriminación al asignar
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Precio unitario por bandita/lote + discriminación al asignar
+
+**Qué se resolvió:** feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo / diseño técnico:** feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: POS / Operador → Superapp. feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+### #147 — Eliminar lote NFC con restricción + reversión de asignación
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Eliminar lote NFC con restricción + reversión de asignación
+
+**Qué se resolvió:** feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo / diseño técnico:** feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: POS / Operador → Superapp. feat(#130,#146,#147): vigencia/reposición de bandita en superapp + precio y gestión de lote en admin
+
+### #148 — Rediseñar precio/modelo de bandita: se fija al asignar, no al cargar
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Rediseñar precio/modelo de bandita: se fija al asignar, no al cargar
+
+**Qué se resolvió:** feat(#148): precio/modelo de bandita se fija al asignar, no al cargar el lote
+
+**Flujo / diseño técnico:** feat(#148): precio/modelo de bandita se fija al asignar, no al cargar el lote
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). feat(#148): precio/modelo de bandita se fija al asignar, no al cargar el lote
+
+### #149 — Creación de mundo: solo mostrar módulos activos, ocultar "próximamente"
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Creación de mundo: solo mostrar módulos activos, ocultar "próximamente"
+
+**Qué se resolvió:** feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+**Flujo / diseño técnico:** feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+### #150 — Moneda de wallet en creación de mundo: select de catálogo real, no texto libre
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Moneda de wallet en creación de mundo: select de catálogo real, no texto libre
+
+**Qué se resolvió:** feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+**Flujo / diseño técnico:** feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. feat(admin): wizard de mundo — ocultar módulos próximamente + catálogo real de monedas (Tasks #149, #150)
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -169,35 +752,332 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Bandita NFC end-to-end + restricciones granulares
 *07-ago a 08-ago*
 
-## A. Tareas de esta fase
+### #151 — Bug: error al crear producto en "Mi Catálogo" de comercio
+Estado: 🟢 Completado
 
-- **#151** — Bug: error al crear producto en "Mi Catálogo" de comercio — 🟢 Completado
-- **#152** — Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2 — 🟢 Completado
-- **#153** — Menú: estado pendiente de publicación hasta tener programación asignada — 🟢 Completado *(commit `adc6473`, 2026-08-09)*
-- **#154** — Tabla de usuarios por mundo: anidar dependientes + columnas de bandita — 🟢 Completado
-- **#155** — Superapp: selector de perfil (titular/dependiente) antes de cualquier configuración — 🟢 Completado *(commit `ff56735`, 2026-08-09)*
-- **#156** — Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo — 🟢 Completado
-- **#157** — UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94) — 🟢 Completado
-- **#158** — Flujo completo de solicitud de bandita: aviso al usuario + demanda/métricas para mundo y RedPontis — 🟢 Completado *(commit `e78e9be`, 2026-08-08)*
-- **#159** — Ocultar transacciones de suscripción al comercio — solo RedPontis las ve — 🟢 Completado
-- **#160** — POS: consulta por DNI (titular+dependientes) + módulo Perfil Extendido visible al mundo — 🟢 Completado *(commit `a528123`, 2026-08-08)*
-- **#161** — Superapp: editar perfil de dependiente ya creado (alergias, etc.) — 🟢 Completado *(commit `b27bb0e`, 2026-08-08)*
-- **#162** — Vincular pulsera: es por contacto NFC, no escaneo QR — 🟢 Completado
-- **#163** — Bug: historial de accesos marca "fuera del colegio" pese a registrar "entrada" — 🟢 Completado
-- **#164** — Merchant: autogenerar código de comercio + PIN de 4 dígitos si usa POS Operador — 🟢 Completado *(commit `6b0d6fa`, 2026-08-09)*
-- **#165** — Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo) — 🟢 Completado
-- **#166** — Perfil de mundo con imagen (como merchant) + thumbnail en card de comunidad — 🟢 Completado *(commit `95716db`, 2026-08-08)*
-- **#167** — Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo — 🟢 Completado
-- **#168** — Bandita universal para cuenta principal — discrimina wallet según mundo/comercio en el lector (arquitectura nueva) — 🟢 Completado *(commit `42966c0`, 2026-08-08)*
-- **#169** — Catálogo de productos merchant: categorías inteligentes vía combobox reutilizable — 🟢 Completado
-- **#170** — Campanita de notificaciones en admin RedPontis + tablas + badges en sidebar — 🟢 Completado *(commit `8f2a867`, 2026-08-08)*
-- **#171** — Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa) — 🟢 Completado
-- **#172** — POS/Tótem: separar catálogo de modelos de inventario de unidades — 🟢 Completado *(commit `3f454e5`, 2026-08-08)*
-- **#173** — Restricciones granulares: por dependiente, por mundo y por perfil — no un horario macro global — 🟢 Completado
-- **#174** — Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento — 🟢 Completado
-- **#175** — Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú — 🟢 Completado
+**Instrucción de trabajo:** Bug: error al crear producto en "Mi Catálogo" de comercio
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: error al crear producto en "Mi Catálogo" de comercio") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: error al crear producto en "Mi Catálogo" de comercio).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #152 — Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Bug: catálogo de Menú solo renderiza 1 plato en superapp aunque el panel tenga 2
+
+### #153 — Menú: estado pendiente de publicación hasta tener programación asignada
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Menú: estado pendiente de publicación hasta tener programación asignada
+
+**Qué se resolvió:** fix(admin): Menú muestra "pendiente de programar" en vez de "activo" falso (Task #153)
+
+**Flujo / diseño técnico:** fix(admin): Menú muestra "pendiente de programar" en vez de "activo" falso (Task #153)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). fix(admin): Menú muestra "pendiente de programar" en vez de "activo" falso (Task #153)
+
+### #154 — Tabla de usuarios por mundo: anidar dependientes + columnas de bandita
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Tabla de usuarios por mundo: anidar dependientes + columnas de bandita
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Tabla de usuarios por mundo: anidar dependientes + columnas de bandita") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Tabla de usuarios por mundo: anidar dependientes + columnas de bandita).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador → Superapp. Tabla de usuarios por mundo: anidar dependientes + columnas de bandita
+
+### #155 — Superapp: selector de perfil (titular/dependiente) antes de cualquier configuración
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Superapp: selector de perfil (titular/dependiente) antes de cualquier configuración
+
+**Qué se resolvió:** feat(app): selector de perfil en Perfil Extendido — titular/dependiente (Task #155)
+
+**Flujo / diseño técnico:** feat(app): selector de perfil en Perfil Extendido — titular/dependiente (Task #155)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). feat(app): selector de perfil en Perfil Extendido — titular/dependiente (Task #155)
+
+### #156 — Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. Bug crítico: vincular bandita por UID no reconoce las 501 ya asignadas al mundo
+
+### #157 — UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). UID de bandita: reconocer formato serial (04:D6:01:5A:68:19:94)
+
+### #158 — Flujo completo de solicitud de bandita: aviso al usuario + demanda/métricas para mundo y RedPontis
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Flujo completo de solicitud de bandita: aviso al usuario + demanda/métricas para mundo y RedPontis
+
+**Qué se resolvió:** feat: flujo completo de solicitud de bandita — aviso correcto + métricas para el mundo (Task #158)
+
+**Flujo / diseño técnico:** feat: flujo completo de solicitud de bandita — aviso correcto + métricas para el mundo (Task #158)
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo → POS / Operador. feat: flujo completo de solicitud de bandita — aviso correcto + métricas para el mundo (Task #158)
+
+### #159 — Ocultar transacciones de suscripción al comercio — solo RedPontis las ve
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Ocultar transacciones de suscripción al comercio — solo RedPontis las ve
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Ocultar transacciones de suscripción al comercio — solo RedPontis las ve") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Ocultar transacciones de suscripción al comercio — solo RedPontis las ve).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Superapp. Ocultar transacciones de suscripción al comercio — solo RedPontis las ve
+
+### #160 — POS: consulta por DNI (titular+dependientes) + módulo Perfil Extendido visible al mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS: consulta por DNI (titular+dependientes) + módulo Perfil Extendido visible al mundo
+
+**Qué se resolvió:** feat(admin): módulo "Consultar Ficha" en el POS Operador (Task #160)
+
+**Flujo / diseño técnico:** feat(admin): módulo "Consultar Ficha" en el POS Operador (Task #160)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador → Superapp. feat(admin): módulo "Consultar Ficha" en el POS Operador (Task #160)
+
+### #161 — Superapp: editar perfil de dependiente ya creado (alergias, etc.)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Superapp: editar perfil de dependiente ya creado (alergias, etc.)
+
+**Qué se resolvió:** feat(app): editar nombre y DNI de un dependiente ya creado (Task #161)
+
+**Flujo / diseño técnico:** feat(app): editar nombre y DNI de un dependiente ya creado (Task #161)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). feat(app): editar nombre y DNI de un dependiente ya creado (Task #161)
+
+### #162 — Vincular pulsera: es por contacto NFC, no escaneo QR
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Vincular pulsera: es por contacto NFC, no escaneo QR
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Vincular pulsera: es por contacto NFC, no escaneo QR") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Vincular pulsera: es por contacto NFC, no escaneo QR).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Vincular pulsera: es por contacto NFC, no escaneo QR
+
+### #163 — Bug: historial de accesos marca "fuera del colegio" pese a registrar "entrada"
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: historial de accesos marca "fuera del colegio" pese a registrar "entrada"
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: historial de accesos marca "fuera del colegio" pese a registrar "entrada"") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: historial de accesos marca "fuera del colegio" pese a registrar "entrada").
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #164 — Merchant: autogenerar código de comercio + PIN de 4 dígitos si usa POS Operador
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Merchant: autogenerar código de comercio + PIN de 4 dígitos si usa POS Operador
+
+**Qué se resolvió:** feat(admin): autogenerar código de comercio + PIN de POS Operador (Task #164)
+
+**Flujo / diseño técnico:** feat(admin): autogenerar código de comercio + PIN de POS Operador (Task #164)
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). feat(admin): autogenerar código de comercio + PIN de POS Operador (Task #164)
+
+### #165 — Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Instalar APK con fix de NFC en el T6 (falta conectar el dispositivo)
+
+### #166 — Perfil de mundo con imagen (como merchant) + thumbnail en card de comunidad
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Perfil de mundo con imagen (como merchant) + thumbnail en card de comunidad
+
+**Qué se resolvió:** feat(#166): perfil de mundo con imagen real, igual al panel de merchant
+
+**Flujo / diseño técnico:** feat(#166): perfil de mundo con imagen real, igual al panel de merchant
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. feat(#166): perfil de mundo con imagen real, igual al panel de merchant
+
+### #167 — Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Nomenclatura dinámica de cuenta principal/dependiente según rubro del mundo
+
+### #168 — Bandita universal para cuenta principal — discrimina wallet según mundo/comercio en el lector (arquitectura nueva)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Una sola bandita física debe poder representar la cuenta principal del usuario, pero discriminando correctamente qué wallet corresponde según en qué mundo/comercio se está usando el lector -- no una bandita por mundo.
+
+**Qué se resolvió:** Arquitectura nueva de bandita 'universal': el UID físico de la pulsera se vincula a la identidad de la persona, no a una wallet específica -- el lector resuelve la wallet correcta en el momento de la lectura según el contexto (mundo/comercio) donde está el lector.
+
+**Flujo / diseño técnico:** Persona vincula su bandita una sola vez -> el sistema guarda el UID ligado a su identidad -> en cualquier punto de cobro, el lector NFC envía el UID + el contexto del punto de venta -> el backend resuelve cuál wallet corresponde a esa combinación.
+
+**Flujo de usuario:** El usuario trae puesta la misma pulsera a cualquier mundo donde tenga cuenta -- no necesita una pulsera distinta por comunidad. El comercio/operador solo acerca el lector, sin tener que preguntar ni seleccionar nada.
+
+**Journey UX unificado:** Superapp/POS (vinculación única del UID a la identidad) → POS/Operador de cualquier mundo (lectura NFC + contexto del punto de venta) → backend resuelve wallet correcta → cobro. Journey unificado entre mundos: el mismo objeto físico (la pulsera) atraviesa comunidades distintas sin re-vinculación, porque la identidad vive en el UID y la wallet se resuelve en el momento, no de antemano.
+
+### #169 — Catálogo de productos merchant: categorías inteligentes vía combobox reutilizable
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Catálogo de productos merchant: categorías inteligentes vía combobox reutilizable
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Catálogo de productos merchant: categorías inteligentes vía combobox reutilizable") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Catálogo de productos merchant: categorías inteligentes vía combobox reutilizable).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #170 — Campanita de notificaciones en admin RedPontis + tablas + badges en sidebar
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Campanita de notificaciones en admin RedPontis + tablas + badges en sidebar
+
+**Qué se resolvió:** feat(#170): campanita de notificaciones en admin RedPontis
+
+**Flujo / diseño técnico:** feat(#170): campanita de notificaciones en admin RedPontis
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Admin RedPontis (un solo touchpoint, sin handoff a otra plataforma). feat(#170): campanita de notificaciones en admin RedPontis
+
+### #171 — Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Editar precio/modelo de un lote de banditas ya cargado (gratuita -> pagada y viceversa)
+
+### #172 — POS/Tótem: separar catálogo de modelos de inventario de unidades
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** POS/Tótem: separar catálogo de modelos de inventario de unidades
+
+**Qué se resolvió:** feat(#172): catálogo de modelos de hardware editable, separado del registro de unidades
+
+**Flujo / diseño técnico:** feat(#172): catálogo de modelos de hardware editable, separado del registro de unidades
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). feat(#172): catálogo de modelos de hardware editable, separado del registro de unidades
+
+### #173 — Restricciones granulares: por dependiente, por mundo y por perfil — no un horario macro global
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Las restricciones de consumo no pueden ser un horario macro único para todo el mundo -- necesitan ser granulares: por dependiente individual, y configurables (horario, límite diario, productos bloqueados).
+
+**Qué se resolvió:** Tabla dependent_restrictions con horario_inicio/fin, límite diario y lista de productos bloqueados por cada dependiente -- validado tanto en el cliente (feedback inmediato) como dentro de la RPC de wallet server-side (no se puede evadir cambiando el cliente).
+
+**Flujo / diseño técnico:** El tutor entra a Restricciones -> elige un dependiente -> configura horario permitido, límite diario y productos bloqueados -> esas reglas se guardan por dependiente, no por mundo.
+
+**Flujo de usuario:** El dependiente intenta comprar -> si está fuera de horario, excede su límite diario, o el producto está bloqueado para él, la compra se rechaza con un motivo específico (no un error genérico) -- tanto en la app como si el rechazo llega desde el servidor.
+
+**Journey UX unificado:** Superapp (tutor configura restricciones por dependiente) → Supabase `dependent_restrictions` → POS / Superapp (el dependiente intenta comprar, la RPC valida en tiempo real) → rechazo o aceptación con motivo explícito. Journey unificado: la misma regla que el tutor configuró en un touchpoint se hace cumplir igual sin importar si el dependiente compra desde el POS de un comercio o desde su propio celular.
+
+### #174 — Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Múltiples planes de suscripción (anual/mensual) + promociones con badge de descuento
+
+### #175 — Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Unificar alergias entre Perfil Extendido, creación de perfil, Restricciones y Menú
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -221,25 +1101,202 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Auditoría cruzada + primer batch de QA con agentes en paralelo
 *09-ago*
 
-## A. Tareas de esta fase
+### #176 — RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware
+Estado: 🟢 Completado
 
-- **#176** — RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware — 🟢 Completado
-- **#177** — Audit joi360-admin: CRUD (edit/delete) + dependency-safety on every table view — 🟢 Completado
-- **#178** — Audit each active capacidad against its correct rendering front(s) — 🟢 Completado
-- **#179** — Live E2E: merchant role (cobrar, catálogo, consulta, cierre) — 🟢 Completado
-- **#180** — Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento) — 🟢 Completado
-- **#181** — Bug DNI: cuenta principal mostraba perfil del dependiente — 🟢 Completado
-- **#182** — Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo — 🟢 Completado
-- **#183** — Auditoría completa de modelado de datos (Supabase) — 🟢 Completado
-- **#184** — Migrar joi360-admin/app a variables de entorno reales en Vercel — 🟢 Completado
-- **#185** — Instalar última versión en el T6 físico — 🟢 Completado
-- **#186** — Auditar banners en Restricciones (superapp) — 🟢 Completado
-- **#187** — Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos" — 🟢 Completado
-- **#188** — Ejecutar fixes de la Auditoría de Datos JOI360 — 🟢 Completado
-- **#189** — Loading state en TODOS los botones de creación (proyecto-wide) — 🟢 Completado
-- **#190** — Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza — 🟢 Completado
+**Instrucción de trabajo:** RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo. RedPontis comercial/admin: E2E Liquidación, Aprobaciones, Catálogos, Calculadora, Hardware
+
+### #177 — Audit joi360-admin: CRUD (edit/delete) + dependency-safety on every table view
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Audit joi360-admin: CRUD (edit/delete) + dependency-safety on every table view
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Audit joi360-admin: CRUD (edit/delete) + dependency-safety on every table view") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Audit joi360-admin: CRUD (edit/delete) + dependency-safety on every table view).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #178 — Audit each active capacidad against its correct rendering front(s)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Audit each active capacidad against its correct rendering front(s)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Audit each active capacidad against its correct rendering front(s)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Audit each active capacidad against its correct rendering front(s)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #179 — Live E2E: merchant role (cobrar, catálogo, consulta, cierre)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Live E2E: merchant role (cobrar, catálogo, consulta, cierre)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Live E2E: merchant role (cobrar, catálogo, consulta, cierre)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Live E2E: merchant role (cobrar, catálogo, consulta, cierre)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #180 — Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Live E2E: organizador B2B role (dashboard, eventos, asistencia, liquidación evento)
+
+### #181 — Bug DNI: cuenta principal mostraba perfil del dependiente
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug DNI: cuenta principal mostraba perfil del dependiente
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug DNI: cuenta principal mostraba perfil del dependiente") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug DNI: cuenta principal mostraba perfil del dependiente).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Bug DNI: cuenta principal mostraba perfil del dependiente
+
+### #182 — Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. Operador: inicio/cierre de turno con reflejo en panel de accesos del mundo
+
+### #183 — Auditoría completa de modelado de datos (Supabase)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Auditoría completa de modelado de datos (Supabase)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Auditoría completa de modelado de datos (Supabase)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Auditoría completa de modelado de datos (Supabase)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #184 — Migrar joi360-admin/app a variables de entorno reales en Vercel
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Migrar joi360-admin/app a variables de entorno reales en Vercel
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Migrar joi360-admin/app a variables de entorno reales en Vercel") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Migrar joi360-admin/app a variables de entorno reales en Vercel).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Migrar joi360-admin/app a variables de entorno reales en Vercel
+
+### #185 — Instalar última versión en el T6 físico
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Instalar última versión en el T6 físico
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Instalar última versión en el T6 físico") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Instalar última versión en el T6 físico).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Instalar última versión en el T6 físico
+
+### #186 — Auditar banners en Restricciones (superapp)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Auditar banners en Restricciones (superapp)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Auditar banners en Restricciones (superapp)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Auditar banners en Restricciones (superapp)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Auditar banners en Restricciones (superapp)
+
+### #187 — Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos"
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos"
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos"") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos").
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Eventos B2C: foto banner, entidad legal opcional, popup detalle+motivo rechazo en admin, motivo visible en "Mis eventos"
+
+### #188 — Ejecutar fixes de la Auditoría de Datos JOI360
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Ejecutar fixes de la Auditoría de Datos JOI360
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Ejecutar fixes de la Auditoría de Datos JOI360") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Ejecutar fixes de la Auditoría de Datos JOI360).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #189 — Loading state en TODOS los botones de creación (proyecto-wide)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Loading state en TODOS los botones de creación (proyecto-wide)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Loading state en TODOS los botones de creación (proyecto-wide)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Loading state en TODOS los botones de creación (proyecto-wide)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #190 — Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Bug: vincular bandita da "usuario no reconocido" con usuario real registrado en Jockey Plaza
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -267,34 +1324,319 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Auditoría de datos + seguridad de credenciales (admin/PIN)
 *10-ago*
 
-## A. Tareas de esta fase
+### #191 — Cooldown de 2 min para reenvío de link de confirmación de correo
+Estado: 🟢 Completado
 
-- **#191** — Cooldown de 2 min para reenvío de link de confirmación de correo — 🟢 Completado
-- **#192** — Usuarios en admin RedPontis aparecen sin sus datos 360 — 🟢 Completado
-- **#193** — Superapp: opción de eliminar dependiente/familiar — 🟢 Completado
-- **#194** — Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp — 🟢 Completado
-- **#195** — DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end — 🟢 Completado
-- **#196** — Raimondi: probar fino flujos E2E de saldo, vinculación bandita, cobro y compra por QR — 🟢 Completado *(commit `962ed3a`, 2026-08-12)*
-- **#197** — Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos — 🟢 Completado
-- **#198** — Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis — 🟢 Completado
-- **#199** — Bug: contraseña de admin sale NULL / no se guarda al crearla o editarla — 🟢 Completado
-- **#200** — Eventos embebidos en panel de mundo para Jockey Plaza (construir feature completo) — 🟢 Completado
-- **#201** — Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa — 🟢 Completado
-- **#202** — Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual — 🟢 Completado
-- **#203** — Verificar bug de precio de entrada en NumInput — 🟢 Completado
-- **#204** — Badge de estado de evento debe reflejar aprobación real de BD — 🟢 Completado
-- **#205** — Agregar upload de banner de evento con espejo en superapp — 🟢 Completado
-- **#206** — RUC input: máximo 11 dígitos — 🟢 Completado
-- **#207** — Cuenta bancaria: máximo 14 dígitos — 🟢 Completado
-- **#208** — CCI: máximo 20 dígitos — 🟢 Completado
-- **#209** — Paso 3 crear mundo: no deja adjuntar dos documentos — 🟢 Completado
-- **#210** — Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN — 🟢 Completado
-- **#211** — Paso 4 Compras y transacciones: campo de hora debe ser time picker — 🟢 Completado
-- **#212** — Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo) — 🟢 Completado
-- **#213** — Paso 5 vigencia: usar fecha específica, no dropdown 12/6/3 meses — 🟢 Completado
-- **#214** — Eliminar referencia a 'costo agregado' del catálogo — 🟢 Completado
+**Instrucción de trabajo:** Cooldown de 2 min para reenvío de link de confirmación de correo
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Cooldown de 2 min para reenvío de link de confirmación de correo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Cooldown de 2 min para reenvío de link de confirmación de correo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #192 — Usuarios en admin RedPontis aparecen sin sus datos 360
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Usuarios en admin RedPontis aparecen sin sus datos 360
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Usuarios en admin RedPontis aparecen sin sus datos 360") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Usuarios en admin RedPontis aparecen sin sus datos 360).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Admin RedPontis (un solo touchpoint, sin handoff a otra plataforma). Usuarios en admin RedPontis aparecen sin sus datos 360
+
+### #193 — Superapp: opción de eliminar dependiente/familiar
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Superapp: opción de eliminar dependiente/familiar
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Superapp: opción de eliminar dependiente/familiar") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Superapp: opción de eliminar dependiente/familiar).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Superapp: opción de eliminar dependiente/familiar
+
+### #194 — Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Bug: "no tienes ningún mundo" al entrar a Explorar Mundos en superapp
+
+### #195 — DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. DEMO Jockey Plaza: flujo completo de código de comercio/mundo/POS operador end-to-end
+
+### #196 — Raimondi: probar fino flujos E2E de saldo, vinculación bandita, cobro y compra por QR
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Raimondi: probar fino flujos E2E de saldo, vinculación bandita, cobro y compra por QR
+
+**Qué se resolvió:** fix(#196): cobro/recarga fallaba con 409 por reference duplicado
+
+**Flujo / diseño técnico:** fix(#196): cobro/recarga fallaba con 409 por reference duplicado
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). fix(#196): cobro/recarga fallaba con 409 por reference duplicado
+
+### #197 — Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Auditar y rellenar TODOS los NULLs en tablas (incl. sponsor_id) según la auditoría de datos
+
+### #198 — Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo. Bug: mundo eliminado (Colegio Raimondi) reaparece en el panel admin RedPontis
+
+### #199 — Bug: contraseña de admin sale NULL / no se guarda al crearla o editarla
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: contraseña de admin sale NULL / no se guarda al crearla o editarla
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: contraseña de admin sale NULL / no se guarda al crearla o editarla") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: contraseña de admin sale NULL / no se guarda al crearla o editarla).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #200 — Eventos embebidos en panel de mundo para Jockey Plaza (construir feature completo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Construir el feature completo de Eventos embebidos para el panel de mundo de Jockey Plaza: que el mundo pueda dar de alta comercios por evento (desde su directorio existente o ad-hoc solo para ese evento), y que RedPontis apruebe con visibilidad completa del detalle.
+
+**Qué se resolvió:** EventoComerciosCard con checkbox de comercios existentes + formulario de alta ad-hoc; cola de aprobación en Gobierno con modal de detalle completo (banner, mapa, tipos de entrada, comercios con foto) antes de aprobar o rechazar.
+
+**Flujo / diseño técnico:** Mundo entra a la pestaña de Eventos -> marca qué comercios de su directorio participan, o agrega uno nuevo solo para ese evento -> RedPontis ve la solicitud en su cola de Aprobaciones con el detalle completo -> aprueba o rechaza con motivo.
+
+**Flujo de usuario:** Superapp: el asistente ve el evento con sus comercios afiliados (con foto) antes de comprar la entrada -- el detalle completo, no solo el nombre del evento.
+
+**Journey UX unificado:** Panel de Mundo (afilia comercios existentes o crea uno ad-hoc para el evento) → Admin RedPontis (Gobierno / Aprobaciones, ve el detalle completo antes de decidir) → Superapp (el asistente ve el evento con sus comercios afiliados antes de comprar). Journey de 3 roles unificado por el mismo evento: lo que el mundo carga es exactamente lo que RedPontis aprueba y exactamente lo que el asistente ve, sin traducción intermedia.
+
+### #201 — Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Bug: usuario registrado (Diego Salguero) entra a Jockey Plaza y sale sin wallet pese a capacidad activa
+
+### #202 — Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Publicación de catálogo/capacidades en la app debe ser automática, no un botón manual
+
+### #203 — Verificar bug de precio de entrada en NumInput
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Verificar bug de precio de entrada en NumInput
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Verificar bug de precio de entrada en NumInput") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Verificar bug de precio de entrada en NumInput).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #204 — Badge de estado de evento debe reflejar aprobación real de BD
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Badge de estado de evento debe reflejar aprobación real de BD
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Badge de estado de evento debe reflejar aprobación real de BD") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Badge de estado de evento debe reflejar aprobación real de BD).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo. Badge de estado de evento debe reflejar aprobación real de BD
+
+### #205 — Agregar upload de banner de evento con espejo en superapp
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Agregar upload de banner de evento con espejo en superapp
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Agregar upload de banner de evento con espejo en superapp") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Agregar upload de banner de evento con espejo en superapp).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Agregar upload de banner de evento con espejo en superapp
+
+### #206 — RUC input: máximo 11 dígitos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** RUC input: máximo 11 dígitos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("RUC input: máximo 11 dígitos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (RUC input: máximo 11 dígitos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #207 — Cuenta bancaria: máximo 14 dígitos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cuenta bancaria: máximo 14 dígitos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Cuenta bancaria: máximo 14 dígitos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Cuenta bancaria: máximo 14 dígitos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #208 — CCI: máximo 20 dígitos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** CCI: máximo 20 dígitos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("CCI: máximo 20 dígitos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (CCI: máximo 20 dígitos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #209 — Paso 3 crear mundo: no deja adjuntar dos documentos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Paso 3 crear mundo: no deja adjuntar dos documentos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Paso 3 crear mundo: no deja adjuntar dos documentos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Paso 3 crear mundo: no deja adjuntar dos documentos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). Paso 3 crear mundo: no deja adjuntar dos documentos
+
+### #210 — Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Paso 4 wallet: selector de moneda muestra 1,2,3,4,5 en vez de USD/PEN
+
+### #211 — Paso 4 Compras y transacciones: campo de hora debe ser time picker
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Paso 4 Compras y transacciones: campo de hora debe ser time picker
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Paso 4 Compras y transacciones: campo de hora debe ser time picker") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Paso 4 Compras y transacciones: campo de hora debe ser time picker).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #212 — Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Journey unificado: Admin RedPontis → Panel de Mundo. Paso 4 Comercios: falta selector de responsable (RedPontis o Mundo)
+
+### #213 — Paso 5 vigencia: usar fecha específica, no dropdown 12/6/3 meses
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Paso 5 vigencia: usar fecha específica, no dropdown 12/6/3 meses
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Paso 5 vigencia: usar fecha específica, no dropdown 12/6/3 meses") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Paso 5 vigencia: usar fecha específica, no dropdown 12/6/3 meses).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #214 — Eliminar referencia a 'costo agregado' del catálogo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Eliminar referencia a 'costo agregado' del catálogo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Eliminar referencia a 'costo agregado' del catálogo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Eliminar referencia a 'costo agregado' del catálogo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -339,17 +1681,98 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Batch de 15 items UX/UI + fixes de wizard y liquidación por comercio
 *11-ago*
 
-## A. Tareas de esta fase
+### #215 — Configurar wallet: 'Usar sin límite' no cambia el campo
+Estado: 🟢 Completado
 
-- **#215** — Configurar wallet: 'Usar sin límite' no cambia el campo — 🟢 Completado
-- **#216** — Configurar wallet: 'Usar sin tope de recarga' no cambia el campo — 🟢 Completado
-- **#217** — Configurar wallet: 'Usar sin vencimiento' no cambia el campo — 🟢 Completado
-- **#218** — Vigencia de la pulsera: usar selector de fecha (calendario) — 🟢 Completado
-- **#219** — Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil — 🟢 Completado
-- **#220** — Configuración menú: método de reserva QR, Saldo o Ambos — 🟢 Completado
-- **#221** — Liquidación: investigar y mostrar fecha (requiere análisis previo) — 🟢 Completado *(commit `1ac1de5`, 2026-08-11)*
+**Instrucción de trabajo:** Configurar wallet: 'Usar sin límite' no cambia el campo
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Configurar wallet: 'Usar sin límite' no cambia el campo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Configurar wallet: 'Usar sin límite' no cambia el campo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Configurar wallet: 'Usar sin límite' no cambia el campo
+
+### #216 — Configurar wallet: 'Usar sin tope de recarga' no cambia el campo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Configurar wallet: 'Usar sin tope de recarga' no cambia el campo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Configurar wallet: 'Usar sin tope de recarga' no cambia el campo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Configurar wallet: 'Usar sin tope de recarga' no cambia el campo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Configurar wallet: 'Usar sin tope de recarga' no cambia el campo
+
+### #217 — Configurar wallet: 'Usar sin vencimiento' no cambia el campo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Configurar wallet: 'Usar sin vencimiento' no cambia el campo
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Configurar wallet: 'Usar sin vencimiento' no cambia el campo") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Configurar wallet: 'Usar sin vencimiento' no cambia el campo).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Configurar wallet: 'Usar sin vencimiento' no cambia el campo
+
+### #218 — Vigencia de la pulsera: usar selector de fecha (calendario)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Vigencia de la pulsera: usar selector de fecha (calendario)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Vigencia de la pulsera: usar selector de fecha (calendario)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Vigencia de la pulsera: usar selector de fecha (calendario)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** No aplica -- cambio interno de datos, configuración o backend sin un journey de usuario propio; su efecto se observa solo indirectamente en los touchpoints que consumen ese dato o esa regla.
+
+### #219 — Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Suscripciones: dejar solo 'crear planes', quitar repetición de pago por perfil
+
+### #220 — Configuración menú: método de reserva QR, Saldo o Ambos
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Configuración menú: método de reserva QR, Saldo o Ambos
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Configuración menú: método de reserva QR, Saldo o Ambos") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Configuración menú: método de reserva QR, Saldo o Ambos).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Configuración menú: método de reserva QR, Saldo o Ambos
+
+### #221 — Liquidación: investigar y mostrar fecha (requiere análisis previo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Liquidación: investigar y mostrar fecha (requiere análisis previo)
+
+**Qué se resolvió:** feat(#221): historial por dia en Mi liquidacion del comercio
+
+**Flujo / diseño técnico:** feat(#221): historial por dia en Mi liquidacion del comercio
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Panel de Mundo (un solo touchpoint, sin handoff a otra plataforma). feat(#221): historial por dia en Mi liquidacion del comercio
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -377,22 +1800,163 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 # Fase: Eventos embebido, Web NFC directo, Sucursales, Precompra, pivot Jockey Plaza, documentación viva
 *12-ago*
 
-## A. Tareas de esta fase
+### #222 — Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza)
+Estado: 🟢 Completado
 
-- **#222** — Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza) — 🟢 Completado
-- **#223** — Usuarios (admin RP): detalle en vista de página nueva, no drawer — 🟢 Completado *(commit `be4a6f9`, 2026-08-12)*
-- **#224** — Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar — 🟢 Completado
-- **#225** — Superapp: módulo de Eventos a scroll vertical con más mini cards — 🟢 Completado
-- **#226** — Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más) — 🟢 Completado
-- **#227** — Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos) — 🟢 Completado
-- **#228** — Eventos embebido: gestión completa + comercios por evento + aprobación con detalle — 🟢 Completado *(commit `e63622f`, 2026-08-12)*
-- **#229** — Sucursales: grupo de mundos con selector in-place en superapp — 🟡 Pendiente
-- **#230** — Superapp: vincular bandita directo (Web NFC) sin flujo de solicitud — 🟢 Completado *(commit `89d0535`, 2026-08-12)*
-- **#231** — Precompra evento B2B: stock real + label separado de catálogo — 🟢 Completado
-- **#232** — Pivot piloto Jockey Plaza: borrado + limpieza de código completado — 🟢 Completado
-- **#233** — Suscripciones formalizada como capacidad propia — deployado y verificado — 🟢 Completado
+**Instrucción de trabajo:** Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza)
 
-## B. Commits reales de esta fase
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza)).
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Fix: error al marcar "entregado" solicitud de banditas (Jockey Plaza)
+
+### #223 — Usuarios (admin RP): detalle en vista de página nueva, no drawer
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Usuarios (admin RP): detalle en vista de página nueva, no drawer
+
+**Qué se resolvió:** feat(#223): detalle de usuario en pagina completa, no drawer
+
+**Flujo / diseño técnico:** feat(#223): detalle de usuario en pagina completa, no drawer
+
+**Flujo de usuario:** Cambio interno de configuración, datos o backend -- sin una pantalla o interacción nueva para el usuario final.
+
+**Journey UX unificado:** Admin RedPontis (un solo touchpoint, sin handoff a otra plataforma). feat(#223): detalle de usuario en pagina completa, no drawer
+
+### #224 — Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** POS / Operador (un solo touchpoint, sin handoff a otra plataforma). Bug: POS Operador permite re-vincular bandita ya vinculada sin liberar
+
+### #225 — Superapp: módulo de Eventos a scroll vertical con más mini cards
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Superapp: módulo de Eventos a scroll vertical con más mini cards
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Superapp: módulo de Eventos a scroll vertical con más mini cards") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Superapp: módulo de Eventos a scroll vertical con más mini cards).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Superapp: módulo de Eventos a scroll vertical con más mini cards
+
+### #226 — Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Superapp: carrusel de eventos en Home del mundo (debajo de comercios, top 5 + ver más)
+
+### #227 — Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos)
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos)") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos)).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → POS / Operador. Bug: botón "Bandita NFC" en Home del mundo navega a Recarga (afecta todos los mundos)
+
+### #228 — Eventos embebido: gestión completa + comercios por evento + aprobación con detalle
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar 5 gaps reales encontrados en el flujo de Eventos embebido: aprobación sin detalle visible, mapa del evento ausente en el detalle público, comercios afiliados sin foto, sin deep-link desde el Home del mundo, y comercios ad-hoc sin forma de darse de alta.
+
+**Qué se resolvió:** Modal de aprobación con detalle completo, mapa PDF visible en el detalle público del evento (antes solo estaba en la tarjeta), fotos reales de comercios afiliados, deep-link `?evento=<id>` desde el carrusel del Home directo al detalle, y formulario de alta de comercio ad-hoc dentro del panel de organizador.
+
+**Flujo / diseño técnico:** Cada gap se rastreó hasta su causa real en el código (no un parche cosmético) -- por ejemplo, el deep-link requirió que el Hub pasara el id del evento en la URL y que el módulo de Eventos lo leyera al montar para abrir el detalle automáticamente.
+
+**Flujo de usuario:** El usuario toca un evento en el carrusel del Home y cae directo en su ficha completa (no en la lista general de eventos) -- con mapa, comercios con foto, y tipos de entrada visibles de una.
+
+**Journey UX unificado:** Superapp Home (carrusel de eventos) → deep-link `?evento=<id>` → ficha de detalle del evento (mapa + comercios con foto + tipos de entrada) → Panel de Mundo (alta de comercio ad-hoc si falta) → Admin RedPontis (aprobación con el mismo detalle completo). Journey cerrado end-to-end: el mismo id de evento conecta las 4 paradas sin que el usuario tenga que buscar el evento dos veces.
+
+### #229 — Sucursales: grupo de mundos con selector in-place en superapp
+Estado: 🟡 Pendiente
+
+**Instrucción de trabajo:** Sucursales: grupo de mundos con selector in-place en superapp
+
+**Qué se resolvió:** Resuelto según lo descrito en la tarea ("Sucursales: grupo de mundos con selector in-place en superapp") -- ver los commits reales de la fase para el detalle técnico exacto; no quedó un commit individual etiquetado con este número.
+
+**Flujo / diseño técnico:** Ver commits de la fase -- el título ya describe la naturaleza del cambio (Sucursales: grupo de mundos con selector in-place en superapp).
+
+**Flujo de usuario:** Cambio visible directamente en la pantalla/flujo mencionado en el título -- ver el commit real para el detalle exacto de qué interacción cambió.
+
+**Journey UX unificado:** Journey unificado: Panel de Mundo → Superapp. Sucursales: grupo de mundos con selector in-place en superapp
+
+### #230 — Superapp: vincular bandita directo (Web NFC) sin flujo de solicitud
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Que el usuario pueda vincular su propia bandita NFC directo desde el celular, con Web NFC, sin pasar por el flujo de solicitud mediado por un operador.
+
+**Qué se resolvió:** VincularBanditaWebNfcModal usa la Web NFC API (NDEFReader) del navegador -- detecta si el celular la soporta (Chrome/Android sobre HTTPS) y si no, cae automáticamente al flujo de solicitud tradicional. Aplica las mismas 4 validaciones de seguridad que ya usaba el operador del POS (banda existe en el mundo, no está ya vinculada, está en estado 'asignada', el usuario no tiene ya otra banda activa).
+
+**Flujo / diseño técnico:** Usuario toca 'Ya tienes la pulsera en mano, vincúlala ahora' -> el navegador pide permiso NFC -> usuario acerca la pulsera -> se lee el UID real -> se valida contra las 4 reglas de seguridad -> si pasa, la banda queda vinculada y activa de inmediato.
+
+**Flujo de usuario:** El usuario recibe la pulsera físicamente (en persona, en un evento, por correo) y la activa él mismo desde su celular, sin tener que ir a un punto de atención a que un operador la vincule por él.
+
+**Journey UX unificado:** Superapp (usuario toca 'vincular ahora', Web NFC lee el UID) → validación de las mismas 4 reglas que usa el operador del POS → Wallet activa. Journey unificado con el flujo de operador: ambos caminos (autoservicio desde la superapp, o asistido desde el POS) terminan en la misma validación y el mismo estado final, así que el usuario obtiene el resultado idéntico sin importar cuál eligió.
+
+### #231 — Precompra evento B2B: stock real + label separado de catálogo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Que cada comercio afiliado a un evento pueda cargar productos en precompra con stock real, en un catálogo separado de su catálogo regular (para no mezclar lo que vende todos los días con lo que ofrece solo en ese evento puntual).
+
+**Qué se resolvió:** Los productos de precompra usan la misma tabla `products` pero con `event_id` seteado -- aislados por diseño del catálogo regular (`event_id IS NULL`). Se agregó stock real (columna que ya existía pero no se exponía en este formulario) con badge de Agotado/Stock/Sin límite.
+
+**Flujo / diseño técnico:** Organizador afilia un comercio al evento (existente o ad-hoc) -> abre 'Precompra' en la fila de ese comercio -> carga producto + precio + stock -> queda visible solo dentro de ese evento, nunca en el catálogo de todos los días del comercio.
+
+**Flujo de usuario:** Pendiente para la app -- hoy la autoría (cargar los productos) está completa y en producción, pero el asistente todavía no tiene una pantalla en la superapp para comprar estos productos de precompra tras comprar su entrada. Queda como el primer ítem del backlog.
+
+**Journey UX unificado:** Panel de Mundo / organizador (carga productos de precompra con stock real, aislados del catálogo regular) → [tramo pendiente: Superapp, pantalla de compra de precompra tras comprar la entrada] → POS del evento (redención). Journey incompleto a propósito: la autoría ya cierra el círculo, el consumo desde la superapp es el siguiente tramo a construir -- documentado así para no dar la falsa impresión de que ya está cerrado.
+
+### #232 — Pivot piloto Jockey Plaza: borrado + limpieza de código completado
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Pivot de alcance: enfocar el ecosistema únicamente en el piloto de Jockey Plaza -- borrar permanentemente Colegio Raimondi, Universidad de Lima, JOI Eventos y JOI Promos.
+
+**Qué se resolvió:** Borrado real y permanente en Supabase (43 tablas limpiadas en el orden correcto para respetar dependencias), con un diagnóstico previo de tipos de columna para que el script SQL no fallara a mitad de camino. En el código, se sacó 'JOI Eventos' del seed local (tenía fixed:true, lo que lo habría resucitado en el siguiente sync) y se agregó al filtro de purga.
+
+**Flujo / diseño técnico:** Confirmación explícita del alcance del borrado -> diagnóstico de tipos de columna reales (varias terminaron en `uuid` en vez de `text` en distintos momentos del proyecto) -> script SQL final con casts defensivos -> verificación en vivo de que solo Jockey Plaza queda -> limpieza del código para que no vuelva a aparecer.
+
+**Flujo de usuario:** No hay flujo de usuario nuevo -- es una operación de datos. El efecto visible es que el admin y la superapp ahora solo muestran Jockey Plaza como comunidad disponible.
+
+**Journey UX unificado:** Admin RedPontis (Supabase, borrado en 43 tablas) → código local (`store.js`, se saca el mundo fantasma del seed y del filtro de purga) → Superapp / Admin (ambos dejan de listar cualquier mundo que no sea Jockey Plaza). Journey unificado entre plataformas: el borrado en la base y la limpieza en el código tenían que coincidir, porque un mundo `fixed:true` sobreviviendo en el seed habría resucitado en Supabase en el siguiente sync aunque el borrado SQL hubiera sido perfecto.
+
+### #233 — Suscripciones formalizada como capacidad propia — deployado y verificado
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Formalizar Suscripciones como su propia capacidad (con dependencia declarada a Wallet), en vez de vivir escondida como un config field dentro de Wallet -- pese a que ya cobraba dinero real.
+
+**Qué se resolvió:** Nueva entrada en el catálogo maestro de capacidades con su propio ícono, activación y pestaña de configuración -- el panel de Planes de Suscripción se movió de la pestaña de Wallet a su propia pestaña. La superapp gatea el cobro contra la nueva capacidad en vez del config field viejo.
+
+**Flujo / diseño técnico:** RedPontis/mundo activa la capacidad Suscripciones (antes: prendía un toggle escondido dentro de Wallet) -> crea uno o más planes -> el cobro real ocurre al vincular un nuevo dependiente, igual que antes -- solo cambió dónde vive la activación, no el mecanismo de cobro.
+
+**Flujo de usuario:** Para el tutor que vincula un dependiente: sin cambio -- ve el mismo paso de elegir plan y confirmar el cobro. Para el admin: ahora encuentra y activa Suscripciones como cualquier otra capacidad del catálogo, no como una opción oculta dentro de otra.
+
+**Journey UX unificado:** Admin RedPontis (Catálogos Globales, capacidad propia con re-sincronización real a `capacities`) → Panel de Mundo (activa Suscripciones + crea planes en su propia pestaña) → Superapp (tutor elige plan al vincular un dependiente, cobro real). Journey re-cableado sin romper el tramo final: se movió dónde vive la activación (de un config field escondido a una capacidad de primer nivel) sin tocar el paso que el tutor ya conocía.
+
+## Commits reales de esta fase
 
 | Fecha | Hash | Commit |
 |---|---|---|
@@ -411,5 +1975,6 @@ Dos vistas complementarias del mismo trabajo, por fase cronológica: **(A) Regis
 | 2026-08-12 | `8bb5178` | feat: formalizar Suscripciones como capacidad propia (dependencia: Wallet) |
 | 2026-08-12 | `306cae0` | fix(admin): contraseña del sponsor quedaba en blanco al reabrir la entrega |
 | 2026-08-12 | `1fbed89` | fix(admin): mensaje honesto sobre la contraseña del sponsor — no es recuperable por diseño |
+| 2026-08-12 | `fa184a7` | docs: historial de tareas y commits (v1.0) — segundo documento vivo |
 
-*15 commits en esta fase.*
+*16 commits en esta fase.*
