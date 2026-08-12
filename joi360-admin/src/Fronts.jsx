@@ -920,7 +920,7 @@ export function CobrarPanel({ comercio, m }) {
             <div>
               <p className="font-mono text-[10px] uppercase text-outline mb-2">Monto a cobrar</p>
               <div className="flex gap-2">
-                <NumInput className={`${inputCls} font-mono`} placeholder="0.00" value={qrMonto} onChange={e => setQrMonto(e.target.value)} onKeyDown={e => e.key === "Enter" && generarQr()} autoFocus />
+                <NumInput className={`${inputCls} font-mono`} placeholder="0.00" value={qrMonto} onChange={setQrMonto} onKeyDown={e => e.key === "Enter" && generarQr()} autoFocus />
                 <BtnPrimary disabled={!(+qrMonto > 0) || qrGenerando} onClick={generarQr}>
                   <Icon n="qr_code_2" className="text-[18px]" /> {qrGenerando ? "Generando…" : "Generar QR"}
                 </BtnPrimary>
