@@ -19,6 +19,7 @@ import { ContratoView } from "./Contrato";
 import { Anunciantes } from "./Anunciantes";
 import { Liquidacion } from "./Liquidacion";
 import { Usuarios, UsuarioDetallePage } from "./Usuarios";
+import { Grupos } from "./Grupos";
 import { Soporte } from "./Soporte";
 import { Monitoreo } from "./Monitoreo";
 import { Calculadora } from "./Calculadora";
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<A title="JOI 360 · Dashboard"><AdminDashboard /></A>} />
         <Route path="/admin/mundos" element={<A title="JOI 360 · Mundos"><Mundos /></A>} />
+        <Route path="/admin/grupos" element={<A title="JOI 360 · Grupos y Sucursales"><Grupos /></A>} />
         <Route path="/admin/mundos/:id" element={<A title="JOI 360 · Mundo"><MundoDetail /></A>} />
         {/* New unified catalog + old routes kept for deep links */}
         <Route path="/admin/catalogos" element={<A title="JOI 360 · Catálogos Globales"><CatalogosGlobales /></A>} />

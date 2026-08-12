@@ -97,8 +97,63 @@ function worldRow(m) {
     // memoria local y nunca viajaba a Supabase; sin esta columna el thumbnail
     // del card de comunidad en el superapp no tenía de dónde leer.
     logo_url: m.logoUrl || null,
+    // Grupo/Sucursales (Task #229): grupo_id liga esta sucursal a un Grupo
+    // (Emisor/Adquirente/tipo de wallet compartidos); comparte_saldo_grupo
+    // es una elección explícita por sucursal, no automática por pertenecer
+    // al grupo -- ver docs/arquitectura/fix-grupos-sucursales.sql.
+    grupo_id: m.grupoId || null,
+    comparte_saldo_grupo: !!m.compartesaldoGrupo,
     updated_at: new Date().toISOString(),
   };
+}
+
+// ── Grupos (Task #229) — contenedor liviano para sucursales de un mismo
+// cliente (ej. "Grupo Jockey Plaza" → Jockey Plaza, Boulevard de Asia, El
+// Outlet). No es un mundo: no tiene capacidades ni comercios propios, solo
+// la marca del grupo y la configuración financiera que sus sucursales
+// heredan (emisor, adquirente, tipo de producto de wallet).
+export async function fetchGruposRemote() {
+  return rest("grupos?select=*&order=created_at.desc");
+}
+export async function crearGrupoRemote(g) {
+  const rows = await rest("grupos", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      nombre: g.nombre, logo_url: g.logoUrl || null, emisor: g.emisor || "JetCash",
+      adquirente: g.adquirente || "redpontis",
+      adquirente_banco: g.adquirente === "cuenta_propia" ? (g.adquirenteBanco || null) : null,
+      adquirente_cuenta: g.adquirente === "cuenta_propia" ? (g.adquirenteCuenta || null) : null,
+      adquirente_cci: g.adquirente === "cuenta_propia" ? (g.adquirenteCci || null) : null,
+      adquirente_titular: g.adquirente === "cuenta_propia" ? (g.adquirenteTitular || null) : null,
+      tipo_wallet: g.tipoWallet || "regular",
+    }),
+  });
+  return rows?.[0] || null;
+}
+export async function actualizarGrupoRemote(id, g) {
+  await rest(`grupos?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      nombre: g.nombre, logo_url: g.logoUrl || null, emisor: g.emisor || "JetCash",
+      adquirente: g.adquirente || "redpontis",
+      adquirente_banco: g.adquirente === "cuenta_propia" ? (g.adquirenteBanco || null) : null,
+      adquirente_cuenta: g.adquirente === "cuenta_propia" ? (g.adquirenteCuenta || null) : null,
+      adquirente_cci: g.adquirente === "cuenta_propia" ? (g.adquirenteCci || null) : null,
+      adquirente_titular: g.adquirente === "cuenta_propia" ? (g.adquirenteTitular || null) : null,
+      tipo_wallet: g.tipoWallet || "regular",
+      updated_at: new Date().toISOString(),
+    }),
+  });
+}
+// Bloquea el borrado si ya tiene sucursales ligadas -- desligarlas primero
+// (poner grupo_id=null en cada mundo) evita huérfanos con saldo compartido
+// apuntando a un grupo que ya no existe.
+export async function verificarBloqueoEliminarGrupo(grupoId) {
+  const rows = await rest(`worlds?grupo_id=eq.${grupoId}&select=id,name`);
+  return { sucursales: rows || [] };
+}
+export async function eliminarGrupoRemote(id) {
+  await rest(`grupos?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 
 // Mundos creados directo en Supabase (u otro browser/sesión admin) — el admin

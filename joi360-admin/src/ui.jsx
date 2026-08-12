@@ -266,6 +266,7 @@ const NAV = [
   ]},
   { group: "Comunidades", items: [
     { to: "/admin/mundos", icon: "public", label: "Todos los Mundos" },
+    { to: "/admin/grupos", icon: "account_tree", label: "Grupos y Sucursales" },
   ]},
   { group: "Operación", items: [
     { to: "/admin/usuarios", icon: "group", label: "Usuarios" },

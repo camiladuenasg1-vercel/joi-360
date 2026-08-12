@@ -815,6 +815,8 @@ export async function refreshMundosLive() {
         posPin: w.pos_pin || null,
         logoUrl: w.logo_url || null,
         entrega: entregaDe(w),
+        grupoId: w.grupo_id || null,
+        compartesaldoGrupo: !!w.comparte_saldo_grupo,
       };
       const base = byId.get(w.id);
       if (base) {

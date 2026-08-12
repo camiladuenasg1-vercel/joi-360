@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
 import { update, uid, MODULE_CATALOG, CORE_IDS, VERTICALS, GIROS_POR_VERTICAL, modosDeMundo, MODULOS_PROXIMAMENTE, MONEDAS_CATALOG } from "./store";
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { uploadArchivo } from "./supabase.js";
+import { uploadArchivo, fetchGruposRemote } from "./supabase.js";
 
 const COLORS = ["#0035b9", "#006688", "#722ce3", "#0e7c43", "#b3541e"];
 const BANCOS_PE = ["BCP", "BBVA", "Interbank", "Scotiabank", "BanBif", "Banco de la Nación", "Otro"];
@@ -167,7 +167,8 @@ export function MundoWizard({ open, onClose }) {
     pais: PAISES[0], logoUrl: "",
     // Paso 2: entidad legal y bancaria
     entidadLegal: "", ruc: "", moneda: "PEN", direccionLegal: "",
-    banco: BANCOS_PE[0], cuentaBancaria: "", cci: "",
+    banco: BANCOS_PE[0], cci: "",
+    grupoId: null, compartesaldoGrupo: false,
     // Paso 3: representante, contacto y documentos
     apoderadoNombre: "", apoderadoDocumento: "", apoderadoCorreo: "",
     contactoNombre: "", contactoDocumento: "", contactoCorreo: "",
@@ -233,7 +234,8 @@ export function MundoWizard({ open, onClose }) {
         codigo: f.codigo || `${f.vertical.slice(0, 2).toUpperCase()}-LIM-${String((st.mundos||[]).length + 1).padStart(3, "0")}`,
         vertical: f.vertical, giro: f.giro, pais: f.pais, logoUrl: f.logoUrl || null,
         entidadLegal: f.entidadLegal, ruc: f.ruc, moneda: f.moneda, direccionLegal: f.direccionLegal,
-        banco: f.banco, cuentaBancaria: f.cuentaBancaria, cci: f.cci,
+        banco: f.banco, cci: f.cci,
+        grupoId: f.grupoId || null, compartesaldoGrupo: !!f.compartesaldoGrupo,
         apoderadoNombre: f.apoderadoNombre, apoderadoDocumento: f.apoderadoDocumento, apoderadoCorreo: f.apoderadoCorreo,
         contactoNombre: f.contactoNombre, contactoDocumento: f.contactoDocumento, contactoCorreo: f.contactoCorreo,
         docContrato: f.docContrato, docFichaRuc: f.docFichaRuc,
@@ -387,6 +389,9 @@ function Step1Contexto({ f, set }) {
 }
 
 function Step2Entidad({ f, set }) {
+  const [grupos, setGrupos] = useState(null);
+  useEffect(() => { fetchGruposRemote().then(r => setGrupos(r || [])).catch(() => setGrupos([])); }, []);
+  const grupoSeleccionado = (grupos || []).find(g => g.id === f.grupoId);
   return (
     <div className="space-y-5">
       <div className="bg-surface-container-low border border-primary/20 rounded-lg p-3 flex gap-2 text-xs text-on-surface-variant">
@@ -409,15 +414,36 @@ function Step2Entidad({ f, set }) {
           <Icon n="account_balance" className="text-[16px] text-secondary"/> Datos bancarios
         </p>
         <p className="text-[11px] text-on-surface-variant mb-3">Necesarios si RedPontis liquida a este mundo (se confirma en el módulo de Liquidación, dentro de Comercios).</p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Banco">
             <select className={inputCls} value={f.banco} onChange={e => set({ banco: e.target.value })}>
               {BANCOS_PE.map(b => <option key={b}>{b}</option>)}
             </select>
           </Field>
-          <Field label="Número de cuenta"><input className={`${inputCls} font-mono`} value={f.cuentaBancaria} onChange={e => set({ cuentaBancaria: e.target.value.replace(/\D/g, "").slice(0, 14) })} placeholder="000-000000-0-00" /></Field>
           <Field label="CCI"><input className={`${inputCls} font-mono`} value={f.cci} onChange={e => set({ cci: e.target.value.replace(/\D/g, "").slice(0, 20) })} placeholder="00200000000000000000" /></Field>
         </div>
+      </div>
+
+      <div className="pt-3 border-t border-outline-variant/50">
+        <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
+          <Icon n="account_tree" className="text-[16px] text-secondary"/> Grupo (opcional)
+        </p>
+        <p className="text-[11px] text-on-surface-variant mb-3">Si este mundo es una sucursal de un cliente con varias (ej. Jockey Plaza, Boulevard de Asia), ligarlo a su Grupo le hereda Emisor/Adquirente y tipo de wallet. Los grupos se crean en <Link to="/admin/grupos" target="_blank" className="text-primary hover:underline">Grupos y Sucursales</Link>.</p>
+        <Field label="Pertenece al grupo">
+          <select className={inputCls} value={f.grupoId || ""} onChange={e => set({ grupoId: e.target.value || null, compartesaldoGrupo: e.target.value ? f.compartesaldoGrupo : false })}>
+            <option value="">Ninguno — mundo independiente</option>
+            {(grupos || []).map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+          </select>
+        </Field>
+        {f.grupoId && (
+          <label className="mt-3 flex items-start gap-2 text-xs text-on-surface-variant cursor-pointer">
+            <input type="checkbox" className="mt-0.5" checked={!!f.compartesaldoGrupo} onChange={e => set({ compartesaldoGrupo: e.target.checked })} />
+            <span>
+              Comparte saldo y bandita con las demás sucursales de <b>{grupoSeleccionado?.nombre || "este grupo"}</b> — una misma pulsera y un mismo saldo funcionan en todas.
+              Si no lo marcas, esta sucursal tiene su propia wallet independiente aunque pertenezca al grupo.
+            </span>
+          </label>
+        )}
       </div>
     </div>
   );
@@ -881,7 +907,7 @@ function Step7Resumen({ f, set, selectedMods, eventosOn, costoModulosFijo, costo
         <Row k="Razón social" v={f.entidadLegal} />
         <Row k="RUC" v={f.ruc} />
         <Row k="Moneda" v={f.moneda} />
-        <Row k="Banco" v={`${f.banco}${f.cuentaBancaria ? ` · ${f.cuentaBancaria}` : ""}`} />
+        <Row k="Banco" v={f.banco} />
       </Section>
 
       <Section icon="badge" title="Representante y contacto">
