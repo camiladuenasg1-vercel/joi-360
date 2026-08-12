@@ -589,10 +589,16 @@ Equipo RedPontis · JOI 360`;
                 <BtnOutline className="!px-3" onClick={() => copiar(cred.usuario, "Usuario")}><Icon n="content_copy" className="text-[16px]" /></BtnOutline>
               </div>
             </Field>
-            <Field label="Contraseña" hint={entregado ? "Esta es la contraseña real ya guardada — \"Regenerar\" crea una nueva y la guarda al toque." : undefined}>
+            <Field label="Contraseña" hint={
+              entregado && cred.password
+                ? "Cópiala y compártela ahora — por seguridad no se guarda en texto plano, no vas a poder volver a verla en otra sesión."
+                : entregado
+                  ? "Por seguridad, la contraseña nunca se guarda en texto plano — solo se puede ver una vez, al generarla, nunca después. Si el sponsor la perdió, no hay forma de recuperar la anterior: usa \"Regenerar\" para crear una nueva y compartirla ahora."
+                  : undefined
+            }>
               <div className="flex gap-2">
                 <input className={`${inputCls} font-mono text-xs`} value={cred.password || ""}
-                  placeholder={entregado && !cred.password ? "Sin contraseña guardada — regenera una" : undefined}
+                  placeholder={entregado && !cred.password ? "No se puede recuperar — regenera una nueva" : undefined}
                   readOnly={entregado} onChange={e => setCred({ ...cred, password: e.target.value })} />
                 {!entregado && <BtnOutline className="!px-3" onClick={() => { setCred({ ...cred, password: generarPassword() }); notify("Contraseña regenerada.", "info"); }}><Icon n="autorenew" className="text-[16px]" /></BtnOutline>}
                 {entregado && <BtnOutline className="!px-3" disabled={regenerando} loading={regenerando} onClick={regenerar}><Icon n="autorenew" className="text-[16px]" /></BtnOutline>}
