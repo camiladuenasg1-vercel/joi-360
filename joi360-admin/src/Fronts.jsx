@@ -3611,6 +3611,56 @@ function PerfilComercioPanel({ comercio, m }) {
   );
 }
 
+// "Mi liquidación" del comercio solo mostraba el corte de HOY en vivo, sin
+// ninguna fecha ni historial — el comercio no tenía forma de ver qué se le
+// liquidó ayer o la semana pasada (Task #221). Agrupa las mismas
+// transacciones reales de fetchVentasComercio por día, igual que
+// LiquidacionMundoTab hace para el sponsor.
+function MerchantLiquidacionHistorial({ merchantId, mdrEfectivo, fijoTx }) {
+  const [txs, setTxs] = useState(null);
+  useEffect(() => { fetchVentasComercio(merchantId, 500).then(setTxs).catch(() => setTxs([])); }, [merchantId]);
+
+  if (txs === null) return <p className="text-on-surface-variant py-8">Cargando historial…</p>;
+
+  const porDia = {};
+  txs.filter(t => t.status === "completada").forEach(t => {
+    const fecha = t.created_at.slice(0, 10);
+    if (!porDia[fecha]) porDia[fecha] = { bruto: 0, count: 0 };
+    porDia[fecha].bruto += +t.amount || 0;
+    porDia[fecha].count += 1;
+  });
+  const dias = Object.entries(porDia).sort((a, b) => b[0].localeCompare(a[0])).map(([fecha, d]) => {
+    const comision = d.bruto * (mdrEfectivo / 100) + (fijoTx ? fijoTx * d.count : 0);
+    return { fecha, bruto: d.bruto, count: d.count, comision, neto: d.bruto - comision };
+  });
+
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-outline-variant">
+        <h3 className="font-semibold text-sm">Historial por día</h3>
+      </div>
+      {dias.length === 0 ? (
+        <p className="text-center text-sm text-on-surface-variant py-8">Aún no hay transacciones aprobadas para liquidar.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-5 gap-2 px-5 py-2.5 bg-surface-container-low border-b border-outline-variant font-mono text-[9px] uppercase text-outline">
+            <span>Fecha</span><span>Transacciones</span><span>Bruto</span><span>MDR</span><span>Neto</span>
+          </div>
+          {dias.map(d => (
+            <div key={d.fecha} className="grid grid-cols-5 gap-2 px-5 py-3 text-sm border-b border-outline-variant/40 last:border-0">
+              <span className="font-mono text-xs">{d.fecha}</span>
+              <span className="font-mono text-on-surface-variant">{d.count}</span>
+              <span className="font-mono">S/ {d.bruto.toFixed(2)}</span>
+              <span className="font-mono text-on-surface-variant">S/ {d.comision.toFixed(2)}</span>
+              <span className="font-mono font-bold">S/ {d.neto.toFixed(2)}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 function MerchantDashboard({ comercio, m, st }) {
   const [tab, setTab] = useState("hoy");
   const merchantId = comercio.supabaseId || comercio.id;
@@ -3754,10 +3804,11 @@ function MerchantDashboard({ comercio, m, st }) {
                   </div>
                 ))}
               </div>
-              <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 text-xs text-on-surface-variant flex gap-2">
+              <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 text-xs text-on-surface-variant flex gap-2 mb-6">
                 <Icon n="info" className="text-secondary text-[18px]" />
                 <span>La tasa de descuento al comercio (MDR) que aplica a tu comercio es del <b>{mdrEfectivo}%</b>{comercio.fijoTx ? ` + S/ ${comercio.fijoTx} por transacción` : ""}. La acreditación la gestiona RedPontis automáticamente. ¿Dudas? Abre un ticket de soporte.</span>
               </div>
+              <MerchantLiquidacionHistorial merchantId={merchantId} mdrEfectivo={mdrEfectivo} fijoTx={comercio.fijoTx} />
             </>
           )}
           {tab === "soporte" && (
