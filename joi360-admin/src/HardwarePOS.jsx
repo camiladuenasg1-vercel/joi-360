@@ -853,7 +853,11 @@ function BanditasNfcTab() {
   const [filterLote, setFilterLote] = useState("all");
   const [filterEstado, setFilterEstado] = useState("all");
   const [showBulk, setShowBulk] = useState(false);
-  const [bulkLote, setBulkLote] = useState("");
+  // Autogenerado para que cargar stock nunca quede bloqueado esperando que se
+  // invente un nombre de lote -- la admin puede renombrarlo después si quiere
+  // agrupar por proveedor/pedido, pero no es un paso obligatorio para subir.
+  const loteAutogenerado = () => `Lote ${new Date().toISOString().slice(0, 10)}`;
+  const [bulkLote, setBulkLote] = useState(loteAutogenerado);
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkFileName, setBulkFileName] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -1009,7 +1013,7 @@ function BanditasNfcTab() {
     try {
       await registerNfcBandsBulkRemote(validas);
       notify(`${validas.length} banditas del lote "${bulkLote}" registradas en stock.`);
-      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");
+      setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(loteAutogenerado());
       load();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
@@ -1671,7 +1675,7 @@ function BanditasNfcTab() {
               La columna se detecta por ese formato, sin importar en qué posición venga ni cómo se llame su encabezado. Si la celda trae el UID sin los dos puntos (ej. 04D6015A681994) se convierte solo. El precio se estipula al asignar el lote a un mundo, no acá.
             </p>
             <div className="mb-4">
-              <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote</label>
+              <label className="block text-xs font-mono uppercase text-outline mb-1.5">Nombre del lote (opcional, ya viene con uno)</label>
               <input className="w-full h-10 px-3 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm"
                 placeholder="Ej: Lote 1" value={bulkLote} onChange={e=>setBulkLote(e.target.value)}/>
             </div>
@@ -1698,7 +1702,7 @@ function BanditasNfcTab() {
               </div>
             )}
             <div className="flex gap-3 mt-6">
-              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote("");}}>Cancelar</BtnOutline>
+              <BtnOutline className="flex-1" onClick={()=>{setShowBulk(false); setBulkRows([]); setBulkFileName(""); setBulkLote(loteAutogenerado());}}>Cancelar</BtnOutline>
               <BtnPrimary className="flex-1" onClick={confirmarBulk} disabled={!bulkRows.some(r=>r.valido) || bulkBusy}>
                 <Icon n="upload_file" className="text-[16px]"/> {bulkBusy ? "Registrando…" : `Registrar ${bulkRows.filter(r=>r.valido).length} banditas`}
               </BtnPrimary>

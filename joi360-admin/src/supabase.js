@@ -1567,9 +1567,13 @@ export async function registerNfcBandsBulkRemote(rows) {
   });
 }
 export async function liberarNfcBandRemote(bandId) {
+  // linked_user_id/activada_at/vence_at quedaban con el valor del dueño
+  // anterior tras liberar -- una reasignación posterior a otra persona
+  // chocaba con el chequeo "ya vinculada a otro usuario" en vincular()
+  // aunque la banda estuviera genuinamente libre (hallado en vivo, 12-ago).
   await rest(`nfc_bands?id=eq.${bandId}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ estado: "disponible", world_id: null }),
+    body: JSON.stringify({ estado: "disponible", world_id: null, linked_user_id: null, activada_at: null, vence_at: null }),
   });
 }
 // ── Asignación de banditas a un mundo, con precio/forma de cobro (corrección
@@ -1734,6 +1738,15 @@ export async function buscarNfcBandPorCodigo(codigo, worldId) {
 // — bandResolver.js ya deja pasar una banda sin world_id en cualquier mundo,
 // y shop-charge.js ya debita la wallet del mundo del lector que la lee, así
 // que no hace falta tocar nada más para que funcione cross-mundo.
+// Gap real (hallado en vivo, 12-ago): vincular() en OperadorApp solo
+// validaba el estado de la bandita QUE SE ESTÁ vinculando, nunca si la
+// cuenta destino YA tenía otra bandita activa en este mundo -- dejaba
+// vincular una segunda sin exigir liberar la anterior primero. Se consulta
+// antes de vincular; si existe, el caller debe bloquear y pedir liberarla.
+export async function fetchBandaActivaDeUsuarioRemote(worldId, userId) {
+  const rows = await rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=eq.${userId}&estado=eq.activa&select=id,codigo&limit=1`);
+  return rows?.[0] || null;
+}
 export async function vincularNfcBandRemote(bandId, userId, vigenciaMeses = null, worldId = null) {
   const now = new Date();
   const vence = vigenciaMeses ? new Date(now.setMonth(now.getMonth() + Number(vigenciaMeses))).toISOString() : null;

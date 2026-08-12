@@ -15,7 +15,7 @@ import {
   fetchAccesosMundo, registrarAccesoRemote, buscarWalletPorCodigo,
   errorControlado, logErrorControlado, fetchProgramaBNPL, fetchProductsRemote,
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
-  buscarNfcBandPorCodigo, vincularNfcBandRemote,
+  buscarNfcBandPorCodigo, vincularNfcBandRemote, fetchBandaActivaDeUsuarioRemote,
   fetchReservasMenuMerchant, marcarMenuReservaEntregadaRemote,
   fetchTurnoAbiertoRemote, iniciarTurnoRemote, cerrarTurnoRemote,
   verificarPinOperadorRemote,
@@ -640,6 +640,8 @@ export function VincularBanditaOperador({ comercio, m }) {
         return;
       }
       if (band.estado !== "asignada") { setResultado({ ok: false, mensaje: `Esta pulsera está en estado "${band.estado}", no está lista para vincular.` }); return; }
+      const yaActiva = await fetchBandaActivaDeUsuarioRemote(m.id, wallet.user_id);
+      if (yaActiva) { setResultado({ ok: false, mensaje: `Esta cuenta ya tiene la pulsera ${yaActiva.codigo} vinculada y activa en este mundo. Libérala primero desde Banditas NFC antes de vincular una nueva.` }); return; }
       await vincularNfcBandRemote(band.id, wallet.user_id, vigenciaMeses, m.id);
       setResultado({ ok: true, mensaje: `Pulsera ${band.codigo} vinculada correctamente.` });
     } catch {
