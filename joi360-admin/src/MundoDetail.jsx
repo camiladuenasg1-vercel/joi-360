@@ -1244,7 +1244,7 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
         <p className="text-xs font-bold text-on-surface">Planes de suscripción</p>
         <button onClick={()=> creando ? cancelar() : setCreando(true)} className="text-[10px] text-primary font-bold underline">{creando ? "Cancelar" : "+ Nuevo plan"}</button>
       </div>
-      <p className="text-[10px] text-on-surface-variant">El usuario elige entre estos planes al vincular un dependiente. Si no hay ninguno activo, se usa el monto fijo de "Monto de la suscripción por perfil" de arriba.</p>
+      <p className="text-[10px] text-on-surface-variant">El usuario elige entre estos planes al vincular un dependiente. Sin ningún plan activo, no se puede cobrar la vinculación todavía.</p>
 
       {creando && (
         <div className="p-3 bg-surface rounded-lg border border-outline-variant space-y-2">
@@ -1272,7 +1272,7 @@ function PlanesSuscripcionPanel({ worldId, moneda }) {
       {planes === null ? (
         <p className="text-xs text-on-surface-variant">Cargando…</p>
       ) : planes.length === 0 ? (
-        <p className="text-xs text-on-surface-variant italic">Sin planes creados — se usa el monto fijo.</p>
+        <p className="text-xs text-on-surface-variant italic">Sin planes creados — crea uno para poder cobrar la vinculación.</p>
       ) : (
         <div className="space-y-1.5">
           {planes.map(p => (
@@ -1604,7 +1604,7 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
             )}
             {(c?.configFields||[]).map(cf => (
               <ConfigFieldInput key={cf.key} cf={cf}
-                value={f.config?.[cf.key] ?? cf.default}
+                value={cf.key in (f.config||{}) ? f.config[cf.key] : cf.default}
                 onChange={v => setF({...f, config:{...f.config,[cf.key]:v}})}
                 moneda={m.moneda}/>
             ))}
@@ -1998,6 +1998,31 @@ function ConfigFieldInput({ cf, value, onChange, moneda = "PEN" }) {
       <input className={inputCls} type="time" value={cur ?? ""} onChange={e => onChange(e.target.value || null)}/>
     </div>
   );
+
+  // Se guarda como meses (la vigencia real corre desde que CADA unidad se
+  // vincula, no desde hoy — ver vincularNfcBandRemote) pero se elige con un
+  // calendario: la fecha se traduce a "meses desde hoy" al guardar.
+  if (cf.type === "monthsAsDate") {
+    const hoy = new Date();
+    const fechaEquivalente = (() => {
+      const d = new Date(hoy);
+      d.setMonth(d.getMonth() + Number(cur || 0));
+      return d.toISOString().slice(0, 10);
+    })();
+    return (
+      <div>
+        {label}
+        <input className={inputCls} type="date" value={fechaEquivalente}
+          onChange={e => {
+            if (!e.target.value) return;
+            const elegida = new Date(e.target.value + "T00:00:00");
+            const meses = Math.max(0, Math.round((elegida - hoy) / (1000 * 60 * 60 * 24 * 30.44)));
+            onChange(meses);
+          }}/>
+        <p className="text-[10px] text-outline mt-1">≈ {cur || 0} {Number(cur) === 1 ? "mes" : "meses"} desde que se vincule cada pulsera</p>
+      </div>
+    );
+  }
 
   if (cf.type === "timerange") return (
     <div>

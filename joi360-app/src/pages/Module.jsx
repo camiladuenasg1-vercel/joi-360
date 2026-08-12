@@ -907,7 +907,6 @@ function RestriccionesTemplate({ cfg, u }) {
   // de ingreso de la billetera, no una regla de control parental).
   const walletCfg = useModuleConfig("wallet");
   const perfilesSuscripcion = walletCfg?.config?.perfilesSuscripcion;
-  const montoSuscripcion = walletCfg?.config?.montoSuscripcion;
 
   // "Agregar familiar para pedirle su bandita" (Wallet) navega acá con
   // ?agregar=1 — quien vino a pedir una bandita para un dependiente que
@@ -1021,9 +1020,11 @@ function RestriccionesTemplate({ cfg, u }) {
   const precioPlan = p => p.descuento_pct > 0 ? p.precio * (1 - p.descuento_pct / 100) : p.precio;
   const hayPlanes = (planesSuscripcion || []).length > 0;
   const planSeleccionado = (planesSuscripcion || []).find(p => p.id === planSeleccionadoId) || null;
-  // Con planes: el monto final lo decide el plan elegido en el paso 2. Sin
-  // planes (mundo legado): monto fijo único, igual que antes.
-  const cuotaSuscripcion = !perfilesSuscripcion ? 0 : hayPlanes ? (planSeleccionado ? precioPlan(planSeleccionado) : null) : (+montoSuscripcion || 5);
+  // El monto fijo único (montoSuscripcion) se retiró — el plan elegido en el
+  // paso 2 es el único mecanismo real. Con la suscripción activada pero sin
+  // ningún plan creado todavía, no hay forma de cobrar (bloqueado, no un
+  // fallback silencioso a un monto sin definir).
+  const cuotaSuscripcion = !perfilesSuscripcion ? 0 : hayPlanes ? (planSeleccionado ? precioPlan(planSeleccionado) : null) : null;
 
   const crear = async () => {
     setCreando(true); setDependienteError(null);
@@ -1154,8 +1155,12 @@ function RestriccionesTemplate({ cfg, u }) {
       <p className="text-sm text-[#777587] mb-5">
         Registra un menor para controlar su consumo.
         {perfilesSuscripcion && hayPlanes && " Este mundo tiene planes de suscripción para vincular perfiles."}
-        {perfilesSuscripcion && !hayPlanes && ` Este mundo cobra S/ ${(+montoSuscripcion || 5).toFixed(2)} por vinculación.`}
       </p>
+      {perfilesSuscripcion && !hayPlanes && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+          Este mundo todavía no tiene planes de suscripción configurados — no se puede vincular un nuevo dependiente hasta que el administrador cree uno.
+        </p>
+      )}
       <div className="space-y-4">
         <div>
           <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Nombre completo</label>
@@ -1193,7 +1198,7 @@ function RestriccionesTemplate({ cfg, u }) {
         )}
         {dependienteError && <p className="text-xs text-red-600">{dependienteError}</p>}
         <PrimaryBtn label={creando ? "Registrando…" : perfilesSuscripcion ? "Continuar" : "Registrar dependiente"}
-          icon={perfilesSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando} onClick={continuar} />
+          icon={perfilesSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando || (perfilesSuscripcion && !hayPlanes)} onClick={continuar} />
       </div>
     </div>
   );
@@ -1715,6 +1720,7 @@ function MenuTemplate({ cfg, u }) {
   // configurado. En modo QR aún no existe un flujo real de canje en POS —
   // se avisa honestamente en vez de simular un cobro que el mundo pidió evitar.
   const metodoReserva = cfg.config.metodoReserva || "saldo";
+  const [metodoElegido, setMetodoElegido] = useState("saldo"); // solo relevante si metodoReserva === "ambos"
   const dias = cfg.config.diasAnticipacion || 7;
   const strip = diasStripDe(Math.min(Math.max(dias, 1), 14));
   const [fecha, setFecha] = useState(draftInicial?.fecha || strip[0].fecha);
@@ -1926,7 +1932,15 @@ function MenuTemplate({ cfg, u }) {
             <p className="text-xs text-red-600 mt-0.5">{[resultado.mensaje, resultado.accion].filter(Boolean).join(" ")}</p>
           </div>
         )}
-        {metodoReserva === "qr" ? (
+        {metodoReserva === "ambos" && (
+          <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1 mb-3">
+            {[["saldo", "Con saldo"], ["qr", "Con QR en el punto de venta"]].map(([v, l]) => (
+              <button key={v} onClick={() => setMetodoElegido(v)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold tap-active ${metodoElegido === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+            ))}
+          </div>
+        )}
+        {(metodoReserva === "qr" || (metodoReserva === "ambos" && metodoElegido === "qr")) ? (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl">
             <p className="text-xs text-amber-800"><b>Este mundo reserva con pago por QR en el punto de venta</b>, no con saldo de la billetera — ese flujo de canje aún no está construido. Por ahora no se puede confirmar esta reserva desde la app.</p>
           </div>

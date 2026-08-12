@@ -14,6 +14,13 @@ const ACUERDOS = [
   { k: "mixto", t: "Mixto (recomendado)", d: "Fijo mensual + % transaccional. Cubre operación base y escala con uso." },
   { k: "fijo", t: "Venta fija", d: "Pago único o periódico cerrado. Sin variable. Proyectos acotados." },
 ];
+// Vigencia del acuerdo es una fecha específica (no un dropdown de meses) —
+// se sugiere +12 meses desde hoy como punto de partida editable.
+function vigenciaPorDefecto() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 export function Mundos() {
   const st = useStore();
@@ -175,7 +182,7 @@ export function MundoWizard({ open, onClose }) {
     // sigue cayendo a cf.default como antes.
     moduleConfig: {},
     // Paso 5: acuerdo
-    acuerdo: { tipo: "mixto", revShare: 5, fijoMensual: 1500, setup: 5000, vigencia: "12 meses", frecuenciaLiquidacion: "mensual" },
+    acuerdo: { tipo: "mixto", revShare: 5, fijoMensual: 1500, setup: 5000, vigencia: vigenciaPorDefecto(), frecuenciaLiquidacion: "mensual" },
     // Paso 6: eventos — B2B es automático para todo mundo regular (ver modosDeMundo);
     // acá solo se decide si además se activa Embebido.
     eventosEmbebido: false,
@@ -388,7 +395,7 @@ function Step2Entidad({ f, set }) {
       </div>
       <Field label="Razón social"><input className={inputCls} value={f.entidadLegal} onChange={e => set({ entidadLegal: e.target.value })} placeholder="Razón social completa" /></Field>
       <div className="grid grid-cols-2 gap-4">
-        <Field label="RUC"><input className={`${inputCls} font-mono`} value={f.ruc} onChange={e => set({ ruc: e.target.value })} placeholder="20XXXXXXXXX" /></Field>
+        <Field label="RUC"><input className={`${inputCls} font-mono`} value={f.ruc} onChange={e => set({ ruc: e.target.value.replace(/\D/g, "").slice(0, 11) })} placeholder="20XXXXXXXXX" /></Field>
         <Field label="Moneda base">
           <select className={inputCls} value={f.moneda} onChange={e => set({ moneda: e.target.value })}>
             {MONEDAS_CATALOG.map(c => <option key={c.id} value={c.id}>{c.id} — {c.nombre}</option>)}
@@ -408,8 +415,8 @@ function Step2Entidad({ f, set }) {
               {BANCOS_PE.map(b => <option key={b}>{b}</option>)}
             </select>
           </Field>
-          <Field label="Número de cuenta"><input className={`${inputCls} font-mono`} value={f.cuentaBancaria} onChange={e => set({ cuentaBancaria: e.target.value })} placeholder="000-000000-0-00" /></Field>
-          <Field label="CCI"><input className={`${inputCls} font-mono`} value={f.cci} onChange={e => set({ cci: e.target.value })} placeholder="00200000000000000000" /></Field>
+          <Field label="Número de cuenta"><input className={`${inputCls} font-mono`} value={f.cuentaBancaria} onChange={e => set({ cuentaBancaria: e.target.value.replace(/\D/g, "").slice(0, 14) })} placeholder="000-000000-0-00" /></Field>
+          <Field label="CCI"><input className={`${inputCls} font-mono`} value={f.cci} onChange={e => set({ cci: e.target.value.replace(/\D/g, "").slice(0, 20) })} placeholder="00200000000000000000" /></Field>
         </div>
       </div>
     </div>
@@ -551,6 +558,30 @@ function Step3Representantes({ f, set }) {
 // bajo "opcionales" como en el catálogo completo de abajo.
 const SERVICIOS_INICIALES = ["wallet", "comercios", "consumos", "reservas", "promociones"];
 
+// Mismo cálculo que ConfigFieldInput en MundoDetail.jsx: se guarda como meses
+// (la vigencia real corre desde que CADA pulsera se vincula), pero se elige
+// con un calendario — la fecha se traduce a "meses desde hoy" al guardar.
+function MonthsAsDateInput({ value, onChange }) {
+  const hoy = new Date();
+  const fechaEquivalente = (() => {
+    const d = new Date(hoy);
+    d.setMonth(d.getMonth() + Number(value || 0));
+    return d.toISOString().slice(0, 10);
+  })();
+  return (
+    <div>
+      <input className={`${inputCls} !h-8 !text-xs`} type="date" value={fechaEquivalente}
+        onChange={e => {
+          if (!e.target.value) return;
+          const elegida = new Date(e.target.value + "T00:00:00");
+          const meses = Math.max(0, Math.round((elegida - hoy) / (1000 * 60 * 60 * 24 * 30.44)));
+          onChange(meses);
+        }} />
+      <p className="text-[9px] text-outline mt-0.5">≈ {value || 0} {Number(value) === 1 ? "mes" : "meses"} desde vinculación</p>
+    </div>
+  );
+}
+
 function Step4Servicios({ f, set }) {
   const [search, setSearch] = useState("");
   const [showOpcional, setShowOpcional] = useState(false);
@@ -602,13 +633,46 @@ function Step4Servicios({ f, set }) {
                 {sel && (mod.configFields || []).length > 0 && (
                   <div className="px-3 pb-3 pt-1 border-t border-outline-variant/50 bg-surface-container-low grid grid-cols-2 gap-3">
                     {mod.configFields.map(cf => {
-                      const val = f.moduleConfig[mod.id]?.[cf.key] ?? cf.default;
+                      // Explícitamente seteado a null (nullable="sin límite/vencimiento")
+                      // se distingue de "todavía no tocado" — un ?? acá revertía el
+                      // valor nulo de vuelta al default en el próximo render.
+                      const cfg = f.moduleConfig[mod.id] || {};
+                      const isSetNull = cf.key in cfg && cfg[cf.key] === null;
+                      const val = cf.key in cfg ? cfg[cf.key] : cf.default;
                       const upd = v => set({ moduleConfig: { ...f.moduleConfig, [mod.id]: { ...f.moduleConfig[mod.id], [cf.key]: v } } });
                       return (
-                        <div key={cf.key} onClick={e => e.stopPropagation()}>
-                          <label className="text-[10px] text-on-surface-variant block mb-1">{cf.label}</label>
-                          {cf.type === "switch" ? (
+                        <div key={cf.key} onClick={e => e.stopPropagation()} className={cf.type === "timerange" ? "col-span-2" : ""}>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] text-on-surface-variant">{cf.label}</label>
+                            {cf.nullable && (
+                              <button onClick={() => upd(isSetNull ? cf.default : null)} className="text-[9px] text-primary underline">
+                                {isSetNull ? "Definir valor" : `Usar «${cf.nullLabel || "Sin límite"}»`}
+                              </button>
+                            )}
+                          </div>
+                          {isSetNull ? (
+                            <div className="h-8 px-2 flex items-center bg-surface-container border border-outline-variant/50 rounded-lg text-[11px] text-outline italic">
+                              {cf.nullLabel || "Sin límite"}
+                            </div>
+                          ) : cf.type === "switch" ? (
                             <Toggle checked={!!val} onChange={upd} />
+                          ) : cf.type === "select" ? (
+                            <select className={`${inputCls} !h-8 !text-xs`} value={val ?? ""} onChange={e => upd(e.target.value)}>
+                              {(cf.options || []).map(o => <option key={o} value={o}>{cf.optionLabels?.[o] || o}</option>)}
+                            </select>
+                          ) : cf.type === "time" ? (
+                            <input className={`${inputCls} !h-8 !text-xs`} type="time" value={val ?? ""} onChange={e => upd(e.target.value)} />
+                          ) : cf.type === "timerange" ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              <input className={`${inputCls} !h-8 !text-xs`} type="time" value={(val || "").split("-")[0]?.trim() || ""}
+                                onChange={e => { const parts = (val || "08:00-20:00").split("-"); upd(`${e.target.value}-${parts[1]?.trim() || "20:00"}`); }} />
+                              <input className={`${inputCls} !h-8 !text-xs`} type="time" value={(val || "").split("-")[1]?.trim() || ""}
+                                onChange={e => { const parts = (val || "08:00-20:00").split("-"); upd(`${parts[0]?.trim() || "08:00"}-${e.target.value}`); }} />
+                            </div>
+                          ) : cf.type === "text" ? (
+                            <input className={`${inputCls} !h-8 !text-xs`} value={val ?? ""} onChange={e => upd(e.target.value)} />
+                          ) : cf.type === "monthsAsDate" ? (
+                            <MonthsAsDateInput value={val} onChange={upd} />
                           ) : (
                             <div className="relative">
                               <NumInput allowNull={!!cf.nullable} className={`${inputCls} !h-8 !text-xs`} value={val} onChange={upd} />
@@ -754,10 +818,8 @@ function Step5Acuerdo({ f, set, costoModulosFijo, costoModulosSetup, mundoId }) 
         <Field label="Setup inicial (S/)" hint="One-shot al activar">
           <NumInput className={inputCls} value={f.acuerdo.setup} onChange={v => set({ acuerdo: { ...f.acuerdo, setup: v } })} />
         </Field>
-        <Field label="Vigencia">
-          <select className={inputCls} value={f.acuerdo.vigencia} onChange={e => set({ acuerdo: { ...f.acuerdo, vigencia: e.target.value } })}>
-            {["6 meses", "12 meses", "24 meses", "indefinida"].map(v => <option key={v}>{v}</option>)}
-          </select>
+        <Field label="Vigencia" hint="Fecha en la que vence el acuerdo comercial">
+          <input className={inputCls} type="date" value={f.acuerdo.vigencia || ""} onChange={e => set({ acuerdo: { ...f.acuerdo, vigencia: e.target.value } })} />
         </Field>
         <Field label="Frecuencia de liquidación" hint="Cada cuánto se le paga al sponsor. El corte y cálculo interno sigue siendo diario 19:00 PE — esto solo define el ciclo de pago real">
           <select className={inputCls} value={f.acuerdo.frecuenciaLiquidacion} onChange={e => set({ acuerdo: { ...f.acuerdo, frecuenciaLiquidacion: e.target.value } })}>
@@ -769,14 +831,6 @@ function Step5Acuerdo({ f, set, costoModulosFijo, costoModulosSetup, mundoId }) 
       <div className="bg-primary-fixed border border-primary/20 rounded-lg p-3 flex gap-2 text-xs text-primary mt-2">
         <Icon n="picture_as_pdf" className="text-[18px]" />
         <span>Al finalizar la creación del mundo, podrás <b>descargar el contrato tentativo en PDF</b> desde el botón en el encabezado del mundo para revisión y firma.</span>
-      </div>
-      <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant mb-2">Referencia: costo agregado del catálogo</p>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div><p className="text-[11px] text-outline">Setup módulos seleccionados</p><p className="font-bold">S/ {costoModulosSetup.toLocaleString()}</p></div>
-          <div><p className="text-[11px] text-outline">Fijo mensual módulos</p><p className="font-bold">S/ {costoModulosFijo.toLocaleString()}</p></div>
-        </div>
-        <p className="text-[10px] text-on-surface-variant mt-2 italic">Esto es el referencial del catálogo. El acuerdo de arriba es el que se aplica como negociado con el sponsor.</p>
       </div>
     </div>
   );

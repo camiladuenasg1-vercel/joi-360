@@ -44,10 +44,13 @@ export const MODULE_CATALOG = [
       { key: "p2pEnabled", label: "Habilitar transferencias entre usuarios del mismo mundo", type: "switch", default: true },
       { key: "usaPulseraNfc", label: "Este mundo usa pulseras NFC físicas", type: "switch", default: true,
         hint: "Antes esto quedaba encendido automáticamente con solo activar Wallet, sin poder apagarlo — un mundo que solo cobra por QR/app, sin banditas físicas, no tenía forma de reflejarlo. Apagado, el POS deja de ofrecer 'Vincular pulsera' y de aceptar identificación por NFC." },
-      { key: "vigenciaBanditasMeses", label: "Vigencia de la pulsera NFC (meses)", type: "number", default: 12, nullable: true, nullLabel: "Sin vencimiento",
-        hint: "El plazo empieza a correr cuando la pulsera se vincula a la persona, no cuando se carga el lote al almacén. Vencida, el POS la rechaza." },
-      { key: "perfilesSuscripcion", label: "Cobrar suscripción por perfil vinculado", type: "switch", default: false, hint: "Cobra al padre/tutor una cuota única al vincular cada nuevo dependiente." },
-      { key: "montoSuscripcion", label: "Monto de la suscripción por perfil (PEN)", type: "currency", default: 5, hint: "Solo aplica si la suscripción está activada." },
+      { key: "vigenciaBanditasMeses", label: "Vigencia de la pulsera NFC", type: "monthsAsDate", default: 12, nullable: true, nullLabel: "Sin vencimiento",
+        hint: "Elige la fecha hasta la que dura la pulsera — se guarda como meses desde hoy porque el plazo real corre desde que CADA pulsera se vincula a su persona (no desde hoy ni desde que se carga el lote al almacén). Vencida, el POS la rechaza." },
+      // El monto fijo único (montoSuscripcion) se retiró — Planes de
+      // suscripción (Task #174, más abajo en el panel) es el único mecanismo
+      // real desde ahora; con este toggle activado y cero planes, el mundo
+      // simplemente no puede cobrar hasta crear al menos uno.
+      { key: "perfilesSuscripcion", label: "Cobrar suscripción por perfil vinculado", type: "switch", default: false, hint: "Cobra al padre/tutor una cuota única al vincular cada nuevo dependiente. Los montos se definen creando planes abajo." },
     ],
     posiblesIngresos: ["Suscripción por perfil", "Comisión por recarga"],
     // ── Microservicios de Wallet (storytelling de flujo real) ──────────
@@ -367,8 +370,9 @@ export const MODULE_CATALOG = [
     configFields: [
       { key: "diasAnticipacion", label: "Días de anticipación para reservar un menú", type: "number", default: 7 },
       { key: "cuposPorMenu",     label: "Cupos predeterminados por opción de menú", type: "number", default: 100 },
-      { key: "metodoReserva", label: "Método de reserva", type: "select", options: ["saldo", "qr"],
-        optionLabels: { saldo: "Pago con saldo", qr: "Pago con QR" }, default: "saldo" },
+      { key: "metodoReserva", label: "Método de reserva", type: "select", options: ["saldo", "qr", "ambos"],
+        optionLabels: { saldo: "Pago con saldo", qr: "Pago con QR", ambos: "Ambos (el usuario elige)" }, default: "saldo",
+        hint: "El pago con QR en punto de venta todavía no tiene canje real construido — con QR o Ambos, esa opción se muestra pero avisa que aún no se puede confirmar desde la app." },
     ],
   },
 
