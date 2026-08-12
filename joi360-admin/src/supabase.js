@@ -200,8 +200,19 @@ const ACQUIRING_CHANNEL_IDS = ["pos_fisico", "app_operador", "qr_estatico"];
 // ── SYNC COMPLETO (debounced desde store.update) ────────────────────────────
 // Deriva TODO el estado remoto desde los mundos locales:
 //   worlds + world_capacity_configs + world_feature_flags + world_channel_configs
+// Mismo set que MUNDOS_RETIRADOS en store.js#load(). Ese filtro solo corre
+// una vez, al cargar localStorage en frío -- una pestaña que ya tenía el
+// módulo en memoria desde antes del pivot (nunca recargada) sigue arrastrando
+// los mundos retirados en su `state.mundos` y los re-sube en el siguiente
+// autosync sin pasar nunca por load() de nuevo. Se repite el filtro acá,
+// justo antes de subir, para que ningún estado local obsoleto pueda
+// resucitarlos en Supabase sin importar qué tan vieja esté la pestaña.
+const MUNDOS_RETIRADOS = new Set(["mundo-promos-rp", "mundo-eventos-rp", "mundo-raimondi", "mundo-rbufxr"]);
+
 export async function syncAllWorlds(mundos) {
   if (!mundos || !mundos.length) return;
+  mundos = mundos.filter(m => !MUNDOS_RETIRADOS.has(m.id));
+  if (!mundos.length) return;
   setSyncStatus("syncing");
   try {
     // 1. worlds (bulk upsert por id)
