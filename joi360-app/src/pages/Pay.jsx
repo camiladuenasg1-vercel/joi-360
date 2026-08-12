@@ -17,6 +17,15 @@ export default function PayPage() {
   const nav = useNavigate();
   const st = useStore(); const u = useUser();
   const [tab, setTab] = useState(params.get("tab") || "qr");
+  // useState solo lee ?tab= una vez, al montar. Si PayPage ya estaba montado
+  // (ej. venías de Recargar) y desde el Home tocás "Bandita NFC", el router
+  // solo cambia el query param -- no remonta el componente -- así que el tab
+  // se quedaba pegado en el anterior (hallado en vivo: "bandita me lleva a
+  // recarga"). Se re-sincroniza cada vez que cambia el query param.
+  useEffect(() => {
+    const t = params.get("tab");
+    if (t) setTab(t);
+  }, [params]);
   const [monto, setMonto] = useState("");
   const [qrGenerated, setQrGenerated] = useState(false);
   const [canalSel, setCanalSel] = useState(null);

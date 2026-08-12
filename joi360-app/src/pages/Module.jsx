@@ -2737,9 +2737,11 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
  * del colegio" y "un evento que alguien publicó en la app" no son la misma
  * cosa, y mezclarlos en una lista los volvía indistinguibles.
  *
- * Va en horizontal y no en columna porque son pocos y cada uno merece una
- * tarjeta grande con su portada; apilados verticalmente empujaban el resto del
- * módulo fuera de pantalla.
+ * Va en columna (scroll vertical) y no en carrusel horizontal — antes
+ * apilaba las tarjetas en una franja que sangraba a los bordes; con más de
+ * 2-3 eventos, las de más a la derecha quedaban escondidas y nada indicaba
+ * que había más para ver. En columna todas quedan visibles, sin límite,
+ * simplemente scrolleando hacia abajo con el resto de la pantalla.
  */
 function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
   return (
@@ -2754,9 +2756,7 @@ function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas }) {
         </p>
       </div>
 
-      {/* -mx-5 + px-5: la franja sangra hasta el borde de la pantalla, que es
-          lo que hace legible que hay más tarjetas a la derecha. */}
-      <div className="flex gap-3 overflow-x-auto -mx-5 px-5 pb-2 snap-x snap-mandatory scrollbar-none">
+      <div className="flex flex-col gap-3">
         {eventos.map(ev => (
           <TarjetaEventoMundo
             key={ev.id}
@@ -2784,7 +2784,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas }) {
   }, [ev.id]);
 
   return (
-    <div className="snap-start shrink-0 w-[290px] rounded-2xl overflow-hidden bg-white border border-[#e4e1ee]">
+    <div className="w-full rounded-2xl overflow-hidden bg-white border border-[#e4e1ee]">
       {/* Portada real cuando existe; si no, el degradado del mundo. Un
           placeholder gris haría ver el evento como algo sin terminar. */}
       <div

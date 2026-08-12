@@ -4,7 +4,7 @@ import { useStore, useWalletLive, useWorldConfig, useMerchantsLive, useCatalogLi
 import { useUser } from "../userStore.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
-import { getSyntheticUserId, fetchMisDependientes, fetchMisReservasMenu } from "../supabaseClient.js";
+import { getSyntheticUserId, fetchMisDependientes, fetchMisReservasMenu, fetchEventosLive } from "../supabaseClient.js";
 
 // "Qué te toca hoy" — auto-generado solo si el mundo tiene Menú activo y
 // hay algo programado para hoy (titular o algún dependiente). Sin reserva
@@ -42,6 +42,53 @@ function MenuHoyWidget({ mundoId, nav }) {
         </div>
         <span className="material-symbols-outlined text-[#777587]">chevron_right</span>
       </button>
+    </div>
+  );
+}
+
+// Vitrina de eventos del mundo en el Home — antes el Home no mostraba
+// eventos en absoluto, solo vivían dentro del módulo de Eventos. Carrusel
+// horizontal a propósito (a diferencia del módulo completo, que ahora
+// scrollea vertical): acá es una vitrina rápida, no el listado completo.
+// Tope de 5 + "Ver más" hacia /module/eventos, la misma pantalla del
+// módulo completo — no una vista distinta.
+function EventosMundoWidget({ mundoId, mundo, nav }) {
+  const [eventos, setEventos] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    fetchEventosLive(mundoId).then(r => { if (vivo) setEventos(r || []); }).catch(() => { if (vivo) setEventos([]); });
+    return () => { vivo = false; };
+  }, [mundoId]);
+
+  if (!eventos || eventos.length === 0) return null;
+  const top5 = eventos.slice(0, 5);
+
+  return (
+    <div className="px-5 mb-5">
+      <div className="flex justify-between items-center mb-3">
+        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest">Eventos</p>
+        <button onClick={() => nav("/module/eventos")} className="text-[11px] font-bold text-[#3525cd]">Ver más →</button>
+      </div>
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
+        {top5.map(ev => (
+          <button key={ev.id} onClick={() => nav("/module/eventos")}
+            className="flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-white border border-[#e4e1ee] text-left tap-active">
+            <div className="h-20 relative" style={{
+              background: ev.imagen_url ? `url(${ev.imagen_url}) center/cover` : `linear-gradient(135deg,${mundo.color || "#3525cd"},#4f46e5)`,
+            }}>
+              {!ev.imagen_url && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="material-symbols-outlined fill text-white/70 text-3xl">festival</span>
+                </div>
+              )}
+            </div>
+            <div className="p-2.5">
+              <p className="text-xs font-black text-[#1b1b24] leading-tight line-clamp-2">{ev.titulo}</p>
+              <p className="text-[10px] font-semibold mt-1" style={{ color: mundo.color || "#3525cd" }}>{ev.fecha}</p>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -291,6 +338,8 @@ export default function HubPage() {
             </div>
           </div>
         )}
+
+        {wc.activo("eventos") && <EventosMundoWidget mundoId={activeMundo.id} mundo={activeMundo} nav={nav}/>}
 
         {/* Últimos movimientos */}
         {txs.length > 0 && (
