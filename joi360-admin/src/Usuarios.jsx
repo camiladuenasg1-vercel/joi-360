@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useStore } from "./hooks";
-import { fetchUsuariosDeMundo, fetchDetalleUsuario, liberarNfcBandRemote } from "./supabase.js";
-import { Icon, Pill, Drawer, BtnOutline, inputCls, notify } from "./ui";
+import { fetchUsuariosDeMundo, fetchDetalleUsuario, fetchUsuarioResumen, liberarNfcBandRemote } from "./supabase.js";
+import { Icon, Pill, BtnOutline, inputCls, notify } from "./ui";
 import { nomenclaturaFamiliar } from "./store";
 
 const soles = n => `S/ ${(Number(n) || 0).toFixed(2)}`;
@@ -38,7 +39,6 @@ export function Usuarios() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
-  const [detalle, setDetalle] = useState(null);
 
   useEffect(() => {
     if (!mundoId && mundos.length) setMundoId(mundos[0].id);
@@ -156,9 +156,9 @@ export function Usuarios() {
               <tbody>
                 {gruposVisibles.map(g => (
                   <React.Fragment key={g.titular.userId}>
-                    <FilaUsuario f={g.titular} nom={nom} onVer={setDetalle} />
+                    <FilaUsuario f={g.titular} nom={nom} mundoId={mundoId} />
                     {g.dependientes.map(d => (
-                      <FilaUsuario key={d.userId} f={d} nom={nom} onVer={setDetalle} esSubfila />
+                      <FilaUsuario key={d.userId} f={d} nom={nom} mundoId={mundoId} esSubfila />
                     ))}
                   </React.Fragment>
                 ))}
@@ -167,8 +167,6 @@ export function Usuarios() {
           </div>
         )}
       </div>
-
-      <DetalleUsuario usuario={detalle} mundos={mundos} nom={nom} onClose={() => setDetalle(null)} />
     </div>
   );
 }
@@ -182,7 +180,7 @@ function Td({ children, className = "" }) {
 
 // Una fila macro (titular/tutor) o una sub-fila indentada (dependiente,
 // colgando visualmente de su titular) — mismo set de columnas para ambas.
-function FilaUsuario({ f, nom, onVer, esSubfila }) {
+function FilaUsuario({ f, nom, mundoId, esSubfila }) {
   const et = etiquetaTipo(f.tipo, nom);
   return (
     <tr className={`border-b border-outline-variant/60 last:border-0 hover:bg-surface-container-low/60 transition-colors ${esSubfila ? "bg-surface-container-low/30" : ""}`}>
@@ -225,12 +223,12 @@ function FilaUsuario({ f, nom, onVer, esSubfila }) {
       </Td>
       <Td className="text-on-surface-variant text-xs">{fecha(f.creado)}</Td>
       <Td>
-        <button
-          onClick={() => onVer(f)}
+        <Link
+          to={`/admin/usuarios/persona/${f.userId}?mundo=${mundoId}`}
           title="Ver detalle"
           className="w-8 h-8 rounded-lg grid place-items-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
           <Icon n="visibility" className="text-[18px]" />
-        </button>
+        </Link>
       </Td>
     </tr>
   );
@@ -258,23 +256,41 @@ function Vacio({ icono, titulo, detalle }) {
   );
 }
 
-function DetalleUsuario({ usuario, mundos, nom, onClose }) {
+// Vista de página completa del detalle de una persona (Task #223) — antes era
+// un Drawer angosto que no tenía espacio para el historial completo de
+// transacciones. Autosuficiente vía URL (/admin/usuarios/persona/:userId) con
+// el mundo de contexto en ?mundo=, así que se puede recargar o compartir el
+// link directo sin depender de haber navegado desde la tabla.
+export function UsuarioDetallePage() {
+  const { userId } = useParams();
+  const [searchParams] = useSearchParams();
+  const mundoId = searchParams.get("mundo") || "";
+  const navigate = useNavigate();
+  const st = useStore();
+  const mundos = useMemo(() => (st.mundos || []).filter(m => m.estado !== "ARCHIVADO"), [st.mundos]);
+  const mundoContexto = mundos.find(m => m.id === mundoId);
+  const nom = nomenclaturaFamiliar(mundoContexto?.vertical);
+
+  const [usuario, setUsuario] = useState(null);
   const [d, setD] = useState(null);
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const [desvinculando, setDesvinculando] = useState(false);
   const [banditaDesvinculada, setBanditaDesvinculada] = useState(false);
 
   useEffect(() => {
-    if (!usuario) { setD(null); return; }
     let vivo = true;
     setCargando(true);
     setBanditaDesvinculada(false);
-    fetchDetalleUsuario(usuario.userId)
-      .then(r => { if (vivo) setD(r); })
-      .catch(() => { if (vivo) setD(null); })
-      .finally(() => { if (vivo) setCargando(false); });
+    Promise.all([
+      mundoId ? fetchUsuarioResumen(mundoId, userId).catch(() => null) : Promise.resolve(null),
+      fetchDetalleUsuario(userId).catch(() => null),
+    ]).then(([resumen, detalle]) => {
+      if (!vivo) return;
+      setUsuario(resumen);
+      setD(detalle);
+    }).finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
-  }, [usuario]);
+  }, [userId, mundoId]);
 
   const nombreMundo = id => mundos.find(m => m.id === id)?.nombre || id;
 
@@ -295,13 +311,33 @@ function DetalleUsuario({ usuario, mundos, nom, onClose }) {
   };
 
   return (
-    <Drawer
-      open={!!usuario}
-      onClose={onClose}
-      title={usuario?.nombre || "Usuario"}
-      subtitle={usuario ? `${etiquetaTipo(usuario.tipo, nom).texto} · alta ${fecha(usuario.creado)}` : ""}
-      icon="person"
-      width="w-[560px]">
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-on-surface-variant mb-2">
+          <Link to="/admin/usuarios" className="hover:text-primary">Operación</Link>
+          <Icon n="chevron_right" className="text-[14px]" />
+          <Link to="/admin/usuarios" className="hover:text-primary">Usuarios</Link>
+          <Icon n="chevron_right" className="text-[14px]" />
+          <span className="text-primary">{usuario?.nombre || "Detalle"}</span>
+        </div>
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-primary mb-3">
+          <Icon n="arrow_back" className="text-[18px]" /> Volver a Usuarios
+        </button>
+        {cargando && !usuario ? (
+          <div className="h-9 w-64 bg-surface-container-low rounded animate-pulse" />
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold">{usuario?.nombre || "Persona sin nombre registrado"}</h1>
+            {usuario && (
+              <div className="flex items-center gap-2 mt-2">
+                <Pill color={etiquetaTipo(usuario.tipo, nom).color}>{etiquetaTipo(usuario.tipo, nom).texto}</Pill>
+                <span className="text-sm text-on-surface-variant">alta {fecha(usuario.creado)}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {usuario && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-3">
@@ -310,7 +346,7 @@ function DetalleUsuario({ usuario, mundos, nom, onClose }) {
           </div>
 
           {usuario.bandita?.estado === "activa" && usuario.bandita?.id && !banditaDesvinculada && (
-            <div className="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 flex items-center justify-between gap-3">
+            <div className="bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-mono text-[10px] uppercase text-outline">Bandita NFC vinculada</p>
                 <p className="text-sm font-mono truncate">{usuario.bandita.codigo}</p>
@@ -333,59 +369,63 @@ function DetalleUsuario({ usuario, mundos, nom, onClose }) {
               falta acceso con llave de servicio, que queda auditado.
             </span>
           </div>
-
-          {cargando ? (
-            <p className="text-sm text-on-surface-variant">Cargando movimientos…</p>
-          ) : d ? (
-            <>
-              <div className="grid grid-cols-3 gap-3">
-                <Dato etiqueta="Consumido" valor={soles(d.consumo)} />
-                <Dato etiqueta="Recargado" valor={soles(d.recargado)} />
-                <Dato etiqueta="Saldo total" valor={soles(d.saldoTotal)} />
-              </div>
-
-              <Seccion titulo={`Mundos activos (${d.mundos.length})`}>
-                {d.mundos.length === 0
-                  ? <p className="text-sm text-on-surface-variant">Sin billeteras.</p>
-                  : d.mundos.map(w => (
-                      <div key={w.id} className="flex justify-between items-center py-2 border-b border-outline-variant/60 last:border-0">
-                        <span className="text-sm">{nombreMundo(w.world_id)}</span>
-                        <span className="text-sm font-semibold tabular-nums">{soles(w.balance)}</span>
-                      </div>
-                    ))}
-              </Seccion>
-
-              <Seccion titulo={`Últimos movimientos (${d.movimientos.length})`}>
-                {d.movimientos.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant">
-                    Todavía no hay transacciones de esta persona.
-                  </p>
-                ) : (
-                  <div className="max-h-72 overflow-y-auto">
-                    {d.movimientos.map(t => (
-                      <div key={t.id} className="flex justify-between items-start py-2 border-b border-outline-variant/60 last:border-0">
-                        <div>
-                          <div className="text-sm capitalize">{t.type}</div>
-                          <div className="text-[11px] text-on-surface-variant">
-                            {new Date(t.created_at).toLocaleString("es-PE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                            {t.status && t.status !== "aprobada" && ` · ${t.status}`}
-                          </div>
-                        </div>
-                        <span className={`text-sm font-semibold tabular-nums ${t.type === "recarga" ? "text-ok" : ""}`}>
-                          {t.type === "recarga" ? "+" : "−"}{soles(Math.abs(t.amount))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Seccion>
-            </>
-          ) : (
-            <p className="text-sm text-on-surface-variant">No se pudieron cargar los movimientos.</p>
-          )}
         </div>
       )}
-    </Drawer>
+
+      {cargando ? (
+        <p className="text-sm text-on-surface-variant mt-6">Cargando movimientos…</p>
+      ) : d ? (
+        <div className="space-y-6 mt-6">
+          <div className="grid grid-cols-3 gap-3">
+            <Dato etiqueta="Consumido" valor={soles(d.consumo)} />
+            <Dato etiqueta="Recargado" valor={soles(d.recargado)} />
+            <Dato etiqueta="Saldo total" valor={soles(d.saldoTotal)} />
+          </div>
+
+          <Seccion titulo={`Mundos activos (${d.mundos.length})`}>
+            {d.mundos.length === 0
+              ? <p className="text-sm text-on-surface-variant">Sin billeteras.</p>
+              : (
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant/60">
+                  {d.mundos.map(w => (
+                    <div key={w.id} className="flex justify-between items-center px-4 py-3">
+                      <span className="text-sm">{nombreMundo(w.world_id)}</span>
+                      <span className="text-sm font-semibold tabular-nums">{soles(w.balance)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </Seccion>
+
+          <Seccion titulo={`Movimientos (${d.movimientos.length})`}>
+            {d.movimientos.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">
+                Todavía no hay transacciones de esta persona.
+              </p>
+            ) : (
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant/60">
+                {d.movimientos.map(t => (
+                  <div key={t.id} className="flex justify-between items-start px-4 py-3">
+                    <div>
+                      <div className="text-sm capitalize">{t.type}{t.reference ? ` · ${t.reference}` : ""}</div>
+                      <div className="text-[11px] text-on-surface-variant">
+                        {new Date(t.created_at).toLocaleString("es-PE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {t.status && t.status !== "aprobada" && ` · ${t.status}`}
+                      </div>
+                    </div>
+                    <span className={`text-sm font-semibold tabular-nums flex-shrink-0 ${t.type === "recarga" ? "text-ok" : ""}`}>
+                      {t.type === "recarga" ? "+" : "−"}{soles(Math.abs(t.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Seccion>
+        </div>
+      ) : (
+        <p className="text-sm text-on-surface-variant mt-6">No se pudieron cargar los movimientos.</p>
+      )}
+    </div>
   );
 }
 

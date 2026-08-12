@@ -2381,6 +2381,35 @@ export async function fetchUsuariosDeMundo(worldId) {
   });
 }
 
+// Mismo cómputo que fetchUsuariosDeMundo pero para UNA sola persona, sin
+// traer la lista completa del mundo -- usado por la página de detalle
+// (Task #223), que necesita cargar sola desde la URL (con ?mundo= como
+// contexto) sin depender de haber navegado desde la tabla.
+export async function fetchUsuarioResumen(worldId, userId) {
+  const [wallet, perfiles, comoDependiente, aCargo, bandas, solicitud] = await Promise.all([
+    rest(`wallets?world_id=eq.${worldId}&user_id=eq.${userId}&select=id,balance,status&limit=1`).then(r => r?.[0] || null),
+    fetchPerfilesUsuarios([userId]).catch(() => []),
+    rest(`dependents?world_id=eq.${worldId}&dependent_user_id=eq.${userId}&select=guardian_user_id,nombre&limit=1`).catch(() => []),
+    rest(`dependents?world_id=eq.${worldId}&guardian_user_id=eq.${userId}&select=dependent_user_id`).catch(() => []),
+    rest(`nfc_bands?world_id=eq.${worldId}&linked_user_id=eq.${userId}&select=id,codigo,vence_at&limit=1`).catch(() => []),
+    rest(`nfc_requests?world_id=eq.${worldId}&status=eq.pendiente&user_id=eq.${userId}&select=user_id&limit=1`).catch(() => []),
+  ]);
+  if (!wallet) return null;
+  const p = perfiles?.[0];
+  const dep = comoDependiente?.[0];
+  const b = bandas?.[0];
+  return {
+    userId, walletId: wallet.id, balance: Number(wallet.balance) || 0, estadoWallet: wallet.status || "activa",
+    tipo: dep ? "dependiente" : p ? "titular" : "sin_perfil",
+    nombre: p ? `${p.nombres} ${p.apellidos}`.trim() : dep?.nombre || null,
+    docTipo: p?.doc_tipo || null, docMask: p?.doc_mask || null, emailMask: p?.email_mask || null,
+    creado: p?.created_at || null,
+    dependientesACargo: aCargo?.length || 0,
+    guardianUserId: dep?.guardian_user_id || null,
+    bandita: b ? { id: b.id, estado: "activa", codigo: b.codigo, venceAt: b.vence_at } : solicitud?.length ? { estado: "solicitada" } : null,
+  };
+}
+
 // Detalle de una persona: consumo real y en qué mundos está.
 export async function fetchDetalleUsuario(userId) {
   const wallets = await rest(`wallets?user_id=eq.${userId}&select=id,world_id,balance,status`);
