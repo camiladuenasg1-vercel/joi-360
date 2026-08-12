@@ -33,7 +33,8 @@ create table if not exists public.grupos (
   updated_at timestamptz not null default now()
 );
 alter table public.grupos enable row level security;
-create policy if not exists demo_all_grupos on public.grupos for all to anon, authenticated using (true) with check (true);
+drop policy if exists demo_all_grupos on public.grupos;
+create policy demo_all_grupos on public.grupos for all to anon, authenticated using (true) with check (true);
 
 alter table public.worlds add column if not exists grupo_id text references public.grupos(id);
 alter table public.worlds add column if not exists comparte_saldo_grupo boolean not null default false;

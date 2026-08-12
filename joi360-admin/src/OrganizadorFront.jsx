@@ -722,7 +722,7 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
                         defaultValue={afiliado.ubicacion || ""} onBlur={e => setUbicacion(afiliado, e.target.value)} />
                       <button onClick={() => setCatalogoAbierto(catalogoAbierto === merchant.id ? null : merchant.id)}
                         className="text-xs font-bold text-primary flex items-center gap-1 flex-shrink-0">
-                        <Icon n="restaurant_menu" className="text-[16px]" /> Catálogo del evento
+                        <Icon n="inventory_2" className="text-[16px]" /> Precompra
                       </button>
                     </>
                   )}
@@ -745,15 +745,24 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
         {afiliadosAdHoc.length > 0 && (
           <div className="space-y-2 mb-3">
             {afiliadosAdHoc.map(a => (
-              <div key={a.id} className="flex items-center gap-3">
-                {a.logo_url ? (
-                  <img src={a.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{(a.merchant_nombre || "?")[0]}</div>
+              <div key={a.id}>
+                <div className="flex items-center gap-3">
+                  {a.logo_url ? (
+                    <img src={a.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{(a.merchant_nombre || "?")[0]}</div>
+                  )}
+                  <input className={`${inputCls} !flex-1 !py-1.5 text-sm`} placeholder="Ubicación / stand"
+                    defaultValue={a.ubicacion || ""} onBlur={e => setUbicacion(a, e.target.value)} />
+                  <button onClick={() => setCatalogoAbierto(catalogoAbierto === a.merchant_id ? null : a.merchant_id)}
+                    className="text-xs font-bold text-primary flex items-center gap-1 flex-shrink-0">
+                    <Icon n="inventory_2" className="text-[16px]" /> Precompra
+                  </button>
+                  <button onClick={() => quitarAdHoc(a)} disabled={busyId === a.id} className="text-xs font-bold text-error flex-shrink-0">Quitar</button>
+                </div>
+                {catalogoAbierto === a.merchant_id && (
+                  <EventoCatalogoComercio worldId={worldId} eventId={ev.id} merchant={{ id: a.merchant_id, name: a.merchant_nombre }} />
                 )}
-                <input className={`${inputCls} !flex-1 !py-1.5 text-sm`} placeholder="Ubicación / stand"
-                  defaultValue={a.ubicacion || ""} onBlur={e => setUbicacion(a, e.target.value)} />
-                <button onClick={() => quitarAdHoc(a)} disabled={busyId === a.id} className="text-xs font-bold text-error flex-shrink-0">Quitar</button>
               </div>
             ))}
           </div>
@@ -794,33 +803,43 @@ function EventoComerciosCard({ ev, worldId, merchants }) {
   );
 }
 
+// Precompra del evento: productos que el comercio carga SOLO para este
+// evento (event_id real en `products`, nunca event_id IS NULL) — por diseño
+// nunca comparte fila ni pantalla con "Mi Catálogo" del comercio (su
+// catálogo de siempre, fuera del evento). Cada producto lleva un stock real:
+// el tope de unidades que el comercio puede honrar el día del evento, no un
+// campo decorativo — cuando stock llega a 0 el producto se agota para
+// precompra aunque el catálogo regular del comercio no tenga ese límite.
 function EventoCatalogoComercio({ worldId, eventId, merchant }) {
   const [productos, setProductos] = useState(null);
-  const [draft, setDraft] = useState({ name: "", price: "" });
+  const [draft, setDraft] = useState({ name: "", price: "", stock: "" });
   const cargar = () => fetchProductsRemote(merchant.id, eventId).then(r => setProductos(r || [])).catch(() => setProductos([]));
   React.useEffect(() => { cargar(); }, [merchant.id, eventId]);
 
   const agregar = async () => {
     if (!draft.name.trim() || !+draft.price) return;
-    await upsertProductRemote({ world_id: worldId, merchant_id: merchant.id, name: draft.name.trim(), price: +draft.price }, eventId);
-    setDraft({ name: "", price: "" });
+    await upsertProductRemote({ world_id: worldId, merchant_id: merchant.id, name: draft.name.trim(), price: +draft.price, stock: draft.stock ? +draft.stock : null }, eventId);
+    setDraft({ name: "", price: "", stock: "" });
     cargar();
   };
   const quitar = async (id) => { await deleteProductRemote(id); cargar(); };
 
   return (
     <div className="mt-3 ml-8 p-3 bg-surface-container-low rounded-lg border border-outline-variant">
-      <p className="font-mono text-[9px] uppercase text-outline mb-2">Productos exclusivos de este evento (no afecta el catálogo regular)</p>
+      <p className="font-mono text-[9px] uppercase text-outline mb-2">Precompra del evento — el asistente reserva y paga acá, retira en el stand (no afecta el catálogo regular del comercio)</p>
       {productos === null ? (
         <p className="text-xs text-on-surface-variant">Cargando…</p>
       ) : (
         <div className="space-y-1.5 mb-3">
-          {productos.length === 0 && <p className="text-xs text-on-surface-variant">Sin productos aún para este evento.</p>}
+          {productos.length === 0 && <p className="text-xs text-on-surface-variant">Sin productos de precompra aún para este evento.</p>}
           {productos.map(p => (
             <div key={p.id} className="flex items-center justify-between text-xs bg-surface-container-lowest px-2.5 py-1.5 rounded border border-outline-variant/60">
               <span>{p.name}</span>
               <span className="flex items-center gap-2">
                 <span className="font-mono">S/ {Number(p.price).toFixed(2)}</span>
+                <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${p.stock === null ? "text-outline" : p.stock > 0 ? "bg-ok/15 text-ok" : "bg-error/15 text-error"}`}>
+                  {p.stock === null ? "Sin límite" : p.stock > 0 ? `Stock: ${p.stock}` : "Agotado"}
+                </span>
                 <button onClick={() => quitar(p.id)} className="text-error"><Icon n="close" className="text-[14px]" /></button>
               </span>
             </div>
@@ -830,6 +849,7 @@ function EventoCatalogoComercio({ worldId, eventId, merchant }) {
       <div className="flex gap-2">
         <input className={`${inputCls} !py-1.5 text-xs`} placeholder="Ej. Anticucho" value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
         <input className={`${inputCls} !w-20 !py-1.5 text-xs`} type="number" placeholder="S/" value={draft.price} onChange={e => setDraft(d => ({ ...d, price: e.target.value }))} />
+        <input className={`${inputCls} !w-24 !py-1.5 text-xs`} type="number" placeholder="Stock" value={draft.stock} onChange={e => setDraft(d => ({ ...d, stock: e.target.value }))} />
         <BtnOutline className="!py-1.5 !px-2.5" onClick={agregar}><Icon n="add" className="text-[16px]" /></BtnOutline>
       </div>
     </div>
