@@ -1022,10 +1022,12 @@ function RestriccionesTemplate({ cfg, u }) {
   const guardianId = getSyntheticUserId();
   const { maxPerfilesControlados, registroAlergias,
           limiteDiarioPerfil, montoAprobacionPadre, horarioConsumo, notificacionConsumoRealTime } = cfg.config;
-  // Cobro por suscripción: vive en Wallet, no en Restricciones (es un modelo
-  // de ingreso de la billetera, no una regla de control parental).
-  const walletCfg = useModuleConfig("wallet");
-  const perfilesSuscripcion = walletCfg?.config?.perfilesSuscripcion;
+  // Cobro por suscripción: capacidad propia (Suscripciones, depende de
+  // Wallet) desde el 12-ago — antes vivía como configField escondido dentro
+  // de Wallet. Activa = el mundo la prendió; sin eso, ningún dependiente
+  // nuevo cobra cuota, sin importar si hay planes creados.
+  const suscripcionesCfg = useModuleConfig("suscripciones");
+  const perfilesSuscripcion = !!suscripcionesCfg;
 
   // "Agregar familiar para pedirle su bandita" (Wallet) navega acá con
   // ?agregar=1 — quien vino a pedir una bandita para un dependiente que

@@ -1597,7 +1597,7 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
             <div className="p-3 bg-primary-fixed/20 border border-primary/20 rounded-lg text-xs text-on-surface-variant">
               Define los <b>parámetros de operación</b> de esta capacidad en este mundo. <b>El pricing se define en el Acuerdo Comercial, no aquí.</b>
             </div>
-            {(c?.configFields||[]).length === 0 && (
+            {(c?.configFields||[]).length === 0 && modId !== "suscripciones" && (
               <div className="p-4 text-center text-on-surface-variant text-sm border border-outline-variant rounded-lg">
                 Este módulo no tiene parámetros adicionales configurables en esta versión.
               </div>
@@ -1611,7 +1611,10 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
             {(c?.configFields||[]).some(cf=>cf.nullable) && (
               <p className="text-[10px] text-on-surface-variant italic">Campos con «Sin límite»: dejar vacío para no restringir.</p>
             )}
-            {modId === "wallet" && (f.config?.perfilesSuscripcion ?? c.configFields.find(cf=>cf.key==="perfilesSuscripcion")?.default) && (
+            {/* Suscripciones se formalizó como capacidad propia (12-ago) — antes
+                vivía como configField escondido dentro de Wallet. El panel de
+                planes es el contenido real de esta pestaña, no un extra. */}
+            {modId === "suscripciones" && (
               <PlanesSuscripcionPanel worldId={mundoId} moneda={m.moneda}/>
             )}
           </section>

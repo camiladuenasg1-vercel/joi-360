@@ -46,13 +46,8 @@ export const MODULE_CATALOG = [
         hint: "Antes esto quedaba encendido automáticamente con solo activar Wallet, sin poder apagarlo — un mundo que solo cobra por QR/app, sin banditas físicas, no tenía forma de reflejarlo. Apagado, el POS deja de ofrecer 'Vincular pulsera' y de aceptar identificación por NFC." },
       { key: "vigenciaBanditasMeses", label: "Vigencia de la pulsera NFC", type: "monthsAsDate", default: 12, nullable: true, nullLabel: "Sin vencimiento",
         hint: "Elige la fecha hasta la que dura la pulsera — se guarda como meses desde hoy porque el plazo real corre desde que CADA pulsera se vincula a su persona (no desde hoy ni desde que se carga el lote al almacén). Vencida, el POS la rechaza." },
-      // El monto fijo único (montoSuscripcion) se retiró — Planes de
-      // suscripción (Task #174, más abajo en el panel) es el único mecanismo
-      // real desde ahora; con este toggle activado y cero planes, el mundo
-      // simplemente no puede cobrar hasta crear al menos uno.
-      { key: "perfilesSuscripcion", label: "Cobrar suscripción por perfil vinculado", type: "switch", default: false, hint: "Cobra al padre/tutor una cuota única al vincular cada nuevo dependiente. Los montos se definen creando planes abajo." },
     ],
-    posiblesIngresos: ["Suscripción por perfil", "Comisión por recarga"],
+    posiblesIngresos: ["Comisión por recarga"],
     // ── Microservicios de Wallet (storytelling de flujo real) ──────────
     // Jerarquía estructurada: cada microservicio tiene sus campos propios,
     // una dependencia explícita y efectos declarados por plataforma.
@@ -250,6 +245,25 @@ export const MODULE_CATALOG = [
   },
 
   // ── OPCIONAL ───────────────────────────────────────────────────────────────
+  // Formalizada como capacidad propia (12-ago-2026, a pedido explícito de
+  // Camila) — antes vivía escondida como un configField de Wallet
+  // ("perfilesSuscripcion"), pese a que ya cobraba dinero real cada vez que
+  // se vinculaba un dependiente en un mundo con planes creados. Sacarla a su
+  // propia capacidad no cambia el mecanismo de cobro (sigue siendo
+  // crearDependienteRemote + Planes de Suscripción, ver PlanesSuscripcionPanel
+  // en MundoDetail.jsx) — solo la hace visible y activable por sí misma en
+  // vez de agazapada dentro de otra capacidad.
+  { id: "suscripciones", name: "Suscripciones", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "subscriptions",
+    desc: "Cobra al padre/tutor una cuota real al vincular cada nuevo dependiente. Depende de Wallet — usa la misma billetera para el cobro. Sin planes creados, el mundo no puede cobrar (nunca cae a un monto por defecto sin definir).",
+    servicios: [
+      { id:"planes",  nombre:"Planes de suscripción", desc:"El mundo crea uno o más planes (nombre, precio, periodo, % de descuento). Se cobran al vincular un dependiente." },
+      { id:"cobro",   nombre:"Cobro automático al vincular", desc:"Al crear un dependiente, se descuenta el plan elegido de la wallet del tutor vía el mismo RPC de saldo real." },
+    ],
+    pricing: { modelo: "revenue", revShare: 3, setup: 0, moneda: "PEN" },
+    configFields: [],
+    posiblesIngresos: ["Suscripción por perfil"],
+  },
+
   { id: "loyalty", name: "Puntos Loyalty", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "loyalty",
     desc: "Acumula, consulta y redime puntos generados por actividades o consumos dentro del ecosistema. Devengo en comercio (A), saldo en wallet (E).",
     servicios: [
@@ -964,6 +978,7 @@ export const DEPENDENCY_MAP = {
   asistencia:     ["accesos"],
   reservas:       ["wallet"],
   turnos:         ["wallet"],
+  suscripciones:  ["wallet"],
 };
 
 // ── Eventos & Promos helpers ──────────────────────────────────────────────

@@ -47,7 +47,7 @@ export default function ProfilePage() {
   // ligado a la cuenta principal, identificado por bandita NFC/QR puramente
   // para consumo (no accede a más que su propio saldo), y su alta puede
   // tener costo de suscripción o ser gratuita según lo configure cada mundo
-  // (perfilesSuscripcion/montoSuscripcion, capacidad Wallet). La creación en
+  // (capacidad Suscripciones, depende de Wallet). La creación en
   // sí sigue viviendo en Restricciones de cada mundo (el cobro es propio de
   // esa wallet) — esta sección solo consolida la vista y entra al mundo
   // correcto para gestionar.
