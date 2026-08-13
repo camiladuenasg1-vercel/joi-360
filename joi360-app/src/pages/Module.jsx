@@ -159,7 +159,7 @@ function WalletTemplate({ cfg, u }) {
   const enviarSoporteP2P = async () => {
     try {
       await crearTicketSoporteRemote({
-        world_id: mundoId, tipo: "P2P",
+        world_id: mundoId, user_id: myCode, tipo: "P2P",
         asunto: "Problema con una transferencia",
         detalle: p2pResult?.ok ? `Transferencia enviada por S/ ${p2pMonto} — la usuaria reporta un problema.` : "Consulta iniciada desde el modal de transferencia.",
       });

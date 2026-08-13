@@ -28,10 +28,10 @@ export function Soporte() {
   // CSV real de los tickets visibles con el filtro actual.
   const exportarCsv = () => {
     if (!tickets.length) { notify("No hay tickets para exportar con este filtro.", "error"); return; }
-    const header = "id,asunto,origen,mundo,modulo,prioridad,estado,asignado,fecha\n";
+    const header = "id,asunto,origen,usuario,mundo,modulo,prioridad,estado,asignado,fecha\n";
     const filas = tickets.map(t => {
       const mundo = t.mundoId ? (st.mundos || []).find(m => m.id === t.mundoId) : null;
-      return [t.id, t.asunto, t.origen || "", mundo?.nombre || "Global", t.modulo || "", t.prioridad || "", t.estado, t.asignado || "", new Date(t.createdAt).toISOString()]
+      return [t.id, t.asunto, t.origen || "", t.usuarioId || "", mundo?.nombre || "Global", t.modulo || "", t.prioridad || "", t.estado, t.asignado || "", new Date(t.createdAt).toISOString()]
         .map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
     }).join("\n");
     const blob = new Blob([header + filas], { type: "text/csv;charset=utf-8;" });
@@ -104,6 +104,7 @@ export function Soporte() {
                 <th className="px-4 py-3 font-medium">ID</th>
                 <th className="px-4 py-3 font-medium">Descripción</th>
                 <th className="px-4 py-3 font-medium">Origen · Mundo</th>
+                <th className="px-4 py-3 font-medium">Usuario</th>
                 <th className="px-4 py-3 font-medium">Módulo</th>
                 <th className="px-4 py-3 font-medium">Prioridad</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
@@ -112,21 +113,28 @@ export function Soporte() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/50">
-              {tickets.length === 0 && <tr><td colSpan="8" className="p-10 text-center text-on-surface-variant">Sin tickets para estos filtros.</td></tr>}
+              {tickets.length === 0 && <tr><td colSpan="9" className="p-10 text-center text-on-surface-variant">Sin tickets para estos filtros.</td></tr>}
               {tickets.map(t => {
                 const mundo = t.mundoId ? (st.mundos||[]).find(m => m.id === t.mundoId) : null;
                 const mod = t.modulo ? MODULE_CATALOG.find(m => m.id === t.modulo) : null;
+                // Devolución/reembolso: dinero real involucrado -- se marca
+                // distinto para que no se pierda entre incidencias comunes.
+                const esDevolucion = /devoluci|reembolso/i.test(t.tipo || "");
                 return (
-                  <tr key={t.id} className="hover:bg-surface-container-low group">
+                  <tr key={t.id} className={`hover:bg-surface-container-low group ${esDevolucion ? "bg-tertiary/5" : ""}`}>
                     <td className="px-4 py-3 font-mono text-xs text-on-surface">#{t.id.slice(-6).toUpperCase()}</td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-sm">{t.asunto}</p>
+                      <p className="font-medium text-sm flex items-center gap-1.5">
+                        {esDevolucion && <Icon n="currency_exchange" className="text-tertiary text-[14px]" />}
+                        {t.asunto}
+                      </p>
                       <p className="text-xs text-on-surface-variant line-clamp-1">{t.detalle}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-mono text-[10px] uppercase">{t.origen === "sponsor" ? "Sponsor" : t.origen === "interno" ? "Interno" : "—"}</p>
+                      <p className="font-mono text-[10px] uppercase">{t.origen === "sponsor" ? "Sponsor" : t.origen === "interno" ? "Interno" : t.origen === "usuario" ? "Usuario" : t.origen === "merchant" ? "Merchant" : "—"}</p>
                       <p className="text-[10px] text-outline">{mundo?.nombre || "Global"}</p>
                     </td>
+                    <td className="px-4 py-3 font-mono text-[10px]">{t.usuarioId || <span className="text-outline italic">—</span>}</td>
                     <td className="px-4 py-3">
                       {mod ? <span className="inline-flex items-center gap-1 text-xs"><Icon n={mod.icon} className="text-primary text-[14px]" />{mod.name}</span> : <span className="text-outline text-xs">—</span>}
                     </td>

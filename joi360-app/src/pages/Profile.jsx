@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore, useWalletBalances, useWalletLive } from "../hooks.js";
 import { useUser, logoutUser, setActiveMundo } from "../userStore.js";
-import { getSyntheticUserId, fetchMisDependientes, fetchDependienteBalance } from "../supabaseClient.js";
+import { getSyntheticUserId, fetchMisDependientes, fetchDependienteBalance, crearTicketSoporteRemote } from "../supabaseClient.js";
 import BottomNav from "../components/BottomNav.jsx";
 import { showToast } from "../components/Toast.jsx";
 
@@ -25,11 +25,26 @@ const TERMINOS_TEXTO = `JOI 360 es la super-app del ecosistema RedPontis. Al usa
 • RedPontis actúa como operador de la plataforma; cada mundo (colegio, condominio, evento) es responsable de sus propias políticas.
 • Este es un entorno de demostración construido para JOI 360 — no sustituye un contrato legal formal.`;
 
+// Canal de soporte para atención al usuario (13-ago) — antes solo existía un
+// botón de escalar contextual dentro de una transferencia P2P fallida
+// (enviarSoporteP2P en Module.jsx); esto es la entrada general, siempre
+// visible, con categorías reales incluyendo Devolución/Reembolso.
+const CATEGORIAS_SOPORTE = [
+  { id: "devolucion", label: "Devolución o reembolso", icon: "currency_exchange" },
+  { id: "cobro", label: "Problema con un cobro", icon: "receipt_long" },
+  { id: "recarga", label: "Problema con una recarga", icon: "add_card" },
+  { id: "bandita", label: "Problema con mi bandita/pulsera", icon: "contactless" },
+  { id: "otro", label: "Otro", icon: "help" },
+];
+
 export default function ProfilePage() {
   const nav = useNavigate();
   const st = useStore();
   const u = useUser();
-  const [modal, setModal] = useState(null); // "privacidad" | "terminos" | null
+  const [modal, setModal] = useState(null); // "privacidad" | "terminos" | "ayuda" | null
+  const [ayudaForm, setAyudaForm] = useState({ categoria: "devolucion", asunto: "", detalle: "", monto: "" });
+  const [enviandoAyuda, setEnviandoAyuda] = useState(false);
+  const [ayudaEnviada, setAyudaEnviada] = useState(false);
 
   const nombre = u?.auth?.nombre || "Usuario";
   const email = u?.auth?.email || "";
@@ -71,6 +86,25 @@ export default function ProfilePage() {
     if (mundoId && mundoId !== activeMundo?.id) setActiveMundo(mundoId);
     nav("/module/control");
   };
+
+  const enviarTicketAyuda = async () => {
+    if (!ayudaForm.asunto.trim()) return;
+    setEnviandoAyuda(true);
+    try {
+      const cat = CATEGORIAS_SOPORTE.find(c => c.id === ayudaForm.categoria);
+      const detalleConMonto = ayudaForm.categoria === "devolucion" && ayudaForm.monto
+        ? `Monto reclamado: S/ ${ayudaForm.monto}\n\n${ayudaForm.detalle}`
+        : ayudaForm.detalle;
+      await crearTicketSoporteRemote({
+        world_id: activeMundo?.id || null, user_id: myCode,
+        tipo: cat?.label || "Otro", asunto: ayudaForm.asunto, detalle: detalleConMonto,
+      });
+      setAyudaEnviada(true);
+    } catch {
+      showToast({ titulo: "No se pudo enviar", mensaje: "Intenta de nuevo en unos minutos." }, "error");
+    } finally { setEnviandoAyuda(false); }
+  };
+  const cerrarAyuda = () => { setModal(null); setAyudaEnviada(false); setAyudaForm({ categoria: "devolucion", asunto: "", detalle: "", monto: "" }); };
 
   const compartirCodigo = async () => {
     if (navigator.share) {
@@ -216,9 +250,16 @@ export default function ProfilePage() {
               <span className="text-[#464555] text-sm flex-1">Términos y condiciones</span>
               <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
             </button>
+
+            <button onClick={() => setModal("ayuda")}
+              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
+              <span className="material-symbols-outlined text-[#777587]">support_agent</span>
+              <span className="text-[#464555] text-sm flex-1">Centro de ayuda</span>
+              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
+            </button>
           </div>
 
-          {modal && (
+          {(modal === "privacidad" || modal === "terminos") && (
             <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setModal(null)}>
               <div className="glass-card rounded-t-3xl w-full max-w-[430px] max-h-[75vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
@@ -228,6 +269,62 @@ export default function ProfilePage() {
                   </button>
                 </div>
                 <p className="text-[#464555] text-sm whitespace-pre-line leading-relaxed">{modal === "privacidad" ? PRIVACIDAD_TEXTO : TERMINOS_TEXTO}</p>
+              </div>
+            </div>
+          )}
+
+          {modal === "ayuda" && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={cerrarAyuda}>
+              <div className="glass-card rounded-t-3xl w-full max-w-[430px] max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-[#1b1b24] font-black text-lg">Centro de ayuda</h2>
+                  <button onClick={cerrarAyuda} className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active">
+                    <span className="material-symbols-outlined text-[#464555] text-lg">close</span>
+                  </button>
+                </div>
+                {ayudaEnviada ? (
+                  <div className="text-center py-8">
+                    <span className="material-symbols-outlined text-[#3525cd] text-5xl block mb-2">check_circle</span>
+                    <p className="text-[#1b1b24] font-black text-lg">Enviado</p>
+                    <p className="text-[#777587] text-sm mt-1">{activeMundo?.nombre || "El mundo"} o RedPontis te contactarán pronto.</p>
+                    <button onClick={cerrarAyuda} className="mt-5 w-full py-3 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active">Listo</button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-2">¿Sobre qué necesitas ayuda?</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {CATEGORIAS_SOPORTE.map(c => (
+                          <button key={c.id} onClick={() => setAyudaForm(f => ({ ...f, categoria: c.id }))}
+                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold text-left tap-active ${ayudaForm.categoria === c.id ? "border-[#3525cd] bg-[#f0ecf9] text-[#3525cd]" : "border-[#e4e1ee] text-[#464555]"}`}>
+                            <span className="material-symbols-outlined text-[16px]">{c.icon}</span> {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Asunto</p>
+                      <input value={ayudaForm.asunto} onChange={e => setAyudaForm(f => ({ ...f, asunto: e.target.value }))}
+                        placeholder="Resumen breve" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none" />
+                    </div>
+                    {ayudaForm.categoria === "devolucion" && (
+                      <div>
+                        <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Monto reclamado (S/)</p>
+                        <input value={ayudaForm.monto} onChange={e => setAyudaForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, "") }))}
+                          placeholder="0.00" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Cuéntanos qué pasó</p>
+                      <textarea value={ayudaForm.detalle} onChange={e => setAyudaForm(f => ({ ...f, detalle: e.target.value }))}
+                        rows={4} placeholder="Mientras más detalle, más rápido te ayudamos" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none resize-none" />
+                    </div>
+                    <button onClick={enviarTicketAyuda} disabled={!ayudaForm.asunto.trim() || enviandoAyuda}
+                      className="w-full py-3.5 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active disabled:opacity-40">
+                      {enviandoAyuda ? "Enviando…" : "Enviar"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

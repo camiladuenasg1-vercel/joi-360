@@ -1819,6 +1819,11 @@ export async function reconciliarTicketsRemoto() {
       if (idsLocales.has(row.id)) return;
       st.tickets.push({
         id: row.id, mundoId: row.world_id, comercioId: row.comercio_id,
+        // usuarioId (13-ago): quién presentó el ticket cuando viene del
+        // usuario final (superapp) -- antes support_tickets no tenía forma
+        // de atribuir un ticket a una persona real, así que una devolución
+        // no tenía a quién acreditársela sin leer el texto libre a mano.
+        usuarioId: row.user_id || null,
         origen: row.origen, tipo: row.tipo, asunto: row.asunto, detalle: row.detalle,
         modulo: row.modulo, prioridad: row.prioridad, estado: row.estado,
         asignado: row.asignado, clickupId: row.clickup_id,
