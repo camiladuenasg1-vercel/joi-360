@@ -193,9 +193,13 @@ export async function fetchAllFeatureFlags() {
 // superapp ni en el panel de RedPontis y quedó fuera del alcance. Dejarlo
 // activable ofrecía una capacidad que después no rendía nada: el mundo la
 // prendía y se encontraba con pestañas vacías.
+// "cashback" salió de acá 13-ago: es la capacidad que Camila confirmó que
+// sale ya (macro, cerrado a comercios habilitados) — ver mover_cashback_wallet
+// en add-cashback.sql y CobrarPanel (Fronts.jsx). Loyalty sigue Próximamente
+// a propósito: se conceptualiza pero no se construye todavía.
 export const MODULOS_PROXIMAMENTE = new Set([
   "facturacion", "reservas", "loyalty", "credito", "subsidio",
-  "estacionamiento", "asistencia", "cashback", "turnos", "transporte",
+  "estacionamiento", "asistencia", "turnos", "transporte",
   "promociones",
 ]);
 
@@ -556,6 +560,7 @@ export async function addMerchantRemote(mundoId, comercio) {
       contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
       banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
       codigo: comercio.codigo || null, pos_pin: comercio.posPin || null,
+      cashback_habilitado: !!comercio.cashbackHabilitado,
     }),
   });
   return rows?.[0]?.id || null;
@@ -670,6 +675,7 @@ export async function actualizarMerchantRemote(merchantId, comercio) {
       contacto_nombre: comercio.contactoNombre || null, contacto_documento: comercio.contactoDocumento || null, contacto_correo: comercio.contactoCorreo || null,
       banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
       codigo: comercio.codigo || null, pos_pin: comercio.posPin || null,
+      cashback_habilitado: !!comercio.cashbackHabilitado,
     }),
   });
 }
@@ -2140,7 +2146,10 @@ export async function buscarWalletPorCodigo(codigo, worldId) {
   const v = String(codigo || "").trim();
   const porCodigo = await rest(`app_profiles?codigo=eq.${encodeURIComponent(v.toUpperCase())}&select=id`).catch(() => []);
   const userId = porCodigo?.[0]?.id || v;
-  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${worldId}&select=id,user_id,balance`);
+  // cashback_balance viaja acá también (Cashback macro, 13-ago) para que el
+  // POS pueda mostrar cuánto cashback tiene disponible ni bien identifica al
+  // cliente, sin un segundo round-trip.
+  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${worldId}&select=id,user_id,balance,cashback_balance`);
   return rows?.[0] || null;
 }
 // Bug real #114: hasta acá el balance se leía y se volvía a escribir con un
@@ -2223,6 +2232,32 @@ export async function recargarPOSRemote(userId, worldId, merchantId, monto, cana
   // para el operador. Ahora se propaga el motivo real cuando existe.
   if (!r?.ok) return { ok: false, motivo: r?.motivo || "sin_wallet" };
   return { ok: true, balance: +r.nuevo_saldo };
+}
+
+// ── Cashback MACRO cerrado a comercios habilitados (13-ago) — mismo patrón
+// de seguridad que mover_saldo_wallet, pero sobre wallets.cashback_balance
+// (saldo separado, no se mezcla con dinero recargado real). p_tipo:
+// "cashback_ganado" (se acredita tras una compra en un comercio habilitado)
+// o "cashback_canjeado" (el operador lo aplica como descuento al cobrar).
+export async function moverCashbackWallet(walletId, delta, tipo, worldId, merchantId, reference, turnoId) {
+  const r = (await rest("rpc/mover_cashback_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_wallet_id: walletId, p_delta: delta, p_tipo: tipo,
+      p_world_id: worldId, p_merchant_id: merchantId || null, p_reference: reference || null, p_turno_id: turnoId || null,
+    }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo || "error" };
+  return { ok: true, balance: +r.nuevo_saldo };
+}
+// Fresco desde Supabase, no del estado local — reconciliarComerciosMundo()
+// no hidrata cashback_habilitado a los comercios ya conocidos localmente
+// (mismo gap ya documentado para ruc/banco de merchants), así que confiar en
+// comercio.cashbackHabilitado del store podría estar desactualizado si el
+// toggle se cambió desde otra sesión.
+export async function fetchCashbackHabilitadoMerchant(merchantId) {
+  const rows = await rest(`merchants?id=eq.${merchantId}&select=cashback_habilitado`).catch(() => []);
+  return !!rows?.[0]?.cashback_habilitado;
 }
 export async function fetchVentasComercio(merchantId, limit = 300) {
   return rest(`transactions?merchant_id=eq.${merchantId}&type=eq.compra&select=id,amount,reference,status,created_at&order=created_at.desc&limit=${limit}`);

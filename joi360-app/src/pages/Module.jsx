@@ -95,7 +95,7 @@ function ModuleHeader({ title, icon, iconBg, iconColor, onBack, action, children
 function WalletTemplate({ cfg, u }) {
   const nav = useNavigate();
   const mundoId = cfg.mundo.id;
-  const { saldo, historial, canales, refresh } = useWalletLive(mundoId);
+  const { saldo, cashback, historial, canales, refresh } = useWalletLive(mundoId);
   const puntos = u?.puntos?.[mundoId] || 0;
   const [hidden, setHidden] = useState(false);
   const txs = historial.slice(0,5);
@@ -311,6 +311,11 @@ function WalletTemplate({ cfg, u }) {
           {hidden ? "••••" : `${currency} ${saldo.toFixed(2)}`}
         </p>
         <p className="text-white/50 text-xs mt-1.5">{cfg.mundo.nombre}</p>
+        {!hidden && cashback > 0 && (
+          <p className="text-[11px] font-bold text-white/80 mt-2 flex items-center justify-center gap-1">
+            <Icon name="redeem" size="text-sm" color="text-white/80" /> + {currency} {cashback.toFixed(2)} en cashback disponible
+          </p>
+        )}
         {maxPorRecarga && (
           <p className="text-white/40 text-[10px] mt-0.5">Máximo por recarga: {currency} {maxPorRecarga}</p>
         )}

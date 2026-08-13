@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar, refreshEventosLive } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote, moverCashbackWallet, fetchCashbackHabilitadoMerchant } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -772,6 +772,21 @@ export function CobrarPanel({ comercio, m }) {
   // sin esto, cobrar()/recargar() de abajo se rechazan con TURNO_INVALIDO.
   const [turnoId, setTurnoId] = useState(null);
 
+  // Cashback MACRO cerrado a comercios habilitados — el % es del mundo, la
+  // participación es del comercio. Se consulta fresco (fetchCashbackHabilitadoMerchant)
+  // porque el estado local del comercio no releva este flag si se activó desde
+  // otra sesión (mismo gap ya documentado para ruc/banco de merchants).
+  const cashbackCfg = cashbackConfigDelMundo(m);
+  const [cashbackHabilitadoComercio, setCashbackHabilitadoComercio] = useState(false);
+  const [aplicarCashback, setAplicarCashback] = useState(false);
+  useEffect(() => {
+    if (!cashbackCfg) return;
+    fetchCashbackHabilitadoMerchant(merchantId).then(setCashbackHabilitadoComercio).catch(() => setCashbackHabilitadoComercio(false));
+  }, [merchantId, !!cashbackCfg]);
+  const cashbackActivoAqui = !!cashbackCfg && cashbackHabilitadoComercio;
+  const cashbackDisponible = cliente ? Number(cliente.cashback_balance || 0) : 0;
+  const montoCashbackAAplicar = aplicarCashback ? Math.min(cashbackDisponible, +monto || 0) : 0;
+
   // Cobrar con QR — el operador tipea el monto, genera una solicitud de
   // cobro, y el cliente la paga escaneando con su propia cámara desde su
   // sesión del superapp. No hay "identificar al cliente" en este modo: quien
@@ -842,8 +857,8 @@ export function CobrarPanel({ comercio, m }) {
     } finally { setBuscando(false); }
   };
   const elegirProducto = (p) => { setProductoSel(p); setMonto(String(p.price)); };
-  const reset = () => { setCodigo(""); setCliente(null); setNotFound(false); setProductoSel(null); setMonto(""); setCanalRecarga(null); setResultado(null); };
-  const cambiarModo = (nuevo) => { setModo(nuevo); setProductoSel(null); setMonto(""); setCanalRecarga(null); setResultado(null); };
+  const reset = () => { setCodigo(""); setCliente(null); setNotFound(false); setProductoSel(null); setMonto(""); setCanalRecarga(null); setResultado(null); setAplicarCashback(false); };
+  const cambiarModo = (nuevo) => { setModo(nuevo); setProductoSel(null); setMonto(""); setCanalRecarga(null); setResultado(null); setAplicarCashback(false); };
 
   const cobrar = async () => {
     const m2 = +monto;
@@ -856,7 +871,26 @@ export function CobrarPanel({ comercio, m }) {
       // -- sin esto, el segundo cobro con el mismo texto siempre rechazaba
       // con HTTP 409 sin importar el cliente (hallado en vivo, 11/12-ago).
       const referencia = `${comercio.nombre}${productoSel ? " · " + productoSel.name : ""} · ${Date.now()}`;
-      const r = await cobrarPOSRemote(cliente.user_id, m.id, merchantId, m2, referencia, turnoId);
+
+      // Cashback aplicado como descuento (canje): se descuenta del saldo de
+      // cashback ANTES de cobrar el resto a la wallet principal — nunca se
+      // mezclan los dos saldos, así Liquidación sigue viendo solo dinero real.
+      const montoCashback = montoCashbackAAplicar;
+      const montoWallet = +(m2 - montoCashback).toFixed(2);
+      if (montoCashback > 0) {
+        const rc = await moverCashbackWallet(cliente.id, -montoCashback, "cashback_canjeado", m.id, merchantId, referencia, turnoId);
+        if (!rc.ok) {
+          const err = await errorControlado("operacion_admin_fallida");
+          logErrorControlado("operacion_admin_fallida", `pos-cashback-canje:${merchantId}`, m.id);
+          setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+          setCobrando(false);
+          return;
+        }
+      }
+
+      const r = montoWallet > 0
+        ? await cobrarPOSRemote(cliente.user_id, m.id, merchantId, montoWallet, referencia, turnoId)
+        : { ok: true, balance: cliente.balance }; // cubierto 100% con cashback, no toca la wallet principal
       if (!r.ok) {
         // Task #181: el RPC ahora también puede rechazar por restricciones
         // del dependiente (horario/límite diario) — antes cualquier motivo
@@ -870,8 +904,23 @@ export function CobrarPanel({ comercio, m }) {
         const err = await errorControlado(code);
         logErrorControlado(code, `pos-cobrar:${merchantId}`, m.id);
         r.mensaje = [err.mensaje, err.accion].filter(Boolean).join(" ");
+        // El canje de cashback ya se descontó — si el cobro del resto falla,
+        // se revierte para no dejar cashback consumido sin la compra real.
+        if (montoCashback > 0) await moverCashbackWallet(cliente.id, montoCashback, "cashback_revertido", m.id, merchantId, `Reversión · ${referencia}`, turnoId).catch(() => {});
+        setResultado(r);
+        return;
       }
-      setResultado(r);
+      // Cashback ganado (13-ago): solo sobre lo efectivamente pagado con
+      // dinero real de la wallet, no sobre la porción cubierta con cashback
+      // — evita que el cashback se re-genere cashback sobre sí mismo.
+      let cashbackGanado = 0;
+      if (cashbackActivoAqui && montoWallet > 0 && cashbackCfg.porcentaje > 0) {
+        cashbackGanado = +((montoWallet * cashbackCfg.porcentaje) / 100).toFixed(2);
+        if (cashbackGanado > 0) {
+          await moverCashbackWallet(cliente.id, cashbackGanado, "cashback_ganado", m.id, merchantId, referencia, turnoId).catch(() => {});
+        }
+      }
+      setResultado({ ...r, cashbackAplicado: montoCashback, cashbackGanado });
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
       logErrorControlado("operacion_admin_fallida", `pos-cobrar:${merchantId}`, m.id);
@@ -984,7 +1033,14 @@ export function CobrarPanel({ comercio, m }) {
           {cliente && (
             <div className="mt-3 p-3 bg-secondary-fixed/20 border border-secondary/30 rounded-lg flex items-center justify-between">
               <span className="text-sm flex items-center gap-2"><Icon n="verified" className="text-secondary text-[18px]" /> Identificado</span>
-              <span className="font-mono text-sm font-bold">Saldo: S/ {Number(cliente.balance).toFixed(2)}</span>
+              <div className="text-right">
+                <span className="font-mono text-sm font-bold block">Saldo: S/ {Number(cliente.balance).toFixed(2)}</span>
+                {cashbackCfg && (
+                  <span className="font-mono text-[10px] text-tertiary block">
+                    <Icon n="redeem" className="text-[12px] align-text-bottom" /> Cashback: S/ {cashbackDisponible.toFixed(2)}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1024,6 +1080,15 @@ export function CobrarPanel({ comercio, m }) {
                 </div>
                 <p className="text-[10px] text-purple-600">El cliente puede pagarlo en cuotas desde "Paga después" en su app JOI 360 — este cobro en POS sigue siendo al contado.</p>
               </div>
+            )}
+            {cashbackActivoAqui && cashbackDisponible > 0 && +monto > 0 && (
+              <label className="mt-3 flex items-center justify-between p-3 rounded-lg border border-tertiary/30 bg-tertiary/5 cursor-pointer">
+                <span className="text-xs flex items-center gap-1.5"><Icon n="redeem" className="text-tertiary text-[16px]" /> Aplicar cashback disponible (S/ {cashbackDisponible.toFixed(2)})</span>
+                <input type="checkbox" checked={aplicarCashback} onChange={e => setAplicarCashback(e.target.checked)} className="w-4 h-4" />
+              </label>
+            )}
+            {montoCashbackAAplicar > 0 && (
+              <p className="text-[11px] text-tertiary mt-1.5">Se descuentan S/ {montoCashbackAAplicar.toFixed(2)} de cashback — se cobra S/ {(+monto - montoCashbackAAplicar).toFixed(2)} a la billetera.</p>
             )}
           </div>
         )}
@@ -1065,6 +1130,8 @@ export function CobrarPanel({ comercio, m }) {
             <Icon n="check_circle" fill className="text-green-600 text-[32px] block mx-auto mb-1" />
             <p className="font-bold text-green-800">{modo === "cobrar" ? "Cobro aprobado" : "Recarga aprobada"}</p>
             <p className="text-xs text-green-700">Nuevo saldo de{nomCliente.articulo === "la" ? " la" : "l"} {nomCliente.texto}: S/ {resultado.balance.toFixed(2)}</p>
+            {resultado.cashbackAplicado > 0 && <p className="text-[11px] text-tertiary mt-1">Cashback aplicado: S/ {resultado.cashbackAplicado.toFixed(2)}</p>}
+            {resultado.cashbackGanado > 0 && <p className="text-[11px] text-tertiary mt-1">Cashback ganado: S/ {resultado.cashbackGanado.toFixed(2)}</p>}
             <BtnOutline className="mt-3" onClick={reset}>{modo === "cobrar" ? "Nueva venta" : "Nueva recarga"}</BtnOutline>
           </div>
         )}
@@ -1179,6 +1246,16 @@ export function bnplLimitesDelMundo(m) {
   const c = mod.config || {};
   const cuotas = [c.cuotas3 !== false && 3, c.cuotas6 !== false && 6, c.cuotas12 === true && 12].filter(Boolean);
   return { cuotas, diasGracia: Math.min(+c.diasGracia || 5, 10), scoreObligatorio: c.scoreObligatorio === true, sinEvaluacion: c.sinEvaluacion !== false, montoMax: +c.montoMaxBNPL || 3000, moraMaxPct: +c.moraMaxPct || 5 };
+}
+
+// Cashback MACRO cerrado a comercios habilitados (13-ago) — el % y el tope
+// son del MUNDO (macro), no por comercio; el comercio solo puede estar
+// dentro o fuera (merchants.cashback_habilitado). Ver MODULE_CATALOG "cashback".
+export function cashbackConfigDelMundo(m) {
+  const mod = (m?.modulos || []).find(x => x.id === "cashback" && x.enabled);
+  if (!mod) return null;
+  const c = mod.config || {};
+  return { porcentaje: +c.porcentajeDefault || 0, topeMensual: c.topeMensual === null ? null : (+c.topeMensual || 0) };
 }
 
 // Notificaciones al comercio ante pérdida de servicio de un cliente (Gantt #29)

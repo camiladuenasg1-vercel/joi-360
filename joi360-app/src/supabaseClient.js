@@ -1126,6 +1126,14 @@ export async function fetchWalletBalance(userId, worldId) {
   return +wallet.balance;
 }
 
+// Cashback MACRO (13-ago): saldo separado del principal, ver mover_cashback_wallet
+// en add-cashback.sql. getOrCreateWallet ya trae `select=*`, así que no hace
+// falta un segundo round-trip — solo se expone el campo.
+export async function fetchCashbackBalance(userId, worldId) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  return +(wallet.cashback_balance || 0);
+}
+
 const TIPO_LABEL = { recarga: "Recarga", compra: "Pago", transferencia_p2p: "Transferencia", devolucion: "Devolución", cashback: "Cashback", puntos: "Puntos" };
 
 // Auditoría Task #133: el mundo podía fijar "Máximo por transacción"/

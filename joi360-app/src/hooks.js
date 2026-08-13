@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
 import { getState, subscribe } from "./store";
 import { useUser } from "./userStore.js";
-import { getSyntheticUserId, fetchWalletBalance, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive } from "./supabaseClient.js";
+import { getSyntheticUserId, fetchWalletBalance, fetchCashbackBalance, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive } from "./supabaseClient.js";
 import { MODULES } from "./modules.js";
 
 let snapshot = getState();
@@ -79,6 +79,7 @@ export function useModuleConfig(moduleId) {
  */
 export function useWalletLive(worldId) {
   const [saldo, setSaldo] = useState(0);
+  const [cashback, setCashback] = useState(0);
   const [canales, setCanales] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,12 +89,14 @@ export function useWalletLive(worldId) {
     if (!worldId) return;
     setLoading(true);
     try {
-      const [bal, chs, hist] = await Promise.all([
+      const [bal, cb, chs, hist] = await Promise.all([
         fetchWalletBalance(userId, worldId),
+        fetchCashbackBalance(userId, worldId),
         canalesHabilitadosDeMundoLive(worldId),
         fetchTxHistory(userId, worldId),
       ]);
       setSaldo(bal);
+      setCashback(cb);
       setCanales(chs);
       setHistorial(hist || []);
     } finally {
@@ -116,7 +119,7 @@ export function useWalletLive(worldId) {
     return r.ok;
   }, [worldId, userId, refresh]);
 
-  return { saldo, canales, historial, loading, refresh, recargar, pagar };
+  return { saldo, cashback, canales, historial, loading, refresh, recargar, pagar };
 }
 
 /**

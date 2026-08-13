@@ -6,6 +6,7 @@ import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inp
 import { EntregaMerchantDrawer } from "./EntregaMerchant";
 import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, actualizarPosPinMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, entregarMundoRemote } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
+import { cashbackConfigDelMundo } from "./Fronts.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
 // cross-mundo y también cubre solicitudes de alta de comercio, con filtros,
@@ -2224,7 +2225,9 @@ function ActoresMerchants({ m, comercios }) {
     apoderadoNombre:"", apoderadoDocumento:"", apoderadoCorreo:"",
     contactoNombre:"", contactoDocumento:"", contactoCorreo:"",
     banco: BANCOS_PE[0], cuentaBancaria:"", cci:"",
+    cashbackHabilitado: false,
   };
+  const cashbackCfgMundo = cashbackConfigDelMundo(m);
   const [f, setF] = useState(blank);
   const [editingId, setEditingId] = useState(null); // c.id local en edición, null = alta
 
@@ -2413,6 +2416,18 @@ function ActoresMerchants({ m, comercios }) {
               <Field label="CCI"><input className={`${inputCls} font-mono`} value={f.cci} onChange={e => setF({...f, cci:e.target.value})} placeholder="00200000000000000000"/></Field>
             </div>
           </div>
+
+          {cashbackCfgMundo && (
+            <div className="pt-3 border-t border-outline-variant/50">
+              <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
+                <Icon n="redeem" className="text-[16px] text-secondary"/> Cashback
+              </p>
+              <label className="flex items-center justify-between p-3 rounded-lg border border-outline-variant cursor-pointer">
+                <span className="text-xs">Comercio habilitado para cashback ({cashbackCfgMundo.porcentaje}% macro del mundo)</span>
+                <Toggle checked={f.cashbackHabilitado} onChange={v => setF({...f, cashbackHabilitado: v})} />
+              </label>
+            </div>
+          )}
         </div>
       </Drawer>
     </div>
