@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useStore } from "./hooks";
-import { actualizarTicket, crearTicketInterno, enviarTicketAClickUp, MODULE_CATALOG } from "./store";
+import { actualizarTicket, crearTicketInterno, enviarTicketAClickUp, MODULE_CATALOG, session } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
+import { fetchWalletIdDeUsuario, procesarDevolucionRemote } from "./supabase.js";
 
 const PRIORIDADES = ["Baja", "Media", "Alta", "Crítica"];
 const PRI_COLOR = { Baja: "text-outline", Media: "text-primary", Alta: "text-tertiary", "Crítica": "text-error" };
@@ -11,6 +12,7 @@ export function Soporte() {
   const [filtroEstado, setFiltroEstado] = useState("Todos");
   const [filtroPri, setFiltroPri] = useState("Todas");
   const [open, setOpen] = useState(false);
+  const [devolviendo, setDevolviendo] = useState(null); // ticket en flujo de devolución
   const blank = { tipo: "Incidencia", asunto: "", detalle: "", mundoId: "", modulo: "", prioridad: "Media" };
   const [f, setF] = useState(blank);
 
@@ -152,6 +154,12 @@ export function Soporte() {
                     <td className="px-4 py-3 text-xs text-on-surface-variant">{t.asignado || <i className="text-outline">Sin asignar</i>}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        {esDevolucion && t.usuarioId && t.estado !== "RESUELTO" && (
+                          <button onClick={() => setDevolviendo(t)} title="Procesar devolución (acredita a la wallet)"
+                            className="px-2 py-1 rounded border border-tertiary/40 text-tertiary hover:bg-tertiary/10 text-[10px] font-bold flex items-center gap-1">
+                            <Icon n="currency_exchange" className="text-[14px]" /> Devolver
+                          </button>
+                        )}
                         {!t.clickupId && <button onClick={() => enviarClickup(t)} title="Enviar a ClickUp" className="p-1.5 rounded border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary"><Icon n="ios_share" className="text-[16px]" /></button>}
                         {t.clickupId && <span className="px-2 py-0.5 rounded bg-secondary-fixed text-secondary font-mono text-[9px] uppercase">{t.clickupId}</span>}
                       </div>
@@ -200,7 +208,77 @@ export function Soporte() {
           </div>
         </div>
       </Drawer>
+
+      {devolviendo && <DevolucionDrawer ticket={devolviendo} onClose={() => setDevolviendo(null)} />}
     </div>
+  );
+}
+
+// Reglas de devolución (13-ago): confirmación explícita de Camila -- solo un
+// admin RedPontis autenticado puede acreditar una devolución real, re-
+// confirmando su contraseña en el momento (step-up), no solo confiando en
+// la sesión local ya abierta. Ver procesar_devolucion en add-procesar-devolucion.sql.
+function DevolucionDrawer({ ticket, onClose }) {
+  const st = useStore();
+  const mundo = ticket.mundoId ? (st.mundos || []).find(m => m.id === ticket.mundoId) : null;
+  const [monto, setMonto] = useState("");
+  const [password, setPassword] = useState("");
+  const [procesando, setProcesando] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const admin = session();
+
+  const confirmar = async () => {
+    const m2 = +monto;
+    if (!m2 || m2 <= 0 || !password || !mundo) return;
+    setProcesando(true);
+    try {
+      const walletId = await fetchWalletIdDeUsuario(ticket.usuarioId, mundo.id);
+      if (!walletId) {
+        setResultado({ ok: false, motivo: "No se encontró la billetera de este usuario en este mundo." });
+        return;
+      }
+      const r = await procesarDevolucionRemote(admin?.email, password, walletId, m2, mundo.id, ticket.id, `Devolución · ${ticket.asunto}`);
+      if (!r.ok) {
+        const msg = r.motivo === "ADMIN_NO_AUTENTICADO" ? "Contraseña incorrecta." : r.motivo === "SIN_WALLET" ? "No se encontró la billetera." : "No se pudo procesar la devolución.";
+        setResultado({ ok: false, motivo: msg });
+        return;
+      }
+      actualizarTicket(ticket.id, { estado: "RESUELTO" });
+      setResultado({ ok: true, balance: r.balance });
+      notify(`Devolución de S/ ${m2.toFixed(2)} acreditada.`);
+    } catch (e) {
+      setResultado({ ok: false, motivo: "Error de conexión. Intenta de nuevo." });
+    } finally { setProcesando(false); }
+  };
+
+  return (
+    <Drawer open={true} onClose={onClose} icon="currency_exchange" title="Procesar devolución" subtitle={`${ticket.asunto} · ${ticket.usuarioId}`}
+      footer={!resultado?.ok && <><BtnOutline onClick={onClose}>Cancelar</BtnOutline><BtnPrimary disabled={!monto || !password || procesando} onClick={confirmar}>{procesando ? "Procesando…" : "Confirmar devolución"}</BtnPrimary></>}>
+      <div className="space-y-5">
+        {resultado?.ok ? (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+            <Icon n="check_circle" fill className="text-green-600 text-[32px] block mx-auto mb-1" />
+            <p className="font-bold text-green-800">Devolución acreditada</p>
+            <p className="text-xs text-green-700">Nuevo saldo del usuario: S/ {resultado.balance.toFixed(2)}</p>
+            <BtnOutline className="mt-3" onClick={onClose}>Cerrar</BtnOutline>
+          </div>
+        ) : (
+          <>
+            <div className="p-3 bg-tertiary/10 border border-tertiary/30 rounded-lg text-[11px] text-on-surface">
+              <b>Usuario:</b> {ticket.usuarioId} · <b>Mundo:</b> {mundo?.nombre || "—"}<br/>
+              <b>Reclamo:</b> {ticket.detalle}
+            </div>
+            <Field label="Monto a devolver">
+              <input className={`${inputCls} font-mono`} type="number" step="0.01" value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" />
+            </Field>
+            <Field label="Confirma tu contraseña de admin" hint="Requerido para autorizar movimiento de dinero real.">
+              <input className={inputCls} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            </Field>
+            {resultado && !resultado.ok && <p className="text-xs text-error">{resultado.motivo}</p>}
+          </>
+        )}
+      </div>
+    </Drawer>
   );
 }
 

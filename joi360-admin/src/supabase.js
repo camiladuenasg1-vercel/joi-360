@@ -1512,6 +1512,32 @@ export async function actualizarTicketSoporteRemote(id, patch) {
   });
 }
 
+// Devuelve el id de wallet real del usuario que reclamó el ticket, en el
+// mundo del ticket -- lo que necesita procesarDevolucionRemote para saber a
+// quién acreditar.
+export async function fetchWalletIdDeUsuario(userId, worldId) {
+  const rows = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).catch(() => []);
+  return rows?.[0]?.id || null;
+}
+
+// Reglas de devolución (13-ago): solo un admin RedPontis autenticado puede
+// acreditar una devolución real a la wallet del usuario -- re-valida
+// email+password del admin EN EL MOMENTO (reusa verificar_admin_login,
+// mismo nivel de exposición que el login normal) porque este panel no tiene
+// una sesión verificable server-side todavía. Ver add-procesar-devolucion.sql.
+export async function procesarDevolucionRemote(adminEmail, adminPassword, walletId, monto, worldId, ticketId, reference) {
+  const r = (await rest("rpc/procesar_devolucion", {
+    method: "POST",
+    body: JSON.stringify({
+      p_admin_email: adminEmail, p_admin_password: adminPassword,
+      p_wallet_id: walletId, p_monto: monto, p_world_id: worldId,
+      p_ticket_id: ticketId || null, p_reference: reference || null,
+    }),
+  }))?.[0];
+  if (!r?.ok) return { ok: false, motivo: r?.motivo || "error" };
+  return { ok: true, balance: +r.nuevo_saldo };
+}
+
 // ── POS — inventario real (Caso 2 Raimondi: cierra el dead code local) ─────
 // Tabla pos_devices ya existía (creada por el otro chat de catálogos) con
 // columnas en español (modelo, estado) — nos adaptamos a ese esquema en vez
