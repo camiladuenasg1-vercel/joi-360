@@ -856,6 +856,9 @@ function TabResumen({ m, comercios, st, goto }) {
                     {x.emision && <span className="font-mono text-[7px] text-secondary bg-secondary-fixed px-1 rounded">E</span>}
                     {x.adquirencia && <span className="font-mono text-[7px] text-primary bg-primary-fixed px-1 rounded">A</span>}
                     {hasPricing && <Icon n="payments" className="text-ok text-[11px]" fill/>}
+                    {x.id === "cashback" && +x.config?.porcentajeDefault > 0 && (
+                      <span className="font-mono text-[9px] text-tertiary">{x.config.porcentajeDefault}%</span>
+                    )}
                   </span>
                 );
               })
@@ -1816,15 +1819,20 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
                 )}
 
                 {/* API integration note for payment-related modules */}
-                {["wallet","comercios","consumos","cashback","credito"].includes(modId) && (
+                {["wallet","comercios","consumos","credito"].includes(modId) && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900">
                     <Icon n="integration_instructions" className="inline mr-1 text-[13px] align-text-top"/>
                     <b>Integración backend:</b> Este módulo se conectará con la API EcoreGateway.
                     {modId==="wallet" && " Endpoints: /wallet/customer, /memberships/transfer, /system-recharge."}
                     {modId==="comercios" && " Endpoints: /merchants/sale, /merchants/pre-sale, /merchants/confirm-sale, /merchants/void."}
                     {modId==="consumos" && " Endpoints: /merchants/session, /memberships/transactions, /settlements."}
-                    {modId==="cashback" && " Calculado en backend por RedPontis. API: /memberships/{id}/system-recharge con tipo=cashback."}
                     {modId==="credito" && " Requiere scoring externo. Endpoint: /memberships/{id}/self-update-spending-limit."}
+                  </div>
+                )}
+                {modId === "cashback" && (
+                  <div className="p-3 bg-tertiary/10 border border-tertiary/30 rounded-lg text-[11px] text-on-surface">
+                    <Icon n="redeem" className="inline mr-1 text-[13px] align-text-top text-tertiary"/>
+                    <b>Ya construido y en producción:</b> el % configurado arriba se acredita automáticamente en el POS/Operador sobre lo pagado en comercios con "Cashback habilitado" (toggle en su ficha, pestaña Actores). El saldo vive separado del principal y se aplica como descuento opcional al cobrar — ver <code className="font-mono text-[10px]">mover_cashback_wallet</code>.
                   </div>
                 )}
               </>
