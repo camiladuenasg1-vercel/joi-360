@@ -6,7 +6,6 @@ import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inp
 import { uploadArchivo, fetchGruposRemote } from "./supabase.js";
 
 const COLORS = ["#0035b9", "#006688", "#722ce3", "#0e7c43", "#b3541e"];
-const BANCOS_PE = ["BCP", "BBVA", "Interbank", "Scotiabank", "BanBif", "Banco de la Nación", "Otro"];
 const PAISES = ["Perú", "Chile", "Colombia", "México", "Ecuador", "Bolivia"];
 const ACUERDOS = [
   { k: "transaccional", t: "Transaccional puro", d: "Solo % sobre volumen procesado. Sin fijos. Ideal para validar." },
@@ -165,9 +164,9 @@ export function MundoWizard({ open, onClose }) {
     // Paso 1: contexto
     nombre: "", vertical: "Educación", giro: GIROS_POR_VERTICAL["Educación"][0], color: COLORS[0], descripcion: "", codigo: "",
     pais: PAISES[0], logoUrl: "",
-    // Paso 2: entidad legal y bancaria
+    // Paso 2: entidad legal (bancaria retirada — cuenta EDE JetCash se
+    // aprovisiona automáticamente, ver comentario en Step2Entidad más abajo)
     entidadLegal: "", ruc: "", moneda: "PEN", direccionLegal: "",
-    banco: BANCOS_PE[0], cci: "",
     grupoId: null, compartesaldoGrupo: false,
     // Paso 3: representante, contacto y documentos
     apoderadoNombre: "", apoderadoDocumento: "", apoderadoCorreo: "",
@@ -234,7 +233,6 @@ export function MundoWizard({ open, onClose }) {
         codigo: f.codigo || `${f.vertical.slice(0, 2).toUpperCase()}-LIM-${String((st.mundos||[]).length + 1).padStart(3, "0")}`,
         vertical: f.vertical, giro: f.giro, pais: f.pais, logoUrl: f.logoUrl || null,
         entidadLegal: f.entidadLegal, ruc: f.ruc, moneda: f.moneda, direccionLegal: f.direccionLegal,
-        banco: f.banco, cci: f.cci,
         grupoId: f.grupoId || null, compartesaldoGrupo: !!f.compartesaldoGrupo,
         apoderadoNombre: f.apoderadoNombre, apoderadoDocumento: f.apoderadoDocumento, apoderadoCorreo: f.apoderadoCorreo,
         contactoNombre: f.contactoNombre, contactoDocumento: f.contactoDocumento, contactoCorreo: f.contactoCorreo,
@@ -409,20 +407,11 @@ function Step2Entidad({ f, set }) {
       </div>
       <Field label="Dirección fiscal"><input className={inputCls} value={f.direccionLegal} onChange={e => set({ direccionLegal: e.target.value })} placeholder="Av. ..." /></Field>
 
-      <div className="pt-3 border-t border-outline-variant/50">
-        <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
-          <Icon n="account_balance" className="text-[16px] text-secondary"/> Datos bancarios
-        </p>
-        <p className="text-[11px] text-on-surface-variant mb-3">Necesarios si RedPontis liquida a este mundo (se confirma en el módulo de Liquidación, dentro de Comercios).</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Banco">
-            <select className={inputCls} value={f.banco} onChange={e => set({ banco: e.target.value })}>
-              {BANCOS_PE.map(b => <option key={b}>{b}</option>)}
-            </select>
-          </Field>
-          <Field label="CCI"><input className={`${inputCls} font-mono`} value={f.cci} onChange={e => set({ cci: e.target.value.replace(/\D/g, "").slice(0, 20) })} placeholder="00200000000000000000" /></Field>
-        </div>
-      </div>
+      {/* Datos bancarios (Banco/CCI) retirados del wizard: al crear el mundo
+          se le aprovisiona automáticamente una cuenta EDE de JetCash (mismo
+          emisor que ya usan los Grupos/Sucursales, ver Grupos.jsx) — ya no
+          hace falta que el sponsor tipee una cuenta bancaria propia para que
+          RedPontis pueda liquidarle. */}
 
       <div className="pt-3 border-t border-outline-variant/50">
         <p className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
@@ -903,11 +892,11 @@ function Step7Resumen({ f, set, selectedMods, eventosOn, costoModulosFijo, costo
         <Row k="Descripción" v={f.descripcion} />
       </Section>
 
-      <Section icon="balance" title="Entidad legal y bancaria">
+      <Section icon="balance" title="Entidad legal">
         <Row k="Razón social" v={f.entidadLegal} />
         <Row k="RUC" v={f.ruc} />
         <Row k="Moneda" v={f.moneda} />
-        <Row k="Banco" v={f.banco} />
+        <Row k="Cuenta de liquidación" v="Se aprovisiona automáticamente (EDE JetCash)" />
       </Section>
 
       <Section icon="badge" title="Representante y contacto">

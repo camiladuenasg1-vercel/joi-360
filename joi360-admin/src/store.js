@@ -813,8 +813,6 @@ export async function refreshMundosLive() {
         pais: w.pais || "",
         direccionLegal: w.direccion_legal || "",
         descripcion: w.descripcion || "",
-        banco: w.banco || "",
-        cci: w.cci || "",
       };
       const base = byId.get(w.id);
       if (base) {

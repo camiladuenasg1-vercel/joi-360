@@ -110,13 +110,13 @@ function worldRow(m) {
     // sesión, o el mismo mundo tras un "reiniciar caché local", los perdía
     // para siempre. Ver también FichaMundoCard (MundoDetail.jsx) -- la
     // edición post-creación de estos mismos campos depende de que viajen acá.
+    // (banco/cci NO viajan: al crear el mundo se le aprovisiona una cuenta
+    // EDE de JetCash automáticamente, no hace falta cuenta bancaria propia.)
     entidad_legal: m.entidadLegal || null,
     ruc: m.ruc || null,
     pais: m.pais || null,
     direccion_legal: m.direccionLegal || null,
     descripcion: m.descripcion || null,
-    banco: m.banco || null,
-    cci: m.cci || null,
     updated_at: new Date().toISOString(),
   };
 }
