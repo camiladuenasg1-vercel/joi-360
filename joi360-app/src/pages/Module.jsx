@@ -100,7 +100,12 @@ function WalletTemplate({ cfg, u }) {
   const [hidden, setHidden] = useState(false);
   const txs = historial.slice(0,5);
   const maxPorRecarga = cfg.config.maxPorRecarga;
-  const currency = cfg.config.monedaPermitida || "S/";
+  // Bug real hallado en vivo (13-ago): mundos configurados antes del fix
+  // Task #210 quedaron con monedaPermitida guardado como índice numérico
+  // (ej. 2) en vez del id real ("PEN"/"USD") -- se veía "2 37.14" en el
+  // saldo. Guarda defensiva: solo acepta un id de moneda real conocido.
+  const MONEDAS_VALIDAS = { PEN: "S/", USD: "US$" };
+  const currency = MONEDAS_VALIDAS[cfg.config.monedaPermitida] || "S/";
   const myCode = getSyntheticUserId();
 
   // Código JOI corto (app_profiles.codigo) — el UUID de myCode sigue siendo
