@@ -17,6 +17,7 @@ import {
   fetchMiCodigoJoi, buscarPorCodigoJoiRemote, buscarPorDniRemote, crearTicketSoporteRemote,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
+  fetchProductosEventoLive, fetchMisPedidosEvento, crearPedidoEvento,
 } from "../supabaseClient.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -2581,7 +2582,7 @@ const fechaHoraCorta = iso => {
 };
 
 // Mis Entradas — QR emitidos, estado de check-in.
-function MisEntradasList({ mundo, refreshKey }) {
+function MisEntradasList({ mundo, refreshKey, nombreTitular }) {
   const userId = getSyntheticUserId();
   const [entradas, setEntradas] = useState(null);
   const [reload, setReload] = useState(0);
@@ -2591,6 +2592,7 @@ function MisEntradasList({ mundo, refreshKey }) {
   const [transferError, setTransferError] = useState("");
   const [generandoLink, setGenerandoLink] = useState(false);
   const [qrFullscreen, setQrFullscreen] = useState(null); // ticket completo
+  const [precompraTicket, setPrecompraTicket] = useState(null); // ticket completo
 
   useEffect(() => {
     let vivo = true;
@@ -2711,6 +2713,12 @@ function MisEntradasList({ mundo, refreshKey }) {
                     <Icon name="send" size="text-xs" color="text-[#1A3270]"/>Transferir
                   </button>
                 )}
+                {t.estado !== "anulado" && (
+                  <button onClick={() => setPrecompraTicket(t)}
+                    className="text-[10px] font-bold text-[#1A3270] flex items-center gap-0.5 tap-active">
+                    <Icon name="shopping_bag" size="text-xs" color="text-[#1A3270]"/>Precompra
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -2756,6 +2764,145 @@ function MisEntradasList({ mundo, refreshKey }) {
           <p className="font-mono text-[10px] text-[#CDD1E4] mt-3 text-center">{qrFullscreen.qr_code}</p>
         </div>
       )}
+      {precompraTicket && (
+        <PrecompraEventoDrawer ticket={precompraTicket} worldId={mundo.id} userId={userId} nombreTitular={nombreTitular}
+          onClose={() => setPrecompraTicket(null)} />
+      )}
+    </div>
+  );
+}
+
+// Precompra del asistente — los productos con event_id real que el comercio
+// ya cargó (Task #231, EventoCatalogoComercio en el admin) aparecen acá,
+// agrupados por comercio, para pagar ahora y retirar en el stand. El cobro
+// pasa por la misma comprarProductosLive de siempre (valida/decrementa
+// stock, mismo mover_saldo_wallet); event_product_orders solo registra el
+// pendiente de retiro para que el comercio lo entregue (ver OperadorApp.jsx
+// > EntregarPrecompraEventoOperador).
+function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose }) {
+  const eventId = ticket.event_id;
+  const [comercios, setComercios] = useState(null);
+  const [productos, setProductos] = useState(null);
+  const [misPedidos, setMisPedidos] = useState(null);
+  const [cart, setCart] = useState({}); // { [productId]: qty }
+  const [pagando, setPagando] = useState(false);
+  const [resultado, setResultado] = useState(null); // {ok, mensaje} | null
+
+  const cargar = () => {
+    Promise.all([fetchEventMerchantsLive(eventId), fetchProductosEventoLive(eventId), fetchMisPedidosEvento(userId, eventId)])
+      .then(([af, prod, pedidos]) => { setComercios(af || []); setProductos(prod || []); setMisPedidos(pedidos || []); })
+      .catch(() => { setComercios([]); setProductos([]); setMisPedidos([]); });
+  };
+  useEffect(() => { cargar(); }, [eventId]);
+
+  const nombrePorComercio = Object.fromEntries((comercios || []).map(c => [c.merchant_id, c.merchant_nombre]));
+  const porComercio = {};
+  (productos || []).forEach(p => { (porComercio[p.merchant_id] = porComercio[p.merchant_id] || []).push(p); });
+
+  const setQty = (productId, qty) => setCart(c => ({ ...c, [productId]: Math.max(0, qty) }));
+  const totalCarrito = Object.entries(cart).reduce((a, [id, qty]) => {
+    const p = (productos || []).find(x => x.id === id);
+    return a + (p ? +p.price * qty : 0);
+  }, 0);
+  const itemsPorComercio = merchantId => (porComercio[merchantId] || [])
+    .filter(p => cart[p.id] > 0)
+    .map(p => ({ id: p.id, nombre: p.name, precio: +p.price, cantidad: cart[p.id] }));
+
+  const pagar = async (merchantId) => {
+    const items = itemsPorComercio(merchantId);
+    if (!items.length) return;
+    setPagando(true); setResultado(null);
+    try {
+      const r = await crearPedidoEvento({ worldId, eventId, merchantId, beneficiarioId: userId, beneficiarioNombre: nombreTitular, items });
+      if (r.ok) {
+        setResultado({ ok: true, mensaje: `Pedido pagado — retíralo en el stand de ${nombrePorComercio[merchantId] || "el comercio"}.` });
+        setCart(c => { const n = { ...c }; items.forEach(it => delete n[it.id]); return n; });
+        cargar();
+      } else if (r.motivo === "stock") {
+        setResultado({ ok: false, mensaje: `"${r.producto}" solo tiene ${r.stockDisponible} disponible(s) — ajusta la cantidad.` });
+      } else {
+        const err = await errorControlado("saldo_insuficiente");
+        logErrorControlado("saldo_insuficiente", `precompra-evento:${merchantId}`, worldId);
+        setResultado({ ok: false, mensaje: `${err.mensaje} Saldo actual: S/ ${(r.balance ?? 0).toFixed(2)}.` });
+      }
+    } catch (e) {
+      const err = await mensajeDeError(e, "operacion_no_completada");
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+    } finally { setPagando(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-full sm:max-w-md max-h-[85vh] bg-white rounded-t-3xl sm:rounded-3xl overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white px-5 pt-5 pb-3 border-b border-[#CDD1E4] flex items-center justify-between">
+          <div>
+            <p className="font-black text-[#1C1C1E]">Precompra del evento</p>
+            <p className="text-xs text-[#404255]">{ticket.events?.titulo || "Evento"} — paga ahora, retira en el stand</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full bg-[#EEF2FD] tap-active"><Icon name="close" size="text-lg" color="text-[#404255]"/></button>
+        </div>
+        <div className="p-5 space-y-5">
+          {misPedidos && misPedidos.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="font-mono text-[9px] uppercase text-[#404255]">Tus pedidos</p>
+              {misPedidos.map(p => (
+                <div key={p.id} className="flex justify-between items-center px-3 py-2 bg-[#EEF2FD] rounded-xl text-xs">
+                  <span className="text-[#404255]">{(p.items || []).map(it => `${it.cantidad}× ${it.nombre}`).join(", ")}</span>
+                  <span className={`font-bold ${p.estado === "ENTREGADA" ? "text-green-600" : "text-[#1A3270]"}`}>
+                    {p.estado === "ENTREGADA" ? "Retirado" : "Por retirar"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {resultado && (
+            <div className={`px-3 py-2.5 rounded-xl text-xs font-semibold ${resultado.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+              {resultado.mensaje}
+            </div>
+          )}
+          {productos === null ? (
+            <div className="py-8 flex flex-col items-center gap-2">
+              <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+              <p className="text-xs text-[#404255]">Cargando productos…</p>
+            </div>
+          ) : productos.length === 0 ? (
+            <EmptyState icon="shopping_bag" title="Sin precompra" subtitle="Ningún comercio de este evento cargó productos para precompra todavía."/>
+          ) : Object.entries(porComercio).map(([merchantId, prods]) => (
+            <div key={merchantId} className="space-y-2">
+              <p className="font-bold text-sm text-[#1C1C1E]">{nombrePorComercio[merchantId] || "Comercio"}</p>
+              {prods.map(p => {
+                const agotado = p.stock !== null && p.stock <= 0;
+                const qty = cart[p.id] || 0;
+                return (
+                  <div key={p.id} className="flex items-center justify-between gap-2 bg-[#F2F2F7] rounded-xl px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#1C1C1E] truncate">{p.name}</p>
+                      <p className="text-xs text-[#404255]">S/ {Number(p.price).toFixed(2)}{agotado ? " · Agotado" : p.stock !== null ? ` · Quedan ${p.stock}` : ""}</p>
+                    </div>
+                    {agotado ? (
+                      <span className="text-[10px] font-bold text-red-500">Agotado</span>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={() => setQty(p.id, qty - 1)} disabled={qty === 0}
+                          className="w-7 h-7 rounded-full bg-white border border-[#CDD1E4] flex items-center justify-center disabled:opacity-30 tap-active">−</button>
+                        <span className="w-5 text-center text-sm font-bold">{qty}</span>
+                        <button onClick={() => setQty(p.id, Math.min(qty + 1, p.stock ?? Infinity))}
+                          className="w-7 h-7 rounded-full bg-[#1A3270] text-white flex items-center justify-center tap-active">+</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {itemsPorComercio(merchantId).length > 0 && (
+                <button onClick={() => pagar(merchantId)} disabled={pagando}
+                  className="w-full py-2.5 rounded-xl bg-[#1A3270] text-white font-bold text-sm tap-active disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  {pagando ? "Pagando…" : `Pagar S/ ${itemsPorComercio(merchantId).reduce((a, it) => a + it.precio * it.cantidad, 0).toFixed(2)}`}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -3332,7 +3479,7 @@ function EventosTemplate({ cfg, u }) {
         ))}
       </div>
 
-      {tab === "mis_entradas" && <MisEntradasList mundo={cfg.mundo} refreshKey={reloadKey}/>}
+      {tab === "mis_entradas" && <MisEntradasList mundo={cfg.mundo} refreshKey={reloadKey} nombreTitular={u?.auth?.nombre || "Yo"}/>}
 
       {tab === "mis_eventos" && <MisEventosCreadosList worldId={worldId} refreshKey={reloadKey}/>}
 

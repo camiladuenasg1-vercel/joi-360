@@ -1134,6 +1134,35 @@ export async function fetchCashbackBalance(userId, worldId) {
   return +(wallet.cashback_balance || 0);
 }
 
+// ── Precompra de evento (Backlog #2, Documento Maestro) — el asistente ya
+// compró su entrada y quiere reservar/pagar productos de los comercios del
+// evento para retirar en el stand. La autoría (comercio carga producto +
+// stock con event_id real) es de Task #231; esto es el lado del asistente:
+// paga ahora con la misma RPC de siempre (comprarProductosLive ya valida y
+// decrementa stock), event_product_orders es solo el pendiente de retiro,
+// mismo rol que menu_reservas para Menú.
+export async function fetchProductosEventoLive(eventId) {
+  return rest(`products?event_id=eq.${eventId}&select=*&order=created_at`);
+}
+export async function fetchMisPedidosEvento(userId, eventId) {
+  return rest(`event_product_orders?beneficiario_user_id=eq.${userId}&event_id=eq.${eventId}&select=*&order=created_at.desc`);
+}
+export async function crearPedidoEvento({ worldId, eventId, merchantId, beneficiarioId, beneficiarioNombre, items }) {
+  const monto = items.reduce((a, it) => a + (+it.precio) * it.cantidad, 0);
+  const cart = items.map(it => ({ product: { id: it.id, name: it.nombre, price: it.precio }, qty: it.cantidad }));
+  const r = await comprarProductosLive(beneficiarioId, worldId, merchantId, cart);
+  if (!r.ok) return r;
+  await rest("event_product_orders", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      world_id: worldId, event_id: eventId, merchant_id: merchantId,
+      beneficiario_user_id: beneficiarioId, beneficiario_nombre: beneficiarioNombre,
+      items, monto, estado: "CONFIRMADA",
+    }),
+  });
+  return { ok: true, total: r.total };
+}
+
 const TIPO_LABEL = { recarga: "Recarga", compra: "Pago", transferencia_p2p: "Transferencia", devolucion: "Devolución", cashback: "Cashback", puntos: "Puntos" };
 
 // Auditoría Task #133: el mundo podía fijar "Máximo por transacción"/

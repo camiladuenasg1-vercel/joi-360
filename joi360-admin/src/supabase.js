@@ -1109,6 +1109,19 @@ export async function marcarMenuReservaEntregadaRemote(id) {
   });
 }
 
+// ── Precompra de evento — lado del comercio (Backlog #2, Documento Maestro).
+// El cobro ya ocurrió en la app (crearPedidoEvento -> mover_saldo_wallet);
+// esto es la entrega física en el stand, mismo patrón que Menú.
+export async function fetchPedidosEventoMerchant(merchantId) {
+  return rest(`event_product_orders?merchant_id=eq.${merchantId}&select=*&order=created_at.desc`);
+}
+export async function marcarPedidoEventoEntregadoRemote(id) {
+  await rest(`event_product_orders?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "ENTREGADA", entregado_at: new Date().toISOString() }),
+  });
+}
+
 // ── Promociones — cupón QR (Gantt #38-#41, Backlog Capítulo 2) ─────────────
 // Alcance mínimo viable confirmado por la usuaria 28-jul: antes TabPromos
 // (MundoDetail.jsx) y PromocionesTemplate (app) eran 100% mock local

@@ -17,6 +17,7 @@ import {
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
   buscarNfcBandPorCodigo, vincularNfcBandRemote, fetchBandaActivaDeUsuarioRemote,
   fetchReservasMenuMerchant, marcarMenuReservaEntregadaRemote,
+  fetchPedidosEventoMerchant, marcarPedidoEventoEntregadoRemote,
   fetchTurnoAbiertoRemote, iniciarTurnoRemote, cerrarTurnoRemote,
   verificarPinOperadorRemote,
 } from "./supabase.js";
@@ -114,6 +115,9 @@ const GRUPOS_MODOS = [
   { titulo: "Menú", items: [
     { id: "menu", nombre: "Entregar Menú", icon: "restaurant", desc: "Validar por DNI o ver todas las reservas de hoy, ya pagadas." },
   ]},
+  { titulo: "Eventos", items: [
+    { id: "precompra_evento", nombre: "Entregar Precompra", icon: "shopping_bag", desc: "Pedidos ya pagados en la app, pendientes de retiro en el stand." },
+  ]},
 ];
 const MODOS = GRUPOS_MODOS.flatMap(g => g.items);
 
@@ -122,6 +126,7 @@ function OperadorShell({ comercio, m }) {
   const bnplOn = !!bnplLimitesDelMundo(m);
   const accesosOn = (m?.modulos || []).some(x => x.id === "accesos" && x.enabled);
   const menuOn = (m?.modulos || []).some(x => x.id === "menu" && x.enabled);
+  const eventosOn = (m?.modulos || []).some(x => x.id === "eventos" && x.enabled);
   const walletMod = (m?.modulos || []).find(x => x.id === "wallet" && x.enabled);
   // usaPulseraNfc por defecto true: mundos configurados antes de este campo
   // siguen viendo el tile, igual que ya asumía el backend del POS nativo.
@@ -151,6 +156,7 @@ function OperadorShell({ comercio, m }) {
     if (md.id === "bnpl") return bnplOn;
     if (md.id === "accesos") return accesosOn;
     if (md.id === "menu") return menuOn;
+    if (md.id === "precompra_evento") return eventosOn;
     if (md.id === "bandita") return banditaOn;
     if (md.id === "ficha") return fichaOn;
     return true;
@@ -209,6 +215,7 @@ function OperadorShell({ comercio, m }) {
         {modo === "accesos" && <AccesosOperador comercio={comercio} m={m} />}
         {modo === "bandita" && <VincularBanditaOperador comercio={comercio} m={m} />}
         {modo === "menu" && <EntregarMenuOperador comercio={comercio} m={m} />}
+        {modo === "precompra_evento" && <EntregarPrecompraEventoOperador comercio={comercio} m={m} />}
         {modo === "ficha" && <ConsultarFichaOperador comercio={comercio} m={m} />}
         {modo === "reserva" && <ReservaProximamente />}
       </div>
@@ -1018,6 +1025,80 @@ export function EntregarMenuOperador({ comercio, m }) {
             {entregadas.map(r => (
               <div key={r.id} className="flex justify-between items-center px-3 py-2 bg-surface-container-lowest/60 rounded-lg text-xs">
                 <span className="truncate">{r.beneficiario_nombre || "Usuario"}</span>
+                <span className="text-ok font-bold flex items-center gap-1"><Icon n="check_circle" className="text-[14px]" /> Entregado</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Entregar Precompra de Evento — mismo patrón que Entregar Menú: el cobro
+// ya ocurrió en la app (crearPedidoEvento -> mover_saldo_wallet al confirmar
+// el pedido), esto es la entrega física en el stand del evento. No filtra
+// por fecha (a diferencia de Menú, un pedido de precompra vive hasta que se
+// retira, sin importar cuántos días falten para el evento).
+export function EntregarPrecompraEventoOperador({ comercio }) {
+  const merchantId = comercio.supabaseId || comercio.id;
+  const [pedidos, setPedidos] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const cargar = () => fetchPedidosEventoMerchant(merchantId).then(setPedidos).catch(() => setPedidos([]));
+  React.useEffect(() => { cargar(); }, [merchantId]);
+
+  const entregar = async (p) => {
+    setBusyId(p.id);
+    try {
+      await marcarPedidoEventoEntregadoRemote(p.id);
+      notify(`Pedido de ${p.beneficiario_nombre || "usuario"} marcado como entregado.`);
+      cargar();
+    } catch {
+      notify("No se pudo marcar como entregado. Intenta de nuevo.", "error");
+    } finally { setBusyId(null); }
+  };
+
+  if (pedidos === null) return <p className="text-sm text-on-surface-variant py-8 text-center">Cargando pedidos…</p>;
+
+  const pendientes = pedidos.filter(p => p.estado === "CONFIRMADA");
+  const entregados = pedidos.filter(p => p.estado === "ENTREGADA");
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="font-mono text-[10px] uppercase text-outline mb-2">Por entregar ({pendientes.length})</p>
+        {pendientes.length === 0 ? (
+          <div className="text-center py-10 border-2 border-dashed border-outline-variant rounded-xl">
+            <Icon n="shopping_bag" className="text-[36px] text-outline mb-2 block mx-auto" />
+            <p className="text-sm text-on-surface-variant">Sin pedidos de precompra pendientes de retiro.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pendientes.map(p => (
+              <div key={p.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm truncate">{p.beneficiario_nombre || "Usuario"}</p>
+                    <p className="text-xs text-on-surface-variant">{(p.items || []).map(it => `${it.cantidad}× ${it.nombre}`).join(", ")}</p>
+                  </div>
+                  <p className="font-mono text-xs font-bold flex-shrink-0">S/ {Number(p.monto).toFixed(2)}</p>
+                </div>
+                <BtnPrimary onClick={() => entregar(p)} disabled={busyId === p.id} className="w-full mt-2 !py-1.5 !text-xs">
+                  <Icon n="check_circle" className="text-[16px]" /> {busyId === p.id ? "Marcando…" : "Marcar entregado"}
+                </BtnPrimary>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {entregados.length > 0 && (
+        <div>
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Ya entregados ({entregados.length})</p>
+          <div className="space-y-1.5">
+            {entregados.map(p => (
+              <div key={p.id} className="flex justify-between items-center px-3 py-2 bg-surface-container-lowest/60 rounded-lg text-xs">
+                <span className="truncate">{p.beneficiario_nombre || "Usuario"}</span>
                 <span className="text-ok font-bold flex items-center gap-1"><Icon n="check_circle" className="text-[14px]" /> Entregado</span>
               </div>
             ))}
