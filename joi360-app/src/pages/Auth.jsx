@@ -130,7 +130,7 @@ export default function AuthPage() {
       <div className="flex rounded-2xl p-1 mb-6 gap-1" style={{ background: "rgba(0,0,0,0.25)" }}>
         {["login", "register"].map(m => (
           <button key={m} onClick={() => { setMode(m); setErr(""); }}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mode === m ? "bg-white text-[#3525cd] shadow-sm" : "text-white/50 hover:text-white/70"}`}>
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mode === m ? "bg-white text-[#1A3270] shadow-sm" : "text-white/50 hover:text-white/70"}`}>
             {m === "login" ? "Iniciar sesión" : "Registrarme"}
           </button>
         ))}
@@ -153,7 +153,7 @@ export default function AuthPage() {
                   className="w-full rounded-2xl px-3 py-3.5 text-white text-sm outline-none appearance-none"
                   style={campo}>
                   {TIPOS_DOCUMENTO.map(t => (
-                    <option key={t.id} value={t.id} className="text-[#1b1b24]">{t.label}</option>
+                    <option key={t.id} value={t.id} className="text-[#1C1C1E]">{t.label}</option>
                   ))}
                 </select>
                 <input
@@ -226,8 +226,8 @@ export default function AuthPage() {
               <span
                 className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center transition-all mt-px"
                 style={{
-                  background: terminos ? "#3525cd" : "rgba(255,255,255,0.10)",
-                  border: `1.5px solid ${terminos ? "#3525cd" : "rgba(255,255,255,0.25)"}`,
+                  background: terminos ? "#1A3270" : "rgba(255,255,255,0.10)",
+                  border: `1.5px solid ${terminos ? "#1A3270" : "rgba(255,255,255,0.25)"}`,
                 }}>
                 {terminos && <span className="material-symbols-outlined text-white text-[15px] leading-none">check</span>}
               </span>
@@ -243,8 +243,8 @@ export default function AuthPage() {
         <button type="submit" disabled={cargando || !(mode === "login" ? loginListo : registroListo)}
           className="w-full rounded-2xl py-4 font-black text-base text-white transition-all mt-1 tap-active disabled:opacity-40"
           style={{
-            background: "linear-gradient(135deg,#3525cd,#4f46e5)",
-            boxShadow: "0 8px 24px rgba(53,37,205,0.45)",
+            background: "linear-gradient(135deg,#1A3270,#3B5BDB)",
+            boxShadow: "0 8px 24px rgba(26,50,112,0.45)",
           }}>
           {cargando ? "Un momento…" : mode === "login" ? "Entrar al ecosistema →" : "Crear cuenta →"}
         </button>
@@ -325,7 +325,7 @@ function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
     <Marco>
       <div className="text-center">
         <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
-          style={{ background: "rgba(53,37,205,0.35)", border: "1px solid rgba(255,255,255,0.15)" }}>
+          style={{ background: "rgba(26,50,112,0.35)", border: "1px solid rgba(255,255,255,0.15)" }}>
           <span className="material-symbols-outlined text-white text-[30px]">mark_email_unread</span>
         </div>
         <h2 className="text-white text-xl font-black tracking-tight mb-2.5">Confirma tu correo</h2>
@@ -341,7 +341,7 @@ function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
 
         <button onClick={revisar}
           className="w-full rounded-2xl py-4 font-black text-base text-white transition-all tap-active"
-          style={{ background: "linear-gradient(135deg,#3525cd,#4f46e5)", boxShadow: "0 8px 24px rgba(53,37,205,0.45)" }}>
+          style={{ background: "linear-gradient(135deg,#1A3270,#3B5BDB)", boxShadow: "0 8px 24px rgba(26,50,112,0.45)" }}>
           Ya confirmé mi correo
         </button>
 
@@ -364,12 +364,12 @@ function Marco({ children }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f1530] via-[#151d3b] to-[#0a0f26] flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#3525cd]/15 blur-[80px]" />
-        <div className="absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#3525cd]/10 blur-[80px]" />
+        <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#1A3270]/15 blur-[80px]" />
+        <div className="absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#1A3270]/10 blur-[80px]" />
       </div>
       <div className="w-full max-w-[390px] relative z-10">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-3xl bg-[#3525cd] mx-auto mb-4 flex items-center justify-center shadow-xl aura-primary">
+          <div className="w-16 h-16 rounded-3xl bg-[#1A3270] mx-auto mb-4 flex items-center justify-center shadow-xl aura-primary">
             <span className="text-white font-black text-xl tracking-tighter">JOI</span>
           </div>
           <h1 className="text-white text-3xl font-black tracking-tight">JOI 360</h1>

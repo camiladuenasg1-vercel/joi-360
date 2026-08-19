@@ -57,23 +57,23 @@ export default function ActivityPage() {
   const entradas = filtered.filter(t=>t.monto>0).reduce((a,t)=>a+t.monto,0);
 
   const TX_ICON = { PAGO:"shopping_bag", RECARGA:"add_card", ASISTENCIA:"how_to_reg", BENEFICIO:"stars" };
-  const TX_COLOR = { PAGO:"bg-[#fce4ec] text-[#c2185b]", RECARGA:"bg-green-50 text-green-600", ASISTENCIA:"bg-[#e8f5e9] text-[#388e3c]", BENEFICIO:"bg-amber-50 text-amber-600" };
+  const TX_COLOR = { PAGO:"bg-[#FBE7E9] text-[#E8394B]", RECARGA:"bg-green-50 text-green-600", ASISTENCIA:"bg-[#E6F7F1] text-[#0BA878]", BENEFICIO:"bg-amber-50 text-amber-600" };
 
   return (
     <div className="min-h-screen aura-bg pb-32">
       <div className="max-w-[430px] mx-auto">
         {/* Header */}
         <div className="px-5 pt-12 pb-4">
-          <h1 className="text-3xl font-black text-[#1b1b24]">Actividad</h1>
-          <p className="text-[#777587] text-sm mt-1">Todo lo que recargas, pagas y usas</p>
+          <h1 className="text-3xl font-black text-[#1C1C1E]">Actividad</h1>
+          <p className="text-[#8A8FA8] text-sm mt-1">Todo lo que recargas, pagas y usas</p>
           {/* Summary chips */}
           <div className="flex gap-3 mt-4">
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
-              <p className="text-[#777587] text-[10px] font-semibold uppercase">Gastado</p>
+              <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Gastado</p>
               <p className="text-red-500 font-black text-lg">- S/ {gastos.toFixed(2)}</p>
             </div>
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
-              <p className="text-[#777587] text-[10px] font-semibold uppercase">Ingresado</p>
+              <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Ingresado</p>
               <p className="text-green-600 font-black text-lg">+ S/ {entradas.toFixed(2)}</p>
             </div>
           </div>
@@ -82,9 +82,9 @@ export default function ActivityPage() {
         {/* Filtro por mundo */}
         {memberships.length > 1 && (
           <div className="flex gap-2 overflow-x-auto scrollbar-hide px-5 mb-3">
-            <button onClick={()=>setFilterMundo(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${!filterMundo?"border-[#3525cd] bg-[#3525cd]/5 text-[#3525cd]":"border-[#e4e1ee] text-[#777587]"}`}>Todos</button>
+            <button onClick={()=>setFilterMundo(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${!filterMundo?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#8A8FA8]"}`}>Todos</button>
             {memberships.map(m=>(
-              <button key={m.id} onClick={()=>setFilterMundo(m.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${filterMundo===m.id?"border-[#3525cd] bg-[#3525cd]/5 text-[#3525cd]":"border-[#e4e1ee] text-[#777587]"}`}>{m.nombre}</button>
+              <button key={m.id} onClick={()=>setFilterMundo(m.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${filterMundo===m.id?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#8A8FA8]"}`}>{m.nombre}</button>
             ))}
           </div>
         )}
@@ -94,7 +94,7 @@ export default function ActivityPage() {
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {TYPES.map(t=>(
               <button key={t} onClick={()=>setTab(t)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${tab===t?"bg-[#3525cd] text-white aura-primary-sm":"glass-card text-[#464555]"}`}>{t}</button>
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${tab===t?"bg-[#1A3270] text-white aura-primary-sm":"glass-card text-[#404255]"}`}>{t}</button>
             ))}
           </div>
         </div>
@@ -103,32 +103,32 @@ export default function ActivityPage() {
         <div className="px-5 space-y-6">
           {Object.keys(grouped).length === 0 && (
             <div className="text-center py-12 glass-card rounded-3xl">
-              <span className="material-symbols-outlined text-4xl text-[#c7c4d8] block mb-2">receipt_long</span>
-              <p className="text-[#464555] text-sm font-semibold">Sin movimientos</p>
+              <span className="material-symbols-outlined text-4xl text-[#CDD1E4] block mb-2">receipt_long</span>
+              <p className="text-[#404255] text-sm font-semibold">Sin movimientos</p>
             </div>
           )}
           {Object.entries(grouped).map(([date, txs]) => (
             <div key={date}>
-              <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest mb-3">{date}</p>
-              <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#e4e1ee]/50">
+              <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-3">{date}</p>
+              <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#CDD1E4]/50">
                 {txs.map(t => {
                   const m = (st.mundos||[]).find(x=>x.id===t.mundoId);
                   const ic = TX_ICON[t.tipo] || "receipt";
-                  const cl = TX_COLOR[t.tipo] || "bg-[#f0ecf9] text-[#3525cd]";
+                  const cl = TX_COLOR[t.tipo] || "bg-[#EEF2FD] text-[#1A3270]";
                   return (
                     <div key={t.id} className="flex items-center gap-3 px-4 py-3.5">
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${cl}`}>
                         <span className="material-symbols-outlined fill text-base">{ic}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="text-[#1b1b24] text-sm font-semibold">{t.titulo}</p>
+                        <p className="text-[#1C1C1E] text-sm font-semibold">{t.titulo}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          {m && <span className="text-[9px] font-bold bg-[#e2dfff] text-[#3525cd] px-1.5 py-0.5 rounded">{m.nombre}</span>}
-                          <span className="text-[#777587] text-[11px]">{new Date(t.fecha).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>
+                          {m && <span className="text-[9px] font-bold bg-[#DCE4FA] text-[#1A3270] px-1.5 py-0.5 rounded">{m.nombre}</span>}
+                          <span className="text-[#8A8FA8] text-[11px]">{new Date(t.fecha).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>
                         </div>
                       </div>
                       {t.monto !== 0 && (
-                        <p className={`font-black text-sm ${t.monto>0?"text-green-600":"text-[#1b1b24]"}`}>
+                        <p className={`font-black text-sm ${t.monto>0?"text-green-600":"text-[#1C1C1E]"}`}>
                           {t.monto>0?"+":""}S/ {Math.abs(t.monto).toFixed(2)}
                         </p>
                       )}

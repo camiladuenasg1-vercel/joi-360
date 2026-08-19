@@ -22,10 +22,10 @@ export default function BottomNav({ badge = 0 }) {
           if (t.cta) return (
             <button key={t.k} onClick={() => nav(t.path)}
               className="flex flex-col items-center justify-center relative -top-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#3525cd] flex items-center justify-center aura-primary">
+              <div className="w-14 h-14 rounded-2xl bg-[#1A3270] flex items-center justify-center aura-primary">
                 <span className="material-symbols-outlined fill text-white text-2xl">{t.icon}</span>
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-tight text-[#464555]/60 mt-1">{t.label}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight text-[#404255]/60 mt-1">{t.label}</span>
             </button>
           );
           return (
@@ -34,9 +34,9 @@ export default function BottomNav({ badge = 0 }) {
               {t.k === "activity" && badge > 0 && (
                 <span className="absolute -top-0.5 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full z-10">{badge}</span>
               )}
-              <span className={`material-symbols-outlined text-2xl transition-colors ${isActive ? "fill text-[#3525cd]" : "text-[#777587]"}`}
+              <span className={`material-symbols-outlined text-2xl transition-colors ${isActive ? "fill text-[#1A3270]" : "text-[#8A8FA8]"}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{t.icon}</span>
-              <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 transition-colors ${isActive ? "text-[#3525cd]" : "text-[#777587]"}`}>{t.label}</span>
+              <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 transition-colors ${isActive ? "text-[#1A3270]" : "text-[#8A8FA8]"}`}>{t.label}</span>
             </button>
           );
         })}

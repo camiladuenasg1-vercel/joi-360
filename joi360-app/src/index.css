@@ -9,8 +9,8 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #fcf8ff;
-  color: #1b1b24;
+  background-color: #F2F2F7;
+  color: #1C1C1E;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
@@ -49,25 +49,25 @@ body {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: 0 8px 32px -4px rgba(53,37,205,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 8px 32px -4px rgba(26,50,112,0.08), 0 2px 8px rgba(0,0,0,0.04);
 }
 
 /* World card dark style */
 .world-card-dark {
-  background: linear-gradient(135deg, #1e2340 0%, #151929 100%);
+  background: linear-gradient(135deg, #0D1A45 0%, #0A1230 100%);
   box-shadow: 0 20px 50px -10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .world-card-active {
-  background: linear-gradient(135deg, #1e2340 0%, #151929 100%);
+  background: linear-gradient(135deg, #0D1A45 0%, #0A1230 100%);
 }
 
 /* Aura background for Hub */
 .aura-bg {
   background: 
-    radial-gradient(circle at 0% 0%, rgba(53,37,205,0.04) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(53,37,205,0.03) 0%, transparent 50%),
-    #fcf8ff;
+    radial-gradient(circle at 0% 0%, rgba(26,50,112,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(26,50,112,0.03) 0%, transparent 50%),
+    #F2F2F7;
 }
 
 /* Scrollbar hide */
@@ -81,5 +81,5 @@ body {
 .card-perspective { perspective: 1000px; transform-style: preserve-3d; }
 
 /* Aura shadow for primary */
-.aura-primary { box-shadow: 0 8px 24px -4px rgba(53,37,205,0.25); }
-.aura-primary-sm { box-shadow: 0 4px 12px -2px rgba(53,37,205,0.20); }
+.aura-primary { box-shadow: 0 8px 24px -4px rgba(26,50,112,0.25); }
+.aura-primary-sm { box-shadow: 0 4px 12px -2px rgba(26,50,112,0.20); }

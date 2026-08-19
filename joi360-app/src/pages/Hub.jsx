@@ -35,12 +35,12 @@ function MenuHoyWidget({ mundoId, nav }) {
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Hoy te toca</p>
           {deHoy.map((r, i) => (
-            <p key={r.id} className="text-sm font-bold text-[#1b1b24] truncate">
+            <p key={r.id} className="text-sm font-bold text-[#1C1C1E] truncate">
               {r.beneficiario_nombre} · {(r.items || []).map(it => it.nombre).join(", ")}
             </p>
           ))}
         </div>
-        <span className="material-symbols-outlined text-[#777587]">chevron_right</span>
+        <span className="material-symbols-outlined text-[#8A8FA8]">chevron_right</span>
       </button>
     </div>
   );
@@ -66,15 +66,15 @@ function EventosMundoWidget({ mundoId, mundo, nav }) {
   return (
     <div className="px-5 mb-5">
       <div className="flex justify-between items-center mb-3">
-        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest">Eventos</p>
-        <button onClick={() => nav("/module/eventos")} className="text-[11px] font-bold text-[#3525cd]">Ver más →</button>
+        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Eventos</p>
+        <button onClick={() => nav("/module/eventos")} className="text-[11px] font-bold text-[#1A3270]">Ver más →</button>
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
         {top5.map(ev => (
           <button key={ev.id} onClick={() => nav(`/module/eventos?evento=${ev.id}`)}
-            className="flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-white border border-[#e4e1ee] text-left tap-active">
+            className="flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-white border border-[#CDD1E4] text-left tap-active">
             <div className="h-20 relative" style={{
-              background: ev.imagen_url ? `url(${ev.imagen_url}) center/cover` : `linear-gradient(135deg,${mundo.color || "#3525cd"},#4f46e5)`,
+              background: ev.imagen_url ? `url(${ev.imagen_url}) center/cover` : `linear-gradient(135deg,${mundo.color || "#1A3270"},#3B5BDB)`,
             }}>
               {!ev.imagen_url && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -83,8 +83,8 @@ function EventosMundoWidget({ mundoId, mundo, nav }) {
               )}
             </div>
             <div className="p-2.5">
-              <p className="text-xs font-black text-[#1b1b24] leading-tight line-clamp-2">{ev.titulo}</p>
-              <p className="text-[10px] font-semibold mt-1" style={{ color: mundo.color || "#3525cd" }}>{ev.fecha}</p>
+              <p className="text-xs font-black text-[#1C1C1E] leading-tight line-clamp-2">{ev.titulo}</p>
+              <p className="text-[10px] font-semibold mt-1" style={{ color: mundo.color || "#1A3270" }}>{ev.fecha}</p>
             </div>
           </button>
         ))}
@@ -107,28 +107,28 @@ function MiCodigoWidget({ mundoId, verSaldo }) {
     <>
       <div className="px-5 mb-5">
         <button onClick={() => setAbierto(true)} className="w-full glass-card rounded-2xl p-4 flex items-center gap-3 tap-active text-left">
-          <div className="w-11 h-11 rounded-full bg-[#e2dfff] flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined fill text-[#3525cd] text-xl">qr_code_2</span>
+          <div className="w-11 h-11 rounded-full bg-[#DCE4FA] flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined fill text-[#1A3270] text-xl">qr_code_2</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-[#1b1b24]">Mi código</p>
-            <p className="text-[11px] text-[#777587]">{verSaldo ? "Para pagos y accesos en este mundo" : "Para accesos en este mundo"}</p>
+            <p className="text-sm font-bold text-[#1C1C1E]">Mi código</p>
+            <p className="text-[11px] text-[#8A8FA8]">{verSaldo ? "Para pagos y accesos en este mundo" : "Para accesos en este mundo"}</p>
           </div>
-          <span className="material-symbols-outlined text-[#777587]">chevron_right</span>
+          <span className="material-symbols-outlined text-[#8A8FA8]">chevron_right</span>
         </button>
       </div>
       {abierto && (
         <div className="fixed inset-0 z-[300] flex flex-col justify-end items-center" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }} onClick={() => setAbierto(false)}>
           <div className="w-full max-w-[430px] bg-white rounded-t-[28px]" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#e4e1ee]" /></div>
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#CDD1E4]" /></div>
             <div className="px-6 pb-10 pt-3 text-center">
-              <div className="w-44 h-44 mx-auto rounded-2xl bg-white border-2 border-[#e4e1ee] mb-3 flex items-center justify-center overflow-hidden">
+              <div className="w-44 h-44 mx-auto rounded-2xl bg-white border-2 border-[#CDD1E4] mb-3 flex items-center justify-center overflow-hidden">
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${encodeURIComponent(myCode)}`}
                   alt="Mi código QR" className="w-full h-full object-contain p-2" />
               </div>
-              <p className="font-black text-[#1b1b24]">Muestra este código</p>
-              <p className="text-xs text-[#777587] mt-0.5">{verSaldo ? "El comercio lo escanea para cobrarte o para registrar tu acceso." : "Se usa para registrar tu acceso en este mundo."}</p>
-              <button onClick={() => setAbierto(false)} className="w-full mt-6 py-3.5 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active">Listo</button>
+              <p className="font-black text-[#1C1C1E]">Muestra este código</p>
+              <p className="text-xs text-[#8A8FA8] mt-0.5">{verSaldo ? "El comercio lo escanea para cobrarte o para registrar tu acceso." : "Se usa para registrar tu acceso en este mundo."}</p>
+              <button onClick={() => setAbierto(false)} className="w-full mt-6 py-3.5 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active">Listo</button>
             </div>
           </div>
         </div>
@@ -145,7 +145,7 @@ function ModuleBtn({ id, onClick }) {
       <div className={`w-16 h-16 rounded-2xl ${m.bg} flex items-center justify-center glass-card tap-active group-hover:scale-105 transition-all`}>
         <span className={`material-symbols-outlined ${m.color} text-3xl`}>{m.icon}</span>
       </div>
-      <span className="text-[10px] font-semibold text-[#464555] text-center leading-tight max-w-[64px]">{m.label}</span>
+      <span className="text-[10px] font-semibold text-[#404255] text-center leading-tight max-w-[64px]">{m.label}</span>
     </button>
   );
 }
@@ -185,10 +185,10 @@ export default function HubPage() {
   // ── Acciones rápidas: UNA entrada por acción, solo si el mundo la tiene.
   // "Pagar" NO va aquí: su única entrada es el CTA central del BottomNav.
   const acciones = [];
-  if (puedeRecargar) acciones.push({ k:"recargar", label:"Recargar", sub:"Añadir saldo", icon:"add_card",     path:"/pay?tab=recargar", bg:"rgba(224,247,250,0.7)", fg:"#006064" });
+  if (puedeRecargar) acciones.push({ k:"recargar", label:"Recargar", sub:"Añadir saldo", icon:"add_card",     path:"/pay?tab=recargar", bg:"rgba(224,247,250,0.7)", fg:"#2E7FD9" });
   if (tieneBandita)  acciones.push({ k:"nfc",      label:"Bandita NFC", sub:"Paga con tu pulsera", icon:"contactless", path:"/pay?tab=nfc", bg:"rgba(237,231,246,0.7)", fg:"#311b92" });
-  if (hasControl)    acciones.push({ k:"familia",  label:"Familia", sub:"Perfiles y límites", icon:"groups",     path:"/module/control",     bg:"rgba(241,248,233,0.8)", fg:"#33691e" });
-  if (wc.activo("promociones")) acciones.push({ k:"promos", label:"Promos", sub:"Ofertas del mundo", icon:"local_offer", path:"/module/promociones", bg:"rgba(255,243,224,0.8)", fg:"#e65100" });
+  if (hasControl)    acciones.push({ k:"familia",  label:"Familia", sub:"Perfiles y límites", icon:"groups",     path:"/module/control",     bg:"rgba(241,248,233,0.8)", fg:"#0BA878" });
+  if (wc.activo("promociones")) acciones.push({ k:"promos", label:"Promos", sub:"Ofertas del mundo", icon:"local_offer", path:"/module/promociones", bg:"rgba(255,243,224,0.8)", fg:"#E06B00" });
   // Directorio de comercios en vivo (tabla merchants — alta en admin → aparece aquí)
   const comercios = useMerchantsLive(activeMundo?.id);
   const txs = historial.slice(0, 3);
@@ -196,9 +196,9 @@ export default function HubPage() {
 
   if (!activeMundo) return (
     <div className="min-h-screen aura-bg flex flex-col items-center justify-center gap-4 p-8">
-      <span className="material-symbols-outlined text-5xl text-[#c7c4d8]">public_off</span>
-      <p className="text-[#464555] text-center">Aún no perteneces a ninguna comunidad.</p>
-      <button onClick={() => nav("/landing")} className="bg-[#3525cd] text-white px-6 py-3 rounded-2xl font-bold text-sm aura-primary">
+      <span className="material-symbols-outlined text-5xl text-[#CDD1E4]">public_off</span>
+      <p className="text-[#404255] text-center">Aún no perteneces a ninguna comunidad.</p>
+      <button onClick={() => nav("/landing")} className="bg-[#1A3270] text-white px-6 py-3 rounded-2xl font-bold text-sm aura-primary">
         Explorar comunidades →
       </button>
     </div>
@@ -212,11 +212,11 @@ export default function HubPage() {
           <div className="flex justify-between items-start">
             {/* Left: greeting */}
             <div>
-              <h1 className="text-[26px] font-black text-[#1b1b24] tracking-tight leading-tight">
+              <h1 className="text-[26px] font-black text-[#1C1C1E] tracking-tight leading-tight">
                 {new Date().getHours() < 12 ? "Buenos días," : new Date().getHours() < 18 ? "Buenas tardes," : "Buenas noches,"}
                 <br />{nombre.split(" ")[0]}
               </h1>
-              <p className="text-[#777587] text-sm mt-0.5">{activeMundo.nombre}</p>
+              <p className="text-[#8A8FA8] text-sm mt-0.5">{activeMundo.nombre}</p>
             </div>
 
             {/* Right icons — order: Avatar → Globe → Bell (Image 2) */}
@@ -231,12 +231,12 @@ export default function HubPage() {
               {/* Globe — switch mundo */}
               <button onClick={() => nav("/mundos")}
                 className="w-10 h-10 glass-card rounded-full flex items-center justify-center tap-active">
-                <span className="material-symbols-outlined text-[#464555] text-xl">public</span>
+                <span className="material-symbols-outlined text-[#404255] text-xl">public</span>
               </button>
 
               {/* Bell — sin centro de notificaciones real todavía; sin badge fijo/inventado */}
               <button className="w-10 h-10 glass-card rounded-full flex items-center justify-center relative tap-active">
-                <span className="material-symbols-outlined fill text-[#464555] text-xl">notifications</span>
+                <span className="material-symbols-outlined fill text-[#404255] text-xl">notifications</span>
               </button>
             </div>
           </div>
@@ -244,26 +244,26 @@ export default function HubPage() {
 
         {/* ── Balance ── */}
         <div className="px-5 mb-5 mt-3">
-          <p className="text-[#777587] text-[11px] font-semibold uppercase tracking-widest mb-1">
+          <p className="text-[#8A8FA8] text-[11px] font-semibold uppercase tracking-widest mb-1">
             {verSaldo ? "Saldo disponible" : "Mi identidad"}
           </p>
           {verSaldo ? (
-            <p className="text-[42px] font-black text-[#1b1b24] tracking-tight leading-none">
+            <p className="text-[42px] font-black text-[#1C1C1E] tracking-tight leading-none">
               S/ {saldo.toFixed(2)}
             </p>
           ) : (
             // Mundo en modo solo-identificación: sin saldo, sin montos.
-            <p className="text-[26px] font-black text-[#1b1b24] tracking-tight leading-none">
+            <p className="text-[26px] font-black text-[#1C1C1E] tracking-tight leading-none">
               {nombre}
             </p>
           )}
-          <p className="text-[#777587] text-sm mt-2">{activeMundo.nombre}</p>
+          <p className="text-[#8A8FA8] text-sm mt-2">{activeMundo.nombre}</p>
           {hasLoyalty && (
             <button onClick={() => nav("/module/loyalty")}
               className="flex items-center gap-1.5 mt-3 px-3 py-1.5 glass-card rounded-full w-fit tap-active">
               <span className="material-symbols-outlined fill text-amber-500 text-base">stars</span>
-              <span className="text-[#464555] text-xs font-bold">{puntos.toLocaleString()} pts</span>
-              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
+              <span className="text-[#404255] text-xs font-bold">{puntos.toLocaleString()} pts</span>
+              <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
           )}
         </div>
@@ -275,7 +275,7 @@ export default function HubPage() {
         {modulos.length > 0 && (
           <div className="px-5 mb-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[15px] font-bold text-[#1b1b24]">Mis módulos</h2>
+              <h2 className="text-[15px] font-bold text-[#1C1C1E]">Mis módulos</h2>
             </div>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
               {modulos.map(mod => {
@@ -287,7 +287,7 @@ export default function HubPage() {
                       <span className={`material-symbols-outlined ${meta.color} text-3xl`}
                         style={{fontVariationSettings:"'FILL' 1"}}>{meta.icon}</span>
                     </div>
-                    <span className="text-[10px] font-semibold text-[#464555] text-center leading-tight max-w-[64px]">{meta.label}</span>
+                    <span className="text-[10px] font-semibold text-[#404255] text-center leading-tight max-w-[64px]">{meta.label}</span>
                   </button>
                 );
               })}
@@ -324,15 +324,15 @@ export default function HubPage() {
         {/* Comercios */}
         {comercios.length > 0 && (
           <div className="px-5 mb-5">
-            <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest mb-3">Comercios disponibles</p>
+            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-3">Comercios disponibles</p>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
               {comercios.map(c => (
                 <button key={c.id} onClick={() => nav("/module/comercios", { state: { filtro: c.id } })}
                   className="flex-shrink-0 flex flex-col items-center gap-1.5 glass-card rounded-2xl p-3 w-20 tap-active">
-                  <div className="w-10 h-10 rounded-xl bg-[#3525cd] flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 rounded-xl bg-[#1A3270] flex items-center justify-center overflow-hidden">
                     {c.fotoUrl ? <img src={c.fotoUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-white font-black text-base">{c.nombre[0]}</span>}
                   </div>
-                  <span className="text-[9px] font-semibold text-[#464555] text-center leading-tight">{c.nombre.split(" ").slice(0,2).join(" ")}</span>
+                  <span className="text-[9px] font-semibold text-[#404255] text-center leading-tight">{c.nombre.split(" ").slice(0,2).join(" ")}</span>
                 </button>
               ))}
             </div>
@@ -345,22 +345,22 @@ export default function HubPage() {
         {txs.length > 0 && (
           <div className="px-5 mb-5">
             <div className="flex justify-between items-center mb-3">
-              <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest">Últimos movimientos</p>
-              <button onClick={() => nav("/activity")} className="text-[11px] font-bold text-[#3525cd]">Ver todo →</button>
+              <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Últimos movimientos</p>
+              <button onClick={() => nav("/activity")} className="text-[11px] font-bold text-[#1A3270]">Ver todo →</button>
             </div>
-            <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#e4e1ee]/50">
+            <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#CDD1E4]/50">
               {txs.map(t => (
                 <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${t.monto > 0 ? "bg-green-50" : "bg-[#f0ecf9]"}`}>
-                    <span className={`material-symbols-outlined fill text-base ${t.monto > 0 ? "text-green-600" : "text-[#3525cd]"}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${t.monto > 0 ? "bg-green-50" : "bg-[#EEF2FD]"}`}>
+                    <span className={`material-symbols-outlined fill text-base ${t.monto > 0 ? "text-green-600" : "text-[#1A3270]"}`}>
                       {t.monto > 0 ? "add_card" : "shopping_bag"}
                     </span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[#1b1b24] text-sm font-semibold">{t.titulo}</p>
-                    <p className="text-[#777587] text-[11px]">{new Date(t.fecha).toLocaleDateString("es-PE")}</p>
+                    <p className="text-[#1C1C1E] text-sm font-semibold">{t.titulo}</p>
+                    <p className="text-[#8A8FA8] text-[11px]">{new Date(t.fecha).toLocaleDateString("es-PE")}</p>
                   </div>
-                  <p className={`font-black text-sm ${t.monto > 0 ? "text-green-600" : "text-[#1b1b24]"}`}>
+                  <p className={`font-black text-sm ${t.monto > 0 ? "text-green-600" : "text-[#1C1C1E]"}`}>
                     {t.monto > 0 ? "+" : ""}S/ {Math.abs(t.monto).toFixed(2)}
                   </p>
                 </div>

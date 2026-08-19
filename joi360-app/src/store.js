@@ -71,7 +71,7 @@ function seed() {
       {
         id: "mundo-eventos-rp", fixed: true, redpontis: true, type: "eventos_rp",
         nombre: "JOI Eventos", codigo: "EV-RP-000", vertical: "Especial RedPontis",
-        color: "#722ce3", moneda: "PEN", estado: "ACTIVO",
+        color: "#3B5BDB", moneda: "PEN", estado: "ACTIVO",
         descripcion: "Crea y publica tu propio evento. RedPontis lo revisa antes de publicarlo. Sin comisión en fase 0.",
         eventosConfig: { modos:["b2c","embebido"], allowUserOrganizer:true, monetizacion:false, requireAprobacionRP:true, entidadLegalRequerida:true, comisionEntrada:1 },
         modulos: [
@@ -86,7 +86,7 @@ function seed() {
       {
         id: "mundo-promos-rp", fixed: true, redpontis: true, type: "promos_rp",
         nombre: "JOI Promos", codigo: "PR-RP-000", vertical: "Especial RedPontis",
-        color: "#006688", moneda: "PEN", estado: "ACTIVO",
+        color: "#2E7FD9", moneda: "PEN", estado: "ACTIVO",
         descripcion: "Descuentos, cashback y accesos exclusivos de marcas del ecosistema JOI.",
         eventosConfig: null,
         modulos: [
@@ -117,7 +117,7 @@ function seed() {
       {
         id: "mundo-raimondi", fixed: false, redpontis: false, type: "standard",
         nombre: "Colegio Raimondi", codigo: "ED-LIM-001", vertical: "Educación",
-        color: "#0035b9", moneda: "PEN", estado: "ACTIVO",
+        color: "#1A3270", moneda: "PEN", estado: "ACTIVO",
         descripcion: "Ecosistema educativo: wallet de alumnos, menú, asistencia y control parental.",
         eventosConfig: null,
         modulos: [
@@ -231,7 +231,7 @@ export async function refreshWorldsLive() {
       for (const w of rows) {
         const patch = {
           id: w.id, nombre: w.name, codigo: w.code, vertical: w.vertical,
-          color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
+          color: w.color_primary || "#1A3270", moneda: w.currency || "PEN",
           estado: (w.status || "activo").toUpperCase(),
           logoUrl: w.logo_url || null,
           // Derivada 100% de nombre/vertical (no hay columna propia en worlds)

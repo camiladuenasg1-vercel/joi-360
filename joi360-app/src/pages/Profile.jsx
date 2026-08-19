@@ -119,30 +119,30 @@ export default function ProfilePage() {
     <div className="min-h-screen aura-bg pb-32">
       <div className="max-w-[430px] mx-auto">
         <div className="px-5 pt-12 pb-5">
-          <h1 className="text-3xl font-black text-[#1b1b24] mb-5">Mi perfil</h1>
+          <h1 className="text-3xl font-black text-[#1C1C1E] mb-5">Mi perfil</h1>
           {/* User card */}
           <div className="glass-card rounded-3xl p-5 mb-5">
             <div className="flex items-center gap-4 mb-5">
-              <div className="w-16 h-16 rounded-2xl bg-[#3525cd] flex items-center justify-center aura-primary">
+              <div className="w-16 h-16 rounded-2xl bg-[#1A3270] flex items-center justify-center aura-primary">
                 <span className="text-white font-black text-2xl">{initials}</span>
               </div>
               <div>
-                <p className="text-[#1b1b24] font-black text-xl">{nombre}</p>
-                <p className="text-[#777587] text-sm">{email}</p>
+                <p className="text-[#1C1C1E] font-black text-xl">{nombre}</p>
+                <p className="text-[#8A8FA8] text-sm">{email}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#f0ecf9] rounded-2xl p-3 text-center">
-                <p className="text-[#3525cd] font-black text-lg">S/ {totalBalance.toFixed(0)}</p>
-                <p className="text-[#777587] text-[10px] font-semibold uppercase">Total</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
+                <p className="text-[#1A3270] font-black text-lg">S/ {totalBalance.toFixed(0)}</p>
+                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Total</p>
               </div>
-              <div className="bg-[#f0ecf9] rounded-2xl p-3 text-center">
-                <p className="text-[#3525cd] font-black text-lg">{memberships.length}</p>
-                <p className="text-[#777587] text-[10px] font-semibold uppercase">Mundos</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
+                <p className="text-[#1A3270] font-black text-lg">{memberships.length}</p>
+                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Mundos</p>
               </div>
-              <div className="bg-[#f0ecf9] rounded-2xl p-3 text-center">
-                <p className="text-[#3525cd] font-black text-lg">{totalTx}</p>
-                <p className="text-[#777587] text-[10px] font-semibold uppercase">Transacciones</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
+                <p className="text-[#1A3270] font-black text-lg">{totalTx}</p>
+                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Transacciones</p>
               </div>
             </div>
           </div>
@@ -150,48 +150,48 @@ export default function ProfilePage() {
           {/* Mi código JOI — identificador único de la cuenta. Ingrésalo (o compártelo)
               donde te pidan un destinatario: transferir P2P, transferir una entrada, etc. */}
           <div className="glass-card rounded-3xl p-5 mb-4">
-            <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-2">Mi código JOI</p>
+            <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-2">Mi código JOI</p>
             <div className="flex items-center justify-between gap-3">
-              <p className="font-mono text-sm text-[#1b1b24] break-all">{myCode}</p>
+              <p className="font-mono text-sm text-[#1C1C1E] break-all">{myCode}</p>
               <div className="flex gap-2 flex-shrink-0">
                 <button onClick={() => { navigator.clipboard?.writeText(myCode); showToast("Código copiado.", "info"); }}
                   className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
-                  <span className="material-symbols-outlined text-[#3525cd] text-[18px]">content_copy</span>
+                  <span className="material-symbols-outlined text-[#1A3270] text-[18px]">content_copy</span>
                 </button>
                 <button onClick={compartirCodigo} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
-                  <span className="material-symbols-outlined text-[#3525cd] text-[18px]">share</span>
+                  <span className="material-symbols-outlined text-[#1A3270] text-[18px]">share</span>
                 </button>
               </div>
             </div>
-            <p className="text-[#777587] text-xs mt-2">Compártelo con quien vaya a transferirte saldo o una entrada — lo ingresan como "código del destinatario".</p>
+            <p className="text-[#8A8FA8] text-xs mt-2">Compártelo con quien vaya a transferirte saldo o una entrada — lo ingresan como "código del destinatario".</p>
           </div>
 
           {/* Mi Familia — dependientes con bandita NFC/QR, ligados a la wallet
               de cada mundo, netamente para consumo. */}
           <div className="glass-card rounded-3xl overflow-hidden mb-4">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-[#e4e1ee]/50">
-              <p className="text-[#1b1b24] font-bold">Mi familia</p>
-              <button onClick={() => irAGestionarFamilia(activeMundo?.id)} className="text-xs font-bold text-[#3525cd]">+ Agregar</button>
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#CDD1E4]/50">
+              <p className="text-[#1C1C1E] font-bold">Mi familia</p>
+              <button onClick={() => irAGestionarFamilia(activeMundo?.id)} className="text-xs font-bold text-[#1A3270]">+ Agregar</button>
             </div>
             {familia === null ? (
-              <div className="px-5 py-6 text-center text-sm text-[#777587]">Cargando…</div>
+              <div className="px-5 py-6 text-center text-sm text-[#8A8FA8]">Cargando…</div>
             ) : familia.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <p className="text-[#777587] text-sm">Aún no tienes familiares registrados.</p>
-                <p className="text-[#777587] text-xs mt-1">Un familiar es un perfil con su propio saldo, identificado por bandita NFC o QR — solo para consumo. Algunos mundos cobran por vincularlo, otros lo dan gratis.</p>
+                <p className="text-[#8A8FA8] text-sm">Aún no tienes familiares registrados.</p>
+                <p className="text-[#8A8FA8] text-xs mt-1">Un familiar es un perfil con su propio saldo, identificado por bandita NFC o QR — solo para consumo. Algunos mundos cobran por vincularlo, otros lo dan gratis.</p>
               </div>
             ) : (
               familia.map(d => (
                 <button key={`${d.mundoId}-${d.dependent_user_id}`} onClick={() => irAGestionarFamilia(d.mundoId)}
-                  className="w-full flex items-center gap-3 px-5 py-4 border-b border-[#e4e1ee]/30 last:border-0 tap-active text-left">
-                  <div className="w-10 h-10 rounded-xl bg-[#e2dfff] flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#3525cd] font-black text-sm">{d.nombre?.[0] || "?"}</span>
+                  className="w-full flex items-center gap-3 px-5 py-4 border-b border-[#CDD1E4]/30 last:border-0 tap-active text-left">
+                  <div className="w-10 h-10 rounded-xl bg-[#DCE4FA] flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#1A3270] font-black text-sm">{d.nombre?.[0] || "?"}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#1b1b24] font-bold text-sm truncate">{d.nombre}</p>
-                    <p className="text-[#777587] text-xs">{d.mundoNombre}{d.alergias ? ` · alergias: ${d.alergias}` : ""}</p>
+                    <p className="text-[#1C1C1E] font-bold text-sm truncate">{d.nombre}</p>
+                    <p className="text-[#8A8FA8] text-xs">{d.mundoNombre}{d.alergias ? ` · alergias: ${d.alergias}` : ""}</p>
                   </div>
-                  <p className="text-[#1b1b24] font-black text-sm flex-shrink-0">S/ {(d.balance||0).toFixed(2)}</p>
+                  <p className="text-[#1C1C1E] font-black text-sm flex-shrink-0">S/ {(d.balance||0).toFixed(2)}</p>
                 </button>
               ))
             )}
@@ -199,14 +199,14 @@ export default function ProfilePage() {
 
           {/* Mis comunidades */}
           <div className="glass-card rounded-3xl overflow-hidden mb-4">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-[#e4e1ee]/50">
-              <p className="text-[#1b1b24] font-bold">Mis comunidades</p>
-              <button onClick={() => nav("/landing")} className="text-xs font-bold text-[#3525cd]">+ Unirme</button>
+            <div className="flex justify-between items-center px-5 py-4 border-b border-[#CDD1E4]/50">
+              <p className="text-[#1C1C1E] font-bold">Mis comunidades</p>
+              <button onClick={() => nav("/landing")} className="text-xs font-bold text-[#1A3270]">+ Unirme</button>
             </div>
             {memberships.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <p className="text-[#777587] text-sm">Aún no te has unido.</p>
-                <button onClick={() => nav("/landing")} className="mt-2 text-[#3525cd] text-sm font-bold">Explorar →</button>
+                <p className="text-[#8A8FA8] text-sm">Aún no te has unido.</p>
+                <button onClick={() => nav("/landing")} className="mt-2 text-[#1A3270] text-sm font-bold">Explorar →</button>
               </div>
             ) : (
               memberships.map(m => {
@@ -214,18 +214,18 @@ export default function ProfilePage() {
                 const pts = u?.puntos?.[m.id] || 0;
                 const isActive = m.id === activeMundo?.id;
                 return (
-                  <div key={m.id} className={`flex items-center gap-3 px-5 py-4 border-b border-[#e4e1ee]/30 last:border-0 ${isActive?"bg-[#f5f2ff]":""}`}>
-                    <div className="w-10 h-10 rounded-xl bg-[#3525cd] flex items-center justify-center">
+                  <div key={m.id} className={`flex items-center gap-3 px-5 py-4 border-b border-[#CDD1E4]/30 last:border-0 ${isActive?"bg-[#F2F2F7]":""}`}>
+                    <div className="w-10 h-10 rounded-xl bg-[#1A3270] flex items-center justify-center">
                       <span className="text-white font-black text-base">{m.nombre[0]}</span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-[#1b1b24] font-bold text-sm">{m.nombre}</p>
-                      <p className="text-[#777587] text-xs">{m.vertical} · {pts.toLocaleString()} pts</p>
+                      <p className="text-[#1C1C1E] font-bold text-sm">{m.nombre}</p>
+                      <p className="text-[#8A8FA8] text-xs">{m.vertical} · {pts.toLocaleString()} pts</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[#1b1b24] font-black text-sm">S/ {bal.toFixed(2)}</p>
-                      {isActive ? <p className="text-[10px] font-mono text-[#3525cd]">ACTIVO</p>
-                        : <button onClick={() => { setActiveMundo(m.id); showToast(`Cambiado a ${m.nombre}`); }} className="text-[10px] font-bold text-[#777587]">Activar</button>}
+                      <p className="text-[#1C1C1E] font-black text-sm">S/ {bal.toFixed(2)}</p>
+                      {isActive ? <p className="text-[10px] font-mono text-[#1A3270]">ACTIVO</p>
+                        : <button onClick={() => { setActiveMundo(m.id); showToast(`Cambiado a ${m.nombre}`); }} className="text-[10px] font-bold text-[#8A8FA8]">Activar</button>}
                     </div>
                   </div>
                 );
@@ -235,27 +235,27 @@ export default function ProfilePage() {
 
           {/* Settings */}
           <div className="glass-card rounded-3xl overflow-hidden mb-4">
-            <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest px-5 pt-4 pb-2">Configuración</p>
+            <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest px-5 pt-4 pb-2">Configuración</p>
 
             <button onClick={() => setModal("privacidad")}
-              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#777587]">privacy_tip</span>
-              <span className="text-[#464555] text-sm flex-1">Privacidad y datos</span>
-              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
+              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
+              <span className="material-symbols-outlined text-[#8A8FA8]">privacy_tip</span>
+              <span className="text-[#404255] text-sm flex-1">Privacidad y datos</span>
+              <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
 
             <button onClick={() => setModal("terminos")}
-              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#777587]">description</span>
-              <span className="text-[#464555] text-sm flex-1">Términos y condiciones</span>
-              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
+              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
+              <span className="material-symbols-outlined text-[#8A8FA8]">description</span>
+              <span className="text-[#404255] text-sm flex-1">Términos y condiciones</span>
+              <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
 
             <button onClick={() => setModal("ayuda")}
-              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#e4e1ee]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#777587]">support_agent</span>
-              <span className="text-[#464555] text-sm flex-1">Centro de ayuda</span>
-              <span className="material-symbols-outlined text-[#c7c4d8] text-sm">chevron_right</span>
+              className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
+              <span className="material-symbols-outlined text-[#8A8FA8]">support_agent</span>
+              <span className="text-[#404255] text-sm flex-1">Centro de ayuda</span>
+              <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
           </div>
 
@@ -263,12 +263,12 @@ export default function ProfilePage() {
             <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setModal(null)}>
               <div className="glass-card rounded-t-3xl w-full max-w-[430px] max-h-[75vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-[#1b1b24] font-black text-lg">{modal === "privacidad" ? "Privacidad y datos" : "Términos y condiciones"}</h2>
-                  <button onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active">
-                    <span className="material-symbols-outlined text-[#464555] text-lg">close</span>
+                  <h2 className="text-[#1C1C1E] font-black text-lg">{modal === "privacidad" ? "Privacidad y datos" : "Términos y condiciones"}</h2>
+                  <button onClick={() => setModal(null)} className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active">
+                    <span className="material-symbols-outlined text-[#404255] text-lg">close</span>
                   </button>
                 </div>
-                <p className="text-[#464555] text-sm whitespace-pre-line leading-relaxed">{modal === "privacidad" ? PRIVACIDAD_TEXTO : TERMINOS_TEXTO}</p>
+                <p className="text-[#404255] text-sm whitespace-pre-line leading-relaxed">{modal === "privacidad" ? PRIVACIDAD_TEXTO : TERMINOS_TEXTO}</p>
               </div>
             </div>
           )}
@@ -277,50 +277,50 @@ export default function ProfilePage() {
             <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={cerrarAyuda}>
               <div className="glass-card rounded-t-3xl w-full max-w-[430px] max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-[#1b1b24] font-black text-lg">Centro de ayuda</h2>
-                  <button onClick={cerrarAyuda} className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active">
-                    <span className="material-symbols-outlined text-[#464555] text-lg">close</span>
+                  <h2 className="text-[#1C1C1E] font-black text-lg">Centro de ayuda</h2>
+                  <button onClick={cerrarAyuda} className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active">
+                    <span className="material-symbols-outlined text-[#404255] text-lg">close</span>
                   </button>
                 </div>
                 {ayudaEnviada ? (
                   <div className="text-center py-8">
-                    <span className="material-symbols-outlined text-[#3525cd] text-5xl block mb-2">check_circle</span>
-                    <p className="text-[#1b1b24] font-black text-lg">Enviado</p>
-                    <p className="text-[#777587] text-sm mt-1">{activeMundo?.nombre || "El mundo"} o RedPontis te contactarán pronto.</p>
-                    <button onClick={cerrarAyuda} className="mt-5 w-full py-3 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active">Listo</button>
+                    <span className="material-symbols-outlined text-[#1A3270] text-5xl block mb-2">check_circle</span>
+                    <p className="text-[#1C1C1E] font-black text-lg">Enviado</p>
+                    <p className="text-[#8A8FA8] text-sm mt-1">{activeMundo?.nombre || "El mundo"} o RedPontis te contactarán pronto.</p>
+                    <button onClick={cerrarAyuda} className="mt-5 w-full py-3 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active">Listo</button>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-2">¿Sobre qué necesitas ayuda?</p>
+                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-2">¿Sobre qué necesitas ayuda?</p>
                       <div className="grid grid-cols-2 gap-2">
                         {CATEGORIAS_SOPORTE.map(c => (
                           <button key={c.id} onClick={() => setAyudaForm(f => ({ ...f, categoria: c.id }))}
-                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold text-left tap-active ${ayudaForm.categoria === c.id ? "border-[#3525cd] bg-[#f0ecf9] text-[#3525cd]" : "border-[#e4e1ee] text-[#464555]"}`}>
+                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold text-left tap-active ${ayudaForm.categoria === c.id ? "border-[#1A3270] bg-[#EEF2FD] text-[#1A3270]" : "border-[#CDD1E4] text-[#404255]"}`}>
                             <span className="material-symbols-outlined text-[16px]">{c.icon}</span> {c.label}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Asunto</p>
+                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Asunto</p>
                       <input value={ayudaForm.asunto} onChange={e => setAyudaForm(f => ({ ...f, asunto: e.target.value }))}
-                        placeholder="Resumen breve" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none" />
+                        placeholder="Resumen breve" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none" />
                     </div>
                     {ayudaForm.categoria === "devolucion" && (
                       <div>
-                        <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Monto reclamado (S/)</p>
+                        <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Monto reclamado (S/)</p>
                         <input value={ayudaForm.monto} onChange={e => setAyudaForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, "") }))}
-                          placeholder="0.00" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none" />
+                          placeholder="0.00" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none" />
                       </div>
                     )}
                     <div>
-                      <p className="text-[#777587] text-[10px] font-bold uppercase tracking-widest mb-1.5">Cuéntanos qué pasó</p>
+                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Cuéntanos qué pasó</p>
                       <textarea value={ayudaForm.detalle} onChange={e => setAyudaForm(f => ({ ...f, detalle: e.target.value }))}
-                        rows={4} placeholder="Mientras más detalle, más rápido te ayudamos" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1b1b24] outline-none resize-none" />
+                        rows={4} placeholder="Mientras más detalle, más rápido te ayudamos" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none resize-none" />
                     </div>
                     <button onClick={enviarTicketAyuda} disabled={!ayudaForm.asunto.trim() || enviandoAyuda}
-                      className="w-full py-3.5 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active disabled:opacity-40">
+                      className="w-full py-3.5 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active disabled:opacity-40">
                       {enviandoAyuda ? "Enviando…" : "Enviar"}
                     </button>
                   </div>
@@ -335,7 +335,7 @@ export default function ProfilePage() {
           </button>
 
           <div className="glass-card rounded-2xl py-3 text-center">
-            <p className="text-[#c7c4d8] text-xs font-mono">v2.0</p>
+            <p className="text-[#CDD1E4] text-xs font-mono">v2.0</p>
           </div>
         </div>
       </div>

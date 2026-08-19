@@ -37,11 +37,11 @@ function soloImporte(v) {
   return `${entero}.${resto.join("").slice(0, 2)}`;
 }
 
-const QR_CELLS = Array.from({length:81},(_,i)=>(i*7+3)%3!==0?"bg-[#1b1b24] rounded-[1px]":"");
+const QR_CELLS = Array.from({length:81},(_,i)=>(i*7+3)%3!==0?"bg-[#1C1C1E] rounded-[1px]":"");
 function QRCode({ label, sub, value }) {
   return (
     <div className="text-center">
-      <div className="w-44 h-44 mx-auto rounded-2xl bg-white border-2 border-[#e4e1ee] mb-3 flex items-center justify-center relative overflow-hidden">
+      <div className="w-44 h-44 mx-auto rounded-2xl bg-white border-2 border-[#CDD1E4] mb-3 flex items-center justify-center relative overflow-hidden">
         {value ? (
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${encodeURIComponent(value)}`}
@@ -53,14 +53,14 @@ function QRCode({ label, sub, value }) {
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                <Icon name="qr_code" fill size="text-xl" color="text-[#3525cd]" />
+                <Icon name="qr_code" fill size="text-xl" color="text-[#1A3270]" />
               </div>
             </div>
           </>
         )}
       </div>
-      {label && <p className="font-black text-[#1b1b24]">{label}</p>}
-      {sub && <p className="text-xs text-[#777587] mt-0.5">{sub}</p>}
+      {label && <p className="font-black text-[#1C1C1E]">{label}</p>}
+      {sub && <p className="text-xs text-[#8A8FA8] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -71,16 +71,16 @@ function ModuleHeader({ title, icon, iconBg, iconColor, onBack, action, children
     <div className="px-5 pt-10 pb-4">
       <div className="flex items-center justify-between mb-5">
         <button onClick={onBack} className="w-10 h-10 glass-card rounded-full flex items-center justify-center tap-active">
-          <Icon name="arrow_back" size="text-xl" color="text-[#1b1b24]" />
+          <Icon name="arrow_back" size="text-xl" color="text-[#1C1C1E]" />
         </button>
         {action}
       </div>
       <div className="flex items-center gap-3">
-        <div className={`w-12 h-12 rounded-2xl ${iconBg || "bg-[#e2dfff]"} flex items-center justify-center`}>
-          <Icon name={icon} fill size="text-2xl" color={iconColor || "text-[#3525cd]"} />
+        <div className={`w-12 h-12 rounded-2xl ${iconBg || "bg-[#DCE4FA]"} flex items-center justify-center`}>
+          <Icon name={icon} fill size="text-2xl" color={iconColor || "text-[#1A3270]"} />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-[#1b1b24]">{title}</h1>
+          <h1 className="text-2xl font-black text-[#1C1C1E]">{title}</h1>
           {children}
         </div>
       </div>
@@ -305,15 +305,15 @@ function WalletTemplate({ cfg, u }) {
           mundos en modo identificación (sin saldo) no deben ver esto. */}
       {cfg.has("balance") && (
       <div className="rounded-3xl p-8 text-center text-white relative overflow-hidden"
-        style={{background:"linear-gradient(135deg,#3525cd 0%,#4f46e5 100%)"}}>
+        style={{background:"linear-gradient(135deg,#1A3270 0%,#3B5BDB 100%)"}}>
         <p className="text-[11px] font-bold uppercase tracking-widest text-white/60 mb-2">Saldo disponible</p>
         <p className="text-5xl font-black tracking-tight">
           {hidden ? "••••" : `${currency} ${saldo.toFixed(2)}`}
         </p>
         <p className="text-white/50 text-xs mt-1.5">{cfg.mundo.nombre}</p>
         {!hidden && cashback > 0 && (
-          <p className="text-[11px] font-bold text-white/80 mt-2 flex items-center justify-center gap-1">
-            <Icon name="redeem" size="text-sm" color="text-white/80" /> + {currency} {cashback.toFixed(2)} en cashback disponible
+          <p className="text-[11px] font-bold text-[#F5C200] mt-2 flex items-center justify-center gap-1">
+            <Icon name="redeem" size="text-sm" color="text-[#F5C200]" /> + {currency} {cashback.toFixed(2)} en cashback disponible
           </p>
         )}
         {maxPorRecarga && (
@@ -331,11 +331,11 @@ function WalletTemplate({ cfg, u }) {
       <div className="grid grid-cols-2 gap-3">
         {cfg.has("recarga") && (
         <SectionCard className="p-4 flex flex-col gap-2 tap-active cursor-pointer" onClick={() => nav("/pay?tab=recargar")}>
-          <div className="w-10 h-10 rounded-full bg-[#3525cd]/10 flex items-center justify-center">
-            <Icon name="add_card" fill size="text-xl" color="text-[#3525cd]" />
+          <div className="w-10 h-10 rounded-full bg-[#1A3270]/10 flex items-center justify-center">
+            <Icon name="add_card" fill size="text-xl" color="text-[#1A3270]" />
           </div>
-          <p className="font-bold text-sm text-[#1b1b24]">Recargar</p>
-          <p className="text-xs text-[#777587]">Agregar saldo</p>
+          <p className="font-bold text-sm text-[#1C1C1E]">Recargar</p>
+          <p className="text-xs text-[#8A8FA8]">Agregar saldo</p>
         </SectionCard>
         )}
         {cfg.config.p2pEnabled && cfg.has("p2p") && (
@@ -343,8 +343,8 @@ function WalletTemplate({ cfg, u }) {
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
               <Icon name="swap_horiz" fill size="text-xl" color="text-green-600" />
             </div>
-            <p className="font-bold text-sm text-[#1b1b24]">Transferir</p>
-            <p className="text-xs text-[#777587]">Entre usuarios del mundo</p>
+            <p className="font-bold text-sm text-[#1C1C1E]">Transferir</p>
+            <p className="text-xs text-[#8A8FA8]">Entre usuarios del mundo</p>
           </SectionCard>
         )}
       </div>
@@ -353,18 +353,18 @@ function WalletTemplate({ cfg, u }) {
           comercio te identifique en el POS. */}
       <SectionCard className="p-4 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Mi código JOI</p>
-          <p className="font-mono text-base font-black text-[#3525cd] mt-0.5">{codigoParaCompartir}</p>
-          <p className="text-[10px] text-[#777587] mt-0.5">Compártelo para recibir una transferencia</p>
+          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Mi código JOI</p>
+          <p className="font-mono text-base font-black text-[#1A3270] mt-0.5">{codigoParaCompartir}</p>
+          <p className="text-[10px] text-[#8A8FA8] mt-0.5">Compártelo para recibir una transferencia</p>
         </div>
         <div className="flex gap-1.5">
           {navigator.share && (
             <button onClick={() => navigator.share({ title: "Mi código JOI", text: `Mi código JOI es ${codigoParaCompartir}` }).catch(() => {})} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
-              <Icon name="share" size="text-base" color="text-[#3525cd]"/>
+              <Icon name="share" size="text-base" color="text-[#1A3270]"/>
             </button>
           )}
           <button onClick={() => navigator.clipboard?.writeText(codigoParaCompartir)} className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active">
-            <Icon name="content_copy" size="text-base" color="text-[#3525cd]"/>
+            <Icon name="content_copy" size="text-base" color="text-[#1A3270]"/>
           </button>
         </div>
       </SectionCard>
@@ -373,44 +373,44 @@ function WalletTemplate({ cfg, u }) {
       {p2pOpen && (
         <div className="fixed inset-0 z-[300] flex flex-col justify-end items-center" style={{background:"rgba(0,0,0,0.45)",backdropFilter:"blur(6px)"}} onClick={cerrarP2P}>
           <div className="w-full max-w-[430px] bg-white rounded-t-[28px]" onClick={e=>e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#e4e1ee]"/></div>
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#CDD1E4]"/></div>
             <div className="px-6 pb-10">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-black text-[#1b1b24]">Transferir saldo</h3>
-                <button onClick={cerrarP2P} className="w-9 h-9 rounded-full bg-[#f0ecf9] flex items-center justify-center">
-                  <Icon name="close" size="text-xl" color="text-[#464555]"/>
+                <h3 className="text-lg font-black text-[#1C1C1E]">Transferir saldo</h3>
+                <button onClick={cerrarP2P} className="w-9 h-9 rounded-full bg-[#EEF2FD] flex items-center justify-center">
+                  <Icon name="close" size="text-xl" color="text-[#404255]"/>
                 </button>
               </div>
               {p2pResult?.ok ? (
                 <div className="text-center py-4">
                   <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
-                  <p className="font-black text-[#1b1b24] mt-2">Transferencia enviada</p>
-                  <p className="text-xs text-[#777587] mt-1">A {p2pDestino?.nombre || "el destinatario"}</p>
+                  <p className="font-black text-[#1C1C1E] mt-2">Transferencia enviada</p>
+                  <p className="text-xs text-[#8A8FA8] mt-1">A {p2pDestino?.nombre || "el destinatario"}</p>
                   <div className="mt-4 space-y-2">
                     <PrimaryBtn label="Listo" onClick={cerrarP2P}/>
-                    <button onClick={enviarSoporteP2P} className="w-full py-2 text-xs font-bold text-[#777587] tap-active">¿Algo salió mal? Contactar soporte</button>
+                    <button onClick={enviarSoporteP2P} className="w-full py-2 text-xs font-bold text-[#8A8FA8] tap-active">¿Algo salió mal? Contactar soporte</button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1">
+                  <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
                     {[["codigo", "Código JOI"], ["dni", "DNI"]].map(([v, l]) => (
                       <button key={v} onClick={() => { setP2pModo(v); setP2pInput(""); setP2pDestino(null); setP2pBusquedaError(""); }}
-                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${p2pModo === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${p2pModo === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
                     ))}
                   </div>
 
                   {!p2pDestino ? (
                     <div>
-                      <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{p2pModo === "dni" ? "DNI del destinatario" : "Código JOI del destinatario"}</label>
+                      <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{p2pModo === "dni" ? "DNI del destinatario" : "Código JOI del destinatario"}</label>
                       <div className="flex gap-2">
-                        <input className="flex-1 bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm font-mono outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+                        <input className="flex-1 bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm font-mono outline-none focus:ring-2 focus:ring-[#1A3270]/20"
                           value={p2pInput} inputMode={p2pModo === "dni" ? "numeric" : "text"}
                           onChange={e=>setP2pInput(p2pModo === "dni" ? e.target.value.replace(/\D/g,"").slice(0,8) : e.target.value)}
                           onKeyDown={e => e.key === "Enter" && buscarDestinoP2P()}
                           placeholder={p2pModo === "dni" ? "8 dígitos" : "Ej. CAMIL385"}/>
                         <button onClick={buscarDestinoP2P} disabled={!p2pInput.trim() || p2pBuscando}
-                          className="px-4 rounded-2xl bg-[#3525cd] text-white font-bold text-sm tap-active disabled:opacity-40">
+                          className="px-4 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active disabled:opacity-40">
                           {p2pBuscando ? "…" : "Buscar"}
                         </button>
                       </div>
@@ -421,19 +421,19 @@ function WalletTemplate({ cfg, u }) {
                       <div className="p-3 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between">
                         <div>
                           <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Le vas a transferir a</p>
-                          <p className="text-sm font-bold text-[#1b1b24]">{p2pDestino.nombre || "Usuario JOI"}</p>
+                          <p className="text-sm font-bold text-[#1C1C1E]">{p2pDestino.nombre || "Usuario JOI"}</p>
                         </div>
-                        <button onClick={() => { setP2pDestino(null); setP2pInput(""); }} className="text-[11px] font-bold text-[#3525cd] tap-active">Cambiar</button>
+                        <button onClick={() => { setP2pDestino(null); setP2pInput(""); }} className="text-[11px] font-bold text-[#1A3270] tap-active">Cambiar</button>
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Monto ({currency})</label>
-                        <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-4">
-                          <span className="text-[#777587] font-bold mr-2 text-lg">{currency}</span>
-                          <input className="flex-1 text-xl font-black text-[#1b1b24] bg-transparent py-3 outline-none" type="number"
+                        <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Monto ({currency})</label>
+                        <div className="flex items-center bg-[#EEF2FD] rounded-2xl px-4">
+                          <span className="text-[#8A8FA8] font-bold mr-2 text-lg">{currency}</span>
+                          <input className="flex-1 text-xl font-black text-[#1C1C1E] bg-transparent py-3 outline-none" type="number"
                             value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                         </div>
                         {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
-                          <p className="text-[10px] text-[#777587] mt-1.5">
+                          <p className="text-[10px] text-[#8A8FA8] mt-1.5">
                             {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
                             {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
                             {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
@@ -441,8 +441,8 @@ function WalletTemplate({ cfg, u }) {
                         )}
                       </div>
                       <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input type="checkbox" checked={p2pConfirmoIrreversible} onChange={e=>setP2pConfirmoIrreversible(e.target.checked)} className="mt-0.5 rounded text-[#3525cd]"/>
-                        <span className="text-xs text-[#464555]">Entiendo que, una vez enviada, esta transferencia <b>no se puede revertir</b>.</span>
+                        <input type="checkbox" checked={p2pConfirmoIrreversible} onChange={e=>setP2pConfirmoIrreversible(e.target.checked)} className="mt-0.5 rounded text-[#1A3270]"/>
+                        <span className="text-xs text-[#404255]">Entiendo que, una vez enviada, esta transferencia <b>no se puede revertir</b>.</span>
                       </label>
                       {p2pResult && !p2pResult.ok && (
                         <p className="text-xs text-red-600">{p2pResult.mensaje}</p>
@@ -450,7 +450,7 @@ function WalletTemplate({ cfg, u }) {
                       <PrimaryBtn label={p2pSending ? "Enviando…" : "Transferir"} icon="swap_horiz" disabled={!p2pMonto || !p2pConfirmoIrreversible || p2pSending} onClick={enviarP2P}/>
                     </>
                   )}
-                  <button onClick={enviarSoporteP2P} className="w-full py-1 text-[11px] font-bold text-[#777587] tap-active">¿Tienes un problema? Contactar soporte</button>
+                  <button onClick={enviarSoporteP2P} className="w-full py-1 text-[11px] font-bold text-[#8A8FA8] tap-active">¿Tienes un problema? Contactar soporte</button>
                 </div>
               )}
             </div>
@@ -463,14 +463,14 @@ function WalletTemplate({ cfg, u }) {
         <SectionHeader label="Cómo recargar en este mundo" icon="add_card" />
         <div className="p-4 space-y-2">
           {canales.map(ch => (
-            <div key={ch.id} className="rounded-2xl p-3.5 border border-[#e4e1ee] flex items-center gap-3 tap-active cursor-pointer hover:border-[#3525cd]/20 transition-colors">
-              <div className="w-9 h-9 rounded-xl bg-[#f0ecf9] flex items-center justify-center flex-shrink-0">
-                <Icon name="payments" fill size="text-lg" color="text-[#3525cd]" />
+            <div key={ch.id} className="rounded-2xl p-3.5 border border-[#CDD1E4] flex items-center gap-3 tap-active cursor-pointer hover:border-[#1A3270]/20 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-[#EEF2FD] flex items-center justify-center flex-shrink-0">
+                <Icon name="payments" fill size="text-lg" color="text-[#1A3270]" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-[#1b1b24] text-sm">{ch.nombre}</p>
+                <p className="font-bold text-[#1C1C1E] text-sm">{ch.nombre}</p>
               </div>
-              <Icon name="chevron_right" size="text-lg" color="text-[#c7c4d8]" />
+              <Icon name="chevron_right" size="text-lg" color="text-[#CDD1E4]" />
             </div>
           ))}
           {/* Bandita NFC — requiere el feature flag Y que el mundo de verdad
@@ -489,11 +489,11 @@ function WalletTemplate({ cfg, u }) {
             const porVencer = diasParaVencer != null && diasParaVencer > 0 && diasParaVencer <= 30;
             const nombreParaAcciones = b.esTitular ? (u?.auth?.nombre || null) : b.nombre;
             return (
-              <div key={b.id} className="rounded-2xl p-3.5 border border-[#e4e1ee]"
+              <div key={b.id} className="rounded-2xl p-3.5 border border-[#CDD1E4]"
                 style={{background:"linear-gradient(135deg,rgba(237,231,246,0.4),white)"}}>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#ede7f6] flex items-center justify-center flex-shrink-0">
-                    <Icon name="contactless" fill size="text-lg" color="text-[#673ab7]" />
+                  <div className="w-9 h-9 rounded-xl bg-[#EEF2FD] flex items-center justify-center flex-shrink-0">
+                    <Icon name="contactless" fill size="text-lg" color="text-[#3B5BDB]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     {/* Antes mostraba el nombre del MUNDO en la card de la
@@ -501,9 +501,9 @@ function WalletTemplate({ cfg, u }) {
                         como si la pulsera fuera del colegio, no tuya) —
                         ahora usa tu propio nombre, igual que ya hacían las
                         cards de cada dependiente. */}
-                    <p className="font-bold text-[#1b1b24] text-sm">Bandita NFC · {b.esTitular ? (nombreParaAcciones || "Mi cuenta") : b.nombre}</p>
+                    <p className="font-bold text-[#1C1C1E] text-sm">Bandita NFC · {b.esTitular ? (nombreParaAcciones || "Mi cuenta") : b.nombre}</p>
                     {solicitud === undefined ? (
-                      <p className="text-[10px] text-[#777587]">Cargando…</p>
+                      <p className="text-[10px] text-[#8A8FA8]">Cargando…</p>
                     ) : solicitud?.status === "entregada" ? (
                       vencida ? (
                         <p className="text-[10px] text-red-600 font-bold">Vencida el {venceAt.toLocaleDateString("es-PE")}</p>
@@ -521,32 +521,32 @@ function WalletTemplate({ cfg, u }) {
                     ) : solicitud?.status === "rechazada" ? (
                       <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
                     ) : (
-                      <p className="text-[10px] text-[#777587]">Aún no vinculada</p>
+                      <p className="text-[10px] text-[#8A8FA8]">Aún no vinculada</p>
                     )}
                   </div>
                   {(solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
                     <button onClick={() => pedirBandita(b.id, nombreParaAcciones, b.esTitular && universalTitular)} disabled={solicitandoNfcId === b.id}
-                      className="flex-shrink-0 text-[11px] font-bold text-white bg-[#673ab7] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
+                      className="flex-shrink-0 text-[11px] font-bold text-white bg-[#3B5BDB] px-3 py-1.5 rounded-full tap-active disabled:opacity-50">
                       {solicitandoNfcId === b.id ? "Enviando…" : (solicitud?.status === "entregada" ? "Renovar" : "Solicitar")}
                     </button>
                   )}
                 </div>
                 {nfcSoportado && (solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
                   <button onClick={() => setVinculandoDirecto({ id: b.id, nombre: nombreParaAcciones })}
-                    className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-[#673ab7] tap-active">
-                    <Icon name="nfc" size="text-sm" color="text-[#673ab7]" />
+                    className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-[#3B5BDB] tap-active">
+                    <Icon name="nfc" size="text-sm" color="text-[#3B5BDB]" />
                     ¿Ya tienes la pulsera en mano? Vincúlala ahora con tu celular
                   </button>
                 )}
                 {b.esTitular && (solicitud === null || solicitud?.status === "rechazada") && (
-                  <label className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 flex items-start gap-2 text-[10px] text-[#777587] cursor-pointer">
+                  <label className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 flex items-start gap-2 text-[10px] text-[#8A8FA8] cursor-pointer">
                     <input type="checkbox" className="mt-0.5" checked={universalTitular} onChange={e=>setUniversalTitular(e.target.checked)}/>
                     <span>Quiero usarla para consumir en <b>todos los mundos</b> a los que pertenezco, no solo {cfg.mundo.nombre}.</span>
                   </label>
                 )}
                 {solicitud?.status === "entregada" && !vencida && (
                   <button onClick={() => reportarPerdida(b.id, nombreParaAcciones)} disabled={reportandoPerdidaId === b.id}
-                    className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 w-full flex items-center gap-1.5 text-[11px] font-semibold text-red-600 disabled:opacity-50">
+                    className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 w-full flex items-center gap-1.5 text-[11px] font-semibold text-red-600 disabled:opacity-50">
                     <Icon name="report" size="text-sm" color="text-red-600" />
                     {reportandoPerdidaId === b.id ? "Reportando…" : "Reportar pérdida o robo"}
                   </button>
@@ -556,8 +556,8 @@ function WalletTemplate({ cfg, u }) {
           })}
           {cfg.has("bandita") && cfg.config?.usaPulseraNfc !== false && (
             <button onClick={() => nav("/module/control?agregar=1")}
-              className="w-full rounded-2xl p-3.5 border border-dashed border-[#c7c4d8] flex items-center justify-center gap-2 text-[#3525cd] text-sm font-bold tap-active">
-              <Icon name="person_add" size="text-lg" color="text-[#3525cd]" />
+              className="w-full rounded-2xl p-3.5 border border-dashed border-[#CDD1E4] flex items-center justify-center gap-2 text-[#1A3270] text-sm font-bold tap-active">
+              <Icon name="person_add" size="text-lg" color="text-[#1A3270]" />
               Agregar familiar para pedirle su bandita
             </button>
           )}
@@ -572,11 +572,11 @@ function WalletTemplate({ cfg, u }) {
           : txs.map(t=>(
             <ListItem key={t.id}
               icon={t.monto>0?"add_card":"shopping_bag"}
-              iconBg={t.monto>0?"bg-green-50":"bg-[#f0ecf9]"}
-              iconColor={t.monto>0?"text-green-600":"text-[#3525cd]"}
+              iconBg={t.monto>0?"bg-green-50":"bg-[#EEF2FD]"}
+              iconColor={t.monto>0?"text-green-600":"text-[#1A3270]"}
               title={t.titulo}
               subtitle={new Date(t.fecha).toLocaleDateString("es-PE")}
-              right={<span className={`font-black text-sm ${t.monto>0?"text-green-600":"text-[#1b1b24]"}`}>{t.monto>0?"+":""}{currency} {Math.abs(t.monto).toFixed(2)}</span>}
+              right={<span className={`font-black text-sm ${t.monto>0?"text-green-600":"text-[#1C1C1E]"}`}>{t.monto>0?"+":""}{currency} {Math.abs(t.monto).toFixed(2)}</span>}
             />
           ))}
       </SectionCard>
@@ -636,41 +636,41 @@ function VincularBanditaWebNfcModal({ mundoId, beneficiarioId, beneficiarioNombr
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-[430px] bg-white rounded-t-3xl p-6 pb-8" onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-[#e4e1ee] rounded-full mx-auto mb-5" />
+        <div className="w-10 h-1 bg-[#CDD1E4] rounded-full mx-auto mb-5" />
         <div className="text-center mb-5">
-          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 ${estado === "exito" ? "bg-green-50" : estado === "error" ? "bg-red-50" : "bg-[#ede7f6]"}`}>
+          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 ${estado === "exito" ? "bg-green-50" : estado === "error" ? "bg-red-50" : "bg-[#EEF2FD]"}`}>
             <Icon name={estado === "exito" ? "check_circle" : estado === "error" ? "error" : "nfc"} fill
-              size="text-4xl" color={estado === "exito" ? "text-green-600" : estado === "error" ? "text-red-500" : "text-[#673ab7]"} />
+              size="text-4xl" color={estado === "exito" ? "text-green-600" : estado === "error" ? "text-red-500" : "text-[#3B5BDB]"} />
           </div>
-          <h3 className="text-[#1b1b24] font-black text-xl">
+          <h3 className="text-[#1C1C1E] font-black text-xl">
             {estado === "exito" ? "¡Pulsera vinculada!" : estado === "error" ? "No se pudo vincular" : `Vincular pulsera${beneficiarioNombre ? ` de ${beneficiarioNombre}` : ""}`}
           </h3>
-          {estado === "listo" && <p className="text-[#777587] text-xs mt-1.5">Acerca la parte trasera de tu celular a la pulsera y mantenla ahí unos segundos.</p>}
-          {estado === "leyendo" && <p className="text-[#777587] text-xs mt-1.5">Buscando la pulsera… acércala al celular.</p>}
-          {estado === "vinculando" && <p className="text-[#777587] text-xs mt-1.5 font-mono">{codigoLeido} — vinculando…</p>}
+          {estado === "listo" && <p className="text-[#8A8FA8] text-xs mt-1.5">Acerca la parte trasera de tu celular a la pulsera y mantenla ahí unos segundos.</p>}
+          {estado === "leyendo" && <p className="text-[#8A8FA8] text-xs mt-1.5">Buscando la pulsera… acércala al celular.</p>}
+          {estado === "vinculando" && <p className="text-[#8A8FA8] text-xs mt-1.5 font-mono">{codigoLeido} — vinculando…</p>}
           {estado === "error" && <p className="text-red-600 text-xs mt-1.5">{errorMsg}</p>}
-          {estado === "exito" && <p className="text-[#777587] text-xs mt-1.5">Ya puedes usarla para pagar.</p>}
+          {estado === "exito" && <p className="text-[#8A8FA8] text-xs mt-1.5">Ya puedes usarla para pagar.</p>}
         </div>
         {estado === "listo" && (
-          <button onClick={empezarLectura} className="w-full py-3.5 bg-[#673ab7] text-white rounded-2xl font-bold text-sm tap-active">
+          <button onClick={empezarLectura} className="w-full py-3.5 bg-[#3B5BDB] text-white rounded-2xl font-bold text-sm tap-active">
             Empezar a leer
           </button>
         )}
         {estado === "leyendo" && (
           <div className="flex justify-center py-2">
-            <span className="w-8 h-8 border-2 border-[#e4e1ee] border-t-[#673ab7] rounded-full animate-spin" />
+            <span className="w-8 h-8 border-2 border-[#CDD1E4] border-t-[#3B5BDB] rounded-full animate-spin" />
           </div>
         )}
         {estado === "error" && (
-          <button onClick={() => setEstado("listo")} className="w-full py-3.5 bg-[#673ab7] text-white rounded-2xl font-bold text-sm tap-active">
+          <button onClick={() => setEstado("listo")} className="w-full py-3.5 bg-[#3B5BDB] text-white rounded-2xl font-bold text-sm tap-active">
             Reintentar
           </button>
         )}
         {(estado === "listo" || estado === "error") && (
-          <button onClick={onClose} className="w-full py-3 mt-2 text-[#777587] text-xs font-bold tap-active">Cancelar</button>
+          <button onClick={onClose} className="w-full py-3 mt-2 text-[#8A8FA8] text-xs font-bold tap-active">Cancelar</button>
         )}
         {estado === "exito" && (
-          <button onClick={onClose} className="w-full py-3.5 bg-[#3525cd] text-white rounded-2xl font-bold text-sm tap-active">Listo</button>
+          <button onClick={onClose} className="w-full py-3.5 bg-[#1A3270] text-white rounded-2xl font-bold text-sm tap-active">Listo</button>
         )}
       </div>
     </div>
@@ -698,23 +698,23 @@ function LoyaltyTemplate({ cfg, u }) {
       <SectionCard className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-[11px] font-bold text-[#3525cd]/70 uppercase tracking-widest">Puntos acumulados</p>
-            <p className="text-5xl font-black text-[#3525cd] mt-1">{puntos.toLocaleString()}</p>
-            <p className="text-xs text-[#777587] mt-1">≈ S/ {cashValue} de valor</p>
+            <p className="text-[11px] font-bold text-[#1A3270]/70 uppercase tracking-widest">Puntos acumulados</p>
+            <p className="text-5xl font-black text-[#1A3270] mt-1">{puntos.toLocaleString()}</p>
+            <p className="text-xs text-[#8A8FA8] mt-1">≈ S/ {cashValue} de valor</p>
           </div>
           <div className="text-right">
-            <Chip label={nivel} color="bg-[#ffdbcc] text-[#7b2f00]" />
-            {cad && <p className="text-[10px] text-[#777587] mt-2">Caducan en {cad} meses</p>}
+            <Chip label={nivel} color="bg-[#FEF3B0] text-[#8E6200]" />
+            {cad && <p className="text-[10px] text-[#8A8FA8] mt-2">Caducan en {cad} meses</p>}
           </div>
         </div>
-        <p className="text-xs text-[#777587] mb-1.5 flex justify-between">
+        <p className="text-xs text-[#8A8FA8] mb-1.5 flex justify-between">
           <span>Progreso al siguiente nivel</span>
-          <span className="font-bold text-[#3525cd]">{Math.max(0,nextPts-puntos)} pts faltantes</span>
+          <span className="font-bold text-[#1A3270]">{Math.max(0,nextPts-puntos)} pts faltantes</span>
         </p>
         <ProgressBar value={puntos} max={nextPts} />
-        <div className="mt-3 p-3 bg-[#f0ecf9] rounded-2xl">
-          <p className="text-[11px] text-[#777587]">
-            Equivalencia · <b className="text-[#3525cd]">1 punto = S/ {equiv.toFixed(2)}</b>
+        <div className="mt-3 p-3 bg-[#EEF2FD] rounded-2xl">
+          <p className="text-[11px] text-[#8A8FA8]">
+            Equivalencia · <b className="text-[#1A3270]">1 punto = S/ {equiv.toFixed(2)}</b>
           </p>
         </div>
       </SectionCard>
@@ -722,16 +722,16 @@ function LoyaltyTemplate({ cfg, u }) {
       {/* Categories */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          {icon:"confirmation_number", label:"Vouchers", sub:"Cupones", color:"bg-[#e2dfff]", c:"text-[#3525cd]"},
-          {icon:"payments", label:"Cashback", sub:"A tu saldo", color:"bg-[#ffdbcc]", c:"text-[#7b2f00]"},
-          {icon:"redeem", label:"Exclusivos", sub:"Artículos", color:"bg-[#e8f5e9]", c:"text-[#388e3c]"},
+          {icon:"confirmation_number", label:"Vouchers", sub:"Cupones", color:"bg-[#DCE4FA]", c:"text-[#1A3270]"},
+          {icon:"payments", label:"Cashback", sub:"A tu saldo", color:"bg-[#FEF3B0]", c:"text-[#8E6200]"},
+          {icon:"redeem", label:"Exclusivos", sub:"Artículos", color:"bg-[#E6F7F1]", c:"text-[#0BA878]"},
         ].map((cat,i)=>(
           <SectionCard key={i} className="p-3 flex flex-col items-center gap-2 tap-active cursor-pointer">
             <div className={`w-10 h-10 rounded-xl ${cat.color} flex items-center justify-center`}>
               <Icon name={cat.icon} fill size="text-xl" color={cat.c} />
             </div>
-            <p className="text-xs font-bold text-[#1b1b24]">{cat.label}</p>
-            <p className="text-[10px] text-[#777587]">{cat.sub}</p>
+            <p className="text-xs font-bold text-[#1C1C1E]">{cat.label}</p>
+            <p className="text-[10px] text-[#8A8FA8]">{cat.sub}</p>
           </SectionCard>
         ))}
       </div>
@@ -741,12 +741,12 @@ function LoyaltyTemplate({ cfg, u }) {
         <SectionHeader label="Destacados para ti" icon="stars" action="Ver todo" />
         <div className="p-4 flex gap-3 overflow-x-auto scrollbar-hide">
           {[{pts:250,label:"Voucher Cafetería",sub:"10% descuento"},{pts:800,label:"Entrada Evento",sub:"Acceso premium"},{pts:1500,label:"Artículo Exclusivo",sub:"Edición limitada"}].map((r,i)=>(
-            <div key={i} className="flex-shrink-0 w-40 rounded-2xl border border-[#e4e1ee] overflow-hidden tap-active">
-              <div className="h-20 bg-[#f0ecf9] flex items-center justify-center relative">
-                <Icon name="redeem" fill size="text-4xl" color="text-[#3525cd]" />
-                <span className="absolute top-2 right-2 bg-[#3525cd] text-white text-[9px] font-black px-1.5 py-0.5 rounded">{r.pts} pts</span>
+            <div key={i} className="flex-shrink-0 w-40 rounded-2xl border border-[#CDD1E4] overflow-hidden tap-active">
+              <div className="h-20 bg-[#EEF2FD] flex items-center justify-center relative">
+                <Icon name="redeem" fill size="text-4xl" color="text-[#1A3270]" />
+                <span className="absolute top-2 right-2 bg-[#1A3270] text-white text-[9px] font-black px-1.5 py-0.5 rounded">{r.pts} pts</span>
               </div>
-              <div className="p-2.5"><p className="text-xs font-bold text-[#1b1b24]">{r.label}</p><p className="text-[10px] text-[#777587]">{r.sub}</p></div>
+              <div className="p-2.5"><p className="text-xs font-bold text-[#1C1C1E]">{r.label}</p><p className="text-[10px] text-[#8A8FA8]">{r.sub}</p></div>
             </div>
           ))}
         </div>
@@ -756,7 +756,7 @@ function LoyaltyTemplate({ cfg, u }) {
       <SectionCard>
         <SectionHeader label="Actividad de puntos" icon="history" />
         {[{pts:"+45",desc:"Compra en Cafetería",t:"Hace 2h",ic:"add",bg:"bg-green-50",c:"text-green-600"},
-          {pts:"+100",desc:"Bono de asistencia",t:"Ayer",ic:"military_tech",bg:"bg-[#e2dfff]",c:"text-[#3525cd]"},
+          {pts:"+100",desc:"Bono de asistencia",t:"Ayer",ic:"military_tech",bg:"bg-[#DCE4FA]",c:"text-[#1A3270]"},
           {pts:"-250",desc:"Canje de voucher",t:"Hace 3d",ic:"redeem",bg:"bg-amber-50",c:"text-amber-600"}].map((h,i)=>(
           <ListItem key={i} icon={h.ic} iconBg={h.bg} iconColor={h.c} title={h.desc} subtitle={h.t}
             right={<span className={`font-black text-sm ${h.pts.startsWith("+")?"text-green-600":"text-amber-600"}`}>{h.pts}</span>} />
@@ -792,33 +792,33 @@ function ReservasTemplate({ cfg, u }) {
 
   if (showNew) return (
     <div className="px-5 pb-8">
-      <button onClick={()=>{setShowNew(false);setSelectedSpace(null);}} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#777587]" /> Volver
+      <button onClick={()=>{setShowNew(false);setSelectedSpace(null);}} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]" /> Volver
       </button>
       <div className="flex gap-2 mb-5">
         {[1,2,3].map(n=>(
-          <div key={n} className={`flex-1 h-1.5 rounded-full ${n===1?"bg-[#3525cd]":"bg-[#e4e1ee]"}`}/>
+          <div key={n} className={`flex-1 h-1.5 rounded-full ${n===1?"bg-[#1A3270]":"bg-[#CDD1E4]"}`}/>
         ))}
       </div>
-      <h2 className="text-2xl font-black text-[#1b1b24] mb-1">Selecciona un espacio</h2>
-      <p className="text-sm text-[#777587] mb-5">Elige el área que deseas reservar.</p>
+      <h2 className="text-2xl font-black text-[#1C1C1E] mb-1">Selecciona un espacio</h2>
+      <p className="text-sm text-[#8A8FA8] mb-5">Elige el área que deseas reservar.</p>
       {anticipo && <ConfigBanner icon="payments" message={`Esta reserva requiere un anticipo mínimo del ${anticipo}%.`} color="amber" />}
       {anticipo && <div className="mb-4"/>}
       <div className="grid grid-cols-2 gap-3 mb-5">
         {SPACES.map(s=>(
           <button key={s.id} onClick={()=>setSelectedSpace(s.id)}
-            className={`glass-card rounded-2xl p-4 flex flex-col gap-3 text-left tap-active transition-all ${selectedSpace===s.id?"border-2 border-[#3525cd] bg-[#f0ecf9]":""}`}>
-            <div className={`w-11 h-11 rounded-xl ${selectedSpace===s.id?"bg-[#3525cd]/10":"bg-[#f0ecf9]"} flex items-center justify-center`}>
-              <Icon name={s.icon} fill size="text-2xl" color={selectedSpace===s.id?"text-[#3525cd]":"text-[#777587]"} />
+            className={`glass-card rounded-2xl p-4 flex flex-col gap-3 text-left tap-active transition-all ${selectedSpace===s.id?"border-2 border-[#1A3270] bg-[#EEF2FD]":""}`}>
+            <div className={`w-11 h-11 rounded-xl ${selectedSpace===s.id?"bg-[#1A3270]/10":"bg-[#EEF2FD]"} flex items-center justify-center`}>
+              <Icon name={s.icon} fill size="text-2xl" color={selectedSpace===s.id?"text-[#1A3270]":"text-[#8A8FA8]"} />
             </div>
             <div>
-              <p className="font-bold text-sm text-[#1b1b24]">{s.label}</p>
+              <p className="font-bold text-sm text-[#1C1C1E]">{s.label}</p>
               <span className={`text-[10px] font-bold ${s.c} ${s.color} px-2 py-0.5 rounded-full`}>{s.avail}</span>
             </div>
           </button>
         ))}
       </div>
-      {cancelHrs && <p className="text-xs text-[#777587] text-center mb-4">Cancela sin costo hasta {cancelHrs}h antes.</p>}
+      {cancelHrs && <p className="text-xs text-[#8A8FA8] text-center mb-4">Cancela sin costo hasta {cancelHrs}h antes.</p>}
       <PrimaryBtn label="Continuar" icon="arrow_forward" disabled={!selectedSpace} onClick={()=>{setShowNew(false);setSelectedSpace(null);}} />
     </div>
   );
@@ -829,7 +829,7 @@ function ReservasTemplate({ cfg, u }) {
       <div className="flex gap-1 glass-card rounded-2xl p-1">
         {["proximas","historial"].map(t=>(
           <button key={t} onClick={()=>setTab(t)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#3525cd] text-white":"text-[#464555]"}`}>
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#1A3270] text-white":"text-[#404255]"}`}>
             {t==="proximas"?"Próximas":"Historial"}
           </button>
         ))}
@@ -837,21 +837,21 @@ function ReservasTemplate({ cfg, u }) {
       {tab==="proximas" ? (
         <SectionCard>
           {NEXT.map((r,i)=>(
-            <div key={i} className="p-4 border-b border-[#e4e1ee]/40 last:border-0">
+            <div key={i} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-[#e2dfff] flex items-center justify-center">
-                    <Icon name={r.icon} fill size="text-xl" color="text-[#3525cd]" />
+                  <div className="w-11 h-11 rounded-xl bg-[#DCE4FA] flex items-center justify-center">
+                    <Icon name={r.icon} fill size="text-xl" color="text-[#1A3270]" />
                   </div>
                   <div>
-                    <p className="font-bold text-[#1b1b24]">{r.space}</p>
-                    <p className="text-xs text-[#777587]">{cfg.mundo.nombre}</p>
+                    <p className="font-bold text-[#1C1C1E]">{r.space}</p>
+                    <p className="text-xs text-[#8A8FA8]">{cfg.mundo.nombre}</p>
                   </div>
                 </div>
                 <span className={`text-[10px] font-black px-2 py-1 rounded-full ${r.statusColor}`}>{r.status}</span>
               </div>
-              <div className="flex gap-4 pt-2 border-t border-[#e4e1ee]/40">
-                <span className="text-xs text-[#3525cd] font-semibold flex items-center gap-1"><Icon name="schedule" size="text-sm" color="text-[#3525cd]"/>{r.hora}</span>
+              <div className="flex gap-4 pt-2 border-t border-[#CDD1E4]/40">
+                <span className="text-xs text-[#1A3270] font-semibold flex items-center gap-1"><Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>{r.hora}</span>
               </div>
             </div>
           ))}
@@ -887,18 +887,18 @@ function AsistenciaTemplate({ cfg, u }) {
       <SectionCard className="p-5">
         <div className="flex justify-between items-end mb-4">
           <div>
-            <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider mb-1">Registros de hoy</p>
-            <p className="text-5xl font-black text-[#3525cd]">{entradas+salidas}</p>
+            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Registros de hoy</p>
+            <p className="text-5xl font-black text-[#1A3270]">{entradas+salidas}</p>
           </div>
-          <Chip label="Semana 12" color="bg-[#e2dfff] text-[#3525cd]" />
+          <Chip label="Semana 12" color="bg-[#DCE4FA] text-[#1A3270]" />
         </div>
-        <div className="h-2 w-full bg-[#e4e1ee] rounded-full overflow-hidden flex gap-0.5">
+        <div className="h-2 w-full bg-[#CDD1E4] rounded-full overflow-hidden flex gap-0.5">
           <div className="h-full bg-emerald-500 rounded-full" style={{width:`${(entradas/(entradas+salidas||1))*65}%`}}/>
           <div className="h-full bg-rose-500 rounded-full" style={{width:`${(salidas/(entradas+salidas||1))*65}%`}}/>
         </div>
         <div className="flex justify-between mt-2 text-xs">
-          <span className="text-[#777587] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Entradas: <b>{entradas}</b></span>
-          <span className="text-[#777587] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>Salidas: <b>{salidas}</b></span>
+          <span className="text-[#8A8FA8] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Entradas: <b>{entradas}</b></span>
+          <span className="text-[#8A8FA8] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>Salidas: <b>{salidas}</b></span>
         </div>
       </SectionCard>
 
@@ -915,7 +915,7 @@ function AsistenciaTemplate({ cfg, u }) {
             </div>
             <div className="text-center">
               <p className={`font-black ${btn.tc}`}>{btn.label}</p>
-              <p className="text-[10px] text-[#777587] uppercase font-bold">Marcar ahora</p>
+              <p className="text-[10px] text-[#8A8FA8] uppercase font-bold">Marcar ahora</p>
             </div>
           </button>
         ))}
@@ -938,7 +938,7 @@ function AsistenciaTemplate({ cfg, u }) {
             right={
               h.ok===true ? <Chip label="A tiempo" color="bg-emerald-100 text-emerald-700"/> :
               h.ok===false ? <Chip label="Tarde" color="bg-rose-100 text-rose-700"/> :
-              <Chip label="Finalizado" color="bg-[#f0ecf9] text-[#777587]"/>
+              <Chip label="Finalizado" color="bg-[#EEF2FD] text-[#8A8FA8]"/>
             }
           />
         ))}
@@ -998,19 +998,19 @@ function ReglasMundoBanner({ montoAprobacion, horario, limiteDiario }) {
   ].filter(Boolean);
   if (!reglas.length) return null;
   return (
-    <div className="rounded-2xl bg-[#f0ecf9] overflow-hidden">
+    <div className="rounded-2xl bg-[#EEF2FD] overflow-hidden">
       <button onClick={() => setAbierto(a => !a)} className="w-full flex items-center justify-between gap-2 p-3.5 tap-active">
         <div className="flex items-center gap-2.5">
-          <Icon name="rule" fill size="text-base" color="text-[#3525cd]" />
-          <p className="text-xs font-bold text-[#3525cd]">Reglas de este mundo</p>
+          <Icon name="rule" fill size="text-base" color="text-[#1A3270]" />
+          <p className="text-xs font-bold text-[#1A3270]">Reglas de este mundo</p>
         </div>
-        <Icon name={abierto ? "expand_less" : "expand_more"} size="text-base" color="text-[#3525cd]" />
+        <Icon name={abierto ? "expand_less" : "expand_more"} size="text-base" color="text-[#1A3270]" />
       </button>
       {abierto && (
         <div className="px-3.5 pb-3.5 space-y-2.5">
           {reglas.map((r, i) => (
             <div key={i} className="flex items-start gap-2.5">
-              <Icon name={r.icon} fill size="text-sm" color="text-[#777587]" />
+              <Icon name={r.icon} fill size="text-sm" color="text-[#8A8FA8]" />
               <p className="text-xs text-[#4b4a58] leading-relaxed">{r.label}</p>
             </div>
           ))}
@@ -1208,11 +1208,11 @@ function RestriccionesTemplate({ cfg, u }) {
     const saldoInsuficiente = saldoGuardian != null && cuotaSuscripcion != null && saldoGuardian < cuotaSuscripcion;
     return (
       <div className="px-5 pb-8">
-        <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
-          <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
+        <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
+          <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]"/> Volver
         </button>
-        <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Confirmar suscripción</h3>
-        <p className="text-sm text-[#777587] mb-5">
+        <h3 className="text-2xl font-black text-[#1C1C1E] mb-1">Confirmar suscripción</h3>
+        <p className="text-sm text-[#8A8FA8] mb-5">
           {hayPlanes ? `Elige un plan para vincular a ${nuevo.nombre.trim()}.` : `${cfg.mundo.nombre} cobra una cuota única al vincular a ${nuevo.nombre.trim()}.`}
         </p>
 
@@ -1223,17 +1223,17 @@ function RestriccionesTemplate({ cfg, u }) {
               const elegido = planSeleccionadoId === p.id;
               return (
                 <button key={p.id} onClick={()=>setPlanSeleccionadoId(p.id)}
-                  className={`w-full text-left p-4 rounded-2xl border-2 tap-active transition-colors ${elegido ? "border-[#3525cd] bg-[#f0ecf9]" : "border-[#e4e1ee]"}`}>
+                  className={`w-full text-left p-4 rounded-2xl border-2 tap-active transition-colors ${elegido ? "border-[#1A3270] bg-[#EEF2FD]" : "border-[#CDD1E4]"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-[#1b1b24] text-sm">{p.nombre}</span>
-                    <span className="font-mono text-[9px] uppercase text-[#777587]">{p.periodo === "anual" ? "Anual" : "Mensual"}</span>
+                    <span className="font-black text-[#1C1C1E] text-sm">{p.nombre}</span>
+                    <span className="font-mono text-[9px] uppercase text-[#8A8FA8]">{p.periodo === "anual" ? "Anual" : "Mensual"}</span>
                   </div>
-                  {p.descripcion && <p className="text-xs text-[#777587] mt-0.5">{p.descripcion}</p>}
+                  {p.descripcion && <p className="text-xs text-[#8A8FA8] mt-0.5">{p.descripcion}</p>}
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className="font-black text-[#3525cd]">S/ {precio.toFixed(2)}</span>
+                    <span className="font-black text-[#1A3270]">S/ {precio.toFixed(2)}</span>
                     {p.descuento_pct > 0 && (
                       <>
-                        <span className="text-xs text-[#777587] line-through">S/ {Number(p.precio).toFixed(2)}</span>
+                        <span className="text-xs text-[#8A8FA8] line-through">S/ {Number(p.precio).toFixed(2)}</span>
                         <span className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">-{p.descuento_pct}%</span>
                       </>
                     )}
@@ -1244,14 +1244,14 @@ function RestriccionesTemplate({ cfg, u }) {
           </div>
         )}
 
-        <div className="rounded-2xl p-4 border border-[#e4e1ee] space-y-3 mb-5">
+        <div className="rounded-2xl p-4 border border-[#CDD1E4] space-y-3 mb-5">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[#777587]">{hayPlanes ? "Plan elegido" : "Cuota de vinculación"}</span>
-            <span className="font-black text-[#1b1b24]">{cuotaSuscripcion != null ? `S/ ${cuotaSuscripcion.toFixed(2)}` : "—"}</span>
+            <span className="text-sm text-[#8A8FA8]">{hayPlanes ? "Plan elegido" : "Cuota de vinculación"}</span>
+            <span className="font-black text-[#1C1C1E]">{cuotaSuscripcion != null ? `S/ ${cuotaSuscripcion.toFixed(2)}` : "—"}</span>
           </div>
-          <div className="flex justify-between items-center pt-3 border-t border-[#e4e1ee]">
-            <span className="text-sm text-[#777587]">Tu saldo actual</span>
-            <span className={`font-black ${saldoInsuficiente ? "text-red-600" : "text-[#1b1b24]"}`}>
+          <div className="flex justify-between items-center pt-3 border-t border-[#CDD1E4]">
+            <span className="text-sm text-[#8A8FA8]">Tu saldo actual</span>
+            <span className={`font-black ${saldoInsuficiente ? "text-red-600" : "text-[#1C1C1E]"}`}>
               {saldoGuardian == null ? "Cargando…" : `S/ ${saldoGuardian.toFixed(2)}`}
             </span>
           </div>
@@ -1274,11 +1274,11 @@ function RestriccionesTemplate({ cfg, u }) {
 
   if (addingChild) return (
     <div className="px-5 pb-8">
-      <button onClick={()=>setAddingChild(false)} className="flex items-center gap-1.5 text-[#777587] text-xs font-semibold mb-5 tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#777587]"/> Volver
+      <button onClick={()=>setAddingChild(false)} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]"/> Volver
       </button>
-      <h3 className="text-2xl font-black text-[#1b1b24] mb-1">Agregar dependiente</h3>
-      <p className="text-sm text-[#777587] mb-5">
+      <h3 className="text-2xl font-black text-[#1C1C1E] mb-1">Agregar dependiente</h3>
+      <p className="text-sm text-[#8A8FA8] mb-5">
         Registra un menor para controlar su consumo.
         {perfilesSuscripcion && hayPlanes && " Este mundo tiene planes de suscripción para vincular perfiles."}
       </p>
@@ -1289,27 +1289,27 @@ function RestriccionesTemplate({ cfg, u }) {
       )}
       <div className="space-y-4">
         <div>
-          <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Nombre completo</label>
-          <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Nombre completo</label>
+          <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="Ej. Ana García" value={nuevo.nombre} onChange={e=>setNuevo(n=>({...n, nombre: e.target.value}))}/>
         </div>
         <div>
-          <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">DNI</label>
-          <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">DNI</label>
+          <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="8 dígitos" inputMode="numeric" value={nuevo.dni} onChange={e=>setNuevo(n=>({...n, dni: e.target.value.replace(/\D/g,"")}))}/>
         </div>
         <div>
-          <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alias (opcional)</label>
-          <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Alias (opcional)</label>
+          <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="Ej. Anita — cómo le dicen" value={nuevo.alias} onChange={e=>setNuevo(n=>({...n, alias: e.target.value}))}/>
         </div>
         {registroAlergias && (
           <div>
-            <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
+            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
             <div className="flex flex-wrap gap-2 items-center">
               {ALERGIAS_CATALOG.map(a=>(
                 <button key={a} onClick={()=>toggleAlergia(a)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${nuevo.alergias.includes(a)?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${nuevo.alergias.includes(a)?"bg-red-50 border-red-300 text-red-700":"border-[#CDD1E4] text-[#404255]"}`}>{a}</button>
               ))}
               {nuevo.alergias.filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a=>(
                 <button key={a} onClick={()=>toggleAlergia(a)}
@@ -1318,7 +1318,7 @@ function RestriccionesTemplate({ cfg, u }) {
               <input value={otraAlergiaNueva} onChange={e=>setOtraAlergiaNueva(e.target.value)}
                 onKeyDown={e=>{ if (e.key==="Enter" && otraAlergiaNueva.trim()) { e.preventDefault(); setNuevo(n=>({...n, alergias: [...n.alergias, otraAlergiaNueva.trim()]})); setOtraAlergiaNueva(""); } }}
                 onBlur={()=>{ if (otraAlergiaNueva.trim()) { setNuevo(n=>({...n, alergias: [...n.alergias, otraAlergiaNueva.trim()]})); setOtraAlergiaNueva(""); } }}
-                placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-transparent outline-none w-20 focus:w-32 transition-all"/>
+                placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#CDD1E4] text-[#404255] bg-transparent outline-none w-20 focus:w-32 transition-all"/>
             </div>
           </div>
         )}
@@ -1339,25 +1339,25 @@ function RestriccionesTemplate({ cfg, u }) {
 
       <div className="flex justify-between items-center">
         <div>
-          <p className="font-black text-[#1b1b24]">Mi familia</p>
-          <p className="text-xs text-[#777587]">{total.length} de {maxPerfilesControlados || "∞"} dependientes</p>
+          <p className="font-black text-[#1C1C1E]">Mi familia</p>
+          <p className="text-xs text-[#8A8FA8]">{total.length} de {maxPerfilesControlados || "∞"} dependientes</p>
         </div>
         {(!maxPerfilesControlados || total.length < maxPerfilesControlados) && (
           <button onClick={()=>setAddingChild(true)}
-            className="flex items-center gap-1.5 bg-[#3525cd] text-white text-xs font-black px-3 py-2 rounded-2xl tap-active"
-            style={{boxShadow:"0 4px 12px rgba(53,37,205,0.25)"}}>
+            className="flex items-center gap-1.5 bg-[#1A3270] text-white text-xs font-black px-3 py-2 rounded-2xl tap-active"
+            style={{boxShadow:"0 4px 12px rgba(26,50,112,0.25)"}}>
             <Icon name="add" size="text-sm" color="text-white"/>Añadir
           </button>
         )}
       </div>
 
       <StatGrid stats={[
-        {label:"Saldo total",value:`S/ ${total.reduce((a,c)=>a+(c.balance||0),0).toFixed(2)}`,color:"text-[#3525cd]"},
+        {label:"Saldo total",value:`S/ ${total.reduce((a,c)=>a+(c.balance||0),0).toFixed(2)}`,color:"text-[#1A3270]"},
         {label:"Dependientes",value:total.length,color:"text-green-600"},
       ]} />
 
       {dependientes === null ? (
-        <SectionCard className="p-6 text-center text-sm text-[#777587]">Cargando…</SectionCard>
+        <SectionCard className="p-6 text-center text-sm text-[#8A8FA8]">Cargando…</SectionCard>
       ) : total.length === 0 ? (
         <SectionCard><EmptyState icon="family_restroom" title="Sin dependientes" subtitle="Agrega un familiar para controlar su consumo y recargarle saldo."/></SectionCard>
       ) : total.map((c)=>{
@@ -1367,26 +1367,26 @@ function RestriccionesTemplate({ cfg, u }) {
           <div className="p-5 space-y-4">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-[#e2dfff] flex items-center justify-center">
-                  <span className="text-[#3525cd] font-black text-xl">{c.nombre[0]}</span>
+                <div className="w-14 h-14 rounded-2xl bg-[#DCE4FA] flex items-center justify-center">
+                  <span className="text-[#1A3270] font-black text-xl">{c.nombre[0]}</span>
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-black text-[#1b1b24]">{c.alias || c.nombre}</p>
+                    <p className="font-black text-[#1C1C1E]">{c.alias || c.nombre}</p>
                     {editandoPerfilId !== c.dependent_user_id && (
                       <button onClick={()=>{setEditandoPerfilId(c.dependent_user_id); setEditNombre(c.nombre); setEditDni(c.dni||""); setEditAlias(c.alias||""); setPerfilError(null);}}
                         className="w-5 h-5 flex items-center justify-center tap-active flex-shrink-0">
-                        <Icon name="edit" size="text-xs" color="text-[#777587]"/>
+                        <Icon name="edit" size="text-xs" color="text-[#8A8FA8]"/>
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-[#777587] font-mono">{c.alias ? c.nombre : ""}{c.alias && c.dni ? " · " : ""}{c.dni ? `DNI ${c.dni}` : (c.alias ? "" : c.dependent_user_id.slice(0,12))}</p>
+                  <p className="text-xs text-[#8A8FA8] font-mono">{c.alias ? c.nombre : ""}{c.alias && c.dni ? " · " : ""}{c.dni ? `DNI ${c.dni}` : (c.alias ? "" : c.dependent_user_id.slice(0,12))}</p>
                   {registroAlergias && (
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
                       {editandoAlergiasId !== c.dependent_user_id && (
                         <button onClick={()=>{setEditandoAlergiasId(c.dependent_user_id); setEditAlergiasArr(alergiasArr); setOtraAlergiaEdit("");}}
-                          className="text-[9px] font-bold text-[#3525cd] tap-active">{alergiasArr.length ? "Editar" : "+ Agregar alergias"}</button>
+                          className="text-[9px] font-bold text-[#1A3270] tap-active">{alergiasArr.length ? "Editar" : "+ Agregar alergias"}</button>
                       )}
                     </div>
                   )}
@@ -1394,30 +1394,30 @@ function RestriccionesTemplate({ cfg, u }) {
               </div>
               <button onClick={()=>setCodigoAbierto(codigoAbierto === c.dependent_user_id ? null : c.dependent_user_id)}
                 className="glass-card w-9 h-9 rounded-full flex items-center justify-center tap-active flex-shrink-0">
-                <Icon name="qr_code" size="text-base" color="text-[#3525cd]"/>
+                <Icon name="qr_code" size="text-base" color="text-[#1A3270]"/>
               </button>
             </div>
             {editandoPerfilId === c.dependent_user_id && (
-              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Editar perfil</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Editar perfil</p>
                 <div>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Nombre completo</label>
-                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Nombre completo</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     value={editNombre} onChange={e=>setEditNombre(e.target.value)}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">DNI</label>
-                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">DNI</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder="8 dígitos" inputMode="numeric" value={editDni} onChange={e=>setEditDni(e.target.value.replace(/\D/g,""))}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Alias (opcional)</label>
-                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Alias (opcional)</label>
+                  <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder="Cómo le dicen" value={editAlias} onChange={e=>setEditAlias(e.target.value)}/>
                 </div>
                 {perfilError && <p className="text-xs text-red-600">{perfilError}</p>}
                 <div className="flex gap-2">
-                  <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
                   <button disabled={guardandoPerfil || !editNombre.trim()} onClick={async()=>{
                     setGuardandoPerfil(true); setPerfilError(null);
                     try {
@@ -1425,7 +1425,7 @@ function RestriccionesTemplate({ cfg, u }) {
                       setEditandoPerfilId(null);
                       setReload(k=>k+1);
                     } catch { setPerfilError("No se pudo guardar. Intenta de nuevo."); } finally { setGuardandoPerfil(false); }
-                  }} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoPerfil?"Guardando…":"Guardar"}</button>
+                  }} className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoPerfil?"Guardando…":"Guardar"}</button>
                 </div>
                 <button onClick={()=>{setEditandoPerfilId(null); setEliminandoId(c.dependent_user_id); setErrorEliminarDep(null);}}
                   className="w-full py-2 text-xs font-bold text-red-600 tap-active">Eliminar dependiente</button>
@@ -1437,7 +1437,7 @@ function RestriccionesTemplate({ cfg, u }) {
                 <p className="text-xs text-red-700/80 leading-relaxed">Se borra su perfil, restricciones y se libera su bandita vinculada (si tiene). Esta acción no se puede deshacer.</p>
                 {errorEliminarDep && <p className="text-xs font-bold text-red-700">{errorEliminarDep}</p>}
                 <div className="flex gap-2">
-                  <button onClick={()=>setEliminandoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] bg-white tap-active">Cancelar</button>
+                  <button onClick={()=>setEliminandoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] bg-white tap-active">Cancelar</button>
                   <button disabled={borrandoDep} onClick={async()=>{
                     setBorrandoDep(true); setErrorEliminarDep(null);
                     try {
@@ -1455,12 +1455,12 @@ function RestriccionesTemplate({ cfg, u }) {
               </div>
             )}
             {editandoAlergiasId === c.dependent_user_id && (
-              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
                 <div className="flex flex-wrap gap-2 items-center">
                   {ALERGIAS_CATALOG.map(a=>(
                     <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.includes(a)?arr.filter(x=>x!==a):[...arr,a])}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${editAlergiasArr.includes(a)?"bg-red-50 border-red-300 text-red-700":"bg-white border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${editAlergiasArr.includes(a)?"bg-red-50 border-red-300 text-red-700":"bg-white border-[#CDD1E4] text-[#404255]"}`}>{a}</button>
                   ))}
                   {editAlergiasArr.filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a=>(
                     <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.filter(x=>x!==a))}
@@ -1469,10 +1469,10 @@ function RestriccionesTemplate({ cfg, u }) {
                   <input value={otraAlergiaEdit} onChange={e=>setOtraAlergiaEdit(e.target.value)}
                     onKeyDown={e=>{ if (e.key==="Enter" && otraAlergiaEdit.trim()) { e.preventDefault(); setEditAlergiasArr(arr=>[...arr, otraAlergiaEdit.trim()]); setOtraAlergiaEdit(""); } }}
                     onBlur={()=>{ if (otraAlergiaEdit.trim()) { setEditAlergiasArr(arr=>[...arr, otraAlergiaEdit.trim()]); setOtraAlergiaEdit(""); } }}
-                    placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-white outline-none w-20 focus:w-32 transition-all"/>
+                    placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#CDD1E4] text-[#404255] bg-white outline-none w-20 focus:w-32 transition-all"/>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
                   <button disabled={guardandoAlergias} onClick={async()=>{
                     setGuardandoAlergias(true);
                     try {
@@ -1480,89 +1480,89 @@ function RestriccionesTemplate({ cfg, u }) {
                       setEditandoAlergiasId(null);
                       setReload(k=>k+1);
                     } catch {} finally { setGuardandoAlergias(false); }
-                  }} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoAlergias?"Guardando…":"Guardar"}</button>
+                  }} className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoAlergias?"Guardando…":"Guardar"}</button>
                 </div>
               </div>
             )}
             {codigoAbierto === c.dependent_user_id && (
-              <div className="bg-[#f0ecf9] rounded-2xl p-4">
-                <p className="text-xs text-[#777587] text-center mb-3">Muestra esto en el POS del comercio para identificar a {c.nombre.split(" ")[0]}.</p>
+              <div className="bg-[#EEF2FD] rounded-2xl p-4">
+                <p className="text-xs text-[#8A8FA8] text-center mb-3">Muestra esto en el POS del comercio para identificar a {c.nombre.split(" ")[0]}.</p>
                 <QRCode label={c.nombre} sub="Identificación en el POS · QR/pulsera" value={c.dependent_user_id} />
                 <div className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 mt-3">
-                  <p className="font-mono text-xs text-[#1b1b24]">{c.dependent_user_id}</p>
+                  <p className="font-mono text-xs text-[#1C1C1E]">{c.dependent_user_id}</p>
                   <button onClick={() => navigator.clipboard?.writeText(c.dependent_user_id)} className="w-7 h-7 rounded-full flex items-center justify-center tap-active flex-shrink-0">
-                    <Icon name="content_copy" size="text-sm" color="text-[#3525cd]"/>
+                    <Icon name="content_copy" size="text-sm" color="text-[#1A3270]"/>
                   </button>
                 </div>
               </div>
             )}
             <div className={`grid gap-2 ${c.limiteEfectivo != null ? "grid-cols-3" : "grid-cols-2"}`}>
-              <div className="bg-[#f0ecf9] p-2.5 rounded-xl text-center">
-                <p className="text-[10px] font-bold text-[#777587] uppercase">Saldo</p>
-                <p className="font-black text-[#1b1b24] text-sm mt-0.5">S/ {(c.balance||0).toFixed(2)}</p>
+              <div className="bg-[#EEF2FD] p-2.5 rounded-xl text-center">
+                <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Saldo</p>
+                <p className="font-black text-[#1C1C1E] text-sm mt-0.5">S/ {(c.balance||0).toFixed(2)}</p>
               </div>
-              <div className="bg-[#f0ecf9] p-2.5 rounded-xl text-center">
-                <p className="text-[10px] font-bold text-[#777587] uppercase">Horario</p>
-                <p className="font-black text-[#1b1b24] text-[10px] mt-0.5">
+              <div className="bg-[#EEF2FD] p-2.5 rounded-xl text-center">
+                <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Horario</p>
+                <p className="font-black text-[#1C1C1E] text-[10px] mt-0.5">
                   {c.restriccion?.horario_inicio ? `${c.restriccion.horario_inicio}-${c.restriccion.horario_fin}` : horarioConsumo || "Sin límite"}
                 </p>
               </div>
               {c.limiteEfectivo != null && (
-                <div className={`p-2.5 rounded-xl text-center ${c.gastadoHoy >= c.limiteEfectivo ? "bg-red-50" : "bg-[#f0ecf9]"}`}>
-                  <p className="text-[10px] font-bold text-[#777587] uppercase">Hoy</p>
-                  <p className={`font-black text-sm mt-0.5 ${c.gastadoHoy >= c.limiteEfectivo ? "text-red-600" : "text-[#1b1b24]"}`}>S/ {(c.gastadoHoy||0).toFixed(0)}/{Number(c.limiteEfectivo).toFixed(0)}</p>
+                <div className={`p-2.5 rounded-xl text-center ${c.gastadoHoy >= c.limiteEfectivo ? "bg-red-50" : "bg-[#EEF2FD]"}`}>
+                  <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Hoy</p>
+                  <p className={`font-black text-sm mt-0.5 ${c.gastadoHoy >= c.limiteEfectivo ? "text-red-600" : "text-[#1C1C1E]"}`}>S/ {(c.gastadoHoy||0).toFixed(0)}/{Number(c.limiteEfectivo).toFixed(0)}</p>
                 </div>
               )}
             </div>
             <button onClick={()=>restriccionesAbiertoId === c.dependent_user_id ? setRestriccionesAbiertoId(null) : abrirRestricciones(c)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-[#3525cd] bg-[#f0ecf9] tap-active">
-              <Icon name="tune" size="text-sm" color="text-[#3525cd]"/>
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-[#1A3270] bg-[#EEF2FD] tap-active">
+              <Icon name="tune" size="text-sm" color="text-[#1A3270]"/>
               {restriccionesAbiertoId === c.dependent_user_id ? "Cerrar restricciones" : c.restriccion ? "Editar restricciones" : "Configurar restricciones"}
             </button>
             {restriccionesAbiertoId === c.dependent_user_id && restriccionesDraft && (
-              <div className="bg-[#f0ecf9] rounded-2xl p-4 space-y-3">
+              <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Horario de consumo</label>
+                    <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Horario de consumo</label>
                     {(restriccionesDraft.horario_inicio || restriccionesDraft.horario_fin) ? (
                       <button onClick={()=>setRestriccionesDraft(d=>({...d, horario_inicio: "", horario_fin: ""}))}
-                        className="text-[9px] font-bold text-[#3525cd] tap-active">Quitar restricción</button>
+                        className="text-[9px] font-bold text-[#1A3270] tap-active">Quitar restricción</button>
                     ) : (
                       <span className="text-[9px] font-bold text-green-700">{horarioConsumo ? `Usa el del mundo: ${horarioConsumo}` : "Sin restricción de horario"}</span>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[9px] text-[#777587] block mb-1">Desde</label>
-                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                      <label className="text-[9px] text-[#8A8FA8] block mb-1">Desde</label>
+                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                         value={restriccionesDraft.horario_inicio} onChange={e=>setRestriccionesDraft(d=>({...d, horario_inicio: e.target.value}))}/>
                     </div>
                     <div>
-                      <label className="text-[9px] text-[#777587] block mb-1">Hasta</label>
-                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                      <label className="text-[9px] text-[#8A8FA8] block mb-1">Hasta</label>
+                      <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                         value={restriccionesDraft.horario_fin} onChange={e=>setRestriccionesDraft(d=>({...d, horario_fin: e.target.value}))}/>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Límite diario (S/)</label>
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Límite diario (S/)</label>
                   <input type="number" min="0" placeholder={limiteDiarioPerfil != null ? `Por defecto del mundo: S/ ${limiteDiarioPerfil}` : "Sin límite"}
-                    className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1b1b24] outline-none"
+                    className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                     value={restriccionesDraft.limite_diario} onChange={e=>setRestriccionesDraft(d=>({...d, limite_diario: e.target.value}))}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Productos bloqueados</label>
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Productos bloqueados</label>
                   {catalogoMundo === null ? (
-                    <p className="text-xs text-[#777587]">Cargando catálogo…</p>
+                    <p className="text-xs text-[#8A8FA8]">Cargando catálogo…</p>
                   ) : catalogoMundo.length === 0 ? (
-                    <p className="text-xs text-[#777587]">Este mundo todavía no tiene productos cargados.</p>
+                    <p className="text-xs text-[#8A8FA8]">Este mundo todavía no tiene productos cargados.</p>
                   ) : (
-                    <div className="max-h-40 overflow-y-auto bg-white rounded-xl divide-y divide-[#e4e1ee]">
+                    <div className="max-h-40 overflow-y-auto bg-white rounded-xl divide-y divide-[#CDD1E4]">
                       {catalogoMundo.map(p => {
                         const bloqueado = restriccionesDraft.productos_bloqueados.includes(p.id);
                         return (
                           <label key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 text-xs cursor-pointer">
-                            <span className={bloqueado ? "text-red-600 font-semibold" : "text-[#1b1b24]"}>{p.name}</span>
+                            <span className={bloqueado ? "text-red-600 font-semibold" : "text-[#1C1C1E]"}>{p.name}</span>
                             <input type="checkbox" checked={bloqueado} onChange={()=>setRestriccionesDraft(d=>({
                               ...d, productos_bloqueados: bloqueado ? d.productos_bloqueados.filter(id=>id!==p.id) : [...d.productos_bloqueados, p.id],
                             }))}/>
@@ -1573,31 +1573,31 @@ function RestriccionesTemplate({ cfg, u }) {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={()=>setRestriccionesAbiertoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
+                  <button onClick={()=>setRestriccionesAbiertoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
                   <button disabled={guardandoRestricciones} onClick={()=>guardarRestriccionesBtn(c)}
-                    className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoRestricciones?"Guardando…":"Guardar"}</button>
+                    className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoRestricciones?"Guardando…":"Guardar"}</button>
                 </div>
               </div>
             )}
             {rechargeFor === c.dependent_user_id ? (
               <div className="space-y-2">
                 <div className="flex gap-2 items-center">
-                  <div className="flex items-center bg-[#f0ecf9] rounded-2xl px-3 flex-1">
-                    <span className="text-[#777587] font-bold mr-1 text-sm">S/</span>
-                    <input autoFocus className="flex-1 text-lg font-black text-[#1b1b24] bg-transparent py-2.5 outline-none" type="number"
+                  <div className="flex items-center bg-[#EEF2FD] rounded-2xl px-3 flex-1">
+                    <span className="text-[#8A8FA8] font-bold mr-1 text-sm">S/</span>
+                    <input autoFocus className="flex-1 text-lg font-black text-[#1C1C1E] bg-transparent py-2.5 outline-none" type="number"
                       value={rechargeMonto} onChange={e=>setRechargeMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                   </div>
                   <button disabled={!rechargeMonto || recharging} onClick={()=>recargar(c)}
-                    className="px-4 py-2.5 bg-[#3525cd] text-white rounded-2xl font-bold text-sm tap-active disabled:opacity-50">
+                    className="px-4 py-2.5 bg-[#1A3270] text-white rounded-2xl font-bold text-sm tap-active disabled:opacity-50">
                     {recharging ? "…" : "Enviar"}
                   </button>
-                  <button onClick={()=>{setRechargeFor(null);setRechargeMonto("");setRechargeError(null);}} className="text-[#777587] text-xs">Cancelar</button>
+                  <button onClick={()=>{setRechargeFor(null);setRechargeMonto("");setRechargeError(null);}} className="text-[#8A8FA8] text-xs">Cancelar</button>
                 </div>
                 {rechargeError && <p className="text-xs text-red-600">{rechargeError}</p>}
               </div>
             ) : (
               <button onClick={()=>setRechargeFor(c.dependent_user_id)}
-                className="w-full py-3 bg-[#3525cd] text-white rounded-2xl font-bold text-sm tap-active" style={{boxShadow:"0 4px 12px rgba(53,37,205,0.25)"}}>
+                className="w-full py-3 bg-[#1A3270] text-white rounded-2xl font-bold text-sm tap-active" style={{boxShadow:"0 4px 12px rgba(26,50,112,0.25)"}}>
                 Recargar desde mi saldo
               </button>
             )}
@@ -1651,13 +1651,13 @@ function AccesosTemplate({ cfg, u }) {
       <SectionCard className="p-6">
         <QRCode label={cfg.mundo.nombre} sub="Muestra este QR en el punto de acceso" value={myCode} />
         {/* Medios de pago habilitados */}
-        <div className="mt-4 pt-4 border-t border-[#e4e1ee]/50">
-          <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider mb-2">Medios de pago en comercios</p>
+        <div className="mt-4 pt-4 border-t border-[#CDD1E4]/50">
+          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Medios de pago en comercios</p>
           <div className="flex flex-wrap gap-2">
             {(canalesAdq || []).map(ch=>(
-              <div key={ch.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f0ecf9] rounded-xl">
-                <Icon name={ch.icon} fill size="text-sm" color="text-[#3525cd]" />
-                <span className="text-[10px] font-semibold text-[#464555]">{ch.nombre}</span>
+              <div key={ch.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FD] rounded-xl">
+                <Icon name={ch.icon} fill size="text-sm" color="text-[#1A3270]" />
+                <span className="text-[10px] font-semibold text-[#404255]">{ch.nombre}</span>
               </div>
             ))}
           </div>
@@ -1667,8 +1667,8 @@ function AccesosTemplate({ cfg, u }) {
         )}
         <div className="flex gap-2 mt-4">
           <PrimaryBtn label="Refrescar QR" icon="refresh" full={false} />
-          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active flex items-center justify-center gap-2">
-            <Icon name="share" size="text-base" color="text-[#464555]"/>Compartir
+          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
+            <Icon name="share" size="text-base" color="text-[#404255]"/>Compartir
           </button>
         </div>
       </SectionCard>
@@ -1676,7 +1676,7 @@ function AccesosTemplate({ cfg, u }) {
       <SectionCard>
         <SectionHeader label="Zonas habilitadas" icon="map" />
         {zonas.map((z,i)=>(
-          <ListItem key={i} icon="door_open" iconBg="bg-[#e2dfff]" title={z} subtitle="Acceso activo"
+          <ListItem key={i} icon="door_open" iconBg="bg-[#DCE4FA]" title={z} subtitle="Acceso activo"
             right={<Chip label="Activa" color="bg-green-100 text-green-700" dot="bg-green-500"/>} />
         ))}
       </SectionCard>
@@ -1684,7 +1684,7 @@ function AccesosTemplate({ cfg, u }) {
       <SectionCard>
         <SectionHeader label="Registros de acceso" icon="history"/>
         {accesos === null ? (
-          <p className="px-4 py-6 text-sm text-[#777587]">Cargando…</p>
+          <p className="px-4 py-6 text-sm text-[#8A8FA8]">Cargando…</p>
         ) : accesos.length === 0 ? (
           <div className="px-4 pb-4"><EmptyState icon="history" title="Sin registros aún" subtitle="Cuando registres tu ingreso o salida en un punto de acceso, aparecerá aquí."/></div>
         ) : accesos.map(h => (
@@ -1705,33 +1705,33 @@ function AccesosTemplate({ cfg, u }) {
               const ultimo = historial[0];
               const dentro = ultimo?.tipo === "entrada";
               return (
-                <div key={d.id} className="border border-[#e4e1ee] rounded-2xl p-3.5">
+                <div key={d.id} className="border border-[#CDD1E4] rounded-2xl p-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-bold text-sm text-[#1b1b24]">{d.nombre}</p>
+                      <p className="font-bold text-sm text-[#1C1C1E]">{d.nombre}</p>
                       {ultimo ? (
                         <p className={`text-xs mt-0.5 font-semibold flex items-center gap-1 ${dentro ? "text-emerald-600" : "text-rose-600"}`}>
                           <Icon name={dentro ? "login" : "logout"} size="text-xs" color={dentro ? "text-emerald-600" : "text-rose-600"}/>
                           {dentro ? "Dentro del colegio" : "Fuera del colegio"} · {new Date(ultimo.created_at).toLocaleString("es-PE", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       ) : (
-                        <p className="text-xs text-[#777587] mt-0.5">Sin registros de acceso aún</p>
+                        <p className="text-xs text-[#8A8FA8] mt-0.5">Sin registros de acceso aún</p>
                       )}
                     </div>
                     <button onClick={() => setQrAbierto(o => o === d.dependent_user_id ? null : d.dependent_user_id)}
-                      className="flex-shrink-0 text-[10px] font-bold text-[#3525cd] bg-[#f0ecf9] px-3 py-1.5 rounded-xl tap-active">
+                      className="flex-shrink-0 text-[10px] font-bold text-[#1A3270] bg-[#EEF2FD] px-3 py-1.5 rounded-xl tap-active">
                       {qrAbierto === d.dependent_user_id ? "Ocultar código" : "Ver código"}
                     </button>
                   </div>
                   {qrAbierto === d.dependent_user_id && (
-                    <div className="mt-3 pt-3 border-t border-[#e4e1ee]">
+                    <div className="mt-3 pt-3 border-t border-[#CDD1E4]">
                       <QRCode label={d.nombre} sub="Código de acceso — bandita NFC o QR en portería" value={d.dependent_user_id} />
                     </div>
                   )}
                   {historial.length > 1 && (
-                    <div className="mt-2.5 pt-2.5 border-t border-[#e4e1ee]/60 space-y-1">
+                    <div className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 space-y-1">
                       {historial.slice(1, 4).map(h => (
-                        <p key={h.id} className="text-[10px] text-[#777587]">
+                        <p key={h.id} className="text-[10px] text-[#8A8FA8]">
                           {h.tipo === "entrada" ? "Entrada" : "Salida"} · {h.zona || "Sin zona"} · {new Date(h.created_at).toLocaleString("es-PE")}
                         </p>
                       ))}
@@ -1757,20 +1757,20 @@ function CashbackTemplate({ cfg, u }) {
 
   return (
     <div className="px-5 space-y-4 pb-8">
-      <div className="rounded-3xl p-6 text-white" style={{background:"linear-gradient(135deg,#7e3000 0%,#a44100 100%)"}}>
+      <div className="rounded-3xl p-6 text-white" style={{background:"linear-gradient(135deg,#8E6200 0%,#a44100 100%)"}}>
         <p className="text-[11px] font-bold text-white/60 uppercase tracking-widest mb-1">Cashback disponible</p>
         <p className="text-5xl font-black">S/ 24.50</p>
         <p className="text-white/60 text-xs mt-2">+ S/ 8.30 pendiente de acreditar</p>
         {tope && <p className="text-white/40 text-[10px] mt-1">Tope mensual: S/ {tope}</p>}
-        <button className="mt-4 bg-white text-[#7b2f00] text-sm font-black px-5 py-2.5 rounded-2xl tap-active">Transferir a billetera</button>
+        <button className="mt-4 bg-white text-[#8E6200] text-sm font-black px-5 py-2.5 rounded-2xl tap-active">Transferir a billetera</button>
       </div>
 
       <SectionCard className="p-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-[#1b1b24]">Tu tasa de retorno</p>
-          <span className="text-2xl font-black text-[#7b2f00]">{pct}%</span>
+          <p className="text-sm font-bold text-[#1C1C1E]">Tu tasa de retorno</p>
+          <span className="text-2xl font-black text-[#8E6200]">{pct}%</span>
         </div>
-        <p className="text-xs text-[#777587] mt-1">Por cada S/ 100 que gastas recibes S/ {pct} de vuelta.</p>
+        <p className="text-xs text-[#8A8FA8] mt-1">Por cada S/ 100 que gastas recibes S/ {pct} de vuelta.</p>
         <div className="mt-3 p-3 bg-orange-50 rounded-2xl">
           <p className="text-xs text-orange-700">💡 Gasta en <b>Cafetería Central</b> para acumular más rápido</p>
         </div>
@@ -2009,11 +2009,11 @@ function MenuTemplate({ cfg, u }) {
     <div className="px-5 pb-8">
       <SectionCard className="p-6 text-center">
         <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
-        <p className="font-black text-[#1b1b24] text-lg mt-2">Reserva confirmada</p>
-        <p className="text-sm text-[#777587] mt-1">Reservaste el menú del <b>{new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</b> en <b>{resultado.comercio}</b> para <b>{beneficiario.nombre}</b> · S/ {resultado.total.toFixed(2)}.</p>
+        <p className="font-black text-[#1C1C1E] text-lg mt-2">Reserva confirmada</p>
+        <p className="text-sm text-[#8A8FA8] mt-1">Reservaste el menú del <b>{new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</b> en <b>{resultado.comercio}</b> para <b>{beneficiario.nombre}</b> · S/ {resultado.total.toFixed(2)}.</p>
         <div className="mt-4 flex flex-col gap-2">
           <PrimaryBtn label="Ver mis reservas" icon="event_available" onClick={() => { setResultado(null); setVista("reservas"); }}/>
-          <button onClick={() => setResultado(null)} className="text-sm font-bold text-[#3525cd] tap-active">Seguir reservando</button>
+          <button onClick={() => setResultado(null)} className="text-sm font-bold text-[#1A3270] tap-active">Seguir reservando</button>
         </div>
       </SectionCard>
     </div>
@@ -2022,12 +2022,12 @@ function MenuTemplate({ cfg, u }) {
   // ── Checkout ──
   if (enCheckout) return (
     <div className="px-5 space-y-4 pb-8">
-      <button onClick={() => setEnCheckout(false)} className="flex items-center gap-1.5 text-sm font-bold text-[#3525cd] tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#3525cd]"/> Seguir eligiendo
+      <button onClick={() => setEnCheckout(false)} className="flex items-center gap-1.5 text-sm font-bold text-[#1A3270] tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Seguir eligiendo
       </button>
       <SectionCard className="p-5">
-        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">{nombreDe(cartMerchant)} · Para {beneficiario.nombre} · {new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "short" })}</p>
-        <p className="font-black text-lg text-[#1b1b24] mb-3">Tu reserva</p>
+        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{nombreDe(cartMerchant)} · Para {beneficiario.nombre} · {new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "short" })}</p>
+        <p className="font-black text-lg text-[#1C1C1E] mb-3">Tu reserva</p>
         {beneficiario.alergias && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl mb-3 flex items-start gap-2">
             <Icon name="warning" size="text-base" color="text-amber-600"/>
@@ -2039,19 +2039,19 @@ function MenuTemplate({ cfg, u }) {
             <div key={it.item.id} className="flex items-center justify-between text-sm">
               <span className="flex-1">{it.item.nombre}</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => quitar(it.item.id)} className="w-6 h-6 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="remove" size="text-xs" color="text-[#3525cd]"/></button>
+                <button onClick={() => quitar(it.item.id)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="remove" size="text-xs" color="text-[#1A3270]"/></button>
                 <span className="font-bold w-4 text-center">{it.qty}</span>
-                <button onClick={() => agregar(it.item)} className="w-6 h-6 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="add" size="text-xs" color="text-[#3525cd]"/></button>
+                <button onClick={() => agregar(it.item)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="add" size="text-xs" color="text-[#1A3270]"/></button>
                 <span className="font-mono text-xs w-16 text-right">S/ {((+it.item.precio) * it.qty).toFixed(2)}</span>
               </div>
             </div>
           ))}
         </div>
-        <div className="border-t border-[#e4e1ee] pt-3 flex justify-between items-center mb-1">
-          <span className="font-bold text-[#1b1b24]">Total</span>
-          <span className="font-black text-xl text-[#3525cd]">S/ {total.toFixed(2)}</span>
+        <div className="border-t border-[#CDD1E4] pt-3 flex justify-between items-center mb-1">
+          <span className="font-bold text-[#1C1C1E]">Total</span>
+          <span className="font-black text-xl text-[#1A3270]">S/ {total.toFixed(2)}</span>
         </div>
-        <p className="text-[10px] text-[#777587] mb-4">Saldo de {beneficiario.nombre}: S/ {(saldoBeneficiario ?? 0).toFixed(2)}{limiteDiario != null && beneficiario.tipo === "dependiente" ? ` · Límite diario del mundo: S/ ${(+limiteDiario).toFixed(2)}` : ""}</p>
+        <p className="text-[10px] text-[#8A8FA8] mb-4">Saldo de {beneficiario.nombre}: S/ {(saldoBeneficiario ?? 0).toFixed(2)}{limiteDiario != null && beneficiario.tipo === "dependiente" ? ` · Límite diario del mundo: S/ ${(+limiteDiario).toFixed(2)}` : ""}</p>
         {resultado && !resultado.ok && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-3">
             <p className="font-bold text-red-700 text-sm">{resultado.titulo}</p>
@@ -2059,10 +2059,10 @@ function MenuTemplate({ cfg, u }) {
           </div>
         )}
         {metodoReserva === "ambos" && (
-          <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1 mb-3">
+          <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1 mb-3">
             {[["saldo", "Con saldo"], ["qr", "Con QR en el punto de venta"]].map(([v, l]) => (
               <button key={v} onClick={() => setMetodoElegido(v)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold tap-active ${metodoElegido === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+                className={`flex-1 py-2 rounded-xl text-xs font-bold tap-active ${metodoElegido === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
             ))}
           </div>
         )}
@@ -2095,26 +2095,26 @@ function MenuTemplate({ cfg, u }) {
     const fechas = Object.keys(porFecha).sort();
     return (
       <div className="px-5 space-y-4 pb-28">
-        <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1">
+        <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
           {[["calendario", "Calendario"], ["reservas", "Mis reservas"]].map(([v, l]) => (
-            <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+            <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
           ))}
         </div>
         {misReservas === null ? (
-          <div className="py-8 flex flex-col items-center gap-2"><span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/></div>
+          <div className="py-8 flex flex-col items-center gap-2"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
         ) : fechas.length === 0 ? (
           <SectionCard><EmptyState icon="event_available" title="Sin reservas programadas" subtitle="Cuando reserves un menú para un día futuro, aparecerá aquí."/></SectionCard>
         ) : fechas.map(f => (
           <SectionCard key={f} className="p-4">
-            <p className="font-black text-sm text-[#1b1b24] mb-2">{new Date(f + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</p>
+            <p className="font-black text-sm text-[#1C1C1E] mb-2">{new Date(f + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</p>
             <div className="space-y-2">
               {porFecha[f].map(r => (
-                <div key={r.id} className="flex justify-between items-center text-xs bg-[#f0ecf9]/60 rounded-xl px-3 py-2">
+                <div key={r.id} className="flex justify-between items-center text-xs bg-[#EEF2FD]/60 rounded-xl px-3 py-2">
                   <div>
-                    <p className="font-bold text-[#1b1b24]">{r.beneficiario_nombre} · {r.merchant_nombre}</p>
-                    <p className="text-[#777587]">{(r.items || []).map(it => `${it.nombre} x${it.cantidad}`).join(", ")}</p>
+                    <p className="font-bold text-[#1C1C1E]">{r.beneficiario_nombre} · {r.merchant_nombre}</p>
+                    <p className="text-[#8A8FA8]">{(r.items || []).map(it => `${it.nombre} x${it.cantidad}`).join(", ")}</p>
                   </div>
-                  <span className="font-mono font-bold text-[#3525cd]">S/ {Number(r.monto).toFixed(2)}</span>
+                  <span className="font-mono font-bold text-[#1A3270]">S/ {Number(r.monto).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -2126,9 +2126,9 @@ function MenuTemplate({ cfg, u }) {
 
   return (
     <div className="px-5 space-y-4 pb-28">
-      <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1">
+      <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
         {[["calendario", "Calendario"], ["reservas", "Mis reservas"]].map(([v, l]) => (
-          <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#3525cd] shadow-sm" : "text-[#777587]"}`}>{l}</button>
+          <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
         ))}
       </div>
 
@@ -2140,11 +2140,11 @@ function MenuTemplate({ cfg, u }) {
           const tieneReserva = (misReservas || []).some(r => r.fecha === d.fecha);
           return (
             <button key={d.fecha} onClick={() => setFecha(d.fecha)}
-              className={`flex-shrink-0 w-14 py-2.5 rounded-2xl text-center transition-all relative ${fecha === d.fecha ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
+              className={`flex-shrink-0 w-14 py-2.5 rounded-2xl text-center transition-all relative ${fecha === d.fecha ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
               <p className="text-[9px] font-bold uppercase">{d.esHoy ? "Hoy" : d.diaLabel}</p>
               <p className="font-black text-base">{d.numLabel}</p>
               {tieneReserva && (
-                <span className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${fecha === d.fecha ? "bg-white" : "bg-[#3525cd]"}`}/>
+                <span className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${fecha === d.fecha ? "bg-white" : "bg-[#1A3270]"}`}/>
               )}
             </button>
           );
@@ -2162,9 +2162,9 @@ function MenuTemplate({ cfg, u }) {
               <Icon name="today" fill size="text-lg" color="text-green-600"/>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Hoy te toca</p>
-              <p className="text-sm font-bold text-[#1b1b24] truncate">{reservaHoy.beneficiario_nombre} · {(reservaHoy.items || []).map(it => it.nombre).join(", ")}</p>
-              <p className="text-[10px] text-[#777587]">{reservaHoy.merchant_nombre}</p>
+              <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Hoy te toca</p>
+              <p className="text-sm font-bold text-[#1C1C1E] truncate">{reservaHoy.beneficiario_nombre} · {(reservaHoy.items || []).map(it => it.nombre).join(", ")}</p>
+              <p className="text-[10px] text-[#8A8FA8]">{reservaHoy.merchant_nombre}</p>
             </div>
           </SectionCard>
         );
@@ -2172,12 +2172,12 @@ function MenuTemplate({ cfg, u }) {
 
       {/* ¿Para quién? */}
       <div>
-        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest mb-2">Reservar para</p>
+        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-2">Reservar para</p>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {beneficiarios.map(b => (
             <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
-              <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#777587]"}/>
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
+              <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
               {b.nombre}
             </button>
           ))}
@@ -2191,17 +2191,17 @@ function MenuTemplate({ cfg, u }) {
 
       {!beneficiario ? (
         <SectionCard className="p-6 text-center">
-          <Icon name="family_restroom" size="text-3xl" color="text-[#3525cd]"/>
-          <p className="font-bold text-sm text-[#1b1b24] mt-2">Elige para quién es el menú</p>
-          <p className="text-xs text-[#777587] mt-1">Toca uno de los nombres de arriba en "Reservar para" antes de ver los platos disponibles.</p>
+          <Icon name="family_restroom" size="text-3xl" color="text-[#1A3270]"/>
+          <p className="font-bold text-sm text-[#1C1C1E] mt-2">Elige para quién es el menú</p>
+          <p className="text-xs text-[#8A8FA8] mt-1">Toca uno de los nombres de arriba en "Reservar para" antes de ver los platos disponibles.</p>
         </SectionCard>
       ) : (
         <>
           {comercios.length > 1 && (
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              <button onClick={() => setFiltroComercio("todos")} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === "todos" ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>Todos</button>
+              <button onClick={() => setFiltroComercio("todos")} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === "todos" ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>Todos</button>
               {comercios.map(c => (
-                <button key={c.id} onClick={() => setFiltroComercio(c.id)} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === c.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>{c.nombre}</button>
+                <button key={c.id} onClick={() => setFiltroComercio(c.id)} className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtroComercio === c.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>{c.nombre}</button>
               ))}
             </div>
           )}
@@ -2213,8 +2213,8 @@ function MenuTemplate({ cfg, u }) {
 
           {menuDelDia === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
-              <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-              <p className="text-xs text-[#777587]">Cargando menú del día…</p>
+              <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+              <p className="text-xs text-[#8A8FA8]">Cargando menú del día…</p>
             </div>
           ) : visibles.length === 0 ? (
             <SectionCard><EmptyState icon="restaurant_menu" title="Sin menú programado" subtitle="Ningún comercio programó platos para este día todavía. Prueba con otro día del calendario."/></SectionCard>
@@ -2228,21 +2228,21 @@ function MenuTemplate({ cfg, u }) {
                 return (
                   <SectionCard key={p.id} className={`p-4 ${bloqueado ? "opacity-60" : ""}`}>
                     <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-xl bg-[#fff3e0] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-14 h-14 rounded-xl bg-[#FDF0E6] flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {p.imagen_url ? <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover"/> : <Icon name="lunch_dining" fill size="text-2xl" color="text-orange-500"/>}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#1b1b24]">{p.nombre}</p>
-                        <p className="text-xs text-[#777587]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
-                        {p.descripcion && <p className="text-[10px] text-[#777587] mt-0.5">{p.descripcion}</p>}
+                        <p className="font-bold text-[#1C1C1E]">{p.nombre}</p>
+                        <p className="text-xs text-[#8A8FA8]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
+                        {p.descripcion && <p className="text-[10px] text-[#8A8FA8] mt-0.5">{p.descripcion}</p>}
                         {p.alergenos?.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">Contiene: {p.alergenos.join(", ")}</p>}
                         {bloqueadoAlergia && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
                         {!bloqueadoAlergia && bloqueadoRestriccion && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-black text-[#3525cd]">S/ {Number(p.precio).toFixed(2)}</p>
+                        <p className="font-black text-[#1A3270]">S/ {Number(p.precio).toFixed(2)}</p>
                         <button onClick={() => agregar(p)} disabled={bloqueado}
-                          className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active disabled:opacity-40 disabled:bg-[#c7c4d8]">
+                          className="mt-1 text-[10px] bg-[#1A3270] text-white px-2.5 py-1 rounded-xl font-bold tap-active disabled:opacity-40 disabled:bg-[#CDD1E4]">
                           {bloqueado ? "Bloqueado" : enCart ? `Agregar (${enCart.qty})` : "Agregar"}
                         </button>
                       </div>
@@ -2259,7 +2259,7 @@ function MenuTemplate({ cfg, u }) {
         <div className="fixed bottom-24 left-0 right-0 px-5 z-40">
           <div className="max-w-[430px] mx-auto">
             <button onClick={() => { setResultado(null); setEnCheckout(true); }}
-              className="w-full py-3.5 rounded-2xl bg-[#3525cd] text-white font-black flex items-center justify-between px-5 tap-active" style={{boxShadow:"0 8px 24px rgba(53,37,205,0.35)"}}>
+              className="w-full py-3.5 rounded-2xl bg-[#1A3270] text-white font-black flex items-center justify-between px-5 tap-active" style={{boxShadow:"0 8px 24px rgba(26,50,112,0.35)"}}>
               <span className="flex items-center gap-2"><Icon name="shopping_cart" size="text-base" color="text-white"/>{unidades} {unidades === 1 ? "item" : "items"} · {nombreDe(cartMerchant)}</span>
               <span>S/ {total.toFixed(2)} →</span>
             </button>
@@ -2283,22 +2283,22 @@ function EventoHeroSection({ ev, vendidas, mundo }) {
       <div className="h-24 flex items-center justify-center relative bg-cover bg-center"
         style={ev.imagen_url
           ? { backgroundImage: `url(${ev.imagen_url})` }
-          : { background: `linear-gradient(135deg,${mundo.color||"#3525cd"}25,#dae2fd)` }}>
-        {!ev.imagen_url && <Icon name="festival" fill size="text-6xl" color="text-[#3525cd]"/>}
-        <div className="absolute top-2 left-3"><Chip label={`Tipo · ${ev.tipo === "kermesse" ? "Kermesse" : ev.tipo}`} color="bg-[#e2dfff] text-[#3525cd]"/></div>
+          : { background: `linear-gradient(135deg,${mundo.color||"#1A3270"}25,#DCE4FA)` }}>
+        {!ev.imagen_url && <Icon name="festival" fill size="text-6xl" color="text-[#1A3270]"/>}
+        <div className="absolute top-2 left-3"><Chip label={`Tipo · ${ev.tipo === "kermesse" ? "Kermesse" : ev.tipo}`} color="bg-[#DCE4FA] text-[#1A3270]"/></div>
         {lleno && <div className="absolute top-2 right-3"><Chip label="Aforo lleno" color="bg-red-100 text-red-700"/></div>}
       </div>
       <div className="p-4">
-        <p className="font-black text-xl text-[#1b1b24]">{ev.titulo}</p>
-        {ev.descripcion && <p className="text-sm text-[#777587] mt-1">{ev.descripcion}</p>}
+        <p className="font-black text-xl text-[#1C1C1E]">{ev.titulo}</p>
+        {ev.descripcion && <p className="text-sm text-[#8A8FA8] mt-1">{ev.descripcion}</p>}
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
-          <p className="text-xs text-[#3525cd] font-semibold flex items-center gap-1"><Icon name="calendar_today" size="text-xs" color="text-[#3525cd]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}</p>
-          {ev.lugar && <p className="text-xs text-[#777587] flex items-center gap-1"><Icon name="location_on" size="text-xs" color="text-[#777587]"/>{ev.lugar}</p>}
-          {ev.organizador && <p className="text-xs text-[#777587]">Organiza: <b>{ev.organizador}</b></p>}
+          <p className="text-xs text-[#1A3270] font-semibold flex items-center gap-1"><Icon name="calendar_today" size="text-xs" color="text-[#1A3270]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}</p>
+          {ev.lugar && <p className="text-xs text-[#8A8FA8] flex items-center gap-1"><Icon name="location_on" size="text-xs" color="text-[#8A8FA8]"/>{ev.lugar}</p>}
+          {ev.organizador && <p className="text-xs text-[#8A8FA8]">Organiza: <b>{ev.organizador}</b></p>}
         </div>
         {ev.aforo_total > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-[10px] text-[#777587] mb-1">
+            <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
               <span>Aforo</span><span>{vendidas}/{ev.aforo_total} entradas</span>
             </div>
             <ProgressBar value={vendidas} max={ev.aforo_total}/>
@@ -2308,9 +2308,9 @@ function EventoHeroSection({ ev, vendidas, mundo }) {
             detalle (donde de verdad se decide comprar) desaparecía. */}
         {ev.mapa_url && (
           <a href={ev.mapa_url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl bg-[#f0ecf9] tap-active">
-            <Icon name="map" size="text-base" color="text-[#3525cd]"/>
-            <span className="text-xs font-bold text-[#3525cd]">{ev.mapa_nombre || "Ver mapa del evento"}</span>
+            className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl bg-[#EEF2FD] tap-active">
+            <Icon name="map" size="text-base" color="text-[#1A3270]"/>
+            <span className="text-xs font-bold text-[#1A3270]">{ev.mapa_nombre || "Ver mapa del evento"}</span>
           </a>
         )}
       </div>
@@ -2342,15 +2342,15 @@ function EventoAgendaSection({ ev }) {
         {rows.map((it, i) => (
           <div key={i} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center flex-shrink-0">
-                <Icon name={it.icon} size="text-base" color="text-[#3525cd]"/>
+              <div className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center flex-shrink-0">
+                <Icon name={it.icon} size="text-base" color="text-[#1A3270]"/>
               </div>
-              {i < rows.length - 1 && <div className="w-px flex-1 bg-[#e4e1ee] my-1"/>}
+              {i < rows.length - 1 && <div className="w-px flex-1 bg-[#CDD1E4] my-1"/>}
             </div>
             <div className="pb-4 pt-1">
-              <p className="text-sm font-semibold text-[#1b1b24]">{it.t}</p>
-              {(it.h || it.d) && <p className="text-[11px] text-[#777587]">{[it.h, it.d].filter(Boolean).join(" · ")}</p>}
-              {i === 0 && !it.h && <p className="text-[11px] text-[#777587]">{ev.fecha} · {hora}</p>}
+              <p className="text-sm font-semibold text-[#1C1C1E]">{it.t}</p>
+              {(it.h || it.d) && <p className="text-[11px] text-[#8A8FA8]">{[it.h, it.d].filter(Boolean).join(" · ")}</p>}
+              {i === 0 && !it.h && <p className="text-[11px] text-[#8A8FA8]">{ev.fecha} · {hora}</p>}
             </div>
           </div>
         ))}
@@ -2375,20 +2375,20 @@ function EventoMarketplaceSection({ ev, mundo, comercios }) {
       <SectionHeader label="Comercios en el evento" icon="storefront"/>
       <div className="px-4 pb-4 flex gap-3 overflow-x-auto scrollbar-hide">
         {afiliados.map(c => (
-          <div key={c.id} className="flex-shrink-0 flex flex-col items-center gap-1.5 bg-[#f0ecf9] rounded-2xl p-3 w-20">
-            <div className="w-10 h-10 rounded-xl bg-[#3525cd] flex items-center justify-center overflow-hidden">
+          <div key={c.id} className="flex-shrink-0 flex flex-col items-center gap-1.5 bg-[#EEF2FD] rounded-2xl p-3 w-20">
+            <div className="w-10 h-10 rounded-xl bg-[#1A3270] flex items-center justify-center overflow-hidden">
               {(c.logo_url || fotoPorId[c.merchant_id]) ? (
                 <img src={c.logo_url || fotoPorId[c.merchant_id]} alt="" className="w-full h-full object-cover"/>
               ) : (
                 <span className="text-white font-black text-base">{(c.merchant_nombre || "?")[0]}</span>
               )}
             </div>
-            <span className="text-[9px] font-semibold text-[#464555] text-center leading-tight">{(c.merchant_nombre || "Comercio").split(" ").slice(0,2).join(" ")}</span>
+            <span className="text-[9px] font-semibold text-[#404255] text-center leading-tight">{(c.merchant_nombre || "Comercio").split(" ").slice(0,2).join(" ")}</span>
             {c.ubicacion && <span className="text-[8px] text-[#9a97ab] text-center leading-tight">{c.ubicacion}</span>}
           </div>
         ))}
       </div>
-      <p className="px-4 pb-3 text-[10px] text-[#c7c4d8]">Paga con tu saldo del mundo en cualquier comercio durante el evento.</p>
+      <p className="px-4 pb-3 text-[10px] text-[#CDD1E4]">Paga con tu saldo del mundo en cualquier comercio durante el evento.</p>
     </SectionCard>
   );
 }
@@ -2489,8 +2489,8 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
         {/* Loading */}
         {tipos === null && (
           <div className="py-6 flex flex-col items-center gap-2">
-            <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-            <p className="text-xs text-[#777587]">Cargando entradas…</p>
+            <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+            <p className="text-xs text-[#8A8FA8]">Cargando entradas…</p>
           </div>
         )}
 
@@ -2508,17 +2508,17 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
           const bloqueado = agotado || fuera || aforoLleno;
           return (
             <button key={t.id} disabled={bloqueado} onClick={() => elegir(t)}
-              className={`w-full p-4 rounded-2xl border-2 text-left transition-all tap-active ${activo ? "border-[#3525cd] bg-[#f0ecf9]" : "border-[#e4e1ee]"} ${bloqueado ? "opacity-50" : ""}`}>
+              className={`w-full p-4 rounded-2xl border-2 text-left transition-all tap-active ${activo ? "border-[#1A3270] bg-[#EEF2FD]" : "border-[#CDD1E4]"} ${bloqueado ? "opacity-50" : ""}`}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-black text-[#1b1b24]">{t.nombre}</p>
-                  {t.descripcion && <p className="text-xs text-[#777587] mt-0.5">{t.descripcion}</p>}
-                  <p className="text-[10px] text-[#777587] mt-1">
+                  <p className="font-black text-[#1C1C1E]">{t.nombre}</p>
+                  {t.descripcion && <p className="text-xs text-[#8A8FA8] mt-0.5">{t.descripcion}</p>}
+                  <p className="text-[10px] text-[#8A8FA8] mt-1">
                     {agotado ? "Agotado" : `${restantes} disponibles`} · máx {t.max_por_compra || 4} por compra
                     {fuera && " · fuera de ventana de venta"}
                   </p>
                 </div>
-                <p className="font-black text-[#3525cd] flex-shrink-0 ml-3">{+t.precio === 0 ? "Gratis" : `S/ ${(+t.precio).toFixed(2)}`}</p>
+                <p className="font-black text-[#1A3270] flex-shrink-0 ml-3">{+t.precio === 0 ? "Gratis" : `S/ ${(+t.precio).toFixed(2)}`}</p>
               </div>
             </button>
           );
@@ -2528,18 +2528,18 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
         {sel && !aforoLleno && (
           <div className="p-4 glass-card rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-[#1b1b24]">Cantidad · {sel.nombre}</p>
+              <p className="text-sm font-bold text-[#1C1C1E]">Cantidad · {sel.nombre}</p>
               <div className="flex items-center gap-3">
                 <button onClick={() => setQty(q => Math.max(sel.min_por_compra || 1, q - 1))}
-                  className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="remove" size="text-base" color="text-[#3525cd]"/></button>
-                <span className="font-black text-lg text-[#1b1b24] w-6 text-center">{qty}</span>
+                  className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="remove" size="text-base" color="text-[#1A3270]"/></button>
+                <span className="font-black text-lg text-[#1C1C1E] w-6 text-center">{qty}</span>
                 <button onClick={() => setQty(q => Math.min(maxQty, q + 1))}
-                  className="w-8 h-8 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="add" size="text-base" color="text-[#3525cd]"/></button>
+                  className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="add" size="text-base" color="text-[#1A3270]"/></button>
               </div>
             </div>
-            <div className="flex justify-between text-xs text-[#777587]">
+            <div className="flex justify-between text-xs text-[#8A8FA8]">
               <span>Pagas con tu saldo del mundo</span>
-              <span>Saldo: <b className="text-[#1b1b24]">S/ {saldo.toFixed(2)}</b></span>
+              <span>Saldo: <b className="text-[#1C1C1E]">S/ {saldo.toFixed(2)}</b></span>
             </div>
             <PrimaryBtn
               label={comprando ? "Procesando…" : totalPagar === 0 ? `Reservar ${qty} entrada(s)` : `Pagar S/ ${totalPagar.toFixed(2)}`}
@@ -2655,8 +2655,8 @@ function MisEntradasList({ mundo, refreshKey }) {
 
   if (entradas === null) return (
     <div className="py-10 flex flex-col items-center gap-2">
-      <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-      <p className="text-xs text-[#777587]">Cargando tus entradas…</p>
+      <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+      <p className="text-xs text-[#8A8FA8]">Cargando tus entradas…</p>
     </div>
   );
   if (!entradas.length) return (
@@ -2673,11 +2673,11 @@ function MisEntradasList({ mundo, refreshKey }) {
                 persona la invita a que lo intente y se lo rechacen en la
                 puerta. En su lugar va un sello que dice qué pasó y cuándo. */}
             {esUsada(t) ? (
-              <div className="w-[74px] h-[74px] shrink-0 rounded-xl bg-[#f0ecf9] flex flex-col items-center justify-center gap-0.5">
+              <div className="w-[74px] h-[74px] shrink-0 rounded-xl bg-[#EEF2FD] flex flex-col items-center justify-center gap-0.5">
                 <Icon name={t.estado === "anulado" ? "block" : "task_alt"} fill size="text-2xl"
                   color={t.estado === "anulado" ? "text-red-500" : "text-green-600"}/>
                 {t.checkin_at && (
-                  <span className="text-[9px] font-bold text-[#777587]">{horaCorta(t.checkin_at)}</span>
+                  <span className="text-[9px] font-bold text-[#8A8FA8]">{horaCorta(t.checkin_at)}</span>
                 )}
               </div>
             ) : (
@@ -2686,47 +2686,47 @@ function MisEntradasList({ mundo, refreshKey }) {
               </button>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-black text-[#1b1b24] leading-tight">{t.events?.titulo || "Evento"}</p>
-              <p className="text-xs text-[#777587] mt-0.5">{t.event_ticket_types?.nombre || "General"} · {t.events?.fecha} {t.events?.hora || ""}</p>
+              <p className="font-black text-[#1C1C1E] leading-tight">{t.events?.titulo || "Evento"}</p>
+              <p className="text-xs text-[#8A8FA8] mt-0.5">{t.event_ticket_types?.nombre || "General"} · {t.events?.fecha} {t.events?.hora || ""}</p>
               {esUsada(t) ? (
-                <p className="text-[10px] text-[#777587] mt-1">
+                <p className="text-[10px] text-[#8A8FA8] mt-1">
                   {t.estado === "anulado"
                     ? "Esta entrada fue anulada y ya no da acceso."
                     : `Ya se usó para ingresar${t.checkin_at ? ` · ${fechaHoraCorta(t.checkin_at)}` : ""}. No sirve para un segundo ingreso.`}
                 </p>
               ) : (
-                <p className="font-mono text-[9px] text-[#777587] mt-1 truncate">{t.qr_code}</p>
+                <p className="font-mono text-[9px] text-[#8A8FA8] mt-1 truncate">{t.qr_code}</p>
               )}
               <div className="mt-2 flex items-center gap-2">
                 <Chip label={t.estado === "checkin" ? "Dentro del evento" : t.estado === "checkout" ? "Evento completado" : t.estado === "anulado" ? "Anulada" : "Lista para usar"}
-                  color={t.estado === "checkin" ? "bg-green-100 text-green-700" : t.estado === "checkout" ? "bg-gray-100 text-gray-500" : t.estado === "anulado" ? "bg-red-100 text-red-600" : "bg-[#e2dfff] text-[#3525cd]"}/>
+                  color={t.estado === "checkin" ? "bg-green-100 text-green-700" : t.estado === "checkout" ? "bg-gray-100 text-gray-500" : t.estado === "anulado" ? "bg-red-100 text-red-600" : "bg-[#DCE4FA] text-[#1A3270]"}/>
                 {t.estado === "emitido" && (
                   <button onClick={() => { setTransferAbierto(transferAbierto === t.id ? null : t.id); setTransferCode(""); setTransferError(""); }}
-                    className="text-[10px] font-bold text-[#3525cd] flex items-center gap-0.5 tap-active">
-                    <Icon name="send" size="text-xs" color="text-[#3525cd]"/>Transferir
+                    className="text-[10px] font-bold text-[#1A3270] flex items-center gap-0.5 tap-active">
+                    <Icon name="send" size="text-xs" color="text-[#1A3270]"/>Transferir
                   </button>
                 )}
               </div>
             </div>
           </div>
           {transferAbierto === t.id && (
-            <div className="mt-3 pt-3 border-t border-[#e4e1ee] space-y-2.5">
+            <div className="mt-3 pt-3 border-t border-[#CDD1E4] space-y-2.5">
               <button onClick={() => compartirEnlace(t.id)} disabled={generandoLink}
-                className="w-full py-2.5 bg-[#e2dfff] text-[#3525cd] rounded-xl font-bold text-xs tap-active disabled:opacity-50 flex items-center justify-center gap-1.5">
-                <Icon name="link" size="text-sm" color="text-[#3525cd]"/> {generandoLink ? "Generando enlace…" : "Compartir enlace de invitación"}
+                className="w-full py-2.5 bg-[#DCE4FA] text-[#1A3270] rounded-xl font-bold text-xs tap-active disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Icon name="link" size="text-sm" color="text-[#1A3270]"/> {generandoLink ? "Generando enlace…" : "Compartir enlace de invitación"}
               </button>
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-[#e4e1ee]"/><span className="text-[9px] text-[#c7c4d8] font-bold uppercase">o por código</span><div className="flex-1 h-px bg-[#e4e1ee]"/>
+                <div className="flex-1 h-px bg-[#CDD1E4]"/><span className="text-[9px] text-[#CDD1E4] font-bold uppercase">o por código</span><div className="flex-1 h-px bg-[#CDD1E4]"/>
               </div>
               <div className="flex gap-2 items-start">
                 <div className="flex-1">
-                  <input className="w-full bg-[#f0ecf9] rounded-xl px-3 py-2 text-xs font-mono text-[#1b1b24] outline-none"
+                  <input className="w-full bg-[#EEF2FD] rounded-xl px-3 py-2 text-xs font-mono text-[#1C1C1E] outline-none"
                     placeholder="Código JOI del destinatario" value={transferCode}
                     onChange={e => { setTransferCode(e.target.value); setTransferError(""); }}/>
                   {transferError && <p className="text-[10px] text-red-500 mt-1">{transferError}</p>}
                 </div>
                 <button onClick={() => transferir(t.id)} disabled={!transferCode.trim() || transfiriendo}
-                  className="px-3 py-2 bg-[#3525cd] text-white rounded-xl font-bold text-xs tap-active disabled:opacity-50 flex-shrink-0">
+                  className="px-3 py-2 bg-[#1A3270] text-white rounded-xl font-bold text-xs tap-active disabled:opacity-50 flex-shrink-0">
                   {transfiriendo ? "…" : "Enviar"}
                 </button>
               </div>
@@ -2736,19 +2736,19 @@ function MisEntradasList({ mundo, refreshKey }) {
       ))}
       {qrFullscreen && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center px-8" onClick={() => setQrFullscreen(null)}>
-          <button className="absolute top-5 right-5 w-10 h-10 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active" onClick={() => setQrFullscreen(null)} aria-label="Cerrar">
-            <Icon name="close" size="text-xl" color="text-[#1b1b24]"/>
+          <button className="absolute top-5 right-5 w-10 h-10 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active" onClick={() => setQrFullscreen(null)} aria-label="Cerrar">
+            <Icon name="close" size="text-xl" color="text-[#1C1C1E]"/>
           </button>
           <Chip label={qrFullscreen.estado === "checkin" ? "Dentro del evento" : qrFullscreen.estado === "checkout" ? "Evento completado" : qrFullscreen.estado === "anulado" ? "Anulada" : "Lista para usar"}
-            color={qrFullscreen.estado === "checkin" ? "bg-green-100 text-green-700" : qrFullscreen.estado === "checkout" ? "bg-gray-100 text-gray-500" : qrFullscreen.estado === "anulado" ? "bg-red-100 text-red-600" : "bg-[#e2dfff] text-[#3525cd]"}/>
+            color={qrFullscreen.estado === "checkin" ? "bg-green-100 text-green-700" : qrFullscreen.estado === "checkout" ? "bg-gray-100 text-gray-500" : qrFullscreen.estado === "anulado" ? "bg-red-100 text-red-600" : "bg-[#DCE4FA] text-[#1A3270]"}/>
           <div className="mt-6 w-full max-w-[320px]">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=${encodeURIComponent(qrFullscreen.qr_code)}`}
-              alt={`Código QR · ${qrFullscreen.qr_code}`} className="w-full aspect-square rounded-2xl border-2 border-[#e4e1ee]" />
+              alt={`Código QR · ${qrFullscreen.qr_code}`} className="w-full aspect-square rounded-2xl border-2 border-[#CDD1E4]" />
           </div>
-          <p className="font-black text-lg text-[#1b1b24] mt-6 text-center">{qrFullscreen.events?.titulo || "Evento"}</p>
-          <p className="text-sm text-[#777587] mt-1 text-center">{qrFullscreen.event_ticket_types?.nombre || "General"} · {qrFullscreen.events?.fecha} {qrFullscreen.events?.hora || ""}</p>
-          <p className="font-mono text-[10px] text-[#c7c4d8] mt-3 text-center">{qrFullscreen.qr_code}</p>
+          <p className="font-black text-lg text-[#1C1C1E] mt-6 text-center">{qrFullscreen.events?.titulo || "Evento"}</p>
+          <p className="text-sm text-[#8A8FA8] mt-1 text-center">{qrFullscreen.event_ticket_types?.nombre || "General"} · {qrFullscreen.events?.fecha} {qrFullscreen.events?.hora || ""}</p>
+          <p className="font-mono text-[10px] text-[#CDD1E4] mt-3 text-center">{qrFullscreen.qr_code}</p>
         </div>
       )}
     </div>
@@ -2801,22 +2801,22 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
   const ESTADO_INFO = {
     PENDIENTE_APROBACION: { label: "En revisión de RedPontis", color: "text-amber-600 bg-amber-50", icon: "hourglass_top" },
     PUBLICADO: { label: "Publicado", color: "text-green-700 bg-green-50", icon: "check_circle" },
-    PAUSADO: { label: "Pausado", color: "text-[#777587] bg-[#f0ecf9]", icon: "pause_circle" },
+    PAUSADO: { label: "Pausado", color: "text-[#8A8FA8] bg-[#EEF2FD]", icon: "pause_circle" },
     RECHAZADO: { label: "Rechazado", color: "text-red-600 bg-red-50", icon: "cancel" },
   };
 
   if (eventos === null) return (
     <div className="py-10 flex flex-col items-center gap-2">
-      <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-      <p className="text-xs text-[#777587]">Cargando tus eventos…</p>
+      <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+      <p className="text-xs text-[#8A8FA8]">Cargando tus eventos…</p>
     </div>
   );
 
   if (eventos.length === 0) return (
     <SectionCard className="p-8 text-center">
-      <Icon name="event_note" size="text-4xl" color="text-[#c7c4d8]"/>
-      <p className="text-[#464555] font-bold text-sm mt-3">Todavía no publicaste ningún evento</p>
-      <p className="text-[#777587] text-xs mt-1">Usa "Crear y publicar mi evento" arriba para empezar.</p>
+      <Icon name="event_note" size="text-4xl" color="text-[#CDD1E4]"/>
+      <p className="text-[#404255] font-bold text-sm mt-3">Todavía no publicaste ningún evento</p>
+      <p className="text-[#8A8FA8] text-xs mt-1">Usa "Crear y publicar mi evento" arriba para empezar.</p>
     </SectionCard>
   );
 
@@ -2828,12 +2828,12 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
         return (
           <SectionCard key={ev.id} className="p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="font-black text-[#1b1b24] text-sm leading-tight">{ev.titulo}</p>
+              <p className="font-black text-[#1C1C1E] text-sm leading-tight">{ev.titulo}</p>
               <span className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${info.color}`}>
                 <Icon name={info.icon} size="text-[11px]"/>{info.label}
               </span>
             </div>
-            <p className="text-[#777587] text-xs">{ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} {ev.lugar ? `· ${ev.lugar}` : ""}</p>
+            <p className="text-[#8A8FA8] text-xs">{ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} {ev.lugar ? `· ${ev.lugar}` : ""}</p>
 
             {ev.estado === "RECHAZADO" && ev.motivo_rechazo && (
               <p className="text-red-600 text-xs mt-2 bg-red-50 rounded-xl px-3 py-2">{ev.motivo_rechazo}</p>
@@ -2842,17 +2842,17 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
             {(ev.estado === "PUBLICADO" || ev.estado === "PAUSADO") && (
               <>
                 <div className="grid grid-cols-2 gap-2 mt-3">
-                  <div className="bg-[#f0ecf9] rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-bold text-[#777587] uppercase tracking-widest">Vendidas</p>
-                    <p className="text-base font-black text-[#1b1b24]">{s.vendidas}{s.aforo > 0 ? ` / ${s.aforo}` : ""}</p>
+                  <div className="bg-[#EEF2FD] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#8A8FA8] uppercase tracking-widest">Vendidas</p>
+                    <p className="text-base font-black text-[#1C1C1E]">{s.vendidas}{s.aforo > 0 ? ` / ${s.aforo}` : ""}</p>
                   </div>
-                  <div className="bg-[#f0ecf9] rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-bold text-[#777587] uppercase tracking-widest">Ingresos</p>
-                    <p className="text-base font-black text-[#1b1b24]">S/ {s.ingresos.toFixed(2)}</p>
+                  <div className="bg-[#EEF2FD] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#8A8FA8] uppercase tracking-widest">Ingresos</p>
+                    <p className="text-base font-black text-[#1C1C1E]">S/ {s.ingresos.toFixed(2)}</p>
                   </div>
                 </div>
                 <button onClick={() => compartir(ev)}
-                  className="w-full mt-3 py-2.5 rounded-xl bg-[#3525cd] text-white text-xs font-bold flex items-center justify-center gap-1.5 tap-active">
+                  className="w-full mt-3 py-2.5 rounded-xl bg-[#1A3270] text-white text-xs font-bold flex items-center justify-center gap-1.5 tap-active">
                   <Icon name={copiadoId === ev.id ? "check" : "link"} size="text-sm" color="text-white"/>
                   {copiadoId === ev.id ? "Enlace copiado" : "Copiar enlace para invitar"}
                 </button>
@@ -2891,9 +2891,9 @@ function CarruselDelMundo({ eventos, mundo, vendidasMap, onVerEntradas, comercio
       <div className="flex items-center gap-2 mb-3">
         <span
           className="w-1.5 h-4 rounded-full"
-          style={{ background: mundo.color || "#3525cd" }}
+          style={{ background: mundo.color || "#1A3270" }}
         />
-        <p className="text-[11px] font-black uppercase tracking-wider text-[#1b1b24]">
+        <p className="text-[11px] font-black uppercase tracking-wider text-[#1C1C1E]">
           Eventos de {mundo.nombre}
         </p>
       </div>
@@ -2930,7 +2930,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
   const fotoPorId = Object.fromEntries((comerciosDelMundo || []).map(c => [c.id, c.fotoUrl]));
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden bg-white border border-[#e4e1ee]">
+    <div className="w-full rounded-2xl overflow-hidden bg-white border border-[#CDD1E4]">
       {/* Portada real cuando existe; si no, el degradado del mundo. Un
           placeholder gris haría ver el evento como algo sin terminar. */}
       <div
@@ -2938,7 +2938,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
         style={{
           background: ev.imagen_url
             ? `url(${ev.imagen_url}) center/cover`
-            : `linear-gradient(135deg,${mundo.color || "#3525cd"},#4f46e5)`,
+            : `linear-gradient(135deg,${mundo.color || "#1A3270"},#3B5BDB)`,
         }}
       >
         {!ev.imagen_url && (
@@ -2954,15 +2954,15 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
       </div>
 
       <div className="p-4">
-        <p className="font-black text-[#1b1b24] leading-tight mb-1.5">{ev.titulo}</p>
+        <p className="font-black text-[#1C1C1E] leading-tight mb-1.5">{ev.titulo}</p>
 
-        <p className="text-xs font-semibold flex items-center gap-1 mb-1" style={{ color: mundo.color || "#3525cd" }}>
+        <p className="text-xs font-semibold flex items-center gap-1 mb-1" style={{ color: mundo.color || "#1A3270" }}>
           <Icon name="calendar_today" size="text-xs" color="text-current" />
           {ev.fecha}{ev.hora && ` · ${ev.hora}`}
         </p>
         {ev.lugar && (
-          <p className="text-xs text-[#777587] flex items-center gap-1 mb-2">
-            <Icon name="location_on" size="text-xs" color="text-[#777587]" />
+          <p className="text-xs text-[#8A8FA8] flex items-center gap-1 mb-2">
+            <Icon name="location_on" size="text-xs" color="text-[#8A8FA8]" />
             {ev.lugar}
           </p>
         )}
@@ -2973,7 +2973,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
 
         {ev.aforo_total > 0 && (
           <div className="mb-3">
-            <div className="flex justify-between text-[10px] text-[#777587] mb-1">
+            <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
               <span>Aforo</span><span>{vendidas}/{ev.aforo_total}</span>
             </div>
             <ProgressBar value={vendidas} max={ev.aforo_total} />
@@ -2984,22 +2984,22 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
             primeras cosas que se preguntan antes de comprar una entrada. */}
         {Array.isArray(afiliados) && afiliados.length > 0 && (
           <div className="mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#777587] mb-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#8A8FA8] mb-1.5">
               Comercios en el evento
             </p>
             <div className="flex flex-wrap gap-1.5">
               {afiliados.slice(0, 4).map(c => (
-                <span key={c.id} className="flex items-center gap-1 text-[10px] pl-1 pr-2 py-1 rounded-full bg-[#f0ecf9] text-[#3525cd] font-semibold">
+                <span key={c.id} className="flex items-center gap-1 text-[10px] pl-1 pr-2 py-1 rounded-full bg-[#EEF2FD] text-[#1A3270] font-semibold">
                   {(c.logo_url || fotoPorId[c.merchant_id]) ? (
                     <img src={c.logo_url || fotoPorId[c.merchant_id]} alt="" className="w-4 h-4 rounded-full object-cover"/>
                   ) : (
-                    <span className="w-4 h-4 rounded-full bg-[#3525cd] text-white flex items-center justify-center text-[8px] font-black">{(c.merchant_nombre||"?")[0]}</span>
+                    <span className="w-4 h-4 rounded-full bg-[#1A3270] text-white flex items-center justify-center text-[8px] font-black">{(c.merchant_nombre||"?")[0]}</span>
                   )}
                   {c.merchant_nombre}
                 </span>
               ))}
               {afiliados.length > 4 && (
-                <span className="text-[10px] px-2 py-1 text-[#777587] font-semibold">
+                <span className="text-[10px] px-2 py-1 text-[#8A8FA8] font-semibold">
                   +{afiliados.length - 4}
                 </span>
               )}
@@ -3012,10 +3012,10 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
             href={ev.mapa_url}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#f0ecf9] tap-active"
+            className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#EEF2FD] tap-active"
           >
-            <Icon name="map" size="text-base" color="text-[#3525cd]" />
-            <span className="text-xs font-bold text-[#3525cd]">Ver mapa del evento</span>
+            <Icon name="map" size="text-base" color="text-[#1A3270]" />
+            <span className="text-xs font-bold text-[#1A3270]">Ver mapa del evento</span>
           </a>
         )}
 
@@ -3120,63 +3120,63 @@ function EventosTemplate({ cfg, u }) {
       <div className="flex items-center gap-2 mb-6">
         {[1,2,3].map(n=>(
           <React.Fragment key={n}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step>=n?"text-white":"text-[#c7c4d8] border border-[#e4e1ee]"}`}
-              style={step>=n?{background:"linear-gradient(135deg,#3525cd,#4f46e5)"}:{}}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step>=n?"text-white":"text-[#CDD1E4] border border-[#CDD1E4]"}`}
+              style={step>=n?{background:"linear-gradient(135deg,#1A3270,#3B5BDB)"}:{}}>
               {step>n?<Icon name="check" size="text-sm" color="text-white"/>:n}
             </div>
-            {n<3&&<div className={`flex-1 h-1 rounded-full ${step>n?"bg-[#3525cd]":"bg-[#e4e1ee]"}`}/>}
+            {n<3&&<div className={`flex-1 h-1 rounded-full ${step>n?"bg-[#1A3270]":"bg-[#CDD1E4]"}`}/>}
           </React.Fragment>
         ))}
       </div>
-      <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider mb-1">
+      <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">
         {step===1?"Datos del evento":step===2?"Entidad organizadora":"Revisar y enviar"}
       </p>
 
       {step===1 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1b1b24]">Tu evento</h2>
+          <h2 className="text-2xl font-black text-[#1C1C1E]">Tu evento</h2>
           {[{l:"Título del evento",k:"titulo",p:"Ej. Festival de Jazz Barranco"},{l:"Fecha",k:"fecha",t:"date"},{l:"Hora",k:"hora",t:"time"},{l:"Lugar / Dirección",k:"lugar",p:"Ej. Parque Kennedy, Miraflores"}].map(f=>(
             <div key={f.k}>
-              <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{f.l}</label>
-              <input type={f.t||"text"} className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none focus:ring-2 focus:ring-[#3525cd]/20"
+              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{f.l}</label>
+              <input type={f.t||"text"} className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
                 placeholder={f.p||""} value={nuevoEvento[f.k]||""} onChange={e=>setNuevoEvento(p=>({...p,[f.k]:e.target.value}))}/>
             </div>
           ))}
           <div>
-            <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Categoría</label>
+            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Categoría</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIAS.map(c=>(
                 <button key={c} onClick={()=>setNuevoEvento(p=>({...p,categoria:c}))}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active ${nuevoEvento.categoria===c?"bg-[#3525cd] text-white border-[#3525cd]":"border-[#e4e1ee] text-[#464555]"}`}>{c}</button>
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active ${nuevoEvento.categoria===c?"bg-[#1A3270] text-white border-[#1A3270]":"border-[#CDD1E4] text-[#404255]"}`}>{c}</button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Descripción</label>
-            <textarea className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none resize-none" rows={3}
+            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Descripción</label>
+            <textarea className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none resize-none" rows={3}
               placeholder="Cuéntanos de qué trata tu evento..." value={nuevoEvento.descripcion} onChange={e=>setNuevoEvento(p=>({...p,descripcion:e.target.value}))}/>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Aforo</label>
-              <input type="number" className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" value={nuevoEvento.aforo} onChange={e=>setNuevoEvento(p=>({...p,aforo:+e.target.value}))}/>
+              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Aforo</label>
+              <input type="number" className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" value={nuevoEvento.aforo} onChange={e=>setNuevoEvento(p=>({...p,aforo:+e.target.value}))}/>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">Precio (S/)</label>
-              <input type="number" disabled={nuevoEvento.gratis} className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none disabled:opacity-40" value={nuevoEvento.gratis?0:nuevoEvento.precio} onChange={e=>setNuevoEvento(p=>({...p,precio:+e.target.value}))}/>
+              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Precio (S/)</label>
+              <input type="number" disabled={nuevoEvento.gratis} className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none disabled:opacity-40" value={nuevoEvento.gratis?0:nuevoEvento.precio} onChange={e=>setNuevoEvento(p=>({...p,precio:+e.target.value}))}/>
             </div>
           </div>
           <label className="flex items-center gap-3 p-3 glass-card rounded-2xl tap-active cursor-pointer">
-            <div onClick={()=>setNuevoEvento(p=>({...p,gratis:!p.gratis}))} className={`w-11 h-6 rounded-full transition-colors ${nuevoEvento.gratis?"bg-green-500":"bg-[#e4e1ee]"} relative`}>
+            <div onClick={()=>setNuevoEvento(p=>({...p,gratis:!p.gratis}))} className={`w-11 h-6 rounded-full transition-colors ${nuevoEvento.gratis?"bg-green-500":"bg-[#CDD1E4]"} relative`}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${nuevoEvento.gratis?"right-1":"left-1"}`}/>
             </div>
             <div>
-              <p className="text-sm font-bold text-[#1b1b24]">Entrada gratuita</p>
-              <p className="text-xs text-[#777587]">{nuevoEvento.gratis?"Sin costo para los asistentes":"Cobro por entrada"}</p>
+              <p className="text-sm font-bold text-[#1C1C1E]">Entrada gratuita</p>
+              <p className="text-xs text-[#8A8FA8]">{nuevoEvento.gratis?"Sin costo para los asistentes":"Cobro por entrada"}</p>
             </div>
           </label>
           <div className="flex gap-2">
-            <button onClick={()=>{setCreando(false);setStep(1);}} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active">Cancelar</button>
+            <button onClick={()=>{setCreando(false);setStep(1);}} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active">Cancelar</button>
             <PrimaryBtn label="Continuar →" onClick={()=>setStep(2)} disabled={!nuevoEvento.titulo||!nuevoEvento.fecha} full={false}/>
           </div>
         </div>
@@ -3184,33 +3184,33 @@ function EventosTemplate({ cfg, u }) {
 
       {step===2 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1b1b24]">Entidad organizadora</h2>
-          <p className="text-sm text-[#777587]">Es opcional: solo hace falta si publicas a nombre de una empresa o entidad legal. Si es un evento personal, puedes saltarlo.</p>
+          <h2 className="text-2xl font-black text-[#1C1C1E]">Entidad organizadora</h2>
+          <p className="text-sm text-[#8A8FA8]">Es opcional: solo hace falta si publicas a nombre de una empresa o entidad legal. Si es un evento personal, puedes saltarlo.</p>
           {[
             {k:"personal",l:"Evento personal",d:"Publicas a título propio, sin empresa ni RUC"},
             {k:"existente",l:"Entidad existente",d:"Asocia tu RUC o el de tu empresa ya registrada"},
             {k:"nueva",l:"Nueva entidad",d:"Registra una nueva entidad legal para este evento"},
           ].map(op=>(
             <button key={op.k} onClick={()=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,tipo:op.k}}))}
-              className={`w-full p-4 rounded-2xl border-2 text-left tap-active transition-all ${nuevoEvento.entidad.tipo===op.k?"border-[#3525cd] bg-[#f0ecf9]":"border-[#e4e1ee] glass-card"}`}>
-              <p className="font-bold text-[#1b1b24]">{op.l}</p>
-              <p className="text-xs text-[#777587] mt-0.5">{op.d}</p>
+              className={`w-full p-4 rounded-2xl border-2 text-left tap-active transition-all ${nuevoEvento.entidad.tipo===op.k?"border-[#1A3270] bg-[#EEF2FD]":"border-[#CDD1E4] glass-card"}`}>
+              <p className="font-bold text-[#1C1C1E]">{op.l}</p>
+              <p className="text-xs text-[#8A8FA8] mt-0.5">{op.d}</p>
             </button>
           ))}
           {nuevoEvento.entidad.tipo!=="personal" && (
             <>
               <div>
-                <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
+                <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">
                   {nuevoEvento.entidad.tipo==="existente"?"Nombre de la entidad / empresa":"Razón social de la nueva entidad"}
                 </label>
-                <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="Ej. Jazz Garage Lima S.R.L."
+                <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" placeholder="Ej. Jazz Garage Lima S.R.L."
                   value={nuevoEvento.entidad.nombre} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,nombre:e.target.value}}))}/>
               </div>
               <div>
-                <label className="text-[11px] font-bold text-[#777587] uppercase tracking-wider block mb-2">
+                <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">
                   {nuevoEvento.entidad.tipo==="existente"?"RUC":"RUC (si ya tienes) o dejalo vacío"}
                 </label>
-                <input className="w-full bg-[#f0ecf9] rounded-2xl px-4 py-3 text-[#1b1b24] text-sm outline-none" placeholder="20XXXXXXXXX"
+                <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" placeholder="20XXXXXXXXX"
                   value={nuevoEvento.entidad.ruc} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,ruc:e.target.value}}))}/>
               </div>
             </>
@@ -3220,7 +3220,7 @@ function EventosTemplate({ cfg, u }) {
             <ConfigBanner icon="volunteer_activism" message="Fase 0 — RedPontis no cobra comisión sobre tus entradas." color="green"/>
           )}
           <div className="flex gap-2">
-            <button onClick={()=>setStep(1)} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active">Atrás</button>
+            <button onClick={()=>setStep(1)} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active">Atrás</button>
             <PrimaryBtn label="Revisar →" onClick={()=>setStep(3)} disabled={nuevoEvento.entidad.tipo!=="personal" && !nuevoEvento.entidad.nombre} full={false}/>
           </div>
         </div>
@@ -3228,7 +3228,7 @@ function EventosTemplate({ cfg, u }) {
 
       {step===3 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1b1b24]">Confirmar envío</h2>
+          <h2 className="text-2xl font-black text-[#1C1C1E]">Confirmar envío</h2>
           <SectionCard className="p-4 space-y-3">
             {[
               {l:"Título",v:nuevoEvento.titulo},{l:"Fecha",v:`${nuevoEvento.fecha} ${nuevoEvento.hora}`},
@@ -3237,16 +3237,16 @@ function EventosTemplate({ cfg, u }) {
               {l:"Organizador",v:nuevoEvento.entidad.tipo==="personal"?"Evento personal (sin entidad legal)":`${nuevoEvento.entidad.nombre} · ${nuevoEvento.entidad.tipo==="nueva"?"Nueva entidad":"Entidad existente"}`},
             ].map((r,i)=>(
               <div key={i} className="flex justify-between items-start">
-                <p className="text-[11px] font-bold text-[#777587] uppercase w-24 flex-shrink-0">{r.l}</p>
-                <p className="text-sm text-[#1b1b24] font-semibold text-right flex-1">{r.v}</p>
+                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase w-24 flex-shrink-0">{r.l}</p>
+                <p className="text-sm text-[#1C1C1E] font-semibold text-right flex-1">{r.v}</p>
               </div>
             ))}
           </SectionCard>
           <div className="flex gap-2">
-            <button onClick={()=>setStep(2)} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active">Atrás</button>
+            <button onClick={()=>setStep(2)} className="flex-1 py-3 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active">Atrás</button>
             <button onClick={submitEvento} disabled={submitting}
               className="flex-1 py-4 rounded-2xl text-white font-black text-sm tap-active disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{background:"linear-gradient(135deg,#3525cd,#4f46e5)"}}>
+              style={{background:"linear-gradient(135deg,#1A3270,#3B5BDB)"}}>
               {submitting?<><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Enviando...</>:"Publicar evento"}
             </button>
           </div>
@@ -3262,8 +3262,8 @@ function EventosTemplate({ cfg, u }) {
     return (
       <div className="px-5 space-y-4 pb-8">
         <button onClick={() => { setDetalle(null); setReloadKey(k => k + 1); }}
-          className="flex items-center gap-1.5 text-sm font-bold text-[#3525cd] tap-active">
-          <Icon name="arrow_back" size="text-base" color="text-[#3525cd]"/> Todos los eventos
+          className="flex items-center gap-1.5 text-sm font-bold text-[#1A3270] tap-active">
+          <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Todos los eventos
         </button>
         {secciones.map(k => {
           const Section = EVENT_SECTION_REGISTRY[k];
@@ -3313,7 +3313,7 @@ function EventosTemplate({ cfg, u }) {
       {canCreate && (
         <button onClick={()=>{setCreando(true);setStep(1);}}
           className="w-full py-4 rounded-2xl text-white font-black text-sm tap-active flex items-center justify-center gap-2"
-          style={{background:`linear-gradient(135deg,${cfg.mundo.color||"#3525cd"},#4f46e5)`,boxShadow:`0 6px 20px ${cfg.mundo.color||"#3525cd"}40`}}>
+          style={{background:`linear-gradient(135deg,${cfg.mundo.color||"#1A3270"},#3B5BDB)`,boxShadow:`0 6px 20px ${cfg.mundo.color||"#1A3270"}40`}}>
           <Icon name="add_circle" fill size="text-base" color="text-white"/>Crear y publicar mi evento
         </button>
       )}
@@ -3321,7 +3321,7 @@ function EventosTemplate({ cfg, u }) {
       <div className="flex gap-2">
         {[["eventos","Eventos"],["mis_entradas","Mis entradas"],...(canCreate ? [["mis_eventos","Mis eventos"]] : [])].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#3525cd] text-white":"glass-card text-[#464555]"}`}>
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#1A3270] text-white":"glass-card text-[#404255]"}`}>
             {l}
           </button>
         ))}
@@ -3336,8 +3336,8 @@ function EventosTemplate({ cfg, u }) {
           {/* Estado: cargando */}
           {liveEvents === null && (
             <div className="py-10 flex flex-col items-center gap-2">
-              <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-              <p className="text-xs text-[#777587]">Buscando eventos…</p>
+              <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+              <p className="text-xs text-[#8A8FA8]">Buscando eventos…</p>
             </div>
           )}
 
@@ -3369,7 +3369,7 @@ function EventosTemplate({ cfg, u }) {
           {otrosEventos.length > 0 && (
             <div className="space-y-3">
               {eventosDelMundo.length > 0 && (
-                <p className="text-[11px] font-black uppercase tracking-wider text-[#777587] pt-2">
+                <p className="text-[11px] font-black uppercase tracking-wider text-[#8A8FA8] pt-2">
                   Otros eventos de la comunidad
                 </p>
               )}
@@ -3379,25 +3379,25 @@ function EventosTemplate({ cfg, u }) {
                 const lleno = ev.aforo_total > 0 && vendidas >= ev.aforo_total;
                 return (
                   <SectionCard key={ev.id} className="overflow-hidden">
-                    <div className="h-20 flex items-center justify-center relative" style={{background:`linear-gradient(135deg,${cfg.mundo.color||"#3525cd"}15,#dae2fd)`}}>
-                      <Icon name={icon} fill size="text-5xl" color="text-[#3525cd]"/>
+                    <div className="h-20 flex items-center justify-center relative" style={{background:`linear-gradient(135deg,${cfg.mundo.color||"#1A3270"}15,#DCE4FA)`}}>
+                      <Icon name={icon} fill size="text-5xl" color="text-[#1A3270]"/>
                       <div className="absolute top-2 left-3 flex gap-1.5">
-                        <Chip label={ev.tipo === "kermesse" ? "Kermesse" : "Evento"} color="bg-[#e2dfff] text-[#3525cd]"/>
+                        <Chip label={ev.tipo === "kermesse" ? "Kermesse" : "Evento"} color="bg-[#DCE4FA] text-[#1A3270]"/>
                       </div>
                       {lleno && <div className="absolute top-2 right-3"><Chip label="Agotado" color="bg-red-100 text-red-700"/></div>}
                     </div>
                     <div className="p-4">
-                      <p className="font-black text-[#1b1b24] mb-1">{ev.titulo}</p>
-                      <p className="text-xs text-[#3525cd] font-semibold flex items-center gap-1 mb-1">
-                        <Icon name="calendar_today" size="text-xs" color="text-[#3525cd]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}
+                      <p className="font-black text-[#1C1C1E] mb-1">{ev.titulo}</p>
+                      <p className="text-xs text-[#1A3270] font-semibold flex items-center gap-1 mb-1">
+                        <Icon name="calendar_today" size="text-xs" color="text-[#1A3270]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}
                       </p>
-                      {ev.lugar && <p className="text-xs text-[#777587] flex items-center gap-1 mb-2"><Icon name="location_on" size="text-xs" color="text-[#777587]"/>{ev.lugar}</p>}
+                      {ev.lugar && <p className="text-xs text-[#8A8FA8] flex items-center gap-1 mb-2"><Icon name="location_on" size="text-xs" color="text-[#8A8FA8]"/>{ev.lugar}</p>}
                       {ev.organizador && (
-                        <p className="text-[10px] text-[#777587] mb-2">Organiza: <b>{ev.organizador}</b></p>
+                        <p className="text-[10px] text-[#8A8FA8] mb-2">Organiza: <b>{ev.organizador}</b></p>
                       )}
                       {ev.aforo_total > 0 && (
                         <div className="mb-3">
-                          <div className="flex justify-between text-[10px] text-[#777587] mb-1">
+                          <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
                             <span>Aforo</span><span>{vendidas}/{ev.aforo_total} entradas</span>
                           </div>
                           <ProgressBar value={vendidas} max={ev.aforo_total}/>
@@ -3408,7 +3408,7 @@ function EventosTemplate({ cfg, u }) {
                         icon={lleno ? "block" : "confirmation_number"}
                         disabled={lleno}
                         onClick={()=>setDetalle(ev)}/>
-                      {pickup && !lleno && <p className="text-center text-[10px] text-[#c7c4d8] mt-2">Pre-orden disponible · retiro en {pickup} min</p>}
+                      {pickup && !lleno && <p className="text-center text-[10px] text-[#CDD1E4] mt-2">Pre-orden disponible · retiro en {pickup} min</p>}
                     </div>
                   </SectionCard>
                 );
@@ -3443,10 +3443,10 @@ function GenericTemplate({ cfg, moduleId }) {
 
   return (
     <div className="px-5 pb-8 space-y-4">
-      <div className={`${m.bg || "bg-[#f0ecf9]"} rounded-3xl p-8 text-center`}>
-        <Icon name={m.icon} fill size="text-5xl" color={m.color || "text-[#3525cd]"}/>
-        <p className="font-black text-[#1b1b24] text-lg mt-3">{m.label}</p>
-        <p className="text-sm text-[#777587] mt-1">Módulo activo en <b>{cfg.mundo.nombre}</b></p>
+      <div className={`${m.bg || "bg-[#EEF2FD]"} rounded-3xl p-8 text-center`}>
+        <Icon name={m.icon} fill size="text-5xl" color={m.color || "text-[#1A3270]"}/>
+        <p className="font-black text-[#1C1C1E] text-lg mt-3">{m.label}</p>
+        <p className="text-sm text-[#8A8FA8] mt-1">Módulo activo en <b>{cfg.mundo.nombre}</b></p>
       </div>
       {flagEntries.length > 0 && (
         <SectionCard>
@@ -3466,7 +3466,7 @@ function GenericTemplate({ cfg, moduleId }) {
           {configEntries.slice(0,6).map(([k,v],i)=>(
             <ListItem key={i} title={k.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())}
               subtitle={typeof v==="boolean"?(v?"Activado":"Desactivado"):String(v)||"—"}
-              right={typeof v==="boolean"?<div className={`w-8 h-4 rounded-full ${v?"bg-[#3525cd]":"bg-[#e4e1ee]"}`}/>:null}
+              right={typeof v==="boolean"?<div className={`w-8 h-4 rounded-full ${v?"bg-[#1A3270]":"bg-[#CDD1E4]"}`}/>:null}
             />
           ))}
         </SectionCard>
@@ -3489,13 +3489,13 @@ function SubsidioTemplate({ cfg, u }) {
 
   return (
     <div className="px-5 space-y-4 pb-8">
-      <div className="rounded-3xl p-8 text-center text-white" style={{background:"linear-gradient(135deg,#5800c3 0%,#7c3aed 100%)"}}>
+      <div className="rounded-3xl p-8 text-center text-white" style={{background:"linear-gradient(135deg,#1A3270 0%,#7c3aed 100%)"}}>
         <p className="text-[11px] font-bold text-white/60 uppercase tracking-widest mb-2">Saldo subsidiado</p>
         <p className="text-5xl font-black">S/ {saldo.toFixed(2)}</p>
         <p className="text-white/50 text-xs mt-2">{vig ? `Vence en ${vig} días` : "Sin caducidad"}</p>
       </div>
       <SectionCard className="p-4">
-        <p className="text-sm font-bold text-[#1b1b24] mb-3">Válido solo en estas categorías</p>
+        <p className="text-sm font-bold text-[#1C1C1E] mb-3">Válido solo en estas categorías</p>
         <div className="flex flex-wrap gap-2">
           {cats.map(c=>(
             <div key={c} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 border border-purple-200">
@@ -3504,7 +3504,7 @@ function SubsidioTemplate({ cfg, u }) {
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-[#777587] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
+        <p className="text-[11px] text-[#8A8FA8] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
       </SectionCard>
       <SectionCard>
         <SectionHeader label="Historial de subsidio" icon="history"/>
@@ -3515,7 +3515,7 @@ function SubsidioTemplate({ cfg, u }) {
             iconBg={h.s.startsWith("-")?"bg-purple-50":"bg-green-50"}
             iconColor={h.s.startsWith("-")?"text-purple-600":"text-green-600"}
             title={h.l} subtitle={`${h.cat} · ${h.t}`}
-            right={<span className={`font-black text-sm ${h.s.startsWith("-")?"text-[#1b1b24]":"text-green-600"}`}>{h.s}</span>}/>
+            right={<span className={`font-black text-sm ${h.s.startsWith("-")?"text-[#1C1C1E]":"text-green-600"}`}>{h.s}</span>}/>
         ))}
       </SectionCard>
     </div>
@@ -3537,12 +3537,12 @@ function CreditoTemplate({ cfg, u }) {
       <SectionCard className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest">Línea disponible</p>
+            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Línea disponible</p>
             <p className="text-4xl font-black text-green-600 mt-1">S/ {disponible.toFixed(2)}</p>
           </div>
           <Chip label={`TEA ${tasa}%`} color="bg-amber-100 text-amber-700"/>
         </div>
-        <div className="mb-2 text-xs text-[#777587] flex justify-between">
+        <div className="mb-2 text-xs text-[#8A8FA8] flex justify-between">
           <span>Usado: S/ {usado.toFixed(2)}</span>
           <span>Total: S/ {lineaMax.toFixed(2)}</span>
         </div>
@@ -3550,14 +3550,14 @@ function CreditoTemplate({ cfg, u }) {
       </SectionCard>
       <div className="grid grid-cols-2 gap-3">
         <SectionCard className="p-4 text-center">
-          <Icon name="credit_card" fill size="text-3xl" color="text-[#3525cd]"/>
-          <p className="font-bold text-sm text-[#1b1b24] mt-2">Usar crédito</p>
-          <p className="text-xs text-[#777587]">Al pagar en POS</p>
+          <Icon name="credit_card" fill size="text-3xl" color="text-[#1A3270]"/>
+          <p className="font-bold text-sm text-[#1C1C1E] mt-2">Usar crédito</p>
+          <p className="text-xs text-[#8A8FA8]">Al pagar en POS</p>
         </SectionCard>
         <SectionCard className="p-4 text-center">
           <Icon name="payments" fill size="text-3xl" color="text-green-600"/>
-          <p className="font-bold text-sm text-[#1b1b24] mt-2">Pagar cuota</p>
-          <p className="text-xs text-[#777587]">Vence en 12 días</p>
+          <p className="font-bold text-sm text-[#1C1C1E] mt-2">Pagar cuota</p>
+          <p className="text-xs text-[#8A8FA8]">Vence en 12 días</p>
         </SectionCard>
       </div>
       <SectionCard>
@@ -3565,9 +3565,9 @@ function CreditoTemplate({ cfg, u }) {
         {[{n:"Cuota 1/3",v:106.67,f:"15 Dic",estado:"Pendiente"},
           {n:"Cuota 2/3",v:106.67,f:"15 Ene",estado:"Futura"},
           {n:"Cuota 3/3",v:106.66,f:"15 Feb",estado:"Futura"}].map((c,i)=>(
-          <ListItem key={i} icon="receipt" iconBg="bg-[#f0ecf9]" iconColor="text-[#3525cd]"
+          <ListItem key={i} icon="receipt" iconBg="bg-[#EEF2FD]" iconColor="text-[#1A3270]"
             title={c.n} subtitle={`Vence ${c.f}`}
-            right={<div className="text-right"><p className="font-black text-sm text-[#1b1b24]">S/ {c.v.toFixed(2)}</p><Chip label={c.estado} color={c.estado==="Pendiente"?"bg-amber-100 text-amber-700":"bg-[#f0ecf9] text-[#777587]"}/></div>}/>
+            right={<div className="text-right"><p className="font-black text-sm text-[#1C1C1E]">S/ {c.v.toFixed(2)}</p><Chip label={c.estado} color={c.estado==="Pendiente"?"bg-amber-100 text-amber-700":"bg-[#EEF2FD] text-[#8A8FA8]"}/></div>}/>
         ))}
       </SectionCard>
     </div>
@@ -3660,11 +3660,11 @@ function PerfilExtTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       {/* Profile card */}
       <SectionCard className="p-6 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-[#3525cd] flex items-center justify-center mx-auto mb-3" style={{boxShadow:"0 8px 24px rgba(53,37,205,0.3)"}}>
+        <div className="w-20 h-20 rounded-3xl bg-[#1A3270] flex items-center justify-center mx-auto mb-3" style={{boxShadow:"0 8px 24px rgba(26,50,112,0.3)"}}>
           <span className="text-white font-black text-2xl">{initials}</span>
         </div>
-        <p className="font-black text-[#1b1b24] text-xl">{nombre}</p>
-        <p className="text-xs text-[#777587] mt-1">{u?.auth?.email}</p>
+        <p className="font-black text-[#1C1C1E] text-xl">{nombre}</p>
+        <p className="text-xs text-[#8A8FA8] mt-1">{u?.auth?.email}</p>
         <div className="flex justify-center gap-2 mt-3">
           <Tag label="TAQ NFC" icon="contactless"/>
           <Tag label="QR activo" icon="qr_code"/>
@@ -3679,24 +3679,24 @@ function PerfilExtTemplate({ cfg, u }) {
             <div className="px-4 pb-3 flex gap-1.5 overflow-x-auto">
               {perfiles.map(p => (
                 <button key={p.id} onClick={()=>{ if (!editando) setPerfilActivoId(p.id); }} disabled={editando}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border tap-active transition-colors disabled:opacity-40 ${p.id===perfilActivoId?"bg-[#3525cd] text-white border-[#3525cd]":"border-[#e4e1ee] text-[#464555]"}`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border tap-active transition-colors disabled:opacity-40 ${p.id===perfilActivoId?"bg-[#1A3270] text-white border-[#1A3270]":"border-[#CDD1E4] text-[#404255]"}`}>
                   {p.esTitular ? `${p.nombre} (tú)` : p.nombre}
                 </button>
               ))}
             </div>
           )}
           {!activo.esTitular && (
-            <p className="px-4 pb-3 text-[11px] text-[#777587]">
+            <p className="px-4 pb-3 text-[11px] text-[#8A8FA8]">
               Ficha de {activo.nombre}. {activo.alergias ? `Alergias: ${activo.alergias}. ` : ""}Las alergias se editan desde Restricciones, no acá.
             </p>
           )}
           {perfil === null ? (
-            <p className="px-4 py-4 text-sm text-[#777587]">Cargando…</p>
+            <p className="px-4 py-4 text-sm text-[#8A8FA8]">Cargando…</p>
           ) : editando ? (
             <div className="px-4 pb-4 space-y-3">
               {CAMPOS.map(f => f.key === "alergias" ? (
                 <div key={f.key}>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-2">{f.label}</label>
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{f.label}</label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {ALERGIAS_CATALOG.map(a => {
                       const arr = (draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
@@ -3708,7 +3708,7 @@ function PerfilExtTemplate({ cfg, u }) {
                             const next = cur.includes(a) ? cur.filter(x=>x!==a) : [...cur, a];
                             return { ...d, alergias: next.join(", ") };
                           })}
-                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${activa?"bg-red-50 border-red-300 text-red-700":"border-[#e4e1ee] text-[#464555]"}`}>{a}</button>
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border tap-active transition-colors ${activa?"bg-red-50 border-red-300 text-red-700":"border-[#CDD1E4] text-[#404255]"}`}>{a}</button>
                       );
                     })}
                     {(draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean).filter(a=>!ALERGIAS_CATALOG.includes(a)).map(a => (
@@ -3726,31 +3726,31 @@ function PerfilExtTemplate({ cfg, u }) {
                       onBlur={()=>{ if (otraAlergiaPerfil.trim()) {
                         setDraft(d => { const cur = (d.alergias || "").split(",").map(x=>x.trim()).filter(Boolean); return { ...d, alergias: [...cur, otraAlergiaPerfil.trim()].join(", ") }; });
                         setOtraAlergiaPerfil(""); } }}
-                      placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#c7c4d8] text-[#464555] bg-[#f0ecf9] outline-none w-20 focus:w-32 transition-all"/>
+                      placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#CDD1E4] text-[#404255] bg-[#EEF2FD] outline-none w-20 focus:w-32 transition-all"/>
                   </div>
                 </div>
               ) : (
                 <div key={f.key}>
-                  <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">{f.label}</label>
-                  <input className="w-full bg-[#f0ecf9] rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none"
+                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">{f.label}</label>
+                  <input className="w-full bg-[#EEF2FD] rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder={f.placeholder} value={draft[f.key]} onChange={e => setDraft(d => ({ ...d, [f.key]: e.target.value }))}/>
                 </div>
               ))}
               {mostrarEmergencia && (
               <div>
-                <label className="text-[10px] font-bold text-[#777587] uppercase tracking-wider block mb-1">Contacto de emergencia</label>
+                <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Contacto de emergencia</label>
                 <div className="flex gap-2">
-                  <input className="flex-1 bg-[#f0ecf9] rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none" placeholder="Nombre"
+                  <input className="flex-1 bg-[#EEF2FD] rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none" placeholder="Nombre"
                     value={draft.contacto_emergencia_nombre} onChange={e => setDraft(d => ({ ...d, contacto_emergencia_nombre: e.target.value }))}/>
-                  <input className="w-32 bg-[#f0ecf9] rounded-xl px-3 py-2.5 text-sm text-[#1b1b24] outline-none" placeholder="Teléfono"
+                  <input className="w-32 bg-[#EEF2FD] rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none" placeholder="Teléfono"
                     value={draft.contacto_emergencia_telefono} onChange={e => setDraft(d => ({ ...d, contacto_emergencia_telefono: e.target.value }))}/>
                 </div>
               </div>
               )}
               {guardarError && <p className="text-xs text-red-600">{guardarError}</p>}
               <div className="flex gap-2">
-                <button onClick={() => setEditando(false)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#777587] tap-active">Cancelar</button>
-                <button onClick={guardar} disabled={guardando} className="flex-1 py-2.5 bg-[#3525cd] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardando ? "Guardando…" : "Guardar"}</button>
+                <button onClick={() => setEditando(false)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
+                <button onClick={guardar} disabled={guardando} className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardando ? "Guardando…" : "Guardar"}</button>
               </div>
             </div>
           ) : !CAMPOS.some(f => perfil[f.key]) && !(mostrarEmergencia && perfil.contacto_emergencia_nombre) ? (
@@ -3776,7 +3776,7 @@ function PerfilExtTemplate({ cfg, u }) {
           viendo la ficha de un hijo. */}
       {!activo.esTitular && (
         <SectionCard className="p-6">
-          <p className="font-bold text-[#1b1b24] text-center mb-4">Identificación de {activo.nombre}</p>
+          <p className="font-bold text-[#1C1C1E] text-center mb-4">Identificación de {activo.nombre}</p>
           <QRCode label={activo.nombre} sub="Identificación en el mundo · TAQ/QR" value={activo.id} />
         </SectionCard>
       )}
@@ -3786,14 +3786,14 @@ function PerfilExtTemplate({ cfg, u }) {
         <SectionCard>
           <SectionHeader label="Grupo familiar vinculado" icon="group"/>
           {dependientes === null ? (
-            <p className="px-4 py-4 text-sm text-[#777587]">Cargando…</p>
+            <p className="px-4 py-4 text-sm text-[#8A8FA8]">Cargando…</p>
           ) : dependientes.length === 0 ? (
             <div className="px-4 pb-4"><EmptyState icon="group_add" title="Sin miembros vinculados" subtitle='Agrega familiares desde el módulo "Mi Familia" para gestión conjunta en el mundo.'/></div>
           ) : dependientes.map(d => (
-            <ListItem key={d.id} icon="person" iconBg="bg-[#e2dfff]" iconColor="text-[#3525cd]" title={d.nombre}
+            <ListItem key={d.id} icon="person" iconBg="bg-[#DCE4FA]" iconColor="text-[#1A3270]" title={d.nombre}
               subtitle={d.alergias ? `Alergias: ${d.alergias}` : "Sin alergias registradas"}
               onClick={medicos ? () => setPerfilActivoId(d.dependent_user_id) : undefined}
-              right={medicos ? <Icon name="medical_information" size="text-sm" color="text-[#3525cd]"/> : undefined}/>
+              right={medicos ? <Icon name="medical_information" size="text-sm" color="text-[#1A3270]"/> : undefined}/>
           ))}
         </SectionCard>
       )}
@@ -3829,9 +3829,9 @@ function EstacionamientoTemplate({ cfg, u }) {
             <Icon name="local_parking" fill size="text-3xl" color="text-white"/>
           </div>
           <p className="text-[11px] font-bold text-green-600 uppercase tracking-widest">Estacionamiento activo</p>
-          <p className="text-4xl font-black text-[#1b1b24] mt-1">{mins}min</p>
-          <p className="text-2xl font-black text-[#3525cd] mt-1">S/ {costo.toFixed(2)}</p>
-          <p className="text-xs text-[#777587] mt-1">{gracia > mins ? `${gracia - mins} min de gracia restantes` : `Cobro activo · S/ ${tarifa}/hr`}</p>
+          <p className="text-4xl font-black text-[#1C1C1E] mt-1">{mins}min</p>
+          <p className="text-2xl font-black text-[#1A3270] mt-1">S/ {costo.toFixed(2)}</p>
+          <p className="text-xs text-[#8A8FA8] mt-1">{gracia > mins ? `${gracia - mins} min de gracia restantes` : `Cobro activo · S/ ${tarifa}/hr`}</p>
           <button onClick={()=>{setActive(false);setMins(0);}}
             className="mt-4 w-full py-3 rounded-2xl bg-red-500 text-white font-black tap-active">
             Registrar salida
@@ -3839,10 +3839,10 @@ function EstacionamientoTemplate({ cfg, u }) {
         </SectionCard>
       ) : (
         <SectionCard className="p-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#f0ecf9] flex items-center justify-center mx-auto mb-3">
-            <Icon name="local_parking" fill size="text-3xl" color="text-[#3525cd]"/>
+          <div className="w-16 h-16 rounded-full bg-[#EEF2FD] flex items-center justify-center mx-auto mb-3">
+            <Icon name="local_parking" fill size="text-3xl" color="text-[#1A3270]"/>
           </div>
-          <p className="text-[#777587] text-sm mb-4">Sin estacionamiento activo</p>
+          <p className="text-[#8A8FA8] text-sm mb-4">Sin estacionamiento activo</p>
           <PrimaryBtn label="Registrar entrada" icon="login" onClick={()=>setActive(true)}/>
         </SectionCard>
       )}
@@ -3850,9 +3850,9 @@ function EstacionamientoTemplate({ cfg, u }) {
       <SectionCard>
         <SectionHeader label="Historial" icon="history"/>
         {[{d:"Hoy · 2h 15min",v:"S/ 10.00"},{d:"Ayer · 45min",v:"S/ 0.00 (gracia)"},{d:"Lunes · 3h",v:"S/ 15.00"}].map((h,i)=>(
-          <ListItem key={i} icon="local_parking" iconBg="bg-[#e3f2fd]" iconColor="text-blue-600"
+          <ListItem key={i} icon="local_parking" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
             title={h.d} subtitle={cfg.mundo.nombre}
-            right={<span className="font-black text-sm text-[#1b1b24]">{h.v}</span>}/>
+            right={<span className="font-black text-sm text-[#1C1C1E]">{h.v}</span>}/>
         ))}
       </SectionCard>
     </div>
@@ -3886,7 +3886,7 @@ function PromocionesTemplate({ cfg, u }) {
     const activo = p.estado === "VIGENTE" && !vencida && !agotada;
     return {
       id: p.id, titulo: p.titulo, desc: p.merchant_nombre,
-      icon: "local_offer", color: activo ? "bg-amber-50" : "bg-[#f0ecf9]", c: activo ? "text-amber-600" : "text-[#777587]",
+      icon: "local_offer", color: activo ? "bg-amber-50" : "bg-[#EEF2FD]", c: activo ? "text-amber-600" : "text-[#8A8FA8]",
       vence: p.vigencia_hasta ? new Date(p.vigencia_hasta).toLocaleDateString("es-PE", { day: "2-digit", month: "short" }) : "Sin vencimiento",
       activo, agotada, codigoQR: p.codigo_qr, valor: p.valor, tipo: p.tipo,
     };
@@ -3896,16 +3896,16 @@ function PromocionesTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       <div className="glass-card rounded-2xl p-4 flex justify-between items-center">
         <div>
-          <p className="text-[10px] font-bold text-[#777587] uppercase">Cupones activos</p>
-          <p className="text-2xl font-black text-[#3525cd]">{PROMOS.filter(p=>p.activo).length} <span className="text-sm font-bold text-[#777587]">/ {maxCupones}</span></p>
+          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Cupones activos</p>
+          <p className="text-2xl font-black text-[#1A3270]">{PROMOS.filter(p=>p.activo).length} <span className="text-sm font-bold text-[#8A8FA8]">/ {maxCupones}</span></p>
         </div>
-        <Icon name="confirmation_number" fill size="text-3xl" color="text-[#3525cd]"/>
+        <Icon name="confirmation_number" fill size="text-3xl" color="text-[#1A3270]"/>
       </div>
 
-      <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest px-1">Disponibles para ti</p>
+      <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest px-1">Disponibles para ti</p>
       {promos === null ? (
         <div className="py-10 flex flex-col items-center gap-2">
-          <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
+          <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
         </div>
       ) : PROMOS.length === 0 ? (
         <EmptyState icon="confirmation_number" title="Sin promociones" subtitle="Cuando este mundo publique un cupón, aparecerá aquí."/>
@@ -3918,16 +3918,16 @@ function PromocionesTemplate({ cfg, u }) {
                   <Icon name={p.icon} fill size="text-2xl" color={p.c}/>
                 </div>
                 <div className="flex-1">
-                  <p className="font-black text-[#1b1b24]">{p.titulo}</p>
-                  <p className="text-xs text-[#777587]">{p.desc}</p>
-                  {p.tipo === "Descuento %" && p.valor && <p className="text-xs font-black text-[#3525cd] mt-0.5">{p.valor}% de descuento</p>}
+                  <p className="font-black text-[#1C1C1E]">{p.titulo}</p>
+                  <p className="text-xs text-[#8A8FA8]">{p.desc}</p>
+                  {p.tipo === "Descuento %" && p.valor && <p className="text-xs font-black text-[#1A3270] mt-0.5">{p.valor}% de descuento</p>}
                   {p.tipo === "Cashback" && p.valor && <p className="text-xs font-black text-green-600 mt-0.5">S/ {p.valor} cashback</p>}
-                  <p className="text-[10px] text-[#c7c4d8] font-bold mt-1">Vence: {p.vence}</p>
+                  <p className="text-[10px] text-[#CDD1E4] font-bold mt-1">Vence: {p.vence}</p>
                 </div>
                 {p.activo ? (
-                  <button onClick={() => setVerQR(p)} className="bg-[#3525cd] text-white text-[10px] font-black px-3 py-1.5 rounded-xl tap-active flex-shrink-0">Ver QR</button>
+                  <button onClick={() => setVerQR(p)} className="bg-[#1A3270] text-white text-[10px] font-black px-3 py-1.5 rounded-xl tap-active flex-shrink-0">Ver QR</button>
                 ) : (
-                  <Chip label={p.agotada ? "Agotada" : "Vencida"} color="bg-[#f0ecf9] text-[#777587]"/>
+                  <Chip label={p.agotada ? "Agotada" : "Vencida"} color="bg-[#EEF2FD] text-[#8A8FA8]"/>
                 )}
               </div>
             </SectionCard>
@@ -3938,12 +3938,12 @@ function PromocionesTemplate({ cfg, u }) {
       {verQR && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-6" onClick={() => setVerQR(null)}>
           <div className="glass-card rounded-3xl w-full max-w-[340px] p-6 text-center" onClick={e => e.stopPropagation()}>
-            <p className="font-black text-[#1b1b24] mb-1">{verQR.titulo}</p>
-            <p className="text-xs text-[#777587] mb-4">{verQR.desc}</p>
+            <p className="font-black text-[#1C1C1E] mb-1">{verQR.titulo}</p>
+            <p className="text-xs text-[#8A8FA8] mb-4">{verQR.desc}</p>
             <QRCode label="" sub="" value={verQR.codigoQR}/>
-            <p className="font-mono text-sm font-bold text-[#3525cd] mt-3">{verQR.codigoQR}</p>
-            <p className="text-[10px] text-[#777587] mt-1">Muéstralo en el POS del comercio para canjearlo.</p>
-            <button onClick={() => setVerQR(null)} className="mt-4 w-full py-3 rounded-xl bg-[#f0ecf9] text-[#3525cd] font-bold text-sm tap-active">Cerrar</button>
+            <p className="font-mono text-sm font-bold text-[#1A3270] mt-3">{verQR.codigoQR}</p>
+            <p className="text-[10px] text-[#8A8FA8] mt-1">Muéstralo en el POS del comercio para canjearlo.</p>
+            <button onClick={() => setVerQR(null)} className="mt-4 w-full py-3 rounded-xl bg-[#EEF2FD] text-[#1A3270] font-bold text-sm tap-active">Cerrar</button>
           </div>
         </div>
       )}
@@ -3972,19 +3972,19 @@ function TurnosTemplate({ cfg, u }) {
         {CITAS.length === 0
           ? <EmptyState icon="event_busy" title="Sin citas agendadas" subtitle="Agenda tu primera cita usando el botón de arriba."/>
           : CITAS.map((c,i)=>(
-            <div key={i} className="p-4 border-b border-[#e4e1ee]/40 last:border-0">
+            <div key={i} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
               <div className="flex items-start gap-3 mb-2">
-                <div className="w-11 h-11 rounded-xl bg-[#e0f7fa] flex items-center justify-center flex-shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-[#EAF3FC] flex items-center justify-center flex-shrink-0">
                   <Icon name={c.icon} fill size="text-xl" color="text-cyan-700"/>
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-[#1b1b24]">{c.titulo}</p>
-                  <p className="text-xs text-[#777587]">{c.servicio}</p>
+                  <p className="font-bold text-[#1C1C1E]">{c.titulo}</p>
+                  <p className="text-xs text-[#8A8FA8]">{c.servicio}</p>
                 </div>
                 <Chip label={c.estado} color={c.estado==="Confirmada"?"bg-green-100 text-green-700":"bg-amber-100 text-amber-700"}/>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#3525cd] font-semibold ml-14">
-                <Icon name="schedule" size="text-sm" color="text-[#3525cd]"/>{c.fecha}
+              <div className="flex items-center gap-2 text-xs text-[#1A3270] font-semibold ml-14">
+                <Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>{c.fecha}
               </div>
             </div>
           ))}
@@ -4005,16 +4005,16 @@ function TransporteTemplate({ cfg, u }) {
   return (
     <div className="px-5 space-y-4 pb-8">
       <SectionCard className="p-6 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-[#e1f5fe] flex items-center justify-center mx-auto mb-4">
+        <div className="w-20 h-20 rounded-3xl bg-[#EAF3FC] flex items-center justify-center mx-auto mb-4">
           <Icon name="directions_bus" fill size="text-4xl" color="text-blue-600"/>
         </div>
-        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-widest">Tarifa por viaje</p>
+        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Tarifa por viaje</p>
         <p className="text-4xl font-black text-blue-600 mt-1">S/ {tarifa.toFixed(2)}</p>
-        <p className="text-xs text-[#777587] mt-1">Saldo disponible: S/ {saldo.toFixed(2)}</p>
+        <p className="text-xs text-[#8A8FA8] mt-1">Saldo disponible: S/ {saldo.toFixed(2)}</p>
         <div className="flex gap-2 mt-4">
           <PrimaryBtn label="Pagar con TAQ" icon="contactless" full={false}/>
-          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#464555] tap-active flex items-center justify-center gap-2">
-            <Icon name="qr_code" size="text-base" color="text-[#464555]"/>QR
+          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
+            <Icon name="qr_code" size="text-base" color="text-[#404255]"/>QR
           </button>
         </div>
       </SectionCard>
@@ -4026,26 +4026,26 @@ function TransporteTemplate({ cfg, u }) {
           {r:`Ruta B · Comedor → ${cfg.mundo.nombre}`,t:"Hoy 13:45",v:`S/ ${tarifa.toFixed(2)}`,ic:"directions_bus"},
           {r:`Ruta Expresa · ${cfg.mundo.nombre} ↔ Centro`,t:"Ayer 08:05",v:`S/ ${(tarifa*1.5).toFixed(2)}`,ic:"airport_shuttle"},
         ].map((h,i)=>(
-          <ListItem key={i} icon={h.ic} iconBg="bg-[#e1f5fe]" iconColor="text-blue-600"
+          <ListItem key={i} icon={h.ic} iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
             title={h.r} subtitle={h.t}
-            right={<span className="font-black text-sm text-[#1b1b24]">{h.v}</span>}/>
+            right={<span className="font-black text-sm text-[#1C1C1E]">{h.v}</span>}/>
         ))}
       </SectionCard>
 
       {/* Route map stub */}
       <SectionCard className="overflow-hidden">
         <SectionHeader label="Rutas activas" icon="route"/>
-        <div className="h-32 bg-gradient-to-br from-blue-50 to-[#e1f5fe] flex items-center justify-center">
+        <div className="h-32 bg-gradient-to-br from-blue-50 to-[#EAF3FC] flex items-center justify-center">
           <div className="text-center">
             <Icon name="map" fill size="text-4xl" color="text-blue-300"/>
             <p className="text-xs text-blue-400 font-semibold mt-1">Mapa de rutas · {cfg.mundo.nombre}</p>
           </div>
         </div>
-        <div className="divide-y divide-[#e4e1ee]/40">
+        <div className="divide-y divide-[#CDD1E4]/40">
           {["Ruta A · Principal","Ruta B · Express","Ruta C · Nocturna"].map((r,i)=>(
-            <ListItem key={i} icon="directions_bus" iconBg="bg-[#e1f5fe]" iconColor="text-blue-600"
+            <ListItem key={i} icon="directions_bus" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
               title={r} subtitle={`S/ ${tarifa.toFixed(2)} por viaje`}
-              right={<Chip label={i<2?"Activa":"Suspendida"} color={i<2?"bg-green-100 text-green-700":"bg-[#f0ecf9] text-[#777587]"}/>}/>
+              right={<Chip label={i<2?"Activa":"Suspendida"} color={i<2?"bg-green-100 text-green-700":"bg-[#EEF2FD] text-[#8A8FA8]"}/>}/>
           ))}
         </div>
       </SectionCard>
@@ -4272,14 +4272,14 @@ function BNPLTemplate({ cfg, u }) {
     const cron = cuotasSel ? cronogramaDe(precio, cuotasSel, diasGraciaEfectivo, sel.prog.frecuencia || "mensual", sel.prog.dias_personalizados) : [];
     return (
       <div className="px-5 space-y-4 pb-8">
-        <button onClick={() => { setSel(null); setFase("idle"); setSolicitudId(null); }} className="flex items-center gap-1.5 text-sm font-bold text-[#3525cd] tap-active">
-          <Icon name="arrow_back" size="text-base" color="text-[#3525cd]"/> Productos financiables
+        <button onClick={() => { setSel(null); setFase("idle"); setSolicitudId(null); }} className="flex items-center gap-1.5 text-sm font-bold text-[#1A3270] tap-active">
+          <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Productos financiables
         </button>
 
         <SectionCard className="p-4">
-          <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">{sel.prog.merchant_nombre}</p>
+          <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{sel.prog.merchant_nombre}</p>
           <div className="flex justify-between items-start mt-1">
-            <p className="font-black text-lg text-[#1b1b24] flex-1 mr-3">{sel.producto.nombre}</p>
+            <p className="font-black text-lg text-[#1C1C1E] flex-1 mr-3">{sel.producto.nombre}</p>
             <p className="font-black text-xl text-purple-700">S/ {Number(precio).toFixed(2)}</p>
           </div>
         </SectionCard>
@@ -4288,37 +4288,37 @@ function BNPLTemplate({ cfg, u }) {
         {fase === "firmado" ? (
           <SectionCard className="p-5 text-center">
             <Icon name="verified" fill size="text-5xl" color="text-green-600"/>
-            <p className="font-black text-[#1b1b24] text-lg mt-2">Contrato firmado</p>
-            <p className="text-sm text-[#777587] mt-1">Tu compra quedó financiada en {cuotasSel} cuotas. El cronograma está en "Mis contratos".</p>
+            <p className="font-black text-[#1C1C1E] text-lg mt-2">Contrato firmado</p>
+            <p className="text-sm text-[#8A8FA8] mt-1">Tu compra quedó financiada en {cuotasSel} cuotas. El cronograma está en "Mis contratos".</p>
             <div className="mt-4"><PrimaryBtn label="Ver mis contratos" icon="receipt_long" onClick={() => { setSel(null); setFase("idle"); setSolicitudId(null); }}/></div>
           </SectionCard>
         ) : fase === "rechazado" ? (
           <SectionCard className="p-5 text-center">
             <Icon name="cancel" fill size="text-5xl" color="text-red-500"/>
-            <p className="font-black text-[#1b1b24] text-lg mt-2">Financiamiento rechazado</p>
-            <p className="text-sm text-[#777587] mt-1">{rechazoMsg || "No pudimos completar la operación. Intenta nuevamente o paga con saldo."}</p>
+            <p className="font-black text-[#1C1C1E] text-lg mt-2">Financiamiento rechazado</p>
+            <p className="text-sm text-[#8A8FA8] mt-1">{rechazoMsg || "No pudimos completar la operación. Intenta nuevamente o paga con saldo."}</p>
           </SectionCard>
         ) : (
           <>
             {/* BNPL Selector — cuotas: intersección techo del mundo ∩ programa del comercio */}
             <SectionCard className="p-5">
-              <p className="font-bold text-sm text-[#1b1b24] mb-1">Elige tus cuotas</p>
-              <p className="text-[10px] text-[#777587] mb-3">Techo del mundo: {cuotasTecho.join("/")} cuotas · {sel.prog.merchant_nombre} ofrece: {(sel.prog.cuotas_activas||[]).join("/")}</p>
+              <p className="font-bold text-sm text-[#1C1C1E] mb-1">Elige tus cuotas</p>
+              <p className="text-[10px] text-[#8A8FA8] mb-3">Techo del mundo: {cuotasTecho.join("/")} cuotas · {sel.prog.merchant_nombre} ofrece: {(sel.prog.cuotas_activas||[]).join("/")}</p>
               <div className="grid grid-cols-3 gap-2">
                 {cuotasDisponibles.map(n => (
                   <button key={n} onClick={() => setCuotasSel(n)}
-                    className={`text-center p-3 rounded-2xl border-2 transition-all tap-active ${cuotasSel === n ? "border-purple-600 bg-[#ede7f6]" : "border-[#e4e1ee]"}`}>
+                    className={`text-center p-3 rounded-2xl border-2 transition-all tap-active ${cuotasSel === n ? "border-purple-600 bg-[#EEF2FD]" : "border-[#CDD1E4]"}`}>
                     <p className="font-black text-purple-700">{n}x</p>
-                    <p className="text-[10px] text-[#777587]">{INTERES_POR_CUOTAS[n] === 0 ? "0% interés" : `${INTERES_POR_CUOTAS[n] * 100}% anual`}</p>
-                    <p className="font-bold text-[11px] text-[#1b1b24] mt-1">S/ {(precio * (1 + (INTERES_POR_CUOTAS[n] ?? 0)) / n).toFixed(2)}/mes</p>
+                    <p className="text-[10px] text-[#8A8FA8]">{INTERES_POR_CUOTAS[n] === 0 ? "0% interés" : `${INTERES_POR_CUOTAS[n] * 100}% anual`}</p>
+                    <p className="font-bold text-[11px] text-[#1C1C1E] mt-1">S/ {(precio * (1 + (INTERES_POR_CUOTAS[n] ?? 0)) / n).toFixed(2)}/mes</p>
                   </button>
                 ))}
               </div>
               {cuotasDisponibles.length === 0 && (
                 <p className="text-xs text-red-500">Este comercio no tiene cuotas activas dentro del límite del mundo.</p>
               )}
-              <p className="text-[10px] text-[#777587] mt-3 flex items-center gap-1">
-                <Icon name="event" size="text-xs" color="text-[#777587]"/>{diasGraciaEfectivo} días de gracia · cobro {FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"}
+              <p className="text-[10px] text-[#8A8FA8] mt-3 flex items-center gap-1">
+                <Icon name="event" size="text-xs" color="text-[#8A8FA8]"/>{diasGraciaEfectivo} días de gracia · cobro {FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"}
               </p>
             </SectionCard>
 
@@ -4329,16 +4329,16 @@ function BNPLTemplate({ cfg, u }) {
             )}
             {fase === "evaluando" && (
               <SectionCard className="p-5 text-center">
-                <span className="inline-block w-7 h-7 border-2 border-[#e4e1ee] border-t-purple-600 rounded-full animate-spin"/>
-                <p className="font-bold text-sm text-[#1b1b24] mt-2">Enviando solicitud…</p>
+                <span className="inline-block w-7 h-7 border-2 border-[#CDD1E4] border-t-purple-600 rounded-full animate-spin"/>
+                <p className="font-bold text-sm text-[#1C1C1E] mt-2">Enviando solicitud…</p>
               </SectionCard>
             )}
             {fase === "pendiente_aprobacion" && (
               <SectionCard className="p-5 text-center">
                 <Icon name="hourglass_top" size="text-4xl" color="text-purple-500"/>
-                <p className="font-black text-[#1b1b24] text-base mt-2">Solicitud enviada</p>
-                <p className="text-sm text-[#777587] mt-1">{sel.prog.merchant_nombre} está revisando tu solicitud de financiamiento. Te avisaremos aquí en cuanto la resuelvan.</p>
-                <button onClick={verificarSolicitud} disabled={verificando} className="mt-4 text-sm font-bold text-[#3525cd] tap-active disabled:opacity-50">
+                <p className="font-black text-[#1C1C1E] text-base mt-2">Solicitud enviada</p>
+                <p className="text-sm text-[#8A8FA8] mt-1">{sel.prog.merchant_nombre} está revisando tu solicitud de financiamiento. Te avisaremos aquí en cuanto la resuelvan.</p>
+                <button onClick={verificarSolicitud} disabled={verificando} className="mt-4 text-sm font-bold text-[#1A3270] tap-active disabled:opacity-50">
                   {verificando ? "Verificando…" : "Verificar estado →"}
                 </button>
               </SectionCard>
@@ -4347,7 +4347,7 @@ function BNPLTemplate({ cfg, u }) {
               <SectionCard className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Icon name="task_alt" fill size="text-xl" color="text-green-600"/>
-                  <p className="font-black text-[#1b1b24]">Aprobado — Contrato digital</p>
+                  <p className="font-black text-[#1C1C1E]">Aprobado — Contrato digital</p>
                 </div>
                 <div className="space-y-1.5 text-xs mb-3">
                   {[["Producto", sel.producto.nombre], ["Comercio", sel.prog.merchant_nombre],
@@ -4357,35 +4357,35 @@ function BNPLTemplate({ cfg, u }) {
                     ["Frecuencia de cobro", FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"],
                     ["Días de gracia", `${diasGraciaEfectivo} días`],
                     ["Gestión de mora", sel.prog.gestion_mora === "con_cargo" ? `Con cargo por mora (${sel.prog.mora_pct || 0}%)` : "Suspensión sin cargo"]].map(([l, v]) => (
-                    <div key={l} className="flex justify-between"><span className="text-[#777587]">{l}</span><span className="font-semibold text-[#1b1b24] text-right">{v}</span></div>
+                    <div key={l} className="flex justify-between"><span className="text-[#8A8FA8]">{l}</span><span className="font-semibold text-[#1C1C1E] text-right">{v}</span></div>
                   ))}
                 </div>
-                <div className="bg-[#f0ecf9] rounded-2xl p-3 mb-4 max-h-36 overflow-y-auto">
-                  <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider mb-2">Cronograma de cuotas</p>
+                <div className="bg-[#EEF2FD] rounded-2xl p-3 mb-4 max-h-36 overflow-y-auto">
+                  <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Cronograma de cuotas</p>
                   {cron.map(q => (
                     <div key={q.n} className="flex justify-between text-[11px] py-0.5">
-                      <span className="text-[#777587]">Cuota {q.n} · {q.fecha}</span>
-                      <span className="font-bold text-[#1b1b24]">S/ {q.monto.toFixed(2)}</span>
+                      <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha}</span>
+                      <span className="font-bold text-[#1C1C1E]">S/ {q.monto.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
                 {fase === "aprobado" ? (
                   <PrimaryBtn label="Continuar al pago de la 1ra cuota" icon="credit_card" onClick={() => setFase("pago")}/>
                 ) : (
-                  <div className="border-t border-[#e4e1ee] pt-4">
+                  <div className="border-t border-[#CDD1E4] pt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[#1b1b24] font-black text-sm">Cobro de la 1ra cuota</p>
+                      <p className="text-[#1C1C1E] font-black text-sm">Cobro de la 1ra cuota</p>
                     </div>
                     <div className="space-y-2 mb-4">
-                      <input disabled={procesandoPago} className="w-full bg-[#f0ecf9] rounded-xl px-4 py-3 text-sm font-mono text-[#1b1b24] outline-none disabled:opacity-60" defaultValue="4111 1111 1111 1111"/>
+                      <input disabled={procesandoPago} className="w-full bg-[#EEF2FD] rounded-xl px-4 py-3 text-sm font-mono text-[#1C1C1E] outline-none disabled:opacity-60" defaultValue="4111 1111 1111 1111"/>
                       <div className="grid grid-cols-2 gap-2">
-                        <input disabled={procesandoPago} className="bg-[#f0ecf9] rounded-xl px-4 py-3 text-sm font-mono text-[#1b1b24] outline-none disabled:opacity-60" defaultValue="12/28"/>
-                        <input disabled={procesandoPago} className="bg-[#f0ecf9] rounded-xl px-4 py-3 text-sm font-mono text-[#1b1b24] outline-none disabled:opacity-60" defaultValue="123"/>
+                        <input disabled={procesandoPago} className="bg-[#EEF2FD] rounded-xl px-4 py-3 text-sm font-mono text-[#1C1C1E] outline-none disabled:opacity-60" defaultValue="12/28"/>
+                        <input disabled={procesandoPago} className="bg-[#EEF2FD] rounded-xl px-4 py-3 text-sm font-mono text-[#1C1C1E] outline-none disabled:opacity-60" defaultValue="123"/>
                       </div>
                     </div>
                     <PrimaryBtn label={procesandoPago ? "Procesando con Culqi…" : `Pagar S/ ${cron[0].monto.toFixed(2)} y firmar contrato`}
                       icon="history_edu" disabled={procesandoPago} onClick={confirmarPagoYFirmar}/>
-                    <p className="text-center text-[9px] text-[#c7c4d8] mt-2 uppercase tracking-wider">Checkout embebido · contrato Culqi (simulado para demo)</p>
+                    <p className="text-center text-[9px] text-[#CDD1E4] mt-2 uppercase tracking-wider">Checkout embebido · contrato Culqi (simulado para demo)</p>
                   </div>
                 )}
               </SectionCard>
@@ -4404,11 +4404,11 @@ function BNPLTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       <SectionCard className="p-6 text-center">
         <Icon name="schedule_send" fill size="text-5xl" color="text-purple-600"/>
-        <p className="font-black text-[#1b1b24] text-xl mt-3">Paga después</p>
-        <p className="text-sm text-[#777587] mt-1">Financia productos seleccionados en hasta <b className="text-purple-600">{Math.max(...cuotasTecho)} cuotas</b></p>
+        <p className="font-black text-[#1C1C1E] text-xl mt-3">Paga después</p>
+        <p className="text-sm text-[#8A8FA8] mt-1">Financia productos seleccionados en hasta <b className="text-purple-600">{Math.max(...cuotasTecho)} cuotas</b></p>
         <div className="flex justify-center gap-2 mt-4 flex-wrap">
           {cuotasTecho.map(n=>(
-            <div key={n} className="px-4 py-2.5 bg-[#ede7f6] rounded-2xl">
+            <div key={n} className="px-4 py-2.5 bg-[#EEF2FD] rounded-2xl">
               <p className="font-black text-purple-700">{n}x</p>
               <p className="text-[10px] text-purple-500">{INTERES_POR_CUOTAS[n] === 0 ? "0% interés" : "Con interés"}</p>
             </div>
@@ -4416,10 +4416,10 @@ function BNPLTemplate({ cfg, u }) {
         </div>
       </SectionCard>
 
-      <div className="flex bg-[#f0ecf9] rounded-2xl p-1 gap-1">
+      <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
         {[["comercios", "Comercios con BNPL"], ["activos", `Mis Planes${activos.length ? ` (${activos.length})` : ""}`], ["historial", "Historial"]].map(([v, l]) => (
           <button key={v} onClick={() => setVista(v)}
-            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-purple-700 shadow-sm" : "text-[#777587]"}`}>
+            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-purple-700 shadow-sm" : "text-[#8A8FA8]"}`}>
             {l}
           </button>
         ))}
@@ -4430,8 +4430,8 @@ function BNPLTemplate({ cfg, u }) {
           {/* Portal BNPL — Comercios con BNPL: descubrimiento previo a la compra */}
           {programas === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
-              <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-purple-600 rounded-full animate-spin"/>
-              <p className="text-xs text-[#777587]">Cargando comercios…</p>
+              <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-purple-600 rounded-full animate-spin"/>
+              <p className="text-xs text-[#8A8FA8]">Cargando comercios…</p>
             </div>
           ) : programas.length === 0 ? (
             <SectionCard>
@@ -4445,20 +4445,20 @@ function BNPLTemplate({ cfg, u }) {
               <SectionCard key={prog.id}>
                 <SectionHeader label={prog.merchant_nombre || "Comercio"} icon="storefront"/>
                 <div className="px-4 pb-4 space-y-2">
-                  <p className="text-[10px] text-[#777587]"><b className="text-purple-600">{(prog.cuotas_activas||[]).join("/")}x</b> · {productos.length} producto{productos.length !== 1 ? "s" : ""} financiable{productos.length !== 1 ? "s" : ""} · cobro {FRECUENCIA_LABEL[prog.frecuencia] || "mensual"}</p>
+                  <p className="text-[10px] text-[#8A8FA8]"><b className="text-purple-600">{(prog.cuotas_activas||[]).join("/")}x</b> · {productos.length} producto{productos.length !== 1 ? "s" : ""} financiable{productos.length !== 1 ? "s" : ""} · cobro {FRECUENCIA_LABEL[prog.frecuencia] || "mensual"}</p>
                   {suspendido && <ConfigBanner icon="block" message="Compras BNPL suspendidas en este comercio por mora pendiente." color="red"/>}
                   {productos.length === 0 && (
-                    <p className="text-xs text-[#777587] py-2">Este comercio aún no define productos financiables.</p>
+                    <p className="text-xs text-[#8A8FA8] py-2">Este comercio aún no define productos financiables.</p>
                   )}
                   {productos.map((p, i) => {
                     const sobreTecho = p.precio > montoMax; // Rules Engine: monto > techo → bloquear
                     const bloqueado = sobreTecho || suspendido;
                     return (
                       <button key={p.id || i} disabled={bloqueado} onClick={() => elegir(prog, p)}
-                        className={`w-full p-3.5 rounded-2xl border-2 border-[#e4e1ee] text-left tap-active flex justify-between items-center ${bloqueado ? "opacity-50" : "hover:border-purple-300"}`}>
+                        className={`w-full p-3.5 rounded-2xl border-2 border-[#CDD1E4] text-left tap-active flex justify-between items-center ${bloqueado ? "opacity-50" : "hover:border-purple-300"}`}>
                         <div>
-                          <p className="font-bold text-sm text-[#1b1b24]">{p.nombre}</p>
-                          <p className="text-[10px] text-[#777587]">
+                          <p className="font-bold text-sm text-[#1C1C1E]">{p.nombre}</p>
+                          <p className="text-[10px] text-[#8A8FA8]">
                             {sobreTecho ? "No elegible · supera el monto máximo del mundo" : `Hasta ${Math.max(...cuotasTecho.filter(n => (prog.cuotas_activas||[]).includes(n)), 0) || "—"} cuotas · ver detalle`}
                           </p>
                         </div>
@@ -4478,7 +4478,7 @@ function BNPLTemplate({ cfg, u }) {
           <SectionHeader label="Mis planes activos" icon="receipt_long"/>
           <div className="px-4 pb-4 space-y-2">
             {contratos === null ? (
-              <p className="text-xs text-[#777587] py-2">Cargando…</p>
+              <p className="text-xs text-[#8A8FA8] py-2">Cargando…</p>
             ) : activos.length === 0 ? (
               <EmptyState icon="schedule_send" title="Sin planes activos" subtitle="Financia un producto en 'Comercios con BNPL' y tu plan aparecerá aquí."/>
             ) : activos.map(k => {
@@ -4486,13 +4486,13 @@ function BNPLTemplate({ cfg, u }) {
               const proxima = [...(k.cronograma || [])].filter(q => q.estado !== "pagada").sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
               const saldoPendiente = pendientes.reduce((a, q) => a + (+q.monto || 0), 0);
               return (
-                <div key={k.id} className="rounded-2xl border-2 border-[#e4e1ee] overflow-hidden">
+                <div key={k.id} className="rounded-2xl border-2 border-[#CDD1E4] overflow-hidden">
                   <button onClick={() => setContratoAbierto(contratoAbierto === k.id ? null : k.id)}
                     className="w-full p-3.5 text-left flex justify-between items-center tap-active">
                     <div>
-                      <p className="font-bold text-sm text-[#1b1b24]">{k.producto}</p>
-                      <p className="text-[10px] text-[#777587]">{k.merchant_nombre} · {FRECUENCIA_LABEL[k.frecuencia] || "mensual"} · {pendientes.length} cuota{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}</p>
-                      {proxima && <p className="text-[10px] text-[#777587]">Próximo vencimiento: {proxima.fecha}</p>}
+                      <p className="font-bold text-sm text-[#1C1C1E]">{k.producto}</p>
+                      <p className="text-[10px] text-[#8A8FA8]">{k.merchant_nombre} · {FRECUENCIA_LABEL[k.frecuencia] || "mensual"} · {pendientes.length} cuota{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}</p>
+                      {proxima && <p className="text-[10px] text-[#8A8FA8]">Próximo vencimiento: {proxima.fecha}</p>}
                     </div>
                     <div className="text-right">
                       <p className="font-black text-purple-700 text-sm">S/ {saldoPendiente.toFixed(2)}</p>
@@ -4507,16 +4507,16 @@ function BNPLTemplate({ cfg, u }) {
                     <div className="px-4 pb-2"><ConfigBanner icon="hourglass_top" message={`${k.merchant_nombre} está revisando esta solicitud.`} color="blue"/></div>
                   )}
                   {contratoAbierto === k.id && k.estado !== "pendiente_aprobacion" && (
-                    <div className="px-4 pb-3 bg-[#f0ecf9]/50">
+                    <div className="px-4 pb-3 bg-[#EEF2FD]/50">
                       <div className="flex justify-between items-center py-2">
-                        <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider">Cronograma</p>
-                        <p className="text-[10px] text-[#777587]">Saldo en wallet: S/ {Number(walletSaldo).toFixed(2)}</p>
+                        <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Cronograma</p>
+                        <p className="text-[10px] text-[#8A8FA8]">Saldo en wallet: S/ {Number(walletSaldo).toFixed(2)}</p>
                       </div>
                       {(k.cronograma || []).map(q => (
                         <div key={q.n} className="flex justify-between items-center text-[11px] py-1">
-                          <span className="text-[#777587]">Cuota {q.n} · {q.fecha} · {q.estado === "pagada" ? "pagada" : q.estado === "vencida" ? "vencida" : "pendiente"}</span>
+                          <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha} · {q.estado === "pagada" ? "pagada" : q.estado === "vencida" ? "vencida" : "pendiente"}</span>
                           <span className="flex items-center gap-2">
-                            <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1b1b24]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
+                            <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1C1C1E]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
                             {q.estado !== "pagada" && (
                               <button disabled={pagandoCuota === `${k.id}-${q.n}`} onClick={() => pagarCuota(k, q.n)}
                                 className="px-2 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold tap-active disabled:opacity-50">
@@ -4541,7 +4541,7 @@ function BNPLTemplate({ cfg, u }) {
           <SectionHeader label="Historial BNPL" icon="history"/>
           <div className="px-4 pb-4 space-y-2">
             {contratos === null ? (
-              <p className="text-xs text-[#777587] py-2">Cargando…</p>
+              <p className="text-xs text-[#8A8FA8] py-2">Cargando…</p>
             ) : historial.length === 0 ? (
               <EmptyState icon="history" title="Sin financiamientos finalizados" subtitle="Los contratos cerrados, cancelados o declarados incobrables aparecerán aquí."/>
             ) : historial.map(k => <HistorialContratoBNPL key={k.id} contrato={k} abierto={contratoAbierto === k.id} onToggle={() => setContratoAbierto(contratoAbierto === k.id ? null : k.id)}/>)}
@@ -4563,46 +4563,46 @@ function HistorialContratoBNPL({ contrato: k, abierto, onToggle }) {
 
   const pagadas = (k.cronograma || []).filter(q => q.estado === "pagada");
   return (
-    <div className="rounded-2xl border-2 border-[#e4e1ee] overflow-hidden">
+    <div className="rounded-2xl border-2 border-[#CDD1E4] overflow-hidden">
       <button onClick={onToggle} className="w-full p-3.5 text-left flex justify-between items-center tap-active">
         <div>
-          <p className="font-bold text-sm text-[#1b1b24]">{k.producto}</p>
-          <p className="text-[10px] text-[#777587]">{k.merchant_nombre} · {k.cuotas} cuotas · {new Date(k.created_at).toLocaleDateString("es-PE")}</p>
+          <p className="font-bold text-sm text-[#1C1C1E]">{k.producto}</p>
+          <p className="text-[10px] text-[#8A8FA8]">{k.merchant_nombre} · {k.cuotas} cuotas · {new Date(k.created_at).toLocaleDateString("es-PE")}</p>
         </div>
         <div className="text-right">
-          <p className="font-black text-[#1b1b24] text-sm">S/ {Number(k.monto).toFixed(2)}</p>
+          <p className="font-black text-[#1C1C1E] text-sm">S/ {Number(k.monto).toFixed(2)}</p>
           <Chip label={k.estado === "incobrable" ? "Incobrable" : k.estado === "rechazado" ? "Rechazado" : "Cerrado"} color={k.estado === "rechazado" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}/>
         </div>
       </button>
       {k.estado === "rechazado" && k.rechazo_motivo && (
-        <p className="px-4 pb-3 text-[11px] text-[#777587]">Motivo: {k.rechazo_motivo}</p>
+        <p className="px-4 pb-3 text-[11px] text-[#8A8FA8]">Motivo: {k.rechazo_motivo}</p>
       )}
       {abierto && (
-        <div className="px-4 pb-3 bg-[#f0ecf9]/50 space-y-3">
+        <div className="px-4 pb-3 bg-[#EEF2FD]/50 space-y-3">
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-2">
-            <div><span className="text-[#777587]">Interés</span><p className="font-bold text-[#1b1b24]">{k.interes_pct || 0}% anual</p></div>
-            <div><span className="text-[#777587]">Gestión de mora</span><p className="font-bold text-[#1b1b24]">{k.gestion_mora === "con_cargo" ? "Con cargo" : "Suspensión sin cargo"}</p></div>
+            <div><span className="text-[#8A8FA8]">Interés</span><p className="font-bold text-[#1C1C1E]">{k.interes_pct || 0}% anual</p></div>
+            <div><span className="text-[#8A8FA8]">Gestión de mora</span><p className="font-bold text-[#1C1C1E]">{k.gestion_mora === "con_cargo" ? "Con cargo" : "Suspensión sin cargo"}</p></div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider mb-1">Cronograma original</p>
+            <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Cronograma original</p>
             {(k.cronograma || []).map(q => (
               <div key={q.n} className="flex justify-between text-[11px] py-0.5">
-                <span className="text-[#777587]">Cuota {q.n} · {q.fecha} · {q.estado}</span>
-                <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1b1b24]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
+                <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha} · {q.estado}</span>
+                <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1C1C1E]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
               </div>
             ))}
-            <p className="text-[10px] text-[#777587] mt-1">{pagadas.length} de {k.cuotas} cuotas pagadas.</p>
+            <p className="text-[10px] text-[#8A8FA8] mt-1">{pagadas.length} de {k.cuotas} cuotas pagadas.</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider mb-1">Modificaciones realizadas</p>
+            <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Modificaciones realizadas</p>
             {mods === null ? (
-              <p className="text-[11px] text-[#777587]">Cargando…</p>
+              <p className="text-[11px] text-[#8A8FA8]">Cargando…</p>
             ) : mods.length === 0 ? (
-              <p className="text-[11px] text-[#777587]">Sin modificaciones — el contrato se cumplió según lo firmado.</p>
+              <p className="text-[11px] text-[#8A8FA8]">Sin modificaciones — el contrato se cumplió según lo firmado.</p>
             ) : mods.map(m => (
-              <div key={m.id} className="text-[11px] py-1 border-t border-[#e4e1ee] first:border-t-0">
-                <p className="text-[#1b1b24]">{m.mensaje}</p>
-                <p className="text-[9px] text-[#777587]">{new Date(m.created_at).toLocaleString("es-PE")}</p>
+              <div key={m.id} className="text-[11px] py-1 border-t border-[#CDD1E4] first:border-t-0">
+                <p className="text-[#1C1C1E]">{m.mensaje}</p>
+                <p className="text-[9px] text-[#8A8FA8]">{new Date(m.created_at).toLocaleString("es-PE")}</p>
               </div>
             ))}
           </div>
@@ -4627,17 +4627,17 @@ function ConsumosTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       {horario && <ConfigBanner icon="schedule" message={`POS operativo: ${horario}`} color="blue"/>}
       <StatGrid stats={[
-        {label:"Total gastado",value:`S/ ${totalGastado.toFixed(2)}`,icon:"shopping_bag",color:"text-[#3525cd]"},
-        {label:"Compras",value:txs.length,icon:"receipt",color:"text-[#464555]"},
+        {label:"Total gastado",value:`S/ ${totalGastado.toFixed(2)}`,icon:"shopping_bag",color:"text-[#1A3270]"},
+        {label:"Compras",value:txs.length,icon:"receipt",color:"text-[#404255]"},
       ]}/>
       <SectionCard>
         <SectionHeader label="Mis compras en este mundo" icon="receipt_long"/>
         {txs.length===0
           ? <EmptyState icon="receipt_long" title="Sin compras" subtitle="Tus transacciones en este mundo aparecerán aquí."/>
           : txs.map(t=>(
-            <ListItem key={t.id} icon="shopping_bag" iconBg="bg-[#f0ecf9]" iconColor="text-[#3525cd]"
+            <ListItem key={t.id} icon="shopping_bag" iconBg="bg-[#EEF2FD]" iconColor="text-[#1A3270]"
               title={t.titulo} subtitle={new Date(t.fecha).toLocaleDateString("es-PE")}
-              right={<span className="font-black text-sm text-[#1b1b24]">S/ {Math.abs(t.monto).toFixed(2)}</span>}/>
+              right={<span className="font-black text-sm text-[#1C1C1E]">S/ {Math.abs(t.monto).toFixed(2)}</span>}/>
           ))}
       </SectionCard>
     </div>
@@ -4785,8 +4785,8 @@ function MarketplaceTemplate({ cfg, u }) {
     <div className="px-5 pb-8">
       <SectionCard className="p-6 text-center">
         <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
-        <p className="font-black text-[#1b1b24] text-lg mt-2">Compra realizada</p>
-        <p className="text-sm text-[#777587] mt-1">Pagaste <b>S/ {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
+        <p className="font-black text-[#1C1C1E] text-lg mt-2">Compra realizada</p>
+        <p className="text-sm text-[#8A8FA8] mt-1">Pagaste <b>S/ {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
         <div className="mt-4"><PrimaryBtn label="Seguir comprando" icon="storefront" onClick={() => setResultado(null)}/></div>
       </SectionCard>
     </div>
@@ -4795,41 +4795,41 @@ function MarketplaceTemplate({ cfg, u }) {
   // ── Checkout unificado ──
   if (enCheckout) return (
     <div className="px-5 space-y-4 pb-8">
-      <button onClick={() => setEnCheckout(false)} className="flex items-center gap-1.5 text-sm font-bold text-[#3525cd] tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#3525cd]"/> Seguir comprando
+      <button onClick={() => setEnCheckout(false)} className="flex items-center gap-1.5 text-sm font-bold text-[#1A3270] tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Seguir comprando
       </button>
       <SectionCard className="p-5">
-        <p className="text-[11px] font-bold text-[#777587] uppercase tracking-wider">{nombreDe(cartMerchant)}</p>
-        <p className="font-black text-lg text-[#1b1b24] mb-3">Tu pedido</p>
+        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{nombreDe(cartMerchant)}</p>
+        <p className="font-black text-lg text-[#1C1C1E] mb-3">Tu pedido</p>
         <div className="space-y-2 mb-4">
           {cart.map(it => (
             <div key={it.product.id} className="flex items-center justify-between text-sm">
               <span className="flex-1">{it.product.name}</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => quitar(it.product.id)} className="w-6 h-6 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="remove" size="text-xs" color="text-[#3525cd]"/></button>
+                <button onClick={() => quitar(it.product.id)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="remove" size="text-xs" color="text-[#1A3270]"/></button>
                 <span className="font-bold w-4 text-center">{it.qty}</span>
-                <button onClick={() => agregar(it.product)} className="w-6 h-6 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active"><Icon name="add" size="text-xs" color="text-[#3525cd]"/></button>
+                <button onClick={() => agregar(it.product)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="add" size="text-xs" color="text-[#1A3270]"/></button>
                 <span className="font-mono text-xs w-16 text-right">S/ {((+it.product.price) * it.qty).toFixed(2)}</span>
               </div>
             </div>
           ))}
         </div>
-        <div className="border-t border-[#e4e1ee] pt-3 flex justify-between items-center mb-1">
-          <span className="font-bold text-[#1b1b24]">Total</span>
-          <span className="font-black text-xl text-[#3525cd]">S/ {total.toFixed(2)}</span>
+        <div className="border-t border-[#CDD1E4] pt-3 flex justify-between items-center mb-1">
+          <span className="font-bold text-[#1C1C1E]">Total</span>
+          <span className="font-black text-xl text-[#1A3270]">S/ {total.toFixed(2)}</span>
         </div>
         {beneficiarios.length > 1 && (
           <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2 mb-1">
             {beneficiarios.map(b => (
               <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
-                <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#777587]"}/>
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
+                <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
                 {b.nombre}
               </button>
             ))}
           </div>
         )}
-        <p className="text-[10px] text-[#777587] mb-4">Saldo de {beneficiario.nombre}: S/ {saldoMostrado.toFixed(2)}</p>
+        <p className="text-[10px] text-[#8A8FA8] mb-4">Saldo de {beneficiario.nombre}: S/ {saldoMostrado.toFixed(2)}</p>
         {resultado && !resultado.ok && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-3">
             <p className="font-bold text-red-700 text-sm">{resultado.titulo}</p>
@@ -4851,10 +4851,10 @@ function MarketplaceTemplate({ cfg, u }) {
         <>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             <button onClick={() => setFiltro("todos")}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtro === "todos" ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>Todos</button>
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all ${filtro === "todos" ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>Todos</button>
             {comercios.map(c => (
               <button key={c.id} onClick={() => setFiltro(c.id)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${filtro === c.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${filtro === c.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
                 <span className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0 bg-white/20 flex items-center justify-center">
                   {c.fotoUrl ? <img src={c.fotoUrl} alt="" className="w-full h-full object-cover"/> : <span className="text-[8px] font-black">{c.nombre[0]}</span>}
                 </span>
@@ -4865,24 +4865,24 @@ function MarketplaceTemplate({ cfg, u }) {
 
           {comercioActivo && (
             <SectionCard className="p-4 flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#3525cd] flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <div className="w-14 h-14 rounded-2xl bg-[#1A3270] flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {comercioActivo.fotoUrl ? <img src={comercioActivo.fotoUrl} alt="" className="w-full h-full object-cover"/> : <span className="text-white font-black text-xl">{comercioActivo.nombre[0]}</span>}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-[#1b1b24]">{comercioActivo.nombre}</p>
-                <p className="text-[11px] text-[#777587]">{visibles.length} {visibles.length === 1 ? "producto" : "productos"} disponibles</p>
+                <p className="font-black text-[#1C1C1E]">{comercioActivo.nombre}</p>
+                <p className="text-[11px] text-[#8A8FA8]">{visibles.length} {visibles.length === 1 ? "producto" : "productos"} disponibles</p>
               </div>
             </SectionCard>
           )}
 
           {beneficiarios.length > 1 && (
             <div>
-              <p className="text-[10px] font-bold text-[#777587] uppercase tracking-wider mb-2">Comprando para</p>
+              <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Comprando para</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                 {beneficiarios.map(b => (
                   <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#3525cd] text-white" : "glass-card text-[#464555]"}`}>
-                    <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#777587]"}/>
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
+                    <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
                     {b.nombre}
                   </button>
                 ))}
@@ -4897,8 +4897,8 @@ function MarketplaceTemplate({ cfg, u }) {
 
           {productos === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
-              <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-              <p className="text-xs text-[#777587]">Cargando catálogos…</p>
+              <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+              <p className="text-xs text-[#8A8FA8]">Cargando catálogos…</p>
             </div>
           ) : visibles.length === 0 ? (
             <SectionCard><EmptyState icon="inventory_2" title="Sin productos" subtitle={filtro === "todos" ? "Los comercios aún no cargan su catálogo." : `${nombreDe(filtro)} aún no carga su catálogo.`}/></SectionCard>
@@ -4909,19 +4909,19 @@ function MarketplaceTemplate({ cfg, u }) {
                 const bloqueado = bloqueadoPorRestriccion(p);
                 return (
                   <SectionCard key={p.id} className={`p-4 flex items-center gap-3 ${bloqueado ? "opacity-60" : ""}`}>
-                    <div className="w-12 h-12 rounded-xl bg-[#f0ecf9] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover"/> : <Icon name="sell" fill size="text-xl" color="text-[#3525cd]"/>}
+                    <div className="w-12 h-12 rounded-xl bg-[#EEF2FD] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover"/> : <Icon name="sell" fill size="text-xl" color="text-[#1A3270]"/>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#1b1b24] text-sm">{p.name}</p>
-                      <p className="text-[10px] text-[#777587]">{nombreDe(p.merchant_id)}{p.category ? ` · ${p.category}` : ""}</p>
+                      <p className="font-bold text-[#1C1C1E] text-sm">{p.name}</p>
+                      <p className="text-[10px] text-[#8A8FA8]">{nombreDe(p.merchant_id)}{p.category ? ` · ${p.category}` : ""}</p>
                       {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="font-black text-[#3525cd] text-sm">S/ {Number(p.price).toFixed(2)}</p>
+                      <p className="font-black text-[#1A3270] text-sm">S/ {Number(p.price).toFixed(2)}</p>
                       {!bloqueado && (
                         <button onClick={() => agregar(p)}
-                          className="mt-1 text-[10px] bg-[#3525cd] text-white px-2.5 py-1 rounded-xl font-bold tap-active">
+                          className="mt-1 text-[10px] bg-[#1A3270] text-white px-2.5 py-1 rounded-xl font-bold tap-active">
                           {enCart ? `Agregar (${enCart.qty})` : "Agregar"}
                         </button>
                       )}
@@ -4936,7 +4936,7 @@ function MarketplaceTemplate({ cfg, u }) {
             <div className="fixed bottom-24 left-0 right-0 px-5 z-40">
               <div className="max-w-[430px] mx-auto">
                 <button onClick={() => { setResultado(null); setEnCheckout(true); }}
-                  className="w-full py-3.5 rounded-2xl bg-[#3525cd] text-white font-black flex items-center justify-between px-5 tap-active" style={{boxShadow:"0 8px 24px rgba(53,37,205,0.35)"}}>
+                  className="w-full py-3.5 rounded-2xl bg-[#1A3270] text-white font-black flex items-center justify-between px-5 tap-active" style={{boxShadow:"0 8px 24px rgba(26,50,112,0.35)"}}>
                   <span className="flex items-center gap-2"><Icon name="shopping_cart" size="text-base" color="text-white"/>{unidades} {unidades === 1 ? "item" : "items"} · {nombreDe(cartMerchant)}</span>
                   <span>S/ {total.toFixed(2)} →</span>
                 </button>
@@ -4972,25 +4972,25 @@ const TEMPLATE_MAP = {
 };
 
 const MODULE_META = {
-  wallet:      { title:"Billetera",        icon:"account_balance_wallet", bg:"bg-[#dae2fd]", color:"text-[#3525cd]" },
-  consumos:    { title:"Mis Compras",      icon:"receipt_long",           bg:"bg-[#f0ecf9]", color:"text-[#464555]" },
-  comercios:   { title:"Comercios",        icon:"storefront",             bg:"bg-[#dae2fd]", color:"text-[#565e74]" },
-  loyalty:     { title:"Lealtad",          icon:"stars",                  bg:"bg-[#fff8e1]", color:"text-amber-600" },
-  reservas:    { title:"Reservas",         icon:"event_available",        bg:"bg-[#e8f5e9]", color:"text-green-700" },
-  asistencia:  { title:"Asistencia",       icon:"how_to_reg",             bg:"bg-[#e0f2f1]", color:"text-teal-700"  },
-  control:     { title:"Mi Familia",       icon:"family_restroom",        bg:"bg-[#f1f8e9]", color:"text-green-700" },
-  accesos:     { title:"Accesos",          icon:"vpn_key",                bg:"bg-[#e8eaf6]", color:"text-indigo-700"},
-  cashback:    { title:"Cashback",         icon:"payments",               bg:"bg-[#ffdbcc]", color:"text-[#7e3000]" },
-  menu:        { title:"Menú",             icon:"restaurant_menu",        bg:"bg-[#fff3e0]", color:"text-orange-700"},
-  eventos:     { title:"Eventos",          icon:"confirmation_number",    bg:"bg-[#fce4ec]", color:"text-pink-700"  },
-  subsidio:    { title:"Subsidio",         icon:"savings",                bg:"bg-[#f3e5f5]", color:"text-purple-700"},
-  credito:     { title:"Crédito",          icon:"credit_card",            bg:"bg-[#e8f5e9]", color:"text-green-700" },
-  estacionamiento:{title:"Parking",        icon:"local_parking",          bg:"bg-[#e3f2fd]", color:"text-blue-700"  },
-  perfil_ext:  { title:"Perfil Pro",       icon:"badge",                  bg:"bg-[#f5f5f5]", color:"text-gray-700"  },
-  promociones: { title:"Promociones",      icon:"local_offer",            bg:"bg-[#fff8e1]", color:"text-amber-700" },
-  turnos:      { title:"Mis Turnos",       icon:"pending_actions",        bg:"bg-[#e0f7fa]", color:"text-cyan-700"  },
-  transporte:  { title:"Transporte",       icon:"directions_bus",         bg:"bg-[#e1f5fe]", color:"text-blue-700"  },
-  bnpl:        { title:"Paga después",     icon:"schedule_send",          bg:"bg-[#ede7f6]", color:"text-purple-700"},
+  wallet:      { title:"Billetera",        icon:"account_balance_wallet", bg:"bg-[#DCE4FA]", color:"text-[#1A3270]" },
+  consumos:    { title:"Mis Compras",      icon:"receipt_long",           bg:"bg-[#EEF2FD]", color:"text-[#404255]" },
+  comercios:   { title:"Comercios",        icon:"storefront",             bg:"bg-[#DCE4FA]", color:"text-[#565e74]" },
+  loyalty:     { title:"Lealtad",          icon:"stars",                  bg:"bg-[#FDF0E6]", color:"text-amber-600" },
+  reservas:    { title:"Reservas",         icon:"event_available",        bg:"bg-[#E6F7F1]", color:"text-green-700" },
+  asistencia:  { title:"Asistencia",       icon:"how_to_reg",             bg:"bg-[#E6F7F1]", color:"text-teal-700"  },
+  control:     { title:"Mi Familia",       icon:"family_restroom",        bg:"bg-[#E6F7F1]", color:"text-green-700" },
+  accesos:     { title:"Accesos",          icon:"vpn_key",                bg:"bg-[#EEF2FD]", color:"text-indigo-700"},
+  cashback:    { title:"Cashback",         icon:"payments",               bg:"bg-[#FEF3B0]", color:"text-[#8E6200]" },
+  menu:        { title:"Menú",             icon:"restaurant_menu",        bg:"bg-[#FDF0E6]", color:"text-orange-700"},
+  eventos:     { title:"Eventos",          icon:"confirmation_number",    bg:"bg-[#FBE7E9]", color:"text-pink-700"  },
+  subsidio:    { title:"Subsidio",         icon:"savings",                bg:"bg-[#EEF2FD]", color:"text-purple-700"},
+  credito:     { title:"Crédito",          icon:"credit_card",            bg:"bg-[#E6F7F1]", color:"text-green-700" },
+  estacionamiento:{title:"Parking",        icon:"local_parking",          bg:"bg-[#EAF3FC]", color:"text-blue-700"  },
+  perfil_ext:  { title:"Perfil Pro",       icon:"badge",                  bg:"bg-[#F2F2F7]", color:"text-gray-700"  },
+  promociones: { title:"Promociones",      icon:"local_offer",            bg:"bg-[#FDF0E6]", color:"text-amber-700" },
+  turnos:      { title:"Mis Turnos",       icon:"pending_actions",        bg:"bg-[#EAF3FC]", color:"text-cyan-700"  },
+  transporte:  { title:"Transporte",       icon:"directions_bus",         bg:"bg-[#EAF3FC]", color:"text-blue-700"  },
+  bnpl:        { title:"Paga después",     icon:"schedule_send",          bg:"bg-[#EEF2FD]", color:"text-purple-700"},
 };
 
 export default function ModulePage() {
@@ -5003,7 +5003,7 @@ export default function ModulePage() {
   // Una capacidad nueva del catálogo abre con GenericTemplate y su nombre real.
   const catMeta = CATALOG[moduleId];
   const meta = MODULE_META[moduleId]
-    || (catMeta && { title: catMeta.label, icon: catMeta.icon, bg: catMeta.bg || "bg-[#f0ecf9]", color: catMeta.color || "text-[#3525cd]" })
+    || (catMeta && { title: catMeta.label, icon: catMeta.icon, bg: catMeta.bg || "bg-[#EEF2FD]", color: catMeta.color || "text-[#1A3270]" })
     || { title: moduleId, icon:"settings", bg:"bg-gray-100", color:"text-gray-500" };
 
   // Not enabled in this world
@@ -5012,7 +5012,7 @@ export default function ModulePage() {
       <div className="min-h-screen aura-bg flex flex-col">
         <div className="px-5 pt-10 pb-4">
           <button onClick={()=>nav(-1)} className="w-10 h-10 glass-card rounded-full flex items-center justify-center tap-active">
-            <Icon name="arrow_back" size="text-xl" color="text-[#1b1b24]"/>
+            <Icon name="arrow_back" size="text-xl" color="text-[#1C1C1E]"/>
           </button>
         </div>
         <div className="flex-1 flex items-center justify-center px-8">
@@ -5046,10 +5046,10 @@ export default function ModulePage() {
           action={
             <div className="flex items-center gap-1.5 px-3 py-1.5 glass-card rounded-full">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500"/>
-              <p className="text-[10px] font-bold text-[#464555] uppercase tracking-wider">{cfg.mundo.nombre}</p>
+              <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">{cfg.mundo.nombre}</p>
             </div>
           }>
-          <p className="text-xs text-[#777587]">Activo en {cfg.mundo.nombre}</p>
+          <p className="text-xs text-[#8A8FA8]">Activo en {cfg.mundo.nombre}</p>
         </ModuleHeader>
 
         {content}

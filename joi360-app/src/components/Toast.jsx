@@ -22,7 +22,7 @@ export function showToast(input, severidad = "success") {
 const ICONS = { success: "check_circle", info: "info", warning: "warning", error: "error" };
 const STYLES = {
   success: "bg-green-600",
-  info: "bg-[#3525cd]",
+  info: "bg-[#1A3270]",
   warning: "bg-amber-500",
   error: "bg-red-500",
 };

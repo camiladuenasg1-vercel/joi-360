@@ -48,44 +48,44 @@ export default function PagarQRPage() {
       <div className="max-w-[430px] w-full">
         {cr === null && (
           <div className="flex flex-col items-center gap-2 py-10">
-            <span className="w-6 h-6 border-2 border-[#e4e1ee] border-t-[#3525cd] rounded-full animate-spin"/>
-            <p className="text-xs text-[#777587]">Buscando el cobro…</p>
+            <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+            <p className="text-xs text-[#8A8FA8]">Buscando el cobro…</p>
           </div>
         )}
         {cr === undefined && (
           <div className="glass-card rounded-2xl p-6 text-center">
-            <Icon name="link_off" size="text-4xl" color="text-[#777587]"/>
-            <p className="font-black text-[#1b1b24] mt-2">Este código ya no es válido</p>
-            <p className="text-xs text-[#777587] mt-1">Pídele al comercio que genere uno nuevo.</p>
-            <button onClick={() => nav("/hub")} className="mt-4 w-full py-3 rounded-xl bg-[#3525cd] text-white font-black tap-active">Ir al inicio</button>
+            <Icon name="link_off" size="text-4xl" color="text-[#8A8FA8]"/>
+            <p className="font-black text-[#1C1C1E] mt-2">Este código ya no es válido</p>
+            <p className="text-xs text-[#8A8FA8] mt-1">Pídele al comercio que genere uno nuevo.</p>
+            <button onClick={() => nav("/hub")} className="mt-4 w-full py-3 rounded-xl bg-[#1A3270] text-white font-black tap-active">Ir al inicio</button>
           </div>
         )}
         {pagado && (
           <div className="glass-card rounded-2xl p-6 text-center">
             <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
-            <p className="font-black text-[#1b1b24] text-lg mt-2">Pago confirmado</p>
-            <p className="text-sm text-[#777587] mt-1">S/ {pagado.monto.toFixed(2)} a {pagado.merchantNombre || "el comercio"}</p>
-            <button onClick={() => nav("/hub")} className="mt-5 w-full py-3.5 rounded-xl bg-[#3525cd] text-white font-black tap-active">Ir al inicio</button>
+            <p className="font-black text-[#1C1C1E] text-lg mt-2">Pago confirmado</p>
+            <p className="text-sm text-[#8A8FA8] mt-1">S/ {pagado.monto.toFixed(2)} a {pagado.merchantNombre || "el comercio"}</p>
+            <button onClick={() => nav("/hub")} className="mt-5 w-full py-3.5 rounded-xl bg-[#1A3270] text-white font-black tap-active">Ir al inicio</button>
           </div>
         )}
         {cr && !pagado && (
           cr.estado !== "pendiente" ? (
             <div className="glass-card rounded-2xl p-6 text-center">
-              <Icon name={cr.estado === "pagado" ? "check_circle" : "cancel"} size="text-4xl" color="text-[#777587]"/>
-              <p className="font-black text-[#1b1b24] mt-2">{cr.estado === "pagado" ? "Este cobro ya fue pagado" : "El comercio canceló este cobro"}</p>
-              <button onClick={() => nav("/hub")} className="mt-4 w-full py-3 rounded-xl bg-[#3525cd] text-white font-black tap-active">Ir al inicio</button>
+              <Icon name={cr.estado === "pagado" ? "check_circle" : "cancel"} size="text-4xl" color="text-[#8A8FA8]"/>
+              <p className="font-black text-[#1C1C1E] mt-2">{cr.estado === "pagado" ? "Este cobro ya fue pagado" : "El comercio canceló este cobro"}</p>
+              <button onClick={() => nav("/hub")} className="mt-4 w-full py-3 rounded-xl bg-[#1A3270] text-white font-black tap-active">Ir al inicio</button>
             </div>
           ) : (
             <div className="glass-card rounded-2xl p-6">
-              <p className="text-[#777587] text-xs font-semibold uppercase mb-1">Te está cobrando</p>
-              <h1 className="text-xl font-black text-[#1b1b24]">{cr.merchant_nombre || "Comercio"}</h1>
-              <p className="text-4xl font-black text-[#3525cd] mt-4">S/ {Number(cr.monto).toFixed(2)}</p>
+              <p className="text-[#8A8FA8] text-xs font-semibold uppercase mb-1">Te está cobrando</p>
+              <h1 className="text-xl font-black text-[#1C1C1E]">{cr.merchant_nombre || "Comercio"}</h1>
+              <p className="text-4xl font-black text-[#1A3270] mt-4">S/ {Number(cr.monto).toFixed(2)}</p>
               {error && <p className="text-xs text-red-500 mt-3">{error}</p>}
               <button onClick={confirmar} disabled={pagando}
-                className="mt-5 w-full py-3.5 rounded-xl bg-[#3525cd] text-white font-black tap-active disabled:opacity-50 flex items-center justify-center gap-2">
+                className="mt-5 w-full py-3.5 rounded-xl bg-[#1A3270] text-white font-black tap-active disabled:opacity-50 flex items-center justify-center gap-2">
                 <Icon name="check_circle" size="text-lg"/> {pagando ? "Confirmando…" : "Confirmar y pagar"}
               </button>
-              <button onClick={() => nav("/hub")} disabled={pagando} className="w-full mt-2 py-2 text-xs font-bold text-[#777587] tap-active">Cancelar</button>
+              <button onClick={() => nav("/hub")} disabled={pagando} className="w-full mt-2 py-2 text-xs font-bold text-[#8A8FA8] tap-active">Cancelar</button>
             </div>
           )
         )}

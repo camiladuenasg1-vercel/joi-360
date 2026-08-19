@@ -12,9 +12,9 @@ export default function MundosPage() {
   const memberships = (u?.memberships || []).map(id => (st.mundos || []).find(m => m.id === id)).filter(Boolean);
   const balances = useWalletBalances(memberships.map(m => m.id));
   if (!memberships.length) return (
-    <div className="min-h-screen bg-[#dcd8e5] flex flex-col items-center justify-center">
-      <p className="text-[#464555]">No tienes mundos activos.</p>
-      <button onClick={() => nav("/landing")} className="mt-4 bg-[#3525cd] text-white px-6 py-3 rounded-2xl font-bold">Explorar</button>
+    <div className="min-h-screen bg-[#CDD1E4] flex flex-col items-center justify-center">
+      <p className="text-[#404255]">No tienes mundos activos.</p>
+      <button onClick={() => nav("/landing")} className="mt-4 bg-[#1A3270] text-white px-6 py-3 rounded-2xl font-bold">Explorar</button>
     </div>
   );
 
@@ -42,11 +42,11 @@ export default function MundosPage() {
       {/* Header */}
       <div className="relative z-20 flex justify-between items-start px-5 pt-12 pb-6">
         <div>
-          <h1 className="text-2xl font-black text-[#1b1b24]">Mis Mundos</h1>
-          <p className="text-[#464555] text-sm mt-0.5">{memberships.length} comunidades disponibles</p>
+          <h1 className="text-2xl font-black text-[#1C1C1E]">Mis Mundos</h1>
+          <p className="text-[#404255] text-sm mt-0.5">{memberships.length} comunidades disponibles</p>
         </div>
         <button onClick={() => nav(-1)} className="w-9 h-9 rounded-full glass flex items-center justify-center tap-active">
-          <span className="material-symbols-outlined text-[#1b1b24] text-xl">close</span>
+          <span className="material-symbols-outlined text-[#1C1C1E] text-xl">close</span>
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export default function MundosPage() {
 
             if (isActive) {
               style = { transform: "translateZ(0) scale(1)", zIndex:10, opacity:1, filter:"none",
-                background:"linear-gradient(135deg, #1e2340 0%, #151929 100%)",
+                background:"linear-gradient(135deg, #0D1A45 0%, #0A1230 100%)",
                 boxShadow:"0 25px 60px -10px rgba(0,0,0,0.5)", height:"300px", top:"30px" };
             } else if (isBehindTop) {
               style = { transform:"translateY(-55px) scale(0.9) translateZ(-120px)", zIndex:9, opacity:0.65, filter:"blur(1.5px)",
@@ -102,22 +102,22 @@ export default function MundosPage() {
       <div className="relative z-20 flex justify-center gap-2 mb-4">
         {memberships.map((_, i) => (
           <button key={i} onClick={() => handleSelect(i)}
-            className={`rounded-full transition-all ${activeIdx===i ? "w-5 h-2 bg-[#1b1b24]" : "w-2 h-2 bg-[#1b1b24]/30"}`} />
+            className={`rounded-full transition-all ${activeIdx===i ? "w-5 h-2 bg-[#1C1C1E]" : "w-2 h-2 bg-[#1C1C1E]/30"}`} />
         ))}
       </div>
 
       {/* Bottom action */}
       <div className="relative z-20 flex justify-center pb-10 px-5">
         <button onClick={handleActivate}
-          className="w-full max-w-[340px] glass flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-[#1b1b24] tap-active shadow-sm">
-          <span className="material-symbols-outlined text-[#1b1b24]">list_alt</span>
+          className="w-full max-w-[340px] glass flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-[#1C1C1E] tap-active shadow-sm">
+          <span className="material-symbols-outlined text-[#1C1C1E]">list_alt</span>
           Entrar a {activeMundo.nombre} →
         </button>
       </div>
 
       {/* Explore more */}
       <div className="relative z-20 flex justify-center pb-8">
-        <button onClick={() => nav("/landing")} className="text-[#464555] text-sm font-semibold flex items-center gap-1">
+        <button onClick={() => nav("/landing")} className="text-[#404255] text-sm font-semibold flex items-center gap-1">
           <span className="material-symbols-outlined text-base">add_circle</span>
           Unirse a más comunidades
         </button>

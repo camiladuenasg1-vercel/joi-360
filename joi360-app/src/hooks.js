@@ -128,7 +128,7 @@ export function useWalletLive(worldId) {
  * capacities de Supabase (cualquier capacidad NUEVA publicada por el admin
  * renderiza con su icono y nombre del catálogo, sin tocar este código).
  */
-const CATALOG_FALLBACK = { bg: "bg-[#f0ecf9]", color: "text-[#3525cd]" };
+const CATALOG_FALLBACK = { bg: "bg-[#EEF2FD]", color: "text-[#1A3270]" };
 export function useCatalogLive() {
   const [registry, setRegistry] = useState(MODULES);
   useEffect(() => {

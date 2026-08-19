@@ -1,27 +1,27 @@
 // Theme system — mirrors iOS PremiumTheme per vertical
 export const THEMES = {
   "Educación": {
-    accent: "#0035b9", secondary: "#5800c3", bg: "from-[#0035b9] via-[#1a2fbf] to-[#5800c3]",
+    accent: "#1A3270", secondary: "#1A3270", bg: "from-[#1A3270] via-[#1a2fbf] to-[#1A3270]",
     card: "bg-blue-950/80", pill: "bg-blue-700/30 text-blue-100", isDark: true,
   },
   "Centro Comercial": {
-    accent: "#006688", secondary: "#0035b9", bg: "from-[#006688] via-[#005577] to-[#0035b9]",
+    accent: "#2E7FD9", secondary: "#1A3270", bg: "from-[#2E7FD9] via-[#005577] to-[#1A3270]",
     card: "bg-teal-950/80", pill: "bg-teal-700/30 text-teal-100", isDark: true,
   },
   "Empresa": {
-    accent: "#1a2b4a", secondary: "#006688", bg: "from-[#1a2b4a] via-[#243557] to-[#006688]",
+    accent: "#0D1A45", secondary: "#2E7FD9", bg: "from-[#0D1A45] via-[#243557] to-[#2E7FD9]",
     card: "bg-slate-900/80", pill: "bg-slate-700/30 text-slate-100", isDark: true,
   },
   "Club": {
-    accent: "#1a7a3c", secondary: "#0a5a2c", bg: "from-[#1a7a3c] via-[#155f30] to-[#0a5a2c]",
+    accent: "#0BA878", secondary: "#087A5C", bg: "from-[#0BA878] via-[#155f30] to-[#087A5C]",
     card: "bg-green-950/80", pill: "bg-green-700/30 text-green-100", isDark: true,
   },
   "Retail": {
-    accent: "#7e3000", secondary: "#b45309", bg: "from-[#7e3000] via-[#92400e] to-[#b45309]",
+    accent: "#8E6200", secondary: "#E06B00", bg: "from-[#8E6200] via-[#92400e] to-[#E06B00]",
     card: "bg-amber-950/80", pill: "bg-amber-700/30 text-amber-100", isDark: true,
   },
   "Especial RedPontis": {
-    accent: "#5800c3", secondary: "#0035b9", bg: "from-[#5800c3] via-[#4000a0] to-[#0035b9]",
+    accent: "#1A3270", secondary: "#1A3270", bg: "from-[#1A3270] via-[#4000a0] to-[#1A3270]",
     card: "bg-purple-950/80", pill: "bg-purple-700/30 text-purple-100", isDark: true,
   },
 };

@@ -18,17 +18,17 @@ export default function BottomSheet({ open, onClose, title, children }) {
 
         {/* Handle pill */}
         <div className="flex justify-center pt-3 pb-0">
-          <div className="w-10 h-1 rounded-full bg-[#e4e1ee]" />
+          <div className="w-10 h-1 rounded-full bg-[#CDD1E4]" />
         </div>
 
         {/* Header */}
         {title && (
           <div className="flex justify-between items-center px-6 py-4">
-            <h3 className="text-xl font-black text-[#1b1b24]">{title}</h3>
+            <h3 className="text-xl font-black text-[#1C1C1E]">{title}</h3>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-[#f0ecf9] flex items-center justify-center tap-active">
-              <span className="material-symbols-outlined text-[#464555] text-xl">close</span>
+              className="w-9 h-9 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active">
+              <span className="material-symbols-outlined text-[#404255] text-xl">close</span>
             </button>
           </div>
         )}
