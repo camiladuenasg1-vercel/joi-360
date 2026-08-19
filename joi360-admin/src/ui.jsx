@@ -332,7 +332,7 @@ export function Shell({ children, title, contextNav }) {
                   );
                   return (
                     <li key={item.to}>
-                      <Link to={item.to} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${active ? "text-primary font-bold bg-primary-fixed border-r-4 border-primary" : "text-on-surface-variant hover:text-primary hover:bg-surface-container"}`}>
+                      <Link to={item.to} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${active ? "text-primary font-bold bg-primary-fixed border-r-4 border-primary" : "text-secondary hover:text-primary hover:bg-surface-container"}`}>
                         <Icon n={item.icon} fill={active} className="text-[20px]" />
                         {item.label}
                         {badge > 0 && <span className="ml-auto w-5 h-5 rounded-full bg-error text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{badge > 9 ? "9+" : badge}</span>}
