@@ -210,10 +210,10 @@ function OrganizadorGate({ m, mundoId }) {
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#0035b9 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#1A3270 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
       <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl p-8 relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: m.color || "#0035b9" }}><Icon n="confirmation_number" /></div>
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl" style={{ background: m.color || "#1A3270" }}><Icon n="confirmation_number" /></div>
           <div>
             <h1 className="text-lg font-black">Organizador de eventos</h1>
             <p className="font-mono text-[10px] text-on-surface-variant uppercase">{m.nombre} · Dashboard B2B</p>
@@ -273,7 +273,7 @@ export function OrganizadorFront() {
       <aside className="w-[280px] bg-surface-container-lowest border-r border-outline-variant flex flex-col h-full py-10 flex-shrink-0">
         <div className="px-6 mb-8">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg" style={{ background: m.color || "#0035b9" }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg" style={{ background: m.color || "#1A3270" }}>
               <Icon n="confirmation_number" />
             </div>
             <div>
@@ -343,7 +343,7 @@ export function OrganizadorFront() {
               <p className="text-sm font-bold">{isOrganizador ? orgSess.nombre : (m.entidadLegal || m.nombre)}</p>
               <p className="text-[10px] text-outline uppercase font-bold leading-none">B2B Organizador</p>
             </div>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: m.color || "#0035b9" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: m.color || "#1A3270" }}>
               {(isOrganizador ? orgSess.nombre : m.nombre)[0]}
             </div>
           </div>

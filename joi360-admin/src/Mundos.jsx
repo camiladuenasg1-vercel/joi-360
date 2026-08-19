@@ -5,7 +5,7 @@ import { update, uid, MODULE_CATALOG, CORE_IDS, VERTICALS, GIROS_POR_VERTICAL, m
 import { Icon, Pill, TierTag, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
 import { uploadArchivo, fetchGruposRemote } from "./supabase.js";
 
-const COLORS = ["#0035b9", "#006688", "#722ce3", "#0e7c43", "#b3541e"];
+const COLORS = ["#1A3270", "#2E7FD9", "#3B5BDB", "#0BA878", "#E06B00"];
 const PAISES = ["Perú", "Chile", "Colombia", "México", "Ecuador", "Bolivia"];
 const ACUERDOS = [
   { k: "transaccional", t: "Transaccional puro", d: "Solo % sobre volumen procesado. Sin fijos. Ideal para validar." },

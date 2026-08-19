@@ -941,26 +941,26 @@ function worldStatus(m, comercios) {
 
 /* ── APP_PREVIEW ─────────────────────────────────────────────────── */
 const APP_PREVIEW = {
-  wallet:      { label:"Billetera",  color:"bg-[#dae2fd] text-[#3525cd]", views:["Balance y saldo en tiempo real","Botón Recargar con canales habilitados","Transferencia P2P si está activa","Bandita NFC vinculada","Historial de movimientos"] },
-  comercios:   { label:"Comercios",  color:"bg-[#dae2fd] text-blue-700",  views:["Directorio de comercios del mundo","Info + categoría por comercio","Click → pagar con QR o NFC"] },
-  consumos:    { label:"Consumos",   color:"bg-[#f0ecf9] text-gray-700",  views:["Historial de compras en el mundo","Detalle por transacción","Estadísticas del período"] },
-  inventario:  { label:"Inventario", color:"bg-[#fafafa] text-gray-600",  views:["Sin vista propia en app","Alimenta el POS y el historial de consumos"] },
-  loyalty:     { label:"Lealtad",    color:"bg-[#fff8e1] text-amber-600", views:["Contador de puntos + nivel (Bronce/Plata/Oro)","Catálogo de canje según equivalencia","Historial de devengo por comercio"] },
-  eventos:     { label:"Eventos",    color:"bg-[#fce4ec] text-pink-700",  views:["Listado de eventos del mundo","Compra de entrada / reserva","Si B2C activo: formulario crear evento (3 pasos)"] },
-  control:     { label:"Familia",    color:"bg-[#f1f8e9] text-green-700", views:["Tarjetas de dependientes","Barra de límite diario por hijo","Registro de alergias (si habilitado)","Modal de límites y notificaciones"] },
-  menu:        { label:"Menú",       color:"bg-[#fff3e0] text-orange-600",views:["Opciones del menú del día","Pre-orden con cupos en tiempo real","Filtros + restricciones alimentarias"] },
-  accesos:     { label:"Accesos",    color:"bg-[#e8eaf6] text-indigo-600",views:["QR de identificación personal","Zonas habilitadas para el usuario","Historial de entradas/salidas"] },
-  asistencia:  { label:"Asistencia", color:"bg-[#e0f2f1] text-teal-600",  views:["Botones entrada / salida","Contador de marcaciones del día","Historial A tiempo / Tarde"] },
-  cashback:    { label:"Cashback",   color:"bg-[#ffdbcc] text-orange-800",views:["Saldo de cashback disponible","% de retorno del configField","Historial por comercio"] },
-  subsidio:    { label:"Subsidio",   color:"bg-[#f3e5f5] text-purple-600",views:["Saldo subsidiado separado del libre","Categorías donde puede usarse","Fecha de caducidad"] },
-  credito:     { label:"Crédito",    color:"bg-[#e8f5e9] text-green-700", views:["Línea disponible vs. usada","Simulador de cuotas","Cuotas pendientes"] },
-  perfil_ext:  { label:"Perfil Pro", color:"bg-[#f5f5f5] text-gray-700",  views:["Datos médicos / emergencia","QR personal de identificación","Grupo familiar vinculado"] },
-  estacionamiento:{ label:"Parking", color:"bg-[#e3f2fd] text-blue-600",  views:["Timer activo + costo en tiempo real","Historial de sesiones"] },
-  promociones: { label:"Promos",     color:"bg-[#fff8e1] text-amber-600", views:["Cupones activos (mundo + JOI Promos)","QR de canje por cupón","Estado activo / agotado"] },
-  reservas:    { label:"Reservas",   color:"bg-[#e8f5e9] text-green-600", views:["Flujo nueva reserva","Mis reservas próximas","Cancelar / reagendar"] },
-  turnos:      { label:"Turnos",     color:"bg-[#e0f7fa] text-cyan-600",  views:["Agenda disponible","Mis citas próximas"] },
-  transporte:  { label:"Transporte", color:"bg-[#e1f5fe] text-blue-600",  views:["Pago de viaje por NFC o QR","Rutas del mundo","Historial de viajes"] },
-  bnpl:        { label:"BNPL",       color:"bg-[#ede7f6] text-purple-600",views:["Simulador de cuotas interactivo","Al pagar: opción de diferir","Historial de cuotas"] },
+  wallet:      { label:"Billetera",  color:"bg-[#DCE4FA] text-[#3525cd]", views:["Balance y saldo en tiempo real","Botón Recargar con canales habilitados","Transferencia P2P si está activa","Bandita NFC vinculada","Historial de movimientos"] },
+  comercios:   { label:"Comercios",  color:"bg-[#DCE4FA] text-blue-700",  views:["Directorio de comercios del mundo","Info + categoría por comercio","Click → pagar con QR o NFC"] },
+  consumos:    { label:"Consumos",   color:"bg-[#EEF2FD] text-gray-700",  views:["Historial de compras en el mundo","Detalle por transacción","Estadísticas del período"] },
+  inventario:  { label:"Inventario", color:"bg-[#F2F2F7] text-gray-600",  views:["Sin vista propia en app","Alimenta el POS y el historial de consumos"] },
+  loyalty:     { label:"Lealtad",    color:"bg-[#FDF0E6] text-amber-600", views:["Contador de puntos + nivel (Bronce/Plata/Oro)","Catálogo de canje según equivalencia","Historial de devengo por comercio"] },
+  eventos:     { label:"Eventos",    color:"bg-[#FBE7E9] text-pink-700",  views:["Listado de eventos del mundo","Compra de entrada / reserva","Si B2C activo: formulario crear evento (3 pasos)"] },
+  control:     { label:"Familia",    color:"bg-[#E6F7F1] text-green-700", views:["Tarjetas de dependientes","Barra de límite diario por hijo","Registro de alergias (si habilitado)","Modal de límites y notificaciones"] },
+  menu:        { label:"Menú",       color:"bg-[#FDF0E6] text-orange-600",views:["Opciones del menú del día","Pre-orden con cupos en tiempo real","Filtros + restricciones alimentarias"] },
+  accesos:     { label:"Accesos",    color:"bg-[#EEF2FD] text-indigo-600",views:["QR de identificación personal","Zonas habilitadas para el usuario","Historial de entradas/salidas"] },
+  asistencia:  { label:"Asistencia", color:"bg-[#E6F7F1] text-teal-600",  views:["Botones entrada / salida","Contador de marcaciones del día","Historial A tiempo / Tarde"] },
+  cashback:    { label:"Cashback",   color:"bg-[#FEF3B0] text-orange-800",views:["Saldo de cashback disponible","% de retorno del configField","Historial por comercio"] },
+  subsidio:    { label:"Subsidio",   color:"bg-[#EEF2FD] text-purple-600",views:["Saldo subsidiado separado del libre","Categorías donde puede usarse","Fecha de caducidad"] },
+  credito:     { label:"Crédito",    color:"bg-[#E6F7F1] text-green-700", views:["Línea disponible vs. usada","Simulador de cuotas","Cuotas pendientes"] },
+  perfil_ext:  { label:"Perfil Pro", color:"bg-[#F2F2F7] text-gray-700",  views:["Datos médicos / emergencia","QR personal de identificación","Grupo familiar vinculado"] },
+  estacionamiento:{ label:"Parking", color:"bg-[#EAF3FC] text-blue-600",  views:["Timer activo + costo en tiempo real","Historial de sesiones"] },
+  promociones: { label:"Promos",     color:"bg-[#FDF0E6] text-amber-600", views:["Cupones activos (mundo + JOI Promos)","QR de canje por cupón","Estado activo / agotado"] },
+  reservas:    { label:"Reservas",   color:"bg-[#E6F7F1] text-green-600", views:["Flujo nueva reserva","Mis reservas próximas","Cancelar / reagendar"] },
+  turnos:      { label:"Turnos",     color:"bg-[#EAF3FC] text-cyan-600",  views:["Agenda disponible","Mis citas próximas"] },
+  transporte:  { label:"Transporte", color:"bg-[#EAF3FC] text-blue-600",  views:["Pago de viaje por NFC o QR","Rutas del mundo","Historial de viajes"] },
+  bnpl:        { label:"BNPL",       color:"bg-[#EEF2FD] text-purple-600",views:["Simulador de cuotas interactivo","Al pagar: opción de diferir","Historial de cuotas"] },
 };
 
 /* ── TabModulos ───────────────────────────────────────────────────── */
@@ -1737,7 +1737,7 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
         {/* VISTA APP */}
         {tab === "app" && (
           <section className="p-5 space-y-4">
-            <div className="p-3 bg-[#0A1628]/5 border border-[#0A1628]/10 rounded-lg text-xs text-on-surface-variant flex items-start gap-2">
+            <div className="p-3 bg-[#0D1A45]/5 border border-[#0D1A45]/10 rounded-lg text-xs text-on-surface-variant flex items-start gap-2">
               <Icon n="smartphone" className="text-[16px] text-primary flex-shrink-0 mt-0.5"/>
               <span>Vista dinámica según los <b>Feature Flags activos</b>. Los items en gris están desactivados en este mundo.</span>
             </div>

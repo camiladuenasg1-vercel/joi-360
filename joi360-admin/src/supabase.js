@@ -76,7 +76,7 @@ function worldRow(m) {
     name: m.nombre,
     vertical: m.vertical || "Educación",
     status: (m.estado || "ACTIVO").toLowerCase(),
-    color_primary: m.color || "#0035b9",
+    color_primary: m.color || "#1A3270",
     currency: m.moneda || "PEN",
     // Gap real (auditoría #122): el acuerdo comercial vivía SOLO en el
     // localStorage de la sesión que creó el mundo — otra pestaña, otro
@@ -2464,7 +2464,7 @@ export async function probeDemoInfra() {
         // después de borrarlo (pasó con mundo-eventos-rp). Se limpia solo.
         await rest("worlds?on_conflict=id", {
           method: "POST", headers: upsertHeaders,
-          body: JSON.stringify([{ id: "zz-probe-write-test", name: "(probe)", code: "PROBE-000", vertical: "Especial RedPontis", status: "activo", currency: "PEN", color_primary: "#722ce3" }]),
+          body: JSON.stringify([{ id: "zz-probe-write-test", name: "(probe)", code: "PROBE-000", vertical: "Especial RedPontis", status: "activo", currency: "PEN", color_primary: "#3B5BDB" }]),
         });
         await rest("worlds?id=eq.zz-probe-write-test", { method: "DELETE", headers: { Prefer: "return=minimal" } });
         return true;

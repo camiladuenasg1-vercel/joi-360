@@ -798,7 +798,7 @@ export async function refreshMundosLive() {
     for (const w of rows) {
       const patch = {
         id: w.id, nombre: w.name, codigo: w.code, vertical: w.vertical,
-        color: w.color_primary || "#0035b9", moneda: w.currency || "PEN",
+        color: w.color_primary || "#1A3270", moneda: w.currency || "PEN",
         estado: (w.status || "activo").toUpperCase(),
         posPin: w.pos_pin || null,
         logoUrl: w.logo_url || null,
@@ -1395,7 +1395,7 @@ export const PSP_PROVIDERS = [
   { id:"ligo",      nombre:"QR", categoria:"billetera_digital",
     api_slug:"ligo",   api_ready:false, checkout_type:"qr",
     api_endpoint:null,  // pendiente convenio Ligo
-    logo_icon:"qr_code_2", color:"#EC4899",
+    logo_icon:"qr_code_2", color:"#E8394B",
     desc:"QR genérico interoperable (estándar ASBANC vía Ligo): un solo código aceptado por cualquier billetera — Yape, Plin y demás. Pendiente de integración." },
   { id:"culqi",     nombre:"Culqi",             categoria:"pasarela_pago",
     api_slug:"culqi",  api_ready:false,  checkout_type:"form",

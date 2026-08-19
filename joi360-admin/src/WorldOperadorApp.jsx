@@ -41,10 +41,10 @@ function WorldGate({ m }) {
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#0035b9 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#1A3270 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
       <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl p-8 relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-lg text-white flex items-center justify-center font-bold text-xl" style={{ background: m.color || "#0035b9" }}><Icon n="public" /></div>
+          <div className="w-12 h-12 rounded-lg text-white flex items-center justify-center font-bold text-xl" style={{ background: m.color || "#1A3270" }}><Icon n="public" /></div>
           <div>
             <h1 className="text-lg font-black">{m.nombre}</h1>
             <p className="font-mono text-[10px] text-on-surface-variant uppercase">Operador de Mundo · Código {m.codigo}</p>

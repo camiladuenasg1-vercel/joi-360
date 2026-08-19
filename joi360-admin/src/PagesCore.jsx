@@ -23,12 +23,12 @@ export function AdminDashboard() {
   // Anunciantes/Promos (JOI Promos) salieron del alcance activo — solo se
   // maneja JOI Eventos como mundo propio de RedPontis.
   const kpis = [
-    { label: "Mundos activos", value: mundosActivos, total: totalMundos, icon: "public", color: "#0035b9", link: "/admin/mundos" },
-    { label: "Módulos contratados", value: totalModulosActivos, icon: "extension", color: "#006688", link: "/admin/modulos-mundo" },
-    { label: "Comercios en ecosistema", value: totalCom, icon: "storefront", color: "#5800c3", link: "/admin/mundos" },
-    { label: "Comisión acumulada", value: `S/ ${comisionTotal.toFixed(0)}`, icon: "account_balance", color: "#0e7c43", link: "/admin/liquidacion" },
-    { label: "Liq. pendientes", value: pendientes, icon: "pending_actions", color: pendientes > 0 ? "#ba1a1a" : "#747686", link: "/admin/liquidacion" },
-    { label: "Tickets abiertos", value: ticketsAbiertos, icon: "support_agent", color: ticketsAbiertos > 2 ? "#ba1a1a" : "#0035b9", link: "/admin/soporte" },
+    { label: "Mundos activos", value: mundosActivos, total: totalMundos, icon: "public", color: "#1A3270", link: "/admin/mundos" },
+    { label: "Módulos contratados", value: totalModulosActivos, icon: "extension", color: "#2E7FD9", link: "/admin/modulos-mundo" },
+    { label: "Comercios en ecosistema", value: totalCom, icon: "storefront", color: "#1A3270", link: "/admin/mundos" },
+    { label: "Comisión acumulada", value: `S/ ${comisionTotal.toFixed(0)}`, icon: "account_balance", color: "#0BA878", link: "/admin/liquidacion" },
+    { label: "Liq. pendientes", value: pendientes, icon: "pending_actions", color: pendientes > 0 ? "#E8394B" : "#8A8FA8", link: "/admin/liquidacion" },
+    { label: "Tickets abiertos", value: ticketsAbiertos, icon: "support_agent", color: ticketsAbiertos > 2 ? "#E8394B" : "#1A3270", link: "/admin/soporte" },
   ];
 
   return (
@@ -159,7 +159,7 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#0035b9 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#1A3270 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
       <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl p-8 relative z-10">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-black text-lg">RP</div>

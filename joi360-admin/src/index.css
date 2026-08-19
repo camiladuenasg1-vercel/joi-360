@@ -16,6 +16,6 @@ body { @apply bg-background text-on-surface font-sans antialiased; }
 .msi-fill { font-variation-settings: 'FILL' 1; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #c4c5d7; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #CDD1E4; border-radius: 10px; }
 @keyframes slideInRight { from { transform: translateX(100%);} to { transform: translateX(0);} }
 .slide-in { animation: slideInRight .28s cubic-bezier(0.16,1,0.3,1) forwards; }
