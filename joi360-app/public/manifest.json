@@ -1,0 +1,15 @@
+{
+  "name": "JOI 360",
+  "short_name": "JOI 360",
+  "description": "Ecosistema cerrado de pagos, billetera y servicios por comunidad — RedPontis.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1A3270",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

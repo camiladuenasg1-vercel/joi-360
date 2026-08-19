@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useStore } from "./hooks";
 import { Icon } from "./ui";
 import { fetchEventosPublicosLanding, fetchEventoPublico, fetchTicketTypesDeEvento } from "./supabase.js";
@@ -9,6 +9,22 @@ import { fetchEventosPublicosLanding, fetchEventoPublico, fetchTicketTypesDeEven
 // exige cuenta JOI 360, la landing no construye un checkout de invitado
 // paralelo a la wallet).
 const SUPERAPP_URL = "https://joi360-app.vercel.app";
+
+// Redirección a instalación (13-ago, confirmado por Camila): en móvil, antes
+// de mandar a alguien al login/registro web, se le ofrece instalar JOI 360
+// como PWA (agregar a pantalla de inicio) -- no existe app nativa en
+// tiendas todavía, esto es lo más cercano a "descargar la app" que
+// funciona hoy. En desktop el comportamiento no cambia: directo al login/
+// registro de la superapp.
+const esMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// Calcula el destino real de "Ingresar"/"Únete" — mismo helper para el header
+// y para cada card/CTA de la landing, así todos quedan consistentes.
+function destinoIngreso(nextPath) {
+  const authUrl = `${SUPERAPP_URL}/#/auth${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+  if (!esMobile()) return authUrl;
+  return `/landing/instalar?to=${encodeURIComponent(authUrl)}`;
+}
 
 /* ── Layout compartido: header + nav + footer — antes la landing era una
    sola pantalla plana sin rutas propias. ──────────────────────────────── */
@@ -24,7 +40,7 @@ function LandingLayout({ children, active }) {
           <nav className="flex items-center gap-6 text-sm font-semibold">
             <Link to="/landing" className={active === "inicio" ? "text-white" : "text-white/60 hover:text-white transition-colors"}>Inicio</Link>
             <Link to="/landing/eventos" className={active === "eventos" ? "text-white" : "text-white/60 hover:text-white transition-colors"}>Eventos</Link>
-            <a href={`${SUPERAPP_URL}/#/auth`} className="bg-white text-primary px-4 py-1.5 rounded-full text-xs font-black hover:bg-white/90 transition-colors">
+            <a href={destinoIngreso()} className="bg-white text-primary px-4 py-1.5 rounded-full text-xs font-black hover:bg-white/90 transition-colors">
               Ingresar →
             </a>
           </nav>
@@ -90,7 +106,7 @@ export function LandingHome() {
                 <h3 className="text-lg font-bold mb-1">{m.nombre}</h3>
                 <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-3">{m.vertical}</p>
                 <p className="text-sm text-on-surface-variant mb-4 line-clamp-2">{m.descripcion}</p>
-                <a href={`${SUPERAPP_URL}/#/auth`} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
+                <a href={destinoIngreso()} className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
                   <Icon n="login" className="text-[16px]" /> Únete a esta comunidad →
                 </a>
               </div>
@@ -187,8 +203,8 @@ export function LandingEventoDetalle() {
   // aterriza en un hub genérico, sino directo donde puede comprar esta
   // entrada puntual.
   const linkRegistro = mundo
-    ? `${SUPERAPP_URL}/#/auth?next=${encodeURIComponent(`/module/eventos?mundo=${mundo.id}&eventId=${id}`)}`
-    : `${SUPERAPP_URL}/#/auth`;
+    ? destinoIngreso(`/module/eventos?mundo=${mundo.id}&eventId=${id}`)
+    : destinoIngreso();
 
   const compartir = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -249,5 +265,57 @@ export function LandingEventoDetalle() {
         )}
       </div>
     </LandingLayout>
+  );
+}
+
+/* ── Instalar PWA (13-ago): destino de "Ingresar"/"Únete" cuando entran desde
+   el celular, antes de mandarlos al login/registro web. No hay app nativa en
+   tiendas todavía — esto es "agregar a pantalla de inicio", lo más cercano a
+   una descarga real que funciona hoy sin pasar por App Store/Play Store. ── */
+export function LandingInstalar() {
+  const [params] = useSearchParams();
+  const to = params.get("to") || `${SUPERAPP_URL}/#/auth`;
+  const esIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  return (
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center px-6 py-12 text-white text-center">
+      <div className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mb-6">
+        <span className="font-black text-2xl">JOI</span>
+      </div>
+      <h1 className="text-2xl font-black mb-2">Instala JOI 360 en tu celular</h1>
+      <p className="text-white/70 text-sm max-w-sm mb-8">Agrégala a tu pantalla de inicio — se abre como una app, sin ocupar espacio de una tienda.</p>
+
+      <div className="bg-white/10 border border-white/15 rounded-2xl p-5 max-w-sm w-full text-left space-y-3 mb-8">
+        {esIOS ? (
+          <>
+            <InstruccionPaso n="1" texto={<>Toca el ícono <b>Compartir</b> (el cuadrado con la flecha hacia arriba) en la barra inferior de Safari.</>} />
+            <InstruccionPaso n="2" texto={<>Desliza y elige <b>"Agregar a pantalla de inicio"</b>.</>} />
+            <InstruccionPaso n="3" texto={<>Toca <b>"Agregar"</b> — listo, JOI 360 queda en tu pantalla de inicio.</>} />
+          </>
+        ) : (
+          <>
+            <InstruccionPaso n="1" texto={<>Toca el menú <b>⋮</b> (arriba a la derecha de Chrome).</>} />
+            <InstruccionPaso n="2" texto={<>Elige <b>"Instalar app"</b> o <b>"Agregar a pantalla de inicio"</b>.</>} />
+            <InstruccionPaso n="3" texto={<>Confirma — listo, JOI 360 queda instalada como una app.</>} />
+          </>
+        )}
+      </div>
+
+      <a href={to} className="w-full max-w-sm bg-white text-primary text-center py-3.5 rounded-2xl font-bold text-sm hover:bg-white/90 transition-colors mb-3">
+        Ya la instalé, continuar →
+      </a>
+      <a href={to} className="text-white/60 text-xs font-medium hover:text-white/80 transition-colors">
+        Continuar sin instalar
+      </a>
+    </div>
+  );
+}
+
+function InstruccionPaso({ n, texto }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black flex-shrink-0">{n}</span>
+      <p className="text-sm text-white/90 leading-snug">{texto}</p>
+    </div>
   );
 }

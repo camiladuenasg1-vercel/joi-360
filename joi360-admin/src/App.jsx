@@ -6,7 +6,7 @@ import { Login, AdminDashboard } from "./PagesCore";
 import { Mundos } from "./Mundos";
 import { MundoDetail } from "./MundoDetail";
 import { MundoFront, ComercioFront, AnuncianteFront } from "./Fronts";
-import { LandingHome, LandingEventos, LandingEventoDetalle } from "./LandingPublica";
+import { LandingHome, LandingEventos, LandingEventoDetalle, LandingInstalar } from "./LandingPublica";
 import { OrganizadorFront } from "./OrganizadorFront";
 import { OperadorApp, PosEntryGate } from "./OperadorApp";
 import { WorldOperadorApp } from "./WorldOperadorApp";
@@ -84,6 +84,7 @@ export default function App() {
         <Route path="/landing" element={<LandingHome />} />
         <Route path="/landing/eventos" element={<LandingEventos />} />
         <Route path="/landing/eventos/:id" element={<LandingEventoDetalle />} />
+        <Route path="/landing/instalar" element={<LandingInstalar />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       </RoutedErrorBoundary>
