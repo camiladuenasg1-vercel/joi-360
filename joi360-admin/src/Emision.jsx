@@ -98,7 +98,7 @@ export function Emision() {
       <div className="flex gap-1 mb-6 border-b border-outline-variant">
         {[{k:"canales",l:"Canales de recarga"},{k:"psp",l:"PSP / Proveedores"}].map(t=>(
           <button key={t.k} onClick={()=>setTab(t.k)}
-            className={`px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors ${tab===t.k?"text-primary border-primary font-semibold":"text-secondary border-transparent hover:text-primary"}`}>
+            className={`px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors ${tab===t.k?"text-primary border-primary font-semibold":"text-on-surface-variant border-transparent hover:text-primary"}`}>
             {t.l}
           </button>
         ))}

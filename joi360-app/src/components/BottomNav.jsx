@@ -34,9 +34,9 @@ export default function BottomNav({ badge = 0 }) {
               {t.k === "activity" && badge > 0 && (
                 <span className="absolute -top-0.5 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full z-10">{badge}</span>
               )}
-              <span className={`material-symbols-outlined text-2xl transition-colors ${isActive ? "fill text-[#1A3270]" : "text-[#8A8FA8]"}`}
+              <span className={`material-symbols-outlined text-2xl transition-colors ${isActive ? "fill text-[#1A3270]" : "text-[#404255]"}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{t.icon}</span>
-              <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 transition-colors ${isActive ? "text-[#1A3270]" : "text-[#8A8FA8]"}`}>{t.label}</span>
+              <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 transition-colors ${isActive ? "text-[#1A3270]" : "text-[#404255]"}`}>{t.label}</span>
             </button>
           );
         })}

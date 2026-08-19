@@ -50,23 +50,23 @@ export default function ClaimTicketPage() {
         {ticket === null && (
           <div className="flex flex-col items-center gap-2 py-10">
             <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-            <p className="text-xs text-[#8A8FA8]">Buscando la entrada…</p>
+            <p className="text-xs text-[#404255]">Buscando la entrada…</p>
           </div>
         )}
         {ticket === undefined && (
           <div className="glass-card rounded-2xl p-6 text-center">
-            <Icon name="link_off" size="text-4xl" color="text-[#8A8FA8]"/>
+            <Icon name="link_off" size="text-4xl" color="text-[#404255]"/>
             <p className="font-black text-[#1C1C1E] mt-2">Este enlace ya no es válido</p>
-            <p className="text-xs text-[#8A8FA8] mt-1">Puede que ya haya sido usado, o que la entrada ya no esté disponible para transferir.</p>
+            <p className="text-xs text-[#404255] mt-1">Puede que ya haya sido usado, o que la entrada ya no esté disponible para transferir.</p>
             <button onClick={() => nav("/hub")} className="mt-4 w-full py-3 rounded-xl bg-[#1A3270] text-white font-black tap-active">Ir al inicio</button>
           </div>
         )}
         {ticket && (
           <div className="glass-card rounded-2xl p-6">
-            <p className="text-[#8A8FA8] text-xs font-semibold uppercase mb-1">Te compartieron una entrada</p>
+            <p className="text-[#404255] text-xs font-semibold uppercase mb-1">Te compartieron una entrada</p>
             <h1 className="text-xl font-black text-[#1C1C1E]">{ticket.events?.titulo || "Evento"}</h1>
-            <p className="text-sm text-[#8A8FA8] mt-1">{ticket.event_ticket_types?.nombre || "General"} · {ticket.events?.fecha} {ticket.events?.hora || ""}</p>
-            {ticket.events?.lugar && <p className="text-xs text-[#8A8FA8] mt-0.5">{ticket.events.lugar}</p>}
+            <p className="text-sm text-[#404255] mt-1">{ticket.event_ticket_types?.nombre || "General"} · {ticket.events?.fecha} {ticket.events?.hora || ""}</p>
+            {ticket.events?.lugar && <p className="text-xs text-[#404255] mt-0.5">{ticket.events.lugar}</p>}
             {error && <p className="text-xs text-red-500 mt-3">{error}</p>}
             <button onClick={aceptar} disabled={aceptando}
               className="mt-5 w-full py-3.5 rounded-xl bg-[#1A3270] text-white font-black tap-active disabled:opacity-50 flex items-center justify-center gap-2">

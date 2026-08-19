@@ -60,7 +60,7 @@ function QRCode({ label, sub, value }) {
         )}
       </div>
       {label && <p className="font-black text-[#1C1C1E]">{label}</p>}
-      {sub && <p className="text-xs text-[#8A8FA8] mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-[#404255] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -340,7 +340,7 @@ function WalletTemplate({ cfg, u }) {
             <Icon name="add_card" fill size="text-xl" color="text-[#1A3270]" />
           </div>
           <p className="font-bold text-sm text-[#1C1C1E]">Recargar</p>
-          <p className="text-xs text-[#8A8FA8]">Agregar saldo</p>
+          <p className="text-xs text-[#404255]">Agregar saldo</p>
         </SectionCard>
         )}
         {cfg.config.p2pEnabled && cfg.has("p2p") && (
@@ -349,7 +349,7 @@ function WalletTemplate({ cfg, u }) {
               <Icon name="swap_horiz" fill size="text-xl" color="text-green-600" />
             </div>
             <p className="font-bold text-sm text-[#1C1C1E]">Transferir</p>
-            <p className="text-xs text-[#8A8FA8]">Entre usuarios del mundo</p>
+            <p className="text-xs text-[#404255]">Entre usuarios del mundo</p>
           </SectionCard>
         )}
       </div>
@@ -358,9 +358,9 @@ function WalletTemplate({ cfg, u }) {
           comercio te identifique en el POS. */}
       <SectionCard className="p-4 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Mi código JOI</p>
+          <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">Mi código JOI</p>
           <p className="font-mono text-base font-black text-[#1A3270] mt-0.5">{codigoParaCompartir}</p>
-          <p className="text-[10px] text-[#8A8FA8] mt-0.5">Compártelo para recibir una transferencia</p>
+          <p className="text-[10px] text-[#404255] mt-0.5">Compártelo para recibir una transferencia</p>
         </div>
         <div className="flex gap-1.5">
           {navigator.share && (
@@ -390,10 +390,10 @@ function WalletTemplate({ cfg, u }) {
                 <div className="text-center py-4">
                   <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
                   <p className="font-black text-[#1C1C1E] mt-2">Transferencia enviada</p>
-                  <p className="text-xs text-[#8A8FA8] mt-1">A {p2pDestino?.nombre || "el destinatario"}</p>
+                  <p className="text-xs text-[#404255] mt-1">A {p2pDestino?.nombre || "el destinatario"}</p>
                   <div className="mt-4 space-y-2">
                     <PrimaryBtn label="Listo" onClick={cerrarP2P}/>
-                    <button onClick={enviarSoporteP2P} className="w-full py-2 text-xs font-bold text-[#8A8FA8] tap-active">¿Algo salió mal? Contactar soporte</button>
+                    <button onClick={enviarSoporteP2P} className="w-full py-2 text-xs font-bold text-[#404255] tap-active">¿Algo salió mal? Contactar soporte</button>
                   </div>
                 </div>
               ) : (
@@ -401,13 +401,13 @@ function WalletTemplate({ cfg, u }) {
                   <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
                     {[["codigo", "Código JOI"], ["dni", "DNI"]].map(([v, l]) => (
                       <button key={v} onClick={() => { setP2pModo(v); setP2pInput(""); setP2pDestino(null); setP2pBusquedaError(""); }}
-                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${p2pModo === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${p2pModo === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#404255]"}`}>{l}</button>
                     ))}
                   </div>
 
                   {!p2pDestino ? (
                     <div>
-                      <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{p2pModo === "dni" ? "DNI del destinatario" : "Código JOI del destinatario"}</label>
+                      <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">{p2pModo === "dni" ? "DNI del destinatario" : "Código JOI del destinatario"}</label>
                       <div className="flex gap-2">
                         <input className="flex-1 bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm font-mono outline-none focus:ring-2 focus:ring-[#1A3270]/20"
                           value={p2pInput} inputMode={p2pModo === "dni" ? "numeric" : "text"}
@@ -431,14 +431,14 @@ function WalletTemplate({ cfg, u }) {
                         <button onClick={() => { setP2pDestino(null); setP2pInput(""); }} className="text-[11px] font-bold text-[#1A3270] tap-active">Cambiar</button>
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Monto ({currency})</label>
+                        <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Monto ({currency})</label>
                         <div className="flex items-center bg-[#EEF2FD] rounded-2xl px-4">
-                          <span className="text-[#8A8FA8] font-bold mr-2 text-lg">{currency}</span>
+                          <span className="text-[#404255] font-bold mr-2 text-lg">{currency}</span>
                           <input className="flex-1 text-xl font-black text-[#1C1C1E] bg-transparent py-3 outline-none" type="number"
                             value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                         </div>
                         {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
-                          <p className="text-[10px] text-[#8A8FA8] mt-1.5">
+                          <p className="text-[10px] text-[#404255] mt-1.5">
                             {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
                             {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
                             {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
@@ -455,7 +455,7 @@ function WalletTemplate({ cfg, u }) {
                       <PrimaryBtn label={p2pSending ? "Enviando…" : "Transferir"} icon="swap_horiz" disabled={!p2pMonto || !p2pConfirmoIrreversible || p2pSending} onClick={enviarP2P}/>
                     </>
                   )}
-                  <button onClick={enviarSoporteP2P} className="w-full py-1 text-[11px] font-bold text-[#8A8FA8] tap-active">¿Tienes un problema? Contactar soporte</button>
+                  <button onClick={enviarSoporteP2P} className="w-full py-1 text-[11px] font-bold text-[#404255] tap-active">¿Tienes un problema? Contactar soporte</button>
                 </div>
               )}
             </div>
@@ -508,7 +508,7 @@ function WalletTemplate({ cfg, u }) {
                         cards de cada dependiente. */}
                     <p className="font-bold text-[#1C1C1E] text-sm">Bandita NFC · {b.esTitular ? (nombreParaAcciones || "Mi cuenta") : b.nombre}</p>
                     {solicitud === undefined ? (
-                      <p className="text-[10px] text-[#8A8FA8]">Cargando…</p>
+                      <p className="text-[10px] text-[#404255]">Cargando…</p>
                     ) : solicitud?.status === "entregada" ? (
                       vencida ? (
                         <p className="text-[10px] text-red-600 font-bold">Vencida el {venceAt.toLocaleDateString("es-PE")}</p>
@@ -526,7 +526,7 @@ function WalletTemplate({ cfg, u }) {
                     ) : solicitud?.status === "rechazada" ? (
                       <p className="text-[10px] text-red-600 font-bold">Solicitud rechazada</p>
                     ) : (
-                      <p className="text-[10px] text-[#8A8FA8]">Aún no vinculada</p>
+                      <p className="text-[10px] text-[#404255]">Aún no vinculada</p>
                     )}
                   </div>
                   {(solicitud === null || solicitud?.status === "rechazada" || (solicitud?.status === "entregada" && (vencida || porVencer))) && (
@@ -544,7 +544,7 @@ function WalletTemplate({ cfg, u }) {
                   </button>
                 )}
                 {b.esTitular && (solicitud === null || solicitud?.status === "rechazada") && (
-                  <label className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 flex items-start gap-2 text-[10px] text-[#8A8FA8] cursor-pointer">
+                  <label className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 flex items-start gap-2 text-[10px] text-[#404255] cursor-pointer">
                     <input type="checkbox" className="mt-0.5" checked={universalTitular} onChange={e=>setUniversalTitular(e.target.checked)}/>
                     <span>Quiero usarla para consumir en <b>todos los mundos</b> a los que pertenezco, no solo {cfg.mundo.nombre}.</span>
                   </label>
@@ -650,11 +650,11 @@ function VincularBanditaWebNfcModal({ mundoId, beneficiarioId, beneficiarioNombr
           <h3 className="text-[#1C1C1E] font-black text-xl">
             {estado === "exito" ? "¡Pulsera vinculada!" : estado === "error" ? "No se pudo vincular" : `Vincular pulsera${beneficiarioNombre ? ` de ${beneficiarioNombre}` : ""}`}
           </h3>
-          {estado === "listo" && <p className="text-[#8A8FA8] text-xs mt-1.5">Acerca la parte trasera de tu celular a la pulsera y mantenla ahí unos segundos.</p>}
-          {estado === "leyendo" && <p className="text-[#8A8FA8] text-xs mt-1.5">Buscando la pulsera… acércala al celular.</p>}
-          {estado === "vinculando" && <p className="text-[#8A8FA8] text-xs mt-1.5 font-mono">{codigoLeido} — vinculando…</p>}
+          {estado === "listo" && <p className="text-[#404255] text-xs mt-1.5">Acerca la parte trasera de tu celular a la pulsera y mantenla ahí unos segundos.</p>}
+          {estado === "leyendo" && <p className="text-[#404255] text-xs mt-1.5">Buscando la pulsera… acércala al celular.</p>}
+          {estado === "vinculando" && <p className="text-[#404255] text-xs mt-1.5 font-mono">{codigoLeido} — vinculando…</p>}
           {estado === "error" && <p className="text-red-600 text-xs mt-1.5">{errorMsg}</p>}
-          {estado === "exito" && <p className="text-[#8A8FA8] text-xs mt-1.5">Ya puedes usarla para pagar.</p>}
+          {estado === "exito" && <p className="text-[#404255] text-xs mt-1.5">Ya puedes usarla para pagar.</p>}
         </div>
         {estado === "listo" && (
           <button onClick={empezarLectura} className="w-full py-3.5 bg-[#3B5BDB] text-white rounded-2xl font-bold text-sm tap-active">
@@ -672,7 +672,7 @@ function VincularBanditaWebNfcModal({ mundoId, beneficiarioId, beneficiarioNombr
           </button>
         )}
         {(estado === "listo" || estado === "error") && (
-          <button onClick={onClose} className="w-full py-3 mt-2 text-[#8A8FA8] text-xs font-bold tap-active">Cancelar</button>
+          <button onClick={onClose} className="w-full py-3 mt-2 text-[#404255] text-xs font-bold tap-active">Cancelar</button>
         )}
         {estado === "exito" && (
           <button onClick={onClose} className="w-full py-3.5 bg-[#1A3270] text-white rounded-2xl font-bold text-sm tap-active">Listo</button>
@@ -705,20 +705,20 @@ function LoyaltyTemplate({ cfg, u }) {
           <div>
             <p className="text-[11px] font-bold text-[#1A3270]/70 uppercase tracking-widest">Puntos acumulados</p>
             <p className="text-5xl font-black text-[#1A3270] mt-1">{puntos.toLocaleString()}</p>
-            <p className="text-xs text-[#8A8FA8] mt-1">≈ S/ {cashValue} de valor</p>
+            <p className="text-xs text-[#404255] mt-1">≈ S/ {cashValue} de valor</p>
           </div>
           <div className="text-right">
             <Chip label={nivel} color="bg-[#FEF3B0] text-[#8E6200]" />
-            {cad && <p className="text-[10px] text-[#8A8FA8] mt-2">Caducan en {cad} meses</p>}
+            {cad && <p className="text-[10px] text-[#404255] mt-2">Caducan en {cad} meses</p>}
           </div>
         </div>
-        <p className="text-xs text-[#8A8FA8] mb-1.5 flex justify-between">
+        <p className="text-xs text-[#404255] mb-1.5 flex justify-between">
           <span>Progreso al siguiente nivel</span>
           <span className="font-bold text-[#1A3270]">{Math.max(0,nextPts-puntos)} pts faltantes</span>
         </p>
         <ProgressBar value={puntos} max={nextPts} />
         <div className="mt-3 p-3 bg-[#EEF2FD] rounded-2xl">
-          <p className="text-[11px] text-[#8A8FA8]">
+          <p className="text-[11px] text-[#404255]">
             Equivalencia · <b className="text-[#1A3270]">1 punto = S/ {equiv.toFixed(2)}</b>
           </p>
         </div>
@@ -736,7 +736,7 @@ function LoyaltyTemplate({ cfg, u }) {
               <Icon name={cat.icon} fill size="text-xl" color={cat.c} />
             </div>
             <p className="text-xs font-bold text-[#1C1C1E]">{cat.label}</p>
-            <p className="text-[10px] text-[#8A8FA8]">{cat.sub}</p>
+            <p className="text-[10px] text-[#404255]">{cat.sub}</p>
           </SectionCard>
         ))}
       </div>
@@ -751,7 +751,7 @@ function LoyaltyTemplate({ cfg, u }) {
                 <Icon name="redeem" fill size="text-4xl" color="text-[#1A3270]" />
                 <span className="absolute top-2 right-2 bg-[#1A3270] text-white text-[9px] font-black px-1.5 py-0.5 rounded">{r.pts} pts</span>
               </div>
-              <div className="p-2.5"><p className="text-xs font-bold text-[#1C1C1E]">{r.label}</p><p className="text-[10px] text-[#8A8FA8]">{r.sub}</p></div>
+              <div className="p-2.5"><p className="text-xs font-bold text-[#1C1C1E]">{r.label}</p><p className="text-[10px] text-[#404255]">{r.sub}</p></div>
             </div>
           ))}
         </div>
@@ -797,8 +797,8 @@ function ReservasTemplate({ cfg, u }) {
 
   if (showNew) return (
     <div className="px-5 pb-8">
-      <button onClick={()=>{setShowNew(false);setSelectedSpace(null);}} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]" /> Volver
+      <button onClick={()=>{setShowNew(false);setSelectedSpace(null);}} className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold mb-5 tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#404255]" /> Volver
       </button>
       <div className="flex gap-2 mb-5">
         {[1,2,3].map(n=>(
@@ -806,7 +806,7 @@ function ReservasTemplate({ cfg, u }) {
         ))}
       </div>
       <h2 className="text-2xl font-black text-[#1C1C1E] mb-1">Selecciona un espacio</h2>
-      <p className="text-sm text-[#8A8FA8] mb-5">Elige el área que deseas reservar.</p>
+      <p className="text-sm text-[#404255] mb-5">Elige el área que deseas reservar.</p>
       {anticipo && <ConfigBanner icon="payments" message={`Esta reserva requiere un anticipo mínimo del ${anticipo}%.`} color="amber" />}
       {anticipo && <div className="mb-4"/>}
       <div className="grid grid-cols-2 gap-3 mb-5">
@@ -814,7 +814,7 @@ function ReservasTemplate({ cfg, u }) {
           <button key={s.id} onClick={()=>setSelectedSpace(s.id)}
             className={`glass-card rounded-2xl p-4 flex flex-col gap-3 text-left tap-active transition-all ${selectedSpace===s.id?"border-2 border-[#1A3270] bg-[#EEF2FD]":""}`}>
             <div className={`w-11 h-11 rounded-xl ${selectedSpace===s.id?"bg-[#1A3270]/10":"bg-[#EEF2FD]"} flex items-center justify-center`}>
-              <Icon name={s.icon} fill size="text-2xl" color={selectedSpace===s.id?"text-[#1A3270]":"text-[#8A8FA8]"} />
+              <Icon name={s.icon} fill size="text-2xl" color={selectedSpace===s.id?"text-[#1A3270]":"text-[#404255]"} />
             </div>
             <div>
               <p className="font-bold text-sm text-[#1C1C1E]">{s.label}</p>
@@ -823,7 +823,7 @@ function ReservasTemplate({ cfg, u }) {
           </button>
         ))}
       </div>
-      {cancelHrs && <p className="text-xs text-[#8A8FA8] text-center mb-4">Cancela sin costo hasta {cancelHrs}h antes.</p>}
+      {cancelHrs && <p className="text-xs text-[#404255] text-center mb-4">Cancela sin costo hasta {cancelHrs}h antes.</p>}
       <PrimaryBtn label="Continuar" icon="arrow_forward" disabled={!selectedSpace} onClick={()=>{setShowNew(false);setSelectedSpace(null);}} />
     </div>
   );
@@ -850,7 +850,7 @@ function ReservasTemplate({ cfg, u }) {
                   </div>
                   <div>
                     <p className="font-bold text-[#1C1C1E]">{r.space}</p>
-                    <p className="text-xs text-[#8A8FA8]">{cfg.mundo.nombre}</p>
+                    <p className="text-xs text-[#404255]">{cfg.mundo.nombre}</p>
                   </div>
                 </div>
                 <span className={`text-[10px] font-black px-2 py-1 rounded-full ${r.statusColor}`}>{r.status}</span>
@@ -892,7 +892,7 @@ function AsistenciaTemplate({ cfg, u }) {
       <SectionCard className="p-5">
         <div className="flex justify-between items-end mb-4">
           <div>
-            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Registros de hoy</p>
+            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider mb-1">Registros de hoy</p>
             <p className="text-5xl font-black text-[#1A3270]">{entradas+salidas}</p>
           </div>
           <Chip label="Semana 12" color="bg-[#DCE4FA] text-[#1A3270]" />
@@ -902,8 +902,8 @@ function AsistenciaTemplate({ cfg, u }) {
           <div className="h-full bg-rose-500 rounded-full" style={{width:`${(salidas/(entradas+salidas||1))*65}%`}}/>
         </div>
         <div className="flex justify-between mt-2 text-xs">
-          <span className="text-[#8A8FA8] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Entradas: <b>{entradas}</b></span>
-          <span className="text-[#8A8FA8] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>Salidas: <b>{salidas}</b></span>
+          <span className="text-[#404255] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Entradas: <b>{entradas}</b></span>
+          <span className="text-[#404255] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>Salidas: <b>{salidas}</b></span>
         </div>
       </SectionCard>
 
@@ -920,7 +920,7 @@ function AsistenciaTemplate({ cfg, u }) {
             </div>
             <div className="text-center">
               <p className={`font-black ${btn.tc}`}>{btn.label}</p>
-              <p className="text-[10px] text-[#8A8FA8] uppercase font-bold">Marcar ahora</p>
+              <p className="text-[10px] text-[#404255] uppercase font-bold">Marcar ahora</p>
             </div>
           </button>
         ))}
@@ -943,7 +943,7 @@ function AsistenciaTemplate({ cfg, u }) {
             right={
               h.ok===true ? <Chip label="A tiempo" color="bg-emerald-100 text-emerald-700"/> :
               h.ok===false ? <Chip label="Tarde" color="bg-rose-100 text-rose-700"/> :
-              <Chip label="Finalizado" color="bg-[#EEF2FD] text-[#8A8FA8]"/>
+              <Chip label="Finalizado" color="bg-[#EEF2FD] text-[#404255]"/>
             }
           />
         ))}
@@ -1015,7 +1015,7 @@ function ReglasMundoBanner({ montoAprobacion, horario, limiteDiario }) {
         <div className="px-3.5 pb-3.5 space-y-2.5">
           {reglas.map((r, i) => (
             <div key={i} className="flex items-start gap-2.5">
-              <Icon name={r.icon} fill size="text-sm" color="text-[#8A8FA8]" />
+              <Icon name={r.icon} fill size="text-sm" color="text-[#404255]" />
               <p className="text-xs text-[#4b4a58] leading-relaxed">{r.label}</p>
             </div>
           ))}
@@ -1213,11 +1213,11 @@ function RestriccionesTemplate({ cfg, u }) {
     const saldoInsuficiente = saldoGuardian != null && cuotaSuscripcion != null && saldoGuardian < cuotaSuscripcion;
     return (
       <div className="px-5 pb-8">
-        <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
-          <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]"/> Volver
+        <button onClick={()=>setPasoSuscripcion(false)} className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold mb-5 tap-active">
+          <Icon name="arrow_back" size="text-base" color="text-[#404255]"/> Volver
         </button>
         <h3 className="text-2xl font-black text-[#1C1C1E] mb-1">Confirmar suscripción</h3>
-        <p className="text-sm text-[#8A8FA8] mb-5">
+        <p className="text-sm text-[#404255] mb-5">
           {hayPlanes ? `Elige un plan para vincular a ${nuevo.nombre.trim()}.` : `${cfg.mundo.nombre} cobra una cuota única al vincular a ${nuevo.nombre.trim()}.`}
         </p>
 
@@ -1231,14 +1231,14 @@ function RestriccionesTemplate({ cfg, u }) {
                   className={`w-full text-left p-4 rounded-2xl border-2 tap-active transition-colors ${elegido ? "border-[#1A3270] bg-[#EEF2FD]" : "border-[#CDD1E4]"}`}>
                   <div className="flex items-center justify-between">
                     <span className="font-black text-[#1C1C1E] text-sm">{p.nombre}</span>
-                    <span className="font-mono text-[9px] uppercase text-[#8A8FA8]">{p.periodo === "anual" ? "Anual" : "Mensual"}</span>
+                    <span className="font-mono text-[9px] uppercase text-[#404255]">{p.periodo === "anual" ? "Anual" : "Mensual"}</span>
                   </div>
-                  {p.descripcion && <p className="text-xs text-[#8A8FA8] mt-0.5">{p.descripcion}</p>}
+                  {p.descripcion && <p className="text-xs text-[#404255] mt-0.5">{p.descripcion}</p>}
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="font-black text-[#1A3270]">S/ {precio.toFixed(2)}</span>
                     {p.descuento_pct > 0 && (
                       <>
-                        <span className="text-xs text-[#8A8FA8] line-through">S/ {Number(p.precio).toFixed(2)}</span>
+                        <span className="text-xs text-[#404255] line-through">S/ {Number(p.precio).toFixed(2)}</span>
                         <span className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">-{p.descuento_pct}%</span>
                       </>
                     )}
@@ -1251,11 +1251,11 @@ function RestriccionesTemplate({ cfg, u }) {
 
         <div className="rounded-2xl p-4 border border-[#CDD1E4] space-y-3 mb-5">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[#8A8FA8]">{hayPlanes ? "Plan elegido" : "Cuota de vinculación"}</span>
+            <span className="text-sm text-[#404255]">{hayPlanes ? "Plan elegido" : "Cuota de vinculación"}</span>
             <span className="font-black text-[#1C1C1E]">{cuotaSuscripcion != null ? `S/ ${cuotaSuscripcion.toFixed(2)}` : "—"}</span>
           </div>
           <div className="flex justify-between items-center pt-3 border-t border-[#CDD1E4]">
-            <span className="text-sm text-[#8A8FA8]">Tu saldo actual</span>
+            <span className="text-sm text-[#404255]">Tu saldo actual</span>
             <span className={`font-black ${saldoInsuficiente ? "text-red-600" : "text-[#1C1C1E]"}`}>
               {saldoGuardian == null ? "Cargando…" : `S/ ${saldoGuardian.toFixed(2)}`}
             </span>
@@ -1279,11 +1279,11 @@ function RestriccionesTemplate({ cfg, u }) {
 
   if (addingChild) return (
     <div className="px-5 pb-8">
-      <button onClick={()=>setAddingChild(false)} className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold mb-5 tap-active">
-        <Icon name="arrow_back" size="text-base" color="text-[#8A8FA8]"/> Volver
+      <button onClick={()=>setAddingChild(false)} className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold mb-5 tap-active">
+        <Icon name="arrow_back" size="text-base" color="text-[#404255]"/> Volver
       </button>
       <h3 className="text-2xl font-black text-[#1C1C1E] mb-1">Agregar dependiente</h3>
-      <p className="text-sm text-[#8A8FA8] mb-5">
+      <p className="text-sm text-[#404255] mb-5">
         Registra un menor para controlar su consumo.
         {perfilesSuscripcion && hayPlanes && " Este mundo tiene planes de suscripción para vincular perfiles."}
       </p>
@@ -1294,23 +1294,23 @@ function RestriccionesTemplate({ cfg, u }) {
       )}
       <div className="space-y-4">
         <div>
-          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Nombre completo</label>
+          <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Nombre completo</label>
           <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="Ej. Ana García" value={nuevo.nombre} onChange={e=>setNuevo(n=>({...n, nombre: e.target.value}))}/>
         </div>
         <div>
-          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">DNI</label>
+          <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">DNI</label>
           <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="8 dígitos" inputMode="numeric" value={nuevo.dni} onChange={e=>setNuevo(n=>({...n, dni: e.target.value.replace(/\D/g,"")}))}/>
         </div>
         <div>
-          <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Alias (opcional)</label>
+          <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Alias (opcional)</label>
           <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
             placeholder="Ej. Anita — cómo le dicen" value={nuevo.alias} onChange={e=>setNuevo(n=>({...n, alias: e.target.value}))}/>
         </div>
         {registroAlergias && (
           <div>
-            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
+            <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Alergias alimentarias</label>
             <div className="flex flex-wrap gap-2 items-center">
               {ALERGIAS_CATALOG.map(a=>(
                 <button key={a} onClick={()=>toggleAlergia(a)}
@@ -1345,7 +1345,7 @@ function RestriccionesTemplate({ cfg, u }) {
       <div className="flex justify-between items-center">
         <div>
           <p className="font-black text-[#1C1C1E]">Mi familia</p>
-          <p className="text-xs text-[#8A8FA8]">{total.length} de {maxPerfilesControlados || "∞"} dependientes</p>
+          <p className="text-xs text-[#404255]">{total.length} de {maxPerfilesControlados || "∞"} dependientes</p>
         </div>
         {(!maxPerfilesControlados || total.length < maxPerfilesControlados) && (
           <button onClick={()=>setAddingChild(true)}
@@ -1362,7 +1362,7 @@ function RestriccionesTemplate({ cfg, u }) {
       ]} />
 
       {dependientes === null ? (
-        <SectionCard className="p-6 text-center text-sm text-[#8A8FA8]">Cargando…</SectionCard>
+        <SectionCard className="p-6 text-center text-sm text-[#404255]">Cargando…</SectionCard>
       ) : total.length === 0 ? (
         <SectionCard><EmptyState icon="family_restroom" title="Sin dependientes" subtitle="Agrega un familiar para controlar su consumo y recargarle saldo."/></SectionCard>
       ) : total.map((c)=>{
@@ -1381,11 +1381,11 @@ function RestriccionesTemplate({ cfg, u }) {
                     {editandoPerfilId !== c.dependent_user_id && (
                       <button onClick={()=>{setEditandoPerfilId(c.dependent_user_id); setEditNombre(c.nombre); setEditDni(c.dni||""); setEditAlias(c.alias||""); setPerfilError(null);}}
                         className="w-5 h-5 flex items-center justify-center tap-active flex-shrink-0">
-                        <Icon name="edit" size="text-xs" color="text-[#8A8FA8]"/>
+                        <Icon name="edit" size="text-xs" color="text-[#404255]"/>
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-[#8A8FA8] font-mono">{c.alias ? c.nombre : ""}{c.alias && c.dni ? " · " : ""}{c.dni ? `DNI ${c.dni}` : (c.alias ? "" : c.dependent_user_id.slice(0,12))}</p>
+                  <p className="text-xs text-[#404255] font-mono">{c.alias ? c.nombre : ""}{c.alias && c.dni ? " · " : ""}{c.dni ? `DNI ${c.dni}` : (c.alias ? "" : c.dependent_user_id.slice(0,12))}</p>
                   {registroAlergias && (
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {alergiasArr.map(a=><span key={a} className="text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">{a}</span>)}
@@ -1404,25 +1404,25 @@ function RestriccionesTemplate({ cfg, u }) {
             </div>
             {editandoPerfilId === c.dependent_user_id && (
               <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Editar perfil</p>
+                <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">Editar perfil</p>
                 <div>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Nombre completo</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">Nombre completo</label>
                   <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     value={editNombre} onChange={e=>setEditNombre(e.target.value)}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">DNI</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">DNI</label>
                   <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder="8 dígitos" inputMode="numeric" value={editDni} onChange={e=>setEditDni(e.target.value.replace(/\D/g,""))}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Alias (opcional)</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">Alias (opcional)</label>
                   <input className="w-full bg-white rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder="Cómo le dicen" value={editAlias} onChange={e=>setEditAlias(e.target.value)}/>
                 </div>
                 {perfilError && <p className="text-xs text-red-600">{perfilError}</p>}
                 <div className="flex gap-2">
-                  <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
+                  <button onClick={()=>setEditandoPerfilId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#404255] tap-active">Cancelar</button>
                   <button disabled={guardandoPerfil || !editNombre.trim()} onClick={async()=>{
                     setGuardandoPerfil(true); setPerfilError(null);
                     try {
@@ -1442,7 +1442,7 @@ function RestriccionesTemplate({ cfg, u }) {
                 <p className="text-xs text-red-700/80 leading-relaxed">Se borra su perfil, restricciones y se libera su bandita vinculada (si tiene). Esta acción no se puede deshacer.</p>
                 {errorEliminarDep && <p className="text-xs font-bold text-red-700">{errorEliminarDep}</p>}
                 <div className="flex gap-2">
-                  <button onClick={()=>setEliminandoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] bg-white tap-active">Cancelar</button>
+                  <button onClick={()=>setEliminandoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#404255] bg-white tap-active">Cancelar</button>
                   <button disabled={borrandoDep} onClick={async()=>{
                     setBorrandoDep(true); setErrorEliminarDep(null);
                     try {
@@ -1461,7 +1461,7 @@ function RestriccionesTemplate({ cfg, u }) {
             )}
             {editandoAlergiasId === c.dependent_user_id && (
               <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
+                <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">Alergias alimentarias de {c.nombre.split(" ")[0]}</p>
                 <div className="flex flex-wrap gap-2 items-center">
                   {ALERGIAS_CATALOG.map(a=>(
                     <button key={a} onClick={()=>setEditAlergiasArr(arr=>arr.includes(a)?arr.filter(x=>x!==a):[...arr,a])}
@@ -1477,7 +1477,7 @@ function RestriccionesTemplate({ cfg, u }) {
                     placeholder="+ Otra…" className="px-3 py-1.5 rounded-full text-xs border border-dashed border-[#CDD1E4] text-[#404255] bg-white outline-none w-20 focus:w-32 transition-all"/>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
+                  <button onClick={()=>setEditandoAlergiasId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#404255] tap-active">Cancelar</button>
                   <button disabled={guardandoAlergias} onClick={async()=>{
                     setGuardandoAlergias(true);
                     try {
@@ -1491,7 +1491,7 @@ function RestriccionesTemplate({ cfg, u }) {
             )}
             {codigoAbierto === c.dependent_user_id && (
               <div className="bg-[#EEF2FD] rounded-2xl p-4">
-                <p className="text-xs text-[#8A8FA8] text-center mb-3">Muestra esto en el POS del comercio para identificar a {c.nombre.split(" ")[0]}.</p>
+                <p className="text-xs text-[#404255] text-center mb-3">Muestra esto en el POS del comercio para identificar a {c.nombre.split(" ")[0]}.</p>
                 <QRCode label={c.nombre} sub="Identificación en el POS · QR/pulsera" value={c.dependent_user_id} />
                 <div className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 mt-3">
                   <p className="font-mono text-xs text-[#1C1C1E]">{c.dependent_user_id}</p>
@@ -1503,18 +1503,18 @@ function RestriccionesTemplate({ cfg, u }) {
             )}
             <div className={`grid gap-2 ${c.limiteEfectivo != null ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="bg-[#EEF2FD] p-2.5 rounded-xl text-center">
-                <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Saldo</p>
+                <p className="text-[10px] font-bold text-[#404255] uppercase">Saldo</p>
                 <p className="font-black text-[#1C1C1E] text-sm mt-0.5">S/ {(c.balance||0).toFixed(2)}</p>
               </div>
               <div className="bg-[#EEF2FD] p-2.5 rounded-xl text-center">
-                <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Horario</p>
+                <p className="text-[10px] font-bold text-[#404255] uppercase">Horario</p>
                 <p className="font-black text-[#1C1C1E] text-[10px] mt-0.5">
                   {c.restriccion?.horario_inicio ? `${c.restriccion.horario_inicio}-${c.restriccion.horario_fin}` : horarioConsumo || "Sin límite"}
                 </p>
               </div>
               {c.limiteEfectivo != null && (
                 <div className={`p-2.5 rounded-xl text-center ${c.gastadoHoy >= c.limiteEfectivo ? "bg-red-50" : "bg-[#EEF2FD]"}`}>
-                  <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Hoy</p>
+                  <p className="text-[10px] font-bold text-[#404255] uppercase">Hoy</p>
                   <p className={`font-black text-sm mt-0.5 ${c.gastadoHoy >= c.limiteEfectivo ? "text-red-600" : "text-[#1C1C1E]"}`}>S/ {(c.gastadoHoy||0).toFixed(0)}/{Number(c.limiteEfectivo).toFixed(0)}</p>
                 </div>
               )}
@@ -1528,7 +1528,7 @@ function RestriccionesTemplate({ cfg, u }) {
               <div className="bg-[#EEF2FD] rounded-2xl p-4 space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Horario de consumo</label>
+                    <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">Horario de consumo</label>
                     {(restriccionesDraft.horario_inicio || restriccionesDraft.horario_fin) ? (
                       <button onClick={()=>setRestriccionesDraft(d=>({...d, horario_inicio: "", horario_fin: ""}))}
                         className="text-[9px] font-bold text-[#1A3270] tap-active">Quitar restricción</button>
@@ -1538,29 +1538,29 @@ function RestriccionesTemplate({ cfg, u }) {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[9px] text-[#8A8FA8] block mb-1">Desde</label>
+                      <label className="text-[9px] text-[#404255] block mb-1">Desde</label>
                       <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                         value={restriccionesDraft.horario_inicio} onChange={e=>setRestriccionesDraft(d=>({...d, horario_inicio: e.target.value}))}/>
                     </div>
                     <div>
-                      <label className="text-[9px] text-[#8A8FA8] block mb-1">Hasta</label>
+                      <label className="text-[9px] text-[#404255] block mb-1">Hasta</label>
                       <input type="time" className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                         value={restriccionesDraft.horario_fin} onChange={e=>setRestriccionesDraft(d=>({...d, horario_fin: e.target.value}))}/>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Límite diario (S/)</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">Límite diario (S/)</label>
                   <input type="number" min="0" placeholder={limiteDiarioPerfil != null ? `Por defecto del mundo: S/ ${limiteDiarioPerfil}` : "Sin límite"}
                     className="w-full bg-white rounded-xl px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                     value={restriccionesDraft.limite_diario} onChange={e=>setRestriccionesDraft(d=>({...d, limite_diario: e.target.value}))}/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Productos bloqueados</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Productos bloqueados</label>
                   {catalogoMundo === null ? (
-                    <p className="text-xs text-[#8A8FA8]">Cargando catálogo…</p>
+                    <p className="text-xs text-[#404255]">Cargando catálogo…</p>
                   ) : catalogoMundo.length === 0 ? (
-                    <p className="text-xs text-[#8A8FA8]">Este mundo todavía no tiene productos cargados.</p>
+                    <p className="text-xs text-[#404255]">Este mundo todavía no tiene productos cargados.</p>
                   ) : (
                     <div className="max-h-40 overflow-y-auto bg-white rounded-xl divide-y divide-[#CDD1E4]">
                       {catalogoMundo.map(p => {
@@ -1578,7 +1578,7 @@ function RestriccionesTemplate({ cfg, u }) {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={()=>setRestriccionesAbiertoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
+                  <button onClick={()=>setRestriccionesAbiertoId(null)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#404255] tap-active">Cancelar</button>
                   <button disabled={guardandoRestricciones} onClick={()=>guardarRestriccionesBtn(c)}
                     className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardandoRestricciones?"Guardando…":"Guardar"}</button>
                 </div>
@@ -1588,7 +1588,7 @@ function RestriccionesTemplate({ cfg, u }) {
               <div className="space-y-2">
                 <div className="flex gap-2 items-center">
                   <div className="flex items-center bg-[#EEF2FD] rounded-2xl px-3 flex-1">
-                    <span className="text-[#8A8FA8] font-bold mr-1 text-sm">S/</span>
+                    <span className="text-[#404255] font-bold mr-1 text-sm">S/</span>
                     <input autoFocus className="flex-1 text-lg font-black text-[#1C1C1E] bg-transparent py-2.5 outline-none" type="number"
                       value={rechargeMonto} onChange={e=>setRechargeMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                   </div>
@@ -1596,7 +1596,7 @@ function RestriccionesTemplate({ cfg, u }) {
                     className="px-4 py-2.5 bg-[#1A3270] text-white rounded-2xl font-bold text-sm tap-active disabled:opacity-50">
                     {recharging ? "…" : "Enviar"}
                   </button>
-                  <button onClick={()=>{setRechargeFor(null);setRechargeMonto("");setRechargeError(null);}} className="text-[#8A8FA8] text-xs">Cancelar</button>
+                  <button onClick={()=>{setRechargeFor(null);setRechargeMonto("");setRechargeError(null);}} className="text-[#404255] text-xs">Cancelar</button>
                 </div>
                 {rechargeError && <p className="text-xs text-red-600">{rechargeError}</p>}
               </div>
@@ -1657,7 +1657,7 @@ function AccesosTemplate({ cfg, u }) {
         <QRCode label={cfg.mundo.nombre} sub="Muestra este QR en el punto de acceso" value={myCode} />
         {/* Medios de pago habilitados */}
         <div className="mt-4 pt-4 border-t border-[#CDD1E4]/50">
-          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Medios de pago en comercios</p>
+          <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-2">Medios de pago en comercios</p>
           <div className="flex flex-wrap gap-2">
             {(canalesAdq || []).map(ch=>(
               <div key={ch.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#EEF2FD] rounded-xl">
@@ -1689,7 +1689,7 @@ function AccesosTemplate({ cfg, u }) {
       <SectionCard>
         <SectionHeader label="Registros de acceso" icon="history"/>
         {accesos === null ? (
-          <p className="px-4 py-6 text-sm text-[#8A8FA8]">Cargando…</p>
+          <p className="px-4 py-6 text-sm text-[#404255]">Cargando…</p>
         ) : accesos.length === 0 ? (
           <div className="px-4 pb-4"><EmptyState icon="history" title="Sin registros aún" subtitle="Cuando registres tu ingreso o salida en un punto de acceso, aparecerá aquí."/></div>
         ) : accesos.map(h => (
@@ -1720,7 +1720,7 @@ function AccesosTemplate({ cfg, u }) {
                           {dentro ? "Dentro del colegio" : "Fuera del colegio"} · {new Date(ultimo.created_at).toLocaleString("es-PE", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       ) : (
-                        <p className="text-xs text-[#8A8FA8] mt-0.5">Sin registros de acceso aún</p>
+                        <p className="text-xs text-[#404255] mt-0.5">Sin registros de acceso aún</p>
                       )}
                     </div>
                     <button onClick={() => setQrAbierto(o => o === d.dependent_user_id ? null : d.dependent_user_id)}
@@ -1736,7 +1736,7 @@ function AccesosTemplate({ cfg, u }) {
                   {historial.length > 1 && (
                     <div className="mt-2.5 pt-2.5 border-t border-[#CDD1E4]/60 space-y-1">
                       {historial.slice(1, 4).map(h => (
-                        <p key={h.id} className="text-[10px] text-[#8A8FA8]">
+                        <p key={h.id} className="text-[10px] text-[#404255]">
                           {h.tipo === "entrada" ? "Entrada" : "Salida"} · {h.zona || "Sin zona"} · {new Date(h.created_at).toLocaleString("es-PE")}
                         </p>
                       ))}
@@ -1775,7 +1775,7 @@ function CashbackTemplate({ cfg, u }) {
           <p className="text-sm font-bold text-[#1C1C1E]">Tu tasa de retorno</p>
           <span className="text-2xl font-black text-[#8E6200]">{pct}%</span>
         </div>
-        <p className="text-xs text-[#8A8FA8] mt-1">Por cada S/ 100 que gastas recibes S/ {pct} de vuelta.</p>
+        <p className="text-xs text-[#404255] mt-1">Por cada S/ 100 que gastas recibes S/ {pct} de vuelta.</p>
         <div className="mt-3 p-3 bg-orange-50 rounded-2xl">
           <p className="text-xs text-orange-700">💡 Gasta en <b>Cafetería Central</b> para acumular más rápido</p>
         </div>
@@ -2015,7 +2015,7 @@ function MenuTemplate({ cfg, u }) {
       <SectionCard className="p-6 text-center">
         <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
         <p className="font-black text-[#1C1C1E] text-lg mt-2">Reserva confirmada</p>
-        <p className="text-sm text-[#8A8FA8] mt-1">Reservaste el menú del <b>{new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</b> en <b>{resultado.comercio}</b> para <b>{beneficiario.nombre}</b> · S/ {resultado.total.toFixed(2)}.</p>
+        <p className="text-sm text-[#404255] mt-1">Reservaste el menú del <b>{new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" })}</b> en <b>{resultado.comercio}</b> para <b>{beneficiario.nombre}</b> · S/ {resultado.total.toFixed(2)}.</p>
         <div className="mt-4 flex flex-col gap-2">
           <PrimaryBtn label="Ver mis reservas" icon="event_available" onClick={() => { setResultado(null); setVista("reservas"); }}/>
           <button onClick={() => setResultado(null)} className="text-sm font-bold text-[#1A3270] tap-active">Seguir reservando</button>
@@ -2031,7 +2031,7 @@ function MenuTemplate({ cfg, u }) {
         <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Seguir eligiendo
       </button>
       <SectionCard className="p-5">
-        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{nombreDe(cartMerchant)} · Para {beneficiario.nombre} · {new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "short" })}</p>
+        <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">{nombreDe(cartMerchant)} · Para {beneficiario.nombre} · {new Date(fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "short" })}</p>
         <p className="font-black text-lg text-[#1C1C1E] mb-3">Tu reserva</p>
         {beneficiario.alergias && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl mb-3 flex items-start gap-2">
@@ -2056,7 +2056,7 @@ function MenuTemplate({ cfg, u }) {
           <span className="font-bold text-[#1C1C1E]">Total</span>
           <span className="font-black text-xl text-[#1A3270]">S/ {total.toFixed(2)}</span>
         </div>
-        <p className="text-[10px] text-[#8A8FA8] mb-4">Saldo de {beneficiario.nombre}: S/ {(saldoBeneficiario ?? 0).toFixed(2)}{limiteDiario != null && beneficiario.tipo === "dependiente" ? ` · Límite diario del mundo: S/ ${(+limiteDiario).toFixed(2)}` : ""}</p>
+        <p className="text-[10px] text-[#404255] mb-4">Saldo de {beneficiario.nombre}: S/ {(saldoBeneficiario ?? 0).toFixed(2)}{limiteDiario != null && beneficiario.tipo === "dependiente" ? ` · Límite diario del mundo: S/ ${(+limiteDiario).toFixed(2)}` : ""}</p>
         {resultado && !resultado.ok && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-3">
             <p className="font-bold text-red-700 text-sm">{resultado.titulo}</p>
@@ -2067,7 +2067,7 @@ function MenuTemplate({ cfg, u }) {
           <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1 mb-3">
             {[["saldo", "Con saldo"], ["qr", "Con QR en el punto de venta"]].map(([v, l]) => (
               <button key={v} onClick={() => setMetodoElegido(v)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold tap-active ${metodoElegido === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
+                className={`flex-1 py-2 rounded-xl text-xs font-bold tap-active ${metodoElegido === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#404255]"}`}>{l}</button>
             ))}
           </div>
         )}
@@ -2102,7 +2102,7 @@ function MenuTemplate({ cfg, u }) {
       <div className="px-5 space-y-4 pb-28">
         <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
           {[["calendario", "Calendario"], ["reservas", "Mis reservas"]].map(([v, l]) => (
-            <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
+            <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#404255]"}`}>{l}</button>
           ))}
         </div>
         {misReservas === null ? (
@@ -2117,7 +2117,7 @@ function MenuTemplate({ cfg, u }) {
                 <div key={r.id} className="flex justify-between items-center text-xs bg-[#EEF2FD]/60 rounded-xl px-3 py-2">
                   <div>
                     <p className="font-bold text-[#1C1C1E]">{r.beneficiario_nombre} · {r.merchant_nombre}</p>
-                    <p className="text-[#8A8FA8]">{(r.items || []).map(it => `${it.nombre} x${it.cantidad}`).join(", ")}</p>
+                    <p className="text-[#404255]">{(r.items || []).map(it => `${it.nombre} x${it.cantidad}`).join(", ")}</p>
                   </div>
                   <span className="font-mono font-bold text-[#1A3270]">S/ {Number(r.monto).toFixed(2)}</span>
                 </div>
@@ -2133,7 +2133,7 @@ function MenuTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-28">
       <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
         {[["calendario", "Calendario"], ["reservas", "Mis reservas"]].map(([v, l]) => (
-          <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#8A8FA8]"}`}>{l}</button>
+          <button key={v} onClick={() => setVista(v)} className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-[#1A3270] shadow-sm" : "text-[#404255]"}`}>{l}</button>
         ))}
       </div>
 
@@ -2167,9 +2167,9 @@ function MenuTemplate({ cfg, u }) {
               <Icon name="today" fill size="text-lg" color="text-green-600"/>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Hoy te toca</p>
+              <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">Hoy te toca</p>
               <p className="text-sm font-bold text-[#1C1C1E] truncate">{reservaHoy.beneficiario_nombre} · {(reservaHoy.items || []).map(it => it.nombre).join(", ")}</p>
-              <p className="text-[10px] text-[#8A8FA8]">{reservaHoy.merchant_nombre}</p>
+              <p className="text-[10px] text-[#404255]">{reservaHoy.merchant_nombre}</p>
             </div>
           </SectionCard>
         );
@@ -2177,12 +2177,12 @@ function MenuTemplate({ cfg, u }) {
 
       {/* ¿Para quién? */}
       <div>
-        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-2">Reservar para</p>
+        <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-2">Reservar para</p>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {beneficiarios.map(b => (
             <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
-              <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
+              <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#404255]"}/>
               {b.nombre}
             </button>
           ))}
@@ -2198,7 +2198,7 @@ function MenuTemplate({ cfg, u }) {
         <SectionCard className="p-6 text-center">
           <Icon name="family_restroom" size="text-3xl" color="text-[#1A3270]"/>
           <p className="font-bold text-sm text-[#1C1C1E] mt-2">Elige para quién es el menú</p>
-          <p className="text-xs text-[#8A8FA8] mt-1">Toca uno de los nombres de arriba en "Reservar para" antes de ver los platos disponibles.</p>
+          <p className="text-xs text-[#404255] mt-1">Toca uno de los nombres de arriba en "Reservar para" antes de ver los platos disponibles.</p>
         </SectionCard>
       ) : (
         <>
@@ -2219,7 +2219,7 @@ function MenuTemplate({ cfg, u }) {
           {menuDelDia === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
               <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-              <p className="text-xs text-[#8A8FA8]">Cargando menú del día…</p>
+              <p className="text-xs text-[#404255]">Cargando menú del día…</p>
             </div>
           ) : visibles.length === 0 ? (
             <SectionCard><EmptyState icon="restaurant_menu" title="Sin menú programado" subtitle="Ningún comercio programó platos para este día todavía. Prueba con otro día del calendario."/></SectionCard>
@@ -2238,8 +2238,8 @@ function MenuTemplate({ cfg, u }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-[#1C1C1E]">{p.nombre}</p>
-                        <p className="text-xs text-[#8A8FA8]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
-                        {p.descripcion && <p className="text-[10px] text-[#8A8FA8] mt-0.5">{p.descripcion}</p>}
+                        <p className="text-xs text-[#404255]">{nombreDe(p.merchant_id)}{p.categoria ? ` · ${p.categoria}` : ""}</p>
+                        {p.descripcion && <p className="text-[10px] text-[#404255] mt-0.5">{p.descripcion}</p>}
                         {p.alergenos?.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">Contiene: {p.alergenos.join(", ")}</p>}
                         {bloqueadoAlergia && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Bloqueado por alergia de {beneficiario.nombre}</p>}
                         {!bloqueadoAlergia && bloqueadoRestriccion && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
@@ -2295,15 +2295,15 @@ function EventoHeroSection({ ev, vendidas, mundo }) {
       </div>
       <div className="p-4">
         <p className="font-black text-xl text-[#1C1C1E]">{ev.titulo}</p>
-        {ev.descripcion && <p className="text-sm text-[#8A8FA8] mt-1">{ev.descripcion}</p>}
+        {ev.descripcion && <p className="text-sm text-[#404255] mt-1">{ev.descripcion}</p>}
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
           <p className="text-xs text-[#1A3270] font-semibold flex items-center gap-1"><Icon name="calendar_today" size="text-xs" color="text-[#1A3270]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}</p>
-          {ev.lugar && <p className="text-xs text-[#8A8FA8] flex items-center gap-1"><Icon name="location_on" size="text-xs" color="text-[#8A8FA8]"/>{ev.lugar}</p>}
-          {ev.organizador && <p className="text-xs text-[#8A8FA8]">Organiza: <b>{ev.organizador}</b></p>}
+          {ev.lugar && <p className="text-xs text-[#404255] flex items-center gap-1"><Icon name="location_on" size="text-xs" color="text-[#404255]"/>{ev.lugar}</p>}
+          {ev.organizador && <p className="text-xs text-[#404255]">Organiza: <b>{ev.organizador}</b></p>}
         </div>
         {ev.aforo_total > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
+            <div className="flex justify-between text-[10px] text-[#404255] mb-1">
               <span>Aforo</span><span>{vendidas}/{ev.aforo_total} entradas</span>
             </div>
             <ProgressBar value={vendidas} max={ev.aforo_total}/>
@@ -2354,8 +2354,8 @@ function EventoAgendaSection({ ev }) {
             </div>
             <div className="pb-4 pt-1">
               <p className="text-sm font-semibold text-[#1C1C1E]">{it.t}</p>
-              {(it.h || it.d) && <p className="text-[11px] text-[#8A8FA8]">{[it.h, it.d].filter(Boolean).join(" · ")}</p>}
-              {i === 0 && !it.h && <p className="text-[11px] text-[#8A8FA8]">{ev.fecha} · {hora}</p>}
+              {(it.h || it.d) && <p className="text-[11px] text-[#404255]">{[it.h, it.d].filter(Boolean).join(" · ")}</p>}
+              {i === 0 && !it.h && <p className="text-[11px] text-[#404255]">{ev.fecha} · {hora}</p>}
             </div>
           </div>
         ))}
@@ -2495,7 +2495,7 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
         {tipos === null && (
           <div className="py-6 flex flex-col items-center gap-2">
             <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-            <p className="text-xs text-[#8A8FA8]">Cargando entradas…</p>
+            <p className="text-xs text-[#404255]">Cargando entradas…</p>
           </div>
         )}
 
@@ -2517,8 +2517,8 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="font-black text-[#1C1C1E]">{t.nombre}</p>
-                  {t.descripcion && <p className="text-xs text-[#8A8FA8] mt-0.5">{t.descripcion}</p>}
-                  <p className="text-[10px] text-[#8A8FA8] mt-1">
+                  {t.descripcion && <p className="text-xs text-[#404255] mt-0.5">{t.descripcion}</p>}
+                  <p className="text-[10px] text-[#404255] mt-1">
                     {agotado ? "Agotado" : `${restantes} disponibles`} · máx {t.max_por_compra || 4} por compra
                     {fuera && " · fuera de ventana de venta"}
                   </p>
@@ -2542,7 +2542,7 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
                   className="w-8 h-8 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="add" size="text-base" color="text-[#1A3270]"/></button>
               </div>
             </div>
-            <div className="flex justify-between text-xs text-[#8A8FA8]">
+            <div className="flex justify-between text-xs text-[#404255]">
               <span>Pagas con tu saldo del mundo</span>
               <span>Saldo: <b className="text-[#1C1C1E]">S/ {saldo.toFixed(2)}</b></span>
             </div>
@@ -2661,7 +2661,7 @@ function MisEntradasList({ mundo, refreshKey }) {
   if (entradas === null) return (
     <div className="py-10 flex flex-col items-center gap-2">
       <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-      <p className="text-xs text-[#8A8FA8]">Cargando tus entradas…</p>
+      <p className="text-xs text-[#404255]">Cargando tus entradas…</p>
     </div>
   );
   if (!entradas.length) return (
@@ -2682,7 +2682,7 @@ function MisEntradasList({ mundo, refreshKey }) {
                 <Icon name={t.estado === "anulado" ? "block" : "task_alt"} fill size="text-2xl"
                   color={t.estado === "anulado" ? "text-red-500" : "text-green-600"}/>
                 {t.checkin_at && (
-                  <span className="text-[9px] font-bold text-[#8A8FA8]">{horaCorta(t.checkin_at)}</span>
+                  <span className="text-[9px] font-bold text-[#404255]">{horaCorta(t.checkin_at)}</span>
                 )}
               </div>
             ) : (
@@ -2692,15 +2692,15 @@ function MisEntradasList({ mundo, refreshKey }) {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-black text-[#1C1C1E] leading-tight">{t.events?.titulo || "Evento"}</p>
-              <p className="text-xs text-[#8A8FA8] mt-0.5">{t.event_ticket_types?.nombre || "General"} · {t.events?.fecha} {t.events?.hora || ""}</p>
+              <p className="text-xs text-[#404255] mt-0.5">{t.event_ticket_types?.nombre || "General"} · {t.events?.fecha} {t.events?.hora || ""}</p>
               {esUsada(t) ? (
-                <p className="text-[10px] text-[#8A8FA8] mt-1">
+                <p className="text-[10px] text-[#404255] mt-1">
                   {t.estado === "anulado"
                     ? "Esta entrada fue anulada y ya no da acceso."
                     : `Ya se usó para ingresar${t.checkin_at ? ` · ${fechaHoraCorta(t.checkin_at)}` : ""}. No sirve para un segundo ingreso.`}
                 </p>
               ) : (
-                <p className="font-mono text-[9px] text-[#8A8FA8] mt-1 truncate">{t.qr_code}</p>
+                <p className="font-mono text-[9px] text-[#404255] mt-1 truncate">{t.qr_code}</p>
               )}
               <div className="mt-2 flex items-center gap-2">
                 <Chip label={t.estado === "checkin" ? "Dentro del evento" : t.estado === "checkout" ? "Evento completado" : t.estado === "anulado" ? "Anulada" : "Lista para usar"}
@@ -2752,7 +2752,7 @@ function MisEntradasList({ mundo, refreshKey }) {
               alt={`Código QR · ${qrFullscreen.qr_code}`} className="w-full aspect-square rounded-2xl border-2 border-[#CDD1E4]" />
           </div>
           <p className="font-black text-lg text-[#1C1C1E] mt-6 text-center">{qrFullscreen.events?.titulo || "Evento"}</p>
-          <p className="text-sm text-[#8A8FA8] mt-1 text-center">{qrFullscreen.event_ticket_types?.nombre || "General"} · {qrFullscreen.events?.fecha} {qrFullscreen.events?.hora || ""}</p>
+          <p className="text-sm text-[#404255] mt-1 text-center">{qrFullscreen.event_ticket_types?.nombre || "General"} · {qrFullscreen.events?.fecha} {qrFullscreen.events?.hora || ""}</p>
           <p className="font-mono text-[10px] text-[#CDD1E4] mt-3 text-center">{qrFullscreen.qr_code}</p>
         </div>
       )}
@@ -2806,14 +2806,14 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
   const ESTADO_INFO = {
     PENDIENTE_APROBACION: { label: "En revisión de RedPontis", color: "text-amber-600 bg-amber-50", icon: "hourglass_top" },
     PUBLICADO: { label: "Publicado", color: "text-green-700 bg-green-50", icon: "check_circle" },
-    PAUSADO: { label: "Pausado", color: "text-[#8A8FA8] bg-[#EEF2FD]", icon: "pause_circle" },
+    PAUSADO: { label: "Pausado", color: "text-[#404255] bg-[#EEF2FD]", icon: "pause_circle" },
     RECHAZADO: { label: "Rechazado", color: "text-red-600 bg-red-50", icon: "cancel" },
   };
 
   if (eventos === null) return (
     <div className="py-10 flex flex-col items-center gap-2">
       <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-      <p className="text-xs text-[#8A8FA8]">Cargando tus eventos…</p>
+      <p className="text-xs text-[#404255]">Cargando tus eventos…</p>
     </div>
   );
 
@@ -2821,7 +2821,7 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
     <SectionCard className="p-8 text-center">
       <Icon name="event_note" size="text-4xl" color="text-[#CDD1E4]"/>
       <p className="text-[#404255] font-bold text-sm mt-3">Todavía no publicaste ningún evento</p>
-      <p className="text-[#8A8FA8] text-xs mt-1">Usa "Crear y publicar mi evento" arriba para empezar.</p>
+      <p className="text-[#404255] text-xs mt-1">Usa "Crear y publicar mi evento" arriba para empezar.</p>
     </SectionCard>
   );
 
@@ -2838,7 +2838,7 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
                 <Icon name={info.icon} size="text-[11px]"/>{info.label}
               </span>
             </div>
-            <p className="text-[#8A8FA8] text-xs">{ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} {ev.lugar ? `· ${ev.lugar}` : ""}</p>
+            <p className="text-[#404255] text-xs">{ev.fecha} {ev.hora ? `· ${ev.hora}` : ""} {ev.lugar ? `· ${ev.lugar}` : ""}</p>
 
             {ev.estado === "RECHAZADO" && ev.motivo_rechazo && (
               <p className="text-red-600 text-xs mt-2 bg-red-50 rounded-xl px-3 py-2">{ev.motivo_rechazo}</p>
@@ -2848,11 +2848,11 @@ function MisEventosCreadosList({ worldId, refreshKey }) {
               <>
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   <div className="bg-[#EEF2FD] rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-bold text-[#8A8FA8] uppercase tracking-widest">Vendidas</p>
+                    <p className="text-[9px] font-bold text-[#404255] uppercase tracking-widest">Vendidas</p>
                     <p className="text-base font-black text-[#1C1C1E]">{s.vendidas}{s.aforo > 0 ? ` / ${s.aforo}` : ""}</p>
                   </div>
                   <div className="bg-[#EEF2FD] rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-bold text-[#8A8FA8] uppercase tracking-widest">Ingresos</p>
+                    <p className="text-[9px] font-bold text-[#404255] uppercase tracking-widest">Ingresos</p>
                     <p className="text-base font-black text-[#1C1C1E]">S/ {s.ingresos.toFixed(2)}</p>
                   </div>
                 </div>
@@ -2966,8 +2966,8 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
           {ev.fecha}{ev.hora && ` · ${ev.hora}`}
         </p>
         {ev.lugar && (
-          <p className="text-xs text-[#8A8FA8] flex items-center gap-1 mb-2">
-            <Icon name="location_on" size="text-xs" color="text-[#8A8FA8]" />
+          <p className="text-xs text-[#404255] flex items-center gap-1 mb-2">
+            <Icon name="location_on" size="text-xs" color="text-[#404255]" />
             {ev.lugar}
           </p>
         )}
@@ -2978,7 +2978,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
 
         {ev.aforo_total > 0 && (
           <div className="mb-3">
-            <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
+            <div className="flex justify-between text-[10px] text-[#404255] mb-1">
               <span>Aforo</span><span>{vendidas}/{ev.aforo_total}</span>
             </div>
             <ProgressBar value={vendidas} max={ev.aforo_total} />
@@ -2989,7 +2989,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
             primeras cosas que se preguntan antes de comprar una entrada. */}
         {Array.isArray(afiliados) && afiliados.length > 0 && (
           <div className="mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#8A8FA8] mb-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#404255] mb-1.5">
               Comercios en el evento
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -3004,7 +3004,7 @@ function TarjetaEventoMundo({ ev, mundo, vendidas, onVerEntradas, comerciosDelMu
                 </span>
               ))}
               {afiliados.length > 4 && (
-                <span className="text-[10px] px-2 py-1 text-[#8A8FA8] font-semibold">
+                <span className="text-[10px] px-2 py-1 text-[#404255] font-semibold">
                   +{afiliados.length - 4}
                 </span>
               )}
@@ -3133,7 +3133,7 @@ function EventosTemplate({ cfg, u }) {
           </React.Fragment>
         ))}
       </div>
-      <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">
+      <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider mb-1">
         {step===1?"Datos del evento":step===2?"Entidad organizadora":"Revisar y enviar"}
       </p>
 
@@ -3142,13 +3142,13 @@ function EventosTemplate({ cfg, u }) {
           <h2 className="text-2xl font-black text-[#1C1C1E]">Tu evento</h2>
           {[{l:"Título del evento",k:"titulo",p:"Ej. Festival de Jazz Barranco"},{l:"Fecha",k:"fecha",t:"date"},{l:"Hora",k:"hora",t:"time"},{l:"Lugar / Dirección",k:"lugar",p:"Ej. Parque Kennedy, Miraflores"}].map(f=>(
             <div key={f.k}>
-              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{f.l}</label>
+              <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">{f.l}</label>
               <input type={f.t||"text"} className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none focus:ring-2 focus:ring-[#1A3270]/20"
                 placeholder={f.p||""} value={nuevoEvento[f.k]||""} onChange={e=>setNuevoEvento(p=>({...p,[f.k]:e.target.value}))}/>
             </div>
           ))}
           <div>
-            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Categoría</label>
+            <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Categoría</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIAS.map(c=>(
                 <button key={c} onClick={()=>setNuevoEvento(p=>({...p,categoria:c}))}
@@ -3157,17 +3157,17 @@ function EventosTemplate({ cfg, u }) {
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Descripción</label>
+            <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Descripción</label>
             <textarea className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none resize-none" rows={3}
               placeholder="Cuéntanos de qué trata tu evento..." value={nuevoEvento.descripcion} onChange={e=>setNuevoEvento(p=>({...p,descripcion:e.target.value}))}/>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Aforo</label>
+              <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Aforo</label>
               <input type="number" className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" value={nuevoEvento.aforo} onChange={e=>setNuevoEvento(p=>({...p,aforo:+e.target.value}))}/>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">Precio (S/)</label>
+              <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Precio (S/)</label>
               <input type="number" disabled={nuevoEvento.gratis} className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none disabled:opacity-40" value={nuevoEvento.gratis?0:nuevoEvento.precio} onChange={e=>setNuevoEvento(p=>({...p,precio:+e.target.value}))}/>
             </div>
           </div>
@@ -3177,7 +3177,7 @@ function EventosTemplate({ cfg, u }) {
             </div>
             <div>
               <p className="text-sm font-bold text-[#1C1C1E]">Entrada gratuita</p>
-              <p className="text-xs text-[#8A8FA8]">{nuevoEvento.gratis?"Sin costo para los asistentes":"Cobro por entrada"}</p>
+              <p className="text-xs text-[#404255]">{nuevoEvento.gratis?"Sin costo para los asistentes":"Cobro por entrada"}</p>
             </div>
           </label>
           <div className="flex gap-2">
@@ -3190,7 +3190,7 @@ function EventosTemplate({ cfg, u }) {
       {step===2 && (
         <div className="space-y-4">
           <h2 className="text-2xl font-black text-[#1C1C1E]">Entidad organizadora</h2>
-          <p className="text-sm text-[#8A8FA8]">Es opcional: solo hace falta si publicas a nombre de una empresa o entidad legal. Si es un evento personal, puedes saltarlo.</p>
+          <p className="text-sm text-[#404255]">Es opcional: solo hace falta si publicas a nombre de una empresa o entidad legal. Si es un evento personal, puedes saltarlo.</p>
           {[
             {k:"personal",l:"Evento personal",d:"Publicas a título propio, sin empresa ni RUC"},
             {k:"existente",l:"Entidad existente",d:"Asocia tu RUC o el de tu empresa ya registrada"},
@@ -3199,20 +3199,20 @@ function EventosTemplate({ cfg, u }) {
             <button key={op.k} onClick={()=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,tipo:op.k}}))}
               className={`w-full p-4 rounded-2xl border-2 text-left tap-active transition-all ${nuevoEvento.entidad.tipo===op.k?"border-[#1A3270] bg-[#EEF2FD]":"border-[#CDD1E4] glass-card"}`}>
               <p className="font-bold text-[#1C1C1E]">{op.l}</p>
-              <p className="text-xs text-[#8A8FA8] mt-0.5">{op.d}</p>
+              <p className="text-xs text-[#404255] mt-0.5">{op.d}</p>
             </button>
           ))}
           {nuevoEvento.entidad.tipo!=="personal" && (
             <>
               <div>
-                <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">
+                <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">
                   {nuevoEvento.entidad.tipo==="existente"?"Nombre de la entidad / empresa":"Razón social de la nueva entidad"}
                 </label>
                 <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" placeholder="Ej. Jazz Garage Lima S.R.L."
                   value={nuevoEvento.entidad.nombre} onChange={e=>setNuevoEvento(p=>({...p,entidad:{...p.entidad,nombre:e.target.value}}))}/>
               </div>
               <div>
-                <label className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">
+                <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">
                   {nuevoEvento.entidad.tipo==="existente"?"RUC":"RUC (si ya tienes) o dejalo vacío"}
                 </label>
                 <input className="w-full bg-[#EEF2FD] rounded-2xl px-4 py-3 text-[#1C1C1E] text-sm outline-none" placeholder="20XXXXXXXXX"
@@ -3242,7 +3242,7 @@ function EventosTemplate({ cfg, u }) {
               {l:"Organizador",v:nuevoEvento.entidad.tipo==="personal"?"Evento personal (sin entidad legal)":`${nuevoEvento.entidad.nombre} · ${nuevoEvento.entidad.tipo==="nueva"?"Nueva entidad":"Entidad existente"}`},
             ].map((r,i)=>(
               <div key={i} className="flex justify-between items-start">
-                <p className="text-[11px] font-bold text-[#8A8FA8] uppercase w-24 flex-shrink-0">{r.l}</p>
+                <p className="text-[11px] font-bold text-[#404255] uppercase w-24 flex-shrink-0">{r.l}</p>
                 <p className="text-sm text-[#1C1C1E] font-semibold text-right flex-1">{r.v}</p>
               </div>
             ))}
@@ -3342,7 +3342,7 @@ function EventosTemplate({ cfg, u }) {
           {liveEvents === null && (
             <div className="py-10 flex flex-col items-center gap-2">
               <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-              <p className="text-xs text-[#8A8FA8]">Buscando eventos…</p>
+              <p className="text-xs text-[#404255]">Buscando eventos…</p>
             </div>
           )}
 
@@ -3374,7 +3374,7 @@ function EventosTemplate({ cfg, u }) {
           {otrosEventos.length > 0 && (
             <div className="space-y-3">
               {eventosDelMundo.length > 0 && (
-                <p className="text-[11px] font-black uppercase tracking-wider text-[#8A8FA8] pt-2">
+                <p className="text-[11px] font-black uppercase tracking-wider text-[#404255] pt-2">
                   Otros eventos de la comunidad
                 </p>
               )}
@@ -3396,13 +3396,13 @@ function EventosTemplate({ cfg, u }) {
                       <p className="text-xs text-[#1A3270] font-semibold flex items-center gap-1 mb-1">
                         <Icon name="calendar_today" size="text-xs" color="text-[#1A3270]"/>{ev.fecha} {ev.hora && `· ${ev.hora}`}
                       </p>
-                      {ev.lugar && <p className="text-xs text-[#8A8FA8] flex items-center gap-1 mb-2"><Icon name="location_on" size="text-xs" color="text-[#8A8FA8]"/>{ev.lugar}</p>}
+                      {ev.lugar && <p className="text-xs text-[#404255] flex items-center gap-1 mb-2"><Icon name="location_on" size="text-xs" color="text-[#404255]"/>{ev.lugar}</p>}
                       {ev.organizador && (
-                        <p className="text-[10px] text-[#8A8FA8] mb-2">Organiza: <b>{ev.organizador}</b></p>
+                        <p className="text-[10px] text-[#404255] mb-2">Organiza: <b>{ev.organizador}</b></p>
                       )}
                       {ev.aforo_total > 0 && (
                         <div className="mb-3">
-                          <div className="flex justify-between text-[10px] text-[#8A8FA8] mb-1">
+                          <div className="flex justify-between text-[10px] text-[#404255] mb-1">
                             <span>Aforo</span><span>{vendidas}/{ev.aforo_total} entradas</span>
                           </div>
                           <ProgressBar value={vendidas} max={ev.aforo_total}/>
@@ -3451,7 +3451,7 @@ function GenericTemplate({ cfg, moduleId }) {
       <div className={`${m.bg || "bg-[#EEF2FD]"} rounded-3xl p-8 text-center`}>
         <Icon name={m.icon} fill size="text-5xl" color={m.color || "text-[#1A3270]"}/>
         <p className="font-black text-[#1C1C1E] text-lg mt-3">{m.label}</p>
-        <p className="text-sm text-[#8A8FA8] mt-1">Módulo activo en <b>{cfg.mundo.nombre}</b></p>
+        <p className="text-sm text-[#404255] mt-1">Módulo activo en <b>{cfg.mundo.nombre}</b></p>
       </div>
       {flagEntries.length > 0 && (
         <SectionCard>
@@ -3509,7 +3509,7 @@ function SubsidioTemplate({ cfg, u }) {
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-[#8A8FA8] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
+        <p className="text-[11px] text-[#404255] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
       </SectionCard>
       <SectionCard>
         <SectionHeader label="Historial de subsidio" icon="history"/>
@@ -3542,12 +3542,12 @@ function CreditoTemplate({ cfg, u }) {
       <SectionCard className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Línea disponible</p>
+            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Línea disponible</p>
             <p className="text-4xl font-black text-green-600 mt-1">S/ {disponible.toFixed(2)}</p>
           </div>
           <Chip label={`TEA ${tasa}%`} color="bg-amber-100 text-amber-700"/>
         </div>
-        <div className="mb-2 text-xs text-[#8A8FA8] flex justify-between">
+        <div className="mb-2 text-xs text-[#404255] flex justify-between">
           <span>Usado: S/ {usado.toFixed(2)}</span>
           <span>Total: S/ {lineaMax.toFixed(2)}</span>
         </div>
@@ -3557,12 +3557,12 @@ function CreditoTemplate({ cfg, u }) {
         <SectionCard className="p-4 text-center">
           <Icon name="credit_card" fill size="text-3xl" color="text-[#1A3270]"/>
           <p className="font-bold text-sm text-[#1C1C1E] mt-2">Usar crédito</p>
-          <p className="text-xs text-[#8A8FA8]">Al pagar en POS</p>
+          <p className="text-xs text-[#404255]">Al pagar en POS</p>
         </SectionCard>
         <SectionCard className="p-4 text-center">
           <Icon name="payments" fill size="text-3xl" color="text-green-600"/>
           <p className="font-bold text-sm text-[#1C1C1E] mt-2">Pagar cuota</p>
-          <p className="text-xs text-[#8A8FA8]">Vence en 12 días</p>
+          <p className="text-xs text-[#404255]">Vence en 12 días</p>
         </SectionCard>
       </div>
       <SectionCard>
@@ -3572,7 +3572,7 @@ function CreditoTemplate({ cfg, u }) {
           {n:"Cuota 3/3",v:106.66,f:"15 Feb",estado:"Futura"}].map((c,i)=>(
           <ListItem key={i} icon="receipt" iconBg="bg-[#EEF2FD]" iconColor="text-[#1A3270]"
             title={c.n} subtitle={`Vence ${c.f}`}
-            right={<div className="text-right"><p className="font-black text-sm text-[#1C1C1E]">S/ {c.v.toFixed(2)}</p><Chip label={c.estado} color={c.estado==="Pendiente"?"bg-amber-100 text-amber-700":"bg-[#EEF2FD] text-[#8A8FA8]"}/></div>}/>
+            right={<div className="text-right"><p className="font-black text-sm text-[#1C1C1E]">S/ {c.v.toFixed(2)}</p><Chip label={c.estado} color={c.estado==="Pendiente"?"bg-amber-100 text-amber-700":"bg-[#EEF2FD] text-[#404255]"}/></div>}/>
         ))}
       </SectionCard>
     </div>
@@ -3669,7 +3669,7 @@ function PerfilExtTemplate({ cfg, u }) {
           <span className="text-white font-black text-2xl">{initials}</span>
         </div>
         <p className="font-black text-[#1C1C1E] text-xl">{nombre}</p>
-        <p className="text-xs text-[#8A8FA8] mt-1">{u?.auth?.email}</p>
+        <p className="text-xs text-[#404255] mt-1">{u?.auth?.email}</p>
         <div className="flex justify-center gap-2 mt-3">
           <Tag label="TAQ NFC" icon="contactless"/>
           <Tag label="QR activo" icon="qr_code"/>
@@ -3691,17 +3691,17 @@ function PerfilExtTemplate({ cfg, u }) {
             </div>
           )}
           {!activo.esTitular && (
-            <p className="px-4 pb-3 text-[11px] text-[#8A8FA8]">
+            <p className="px-4 pb-3 text-[11px] text-[#404255]">
               Ficha de {activo.nombre}. {activo.alergias ? `Alergias: ${activo.alergias}. ` : ""}Las alergias se editan desde Restricciones, no acá.
             </p>
           )}
           {perfil === null ? (
-            <p className="px-4 py-4 text-sm text-[#8A8FA8]">Cargando…</p>
+            <p className="px-4 py-4 text-sm text-[#404255]">Cargando…</p>
           ) : editando ? (
             <div className="px-4 pb-4 space-y-3">
               {CAMPOS.map(f => f.key === "alergias" ? (
                 <div key={f.key}>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-2">{f.label}</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-2">{f.label}</label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {ALERGIAS_CATALOG.map(a => {
                       const arr = (draft.alergias || "").split(",").map(x=>x.trim()).filter(Boolean);
@@ -3736,14 +3736,14 @@ function PerfilExtTemplate({ cfg, u }) {
                 </div>
               ) : (
                 <div key={f.key}>
-                  <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">{f.label}</label>
+                  <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">{f.label}</label>
                   <input className="w-full bg-[#EEF2FD] rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none"
                     placeholder={f.placeholder} value={draft[f.key]} onChange={e => setDraft(d => ({ ...d, [f.key]: e.target.value }))}/>
                 </div>
               ))}
               {mostrarEmergencia && (
               <div>
-                <label className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider block mb-1">Contacto de emergencia</label>
+                <label className="text-[10px] font-bold text-[#404255] uppercase tracking-wider block mb-1">Contacto de emergencia</label>
                 <div className="flex gap-2">
                   <input className="flex-1 bg-[#EEF2FD] rounded-xl px-3 py-2.5 text-sm text-[#1C1C1E] outline-none" placeholder="Nombre"
                     value={draft.contacto_emergencia_nombre} onChange={e => setDraft(d => ({ ...d, contacto_emergencia_nombre: e.target.value }))}/>
@@ -3754,7 +3754,7 @@ function PerfilExtTemplate({ cfg, u }) {
               )}
               {guardarError && <p className="text-xs text-red-600">{guardarError}</p>}
               <div className="flex gap-2">
-                <button onClick={() => setEditando(false)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#8A8FA8] tap-active">Cancelar</button>
+                <button onClick={() => setEditando(false)} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-[#404255] tap-active">Cancelar</button>
                 <button onClick={guardar} disabled={guardando} className="flex-1 py-2.5 bg-[#1A3270] text-white rounded-xl font-bold text-sm tap-active disabled:opacity-50">{guardando ? "Guardando…" : "Guardar"}</button>
               </div>
             </div>
@@ -3791,7 +3791,7 @@ function PerfilExtTemplate({ cfg, u }) {
         <SectionCard>
           <SectionHeader label="Grupo familiar vinculado" icon="group"/>
           {dependientes === null ? (
-            <p className="px-4 py-4 text-sm text-[#8A8FA8]">Cargando…</p>
+            <p className="px-4 py-4 text-sm text-[#404255]">Cargando…</p>
           ) : dependientes.length === 0 ? (
             <div className="px-4 pb-4"><EmptyState icon="group_add" title="Sin miembros vinculados" subtitle='Agrega familiares desde el módulo "Mi Familia" para gestión conjunta en el mundo.'/></div>
           ) : dependientes.map(d => (
@@ -3836,7 +3836,7 @@ function EstacionamientoTemplate({ cfg, u }) {
           <p className="text-[11px] font-bold text-green-600 uppercase tracking-widest">Estacionamiento activo</p>
           <p className="text-4xl font-black text-[#1C1C1E] mt-1">{mins}min</p>
           <p className="text-2xl font-black text-[#1A3270] mt-1">S/ {costo.toFixed(2)}</p>
-          <p className="text-xs text-[#8A8FA8] mt-1">{gracia > mins ? `${gracia - mins} min de gracia restantes` : `Cobro activo · S/ ${tarifa}/hr`}</p>
+          <p className="text-xs text-[#404255] mt-1">{gracia > mins ? `${gracia - mins} min de gracia restantes` : `Cobro activo · S/ ${tarifa}/hr`}</p>
           <button onClick={()=>{setActive(false);setMins(0);}}
             className="mt-4 w-full py-3 rounded-2xl bg-red-500 text-white font-black tap-active">
             Registrar salida
@@ -3847,7 +3847,7 @@ function EstacionamientoTemplate({ cfg, u }) {
           <div className="w-16 h-16 rounded-full bg-[#EEF2FD] flex items-center justify-center mx-auto mb-3">
             <Icon name="local_parking" fill size="text-3xl" color="text-[#1A3270]"/>
           </div>
-          <p className="text-[#8A8FA8] text-sm mb-4">Sin estacionamiento activo</p>
+          <p className="text-[#404255] text-sm mb-4">Sin estacionamiento activo</p>
           <PrimaryBtn label="Registrar entrada" icon="login" onClick={()=>setActive(true)}/>
         </SectionCard>
       )}
@@ -3891,7 +3891,7 @@ function PromocionesTemplate({ cfg, u }) {
     const activo = p.estado === "VIGENTE" && !vencida && !agotada;
     return {
       id: p.id, titulo: p.titulo, desc: p.merchant_nombre,
-      icon: "local_offer", color: activo ? "bg-amber-50" : "bg-[#EEF2FD]", c: activo ? "text-amber-600" : "text-[#8A8FA8]",
+      icon: "local_offer", color: activo ? "bg-amber-50" : "bg-[#EEF2FD]", c: activo ? "text-amber-600" : "text-[#404255]",
       vence: p.vigencia_hasta ? new Date(p.vigencia_hasta).toLocaleDateString("es-PE", { day: "2-digit", month: "short" }) : "Sin vencimiento",
       activo, agotada, codigoQR: p.codigo_qr, valor: p.valor, tipo: p.tipo,
     };
@@ -3901,13 +3901,13 @@ function PromocionesTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       <div className="glass-card rounded-2xl p-4 flex justify-between items-center">
         <div>
-          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">Cupones activos</p>
-          <p className="text-2xl font-black text-[#1A3270]">{PROMOS.filter(p=>p.activo).length} <span className="text-sm font-bold text-[#8A8FA8]">/ {maxCupones}</span></p>
+          <p className="text-[10px] font-bold text-[#404255] uppercase">Cupones activos</p>
+          <p className="text-2xl font-black text-[#1A3270]">{PROMOS.filter(p=>p.activo).length} <span className="text-sm font-bold text-[#404255]">/ {maxCupones}</span></p>
         </div>
         <Icon name="confirmation_number" fill size="text-3xl" color="text-[#1A3270]"/>
       </div>
 
-      <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest px-1">Disponibles para ti</p>
+      <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest px-1">Disponibles para ti</p>
       {promos === null ? (
         <div className="py-10 flex flex-col items-center gap-2">
           <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
@@ -3924,7 +3924,7 @@ function PromocionesTemplate({ cfg, u }) {
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-[#1C1C1E]">{p.titulo}</p>
-                  <p className="text-xs text-[#8A8FA8]">{p.desc}</p>
+                  <p className="text-xs text-[#404255]">{p.desc}</p>
                   {p.tipo === "Descuento %" && p.valor && <p className="text-xs font-black text-[#1A3270] mt-0.5">{p.valor}% de descuento</p>}
                   {p.tipo === "Cashback" && p.valor && <p className="text-xs font-black text-green-600 mt-0.5">S/ {p.valor} cashback</p>}
                   <p className="text-[10px] text-[#CDD1E4] font-bold mt-1">Vence: {p.vence}</p>
@@ -3932,7 +3932,7 @@ function PromocionesTemplate({ cfg, u }) {
                 {p.activo ? (
                   <button onClick={() => setVerQR(p)} className="bg-[#1A3270] text-white text-[10px] font-black px-3 py-1.5 rounded-xl tap-active flex-shrink-0">Ver QR</button>
                 ) : (
-                  <Chip label={p.agotada ? "Agotada" : "Vencida"} color="bg-[#EEF2FD] text-[#8A8FA8]"/>
+                  <Chip label={p.agotada ? "Agotada" : "Vencida"} color="bg-[#EEF2FD] text-[#404255]"/>
                 )}
               </div>
             </SectionCard>
@@ -3944,10 +3944,10 @@ function PromocionesTemplate({ cfg, u }) {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-6" onClick={() => setVerQR(null)}>
           <div className="glass-card rounded-3xl w-full max-w-[340px] p-6 text-center" onClick={e => e.stopPropagation()}>
             <p className="font-black text-[#1C1C1E] mb-1">{verQR.titulo}</p>
-            <p className="text-xs text-[#8A8FA8] mb-4">{verQR.desc}</p>
+            <p className="text-xs text-[#404255] mb-4">{verQR.desc}</p>
             <QRCode label="" sub="" value={verQR.codigoQR}/>
             <p className="font-mono text-sm font-bold text-[#1A3270] mt-3">{verQR.codigoQR}</p>
-            <p className="text-[10px] text-[#8A8FA8] mt-1">Muéstralo en el POS del comercio para canjearlo.</p>
+            <p className="text-[10px] text-[#404255] mt-1">Muéstralo en el POS del comercio para canjearlo.</p>
             <button onClick={() => setVerQR(null)} className="mt-4 w-full py-3 rounded-xl bg-[#EEF2FD] text-[#1A3270] font-bold text-sm tap-active">Cerrar</button>
           </div>
         </div>
@@ -3984,7 +3984,7 @@ function TurnosTemplate({ cfg, u }) {
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-[#1C1C1E]">{c.titulo}</p>
-                  <p className="text-xs text-[#8A8FA8]">{c.servicio}</p>
+                  <p className="text-xs text-[#404255]">{c.servicio}</p>
                 </div>
                 <Chip label={c.estado} color={c.estado==="Confirmada"?"bg-green-100 text-green-700":"bg-amber-100 text-amber-700"}/>
               </div>
@@ -4013,9 +4013,9 @@ function TransporteTemplate({ cfg, u }) {
         <div className="w-20 h-20 rounded-3xl bg-[#EAF3FC] flex items-center justify-center mx-auto mb-4">
           <Icon name="directions_bus" fill size="text-4xl" color="text-blue-600"/>
         </div>
-        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Tarifa por viaje</p>
+        <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Tarifa por viaje</p>
         <p className="text-4xl font-black text-blue-600 mt-1">S/ {tarifa.toFixed(2)}</p>
-        <p className="text-xs text-[#8A8FA8] mt-1">Saldo disponible: S/ {saldo.toFixed(2)}</p>
+        <p className="text-xs text-[#404255] mt-1">Saldo disponible: S/ {saldo.toFixed(2)}</p>
         <div className="flex gap-2 mt-4">
           <PrimaryBtn label="Pagar con TAQ" icon="contactless" full={false}/>
           <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
@@ -4050,7 +4050,7 @@ function TransporteTemplate({ cfg, u }) {
           {["Ruta A · Principal","Ruta B · Express","Ruta C · Nocturna"].map((r,i)=>(
             <ListItem key={i} icon="directions_bus" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
               title={r} subtitle={`S/ ${tarifa.toFixed(2)} por viaje`}
-              right={<Chip label={i<2?"Activa":"Suspendida"} color={i<2?"bg-green-100 text-green-700":"bg-[#EEF2FD] text-[#8A8FA8]"}/>}/>
+              right={<Chip label={i<2?"Activa":"Suspendida"} color={i<2?"bg-green-100 text-green-700":"bg-[#EEF2FD] text-[#404255]"}/>}/>
           ))}
         </div>
       </SectionCard>
@@ -4282,7 +4282,7 @@ function BNPLTemplate({ cfg, u }) {
         </button>
 
         <SectionCard className="p-4">
-          <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{sel.prog.merchant_nombre}</p>
+          <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">{sel.prog.merchant_nombre}</p>
           <div className="flex justify-between items-start mt-1">
             <p className="font-black text-lg text-[#1C1C1E] flex-1 mr-3">{sel.producto.nombre}</p>
             <p className="font-black text-xl text-purple-700">S/ {Number(precio).toFixed(2)}</p>
@@ -4294,27 +4294,27 @@ function BNPLTemplate({ cfg, u }) {
           <SectionCard className="p-5 text-center">
             <Icon name="verified" fill size="text-5xl" color="text-green-600"/>
             <p className="font-black text-[#1C1C1E] text-lg mt-2">Contrato firmado</p>
-            <p className="text-sm text-[#8A8FA8] mt-1">Tu compra quedó financiada en {cuotasSel} cuotas. El cronograma está en "Mis contratos".</p>
+            <p className="text-sm text-[#404255] mt-1">Tu compra quedó financiada en {cuotasSel} cuotas. El cronograma está en "Mis contratos".</p>
             <div className="mt-4"><PrimaryBtn label="Ver mis contratos" icon="receipt_long" onClick={() => { setSel(null); setFase("idle"); setSolicitudId(null); }}/></div>
           </SectionCard>
         ) : fase === "rechazado" ? (
           <SectionCard className="p-5 text-center">
             <Icon name="cancel" fill size="text-5xl" color="text-red-500"/>
             <p className="font-black text-[#1C1C1E] text-lg mt-2">Financiamiento rechazado</p>
-            <p className="text-sm text-[#8A8FA8] mt-1">{rechazoMsg || "No pudimos completar la operación. Intenta nuevamente o paga con saldo."}</p>
+            <p className="text-sm text-[#404255] mt-1">{rechazoMsg || "No pudimos completar la operación. Intenta nuevamente o paga con saldo."}</p>
           </SectionCard>
         ) : (
           <>
             {/* BNPL Selector — cuotas: intersección techo del mundo ∩ programa del comercio */}
             <SectionCard className="p-5">
               <p className="font-bold text-sm text-[#1C1C1E] mb-1">Elige tus cuotas</p>
-              <p className="text-[10px] text-[#8A8FA8] mb-3">Techo del mundo: {cuotasTecho.join("/")} cuotas · {sel.prog.merchant_nombre} ofrece: {(sel.prog.cuotas_activas||[]).join("/")}</p>
+              <p className="text-[10px] text-[#404255] mb-3">Techo del mundo: {cuotasTecho.join("/")} cuotas · {sel.prog.merchant_nombre} ofrece: {(sel.prog.cuotas_activas||[]).join("/")}</p>
               <div className="grid grid-cols-3 gap-2">
                 {cuotasDisponibles.map(n => (
                   <button key={n} onClick={() => setCuotasSel(n)}
                     className={`text-center p-3 rounded-2xl border-2 transition-all tap-active ${cuotasSel === n ? "border-purple-600 bg-[#EEF2FD]" : "border-[#CDD1E4]"}`}>
                     <p className="font-black text-purple-700">{n}x</p>
-                    <p className="text-[10px] text-[#8A8FA8]">{INTERES_POR_CUOTAS[n] === 0 ? "0% interés" : `${INTERES_POR_CUOTAS[n] * 100}% anual`}</p>
+                    <p className="text-[10px] text-[#404255]">{INTERES_POR_CUOTAS[n] === 0 ? "0% interés" : `${INTERES_POR_CUOTAS[n] * 100}% anual`}</p>
                     <p className="font-bold text-[11px] text-[#1C1C1E] mt-1">S/ {(precio * (1 + (INTERES_POR_CUOTAS[n] ?? 0)) / n).toFixed(2)}/mes</p>
                   </button>
                 ))}
@@ -4322,8 +4322,8 @@ function BNPLTemplate({ cfg, u }) {
               {cuotasDisponibles.length === 0 && (
                 <p className="text-xs text-red-500">Este comercio no tiene cuotas activas dentro del límite del mundo.</p>
               )}
-              <p className="text-[10px] text-[#8A8FA8] mt-3 flex items-center gap-1">
-                <Icon name="event" size="text-xs" color="text-[#8A8FA8]"/>{diasGraciaEfectivo} días de gracia · cobro {FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"}
+              <p className="text-[10px] text-[#404255] mt-3 flex items-center gap-1">
+                <Icon name="event" size="text-xs" color="text-[#404255]"/>{diasGraciaEfectivo} días de gracia · cobro {FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"}
               </p>
             </SectionCard>
 
@@ -4342,7 +4342,7 @@ function BNPLTemplate({ cfg, u }) {
               <SectionCard className="p-5 text-center">
                 <Icon name="hourglass_top" size="text-4xl" color="text-purple-500"/>
                 <p className="font-black text-[#1C1C1E] text-base mt-2">Solicitud enviada</p>
-                <p className="text-sm text-[#8A8FA8] mt-1">{sel.prog.merchant_nombre} está revisando tu solicitud de financiamiento. Te avisaremos aquí en cuanto la resuelvan.</p>
+                <p className="text-sm text-[#404255] mt-1">{sel.prog.merchant_nombre} está revisando tu solicitud de financiamiento. Te avisaremos aquí en cuanto la resuelvan.</p>
                 <button onClick={verificarSolicitud} disabled={verificando} className="mt-4 text-sm font-bold text-[#1A3270] tap-active disabled:opacity-50">
                   {verificando ? "Verificando…" : "Verificar estado →"}
                 </button>
@@ -4362,14 +4362,14 @@ function BNPLTemplate({ cfg, u }) {
                     ["Frecuencia de cobro", FRECUENCIA_LABEL[sel.prog.frecuencia] || "mensual"],
                     ["Días de gracia", `${diasGraciaEfectivo} días`],
                     ["Gestión de mora", sel.prog.gestion_mora === "con_cargo" ? `Con cargo por mora (${sel.prog.mora_pct || 0}%)` : "Suspensión sin cargo"]].map(([l, v]) => (
-                    <div key={l} className="flex justify-between"><span className="text-[#8A8FA8]">{l}</span><span className="font-semibold text-[#1C1C1E] text-right">{v}</span></div>
+                    <div key={l} className="flex justify-between"><span className="text-[#404255]">{l}</span><span className="font-semibold text-[#1C1C1E] text-right">{v}</span></div>
                   ))}
                 </div>
                 <div className="bg-[#EEF2FD] rounded-2xl p-3 mb-4 max-h-36 overflow-y-auto">
-                  <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Cronograma de cuotas</p>
+                  <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-2">Cronograma de cuotas</p>
                   {cron.map(q => (
                     <div key={q.n} className="flex justify-between text-[11px] py-0.5">
-                      <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha}</span>
+                      <span className="text-[#404255]">Cuota {q.n} · {q.fecha}</span>
                       <span className="font-bold text-[#1C1C1E]">S/ {q.monto.toFixed(2)}</span>
                     </div>
                   ))}
@@ -4410,7 +4410,7 @@ function BNPLTemplate({ cfg, u }) {
       <SectionCard className="p-6 text-center">
         <Icon name="schedule_send" fill size="text-5xl" color="text-purple-600"/>
         <p className="font-black text-[#1C1C1E] text-xl mt-3">Paga después</p>
-        <p className="text-sm text-[#8A8FA8] mt-1">Financia productos seleccionados en hasta <b className="text-purple-600">{Math.max(...cuotasTecho)} cuotas</b></p>
+        <p className="text-sm text-[#404255] mt-1">Financia productos seleccionados en hasta <b className="text-purple-600">{Math.max(...cuotasTecho)} cuotas</b></p>
         <div className="flex justify-center gap-2 mt-4 flex-wrap">
           {cuotasTecho.map(n=>(
             <div key={n} className="px-4 py-2.5 bg-[#EEF2FD] rounded-2xl">
@@ -4424,7 +4424,7 @@ function BNPLTemplate({ cfg, u }) {
       <div className="flex bg-[#EEF2FD] rounded-2xl p-1 gap-1">
         {[["comercios", "Comercios con BNPL"], ["activos", `Mis Planes${activos.length ? ` (${activos.length})` : ""}`], ["historial", "Historial"]].map(([v, l]) => (
           <button key={v} onClick={() => setVista(v)}
-            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-purple-700 shadow-sm" : "text-[#8A8FA8]"}`}>
+            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors ${vista === v ? "bg-white text-purple-700 shadow-sm" : "text-[#404255]"}`}>
             {l}
           </button>
         ))}
@@ -4436,7 +4436,7 @@ function BNPLTemplate({ cfg, u }) {
           {programas === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
               <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-purple-600 rounded-full animate-spin"/>
-              <p className="text-xs text-[#8A8FA8]">Cargando comercios…</p>
+              <p className="text-xs text-[#404255]">Cargando comercios…</p>
             </div>
           ) : programas.length === 0 ? (
             <SectionCard>
@@ -4450,10 +4450,10 @@ function BNPLTemplate({ cfg, u }) {
               <SectionCard key={prog.id}>
                 <SectionHeader label={prog.merchant_nombre || "Comercio"} icon="storefront"/>
                 <div className="px-4 pb-4 space-y-2">
-                  <p className="text-[10px] text-[#8A8FA8]"><b className="text-purple-600">{(prog.cuotas_activas||[]).join("/")}x</b> · {productos.length} producto{productos.length !== 1 ? "s" : ""} financiable{productos.length !== 1 ? "s" : ""} · cobro {FRECUENCIA_LABEL[prog.frecuencia] || "mensual"}</p>
+                  <p className="text-[10px] text-[#404255]"><b className="text-purple-600">{(prog.cuotas_activas||[]).join("/")}x</b> · {productos.length} producto{productos.length !== 1 ? "s" : ""} financiable{productos.length !== 1 ? "s" : ""} · cobro {FRECUENCIA_LABEL[prog.frecuencia] || "mensual"}</p>
                   {suspendido && <ConfigBanner icon="block" message="Compras BNPL suspendidas en este comercio por mora pendiente." color="red"/>}
                   {productos.length === 0 && (
-                    <p className="text-xs text-[#8A8FA8] py-2">Este comercio aún no define productos financiables.</p>
+                    <p className="text-xs text-[#404255] py-2">Este comercio aún no define productos financiables.</p>
                   )}
                   {productos.map((p, i) => {
                     const sobreTecho = p.precio > montoMax; // Rules Engine: monto > techo → bloquear
@@ -4463,7 +4463,7 @@ function BNPLTemplate({ cfg, u }) {
                         className={`w-full p-3.5 rounded-2xl border-2 border-[#CDD1E4] text-left tap-active flex justify-between items-center ${bloqueado ? "opacity-50" : "hover:border-purple-300"}`}>
                         <div>
                           <p className="font-bold text-sm text-[#1C1C1E]">{p.nombre}</p>
-                          <p className="text-[10px] text-[#8A8FA8]">
+                          <p className="text-[10px] text-[#404255]">
                             {sobreTecho ? "No elegible · supera el monto máximo del mundo" : `Hasta ${Math.max(...cuotasTecho.filter(n => (prog.cuotas_activas||[]).includes(n)), 0) || "—"} cuotas · ver detalle`}
                           </p>
                         </div>
@@ -4483,7 +4483,7 @@ function BNPLTemplate({ cfg, u }) {
           <SectionHeader label="Mis planes activos" icon="receipt_long"/>
           <div className="px-4 pb-4 space-y-2">
             {contratos === null ? (
-              <p className="text-xs text-[#8A8FA8] py-2">Cargando…</p>
+              <p className="text-xs text-[#404255] py-2">Cargando…</p>
             ) : activos.length === 0 ? (
               <EmptyState icon="schedule_send" title="Sin planes activos" subtitle="Financia un producto en 'Comercios con BNPL' y tu plan aparecerá aquí."/>
             ) : activos.map(k => {
@@ -4496,8 +4496,8 @@ function BNPLTemplate({ cfg, u }) {
                     className="w-full p-3.5 text-left flex justify-between items-center tap-active">
                     <div>
                       <p className="font-bold text-sm text-[#1C1C1E]">{k.producto}</p>
-                      <p className="text-[10px] text-[#8A8FA8]">{k.merchant_nombre} · {FRECUENCIA_LABEL[k.frecuencia] || "mensual"} · {pendientes.length} cuota{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}</p>
-                      {proxima && <p className="text-[10px] text-[#8A8FA8]">Próximo vencimiento: {proxima.fecha}</p>}
+                      <p className="text-[10px] text-[#404255]">{k.merchant_nombre} · {FRECUENCIA_LABEL[k.frecuencia] || "mensual"} · {pendientes.length} cuota{pendientes.length !== 1 ? "s" : ""} pendiente{pendientes.length !== 1 ? "s" : ""}</p>
+                      {proxima && <p className="text-[10px] text-[#404255]">Próximo vencimiento: {proxima.fecha}</p>}
                     </div>
                     <div className="text-right">
                       <p className="font-black text-purple-700 text-sm">S/ {saldoPendiente.toFixed(2)}</p>
@@ -4514,12 +4514,12 @@ function BNPLTemplate({ cfg, u }) {
                   {contratoAbierto === k.id && k.estado !== "pendiente_aprobacion" && (
                     <div className="px-4 pb-3 bg-[#EEF2FD]/50">
                       <div className="flex justify-between items-center py-2">
-                        <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider">Cronograma</p>
-                        <p className="text-[10px] text-[#8A8FA8]">Saldo en wallet: S/ {Number(walletSaldo).toFixed(2)}</p>
+                        <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">Cronograma</p>
+                        <p className="text-[10px] text-[#404255]">Saldo en wallet: S/ {Number(walletSaldo).toFixed(2)}</p>
                       </div>
                       {(k.cronograma || []).map(q => (
                         <div key={q.n} className="flex justify-between items-center text-[11px] py-1">
-                          <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha} · {q.estado === "pagada" ? "pagada" : q.estado === "vencida" ? "vencida" : "pendiente"}</span>
+                          <span className="text-[#404255]">Cuota {q.n} · {q.fecha} · {q.estado === "pagada" ? "pagada" : q.estado === "vencida" ? "vencida" : "pendiente"}</span>
                           <span className="flex items-center gap-2">
                             <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1C1C1E]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
                             {q.estado !== "pagada" && (
@@ -4546,7 +4546,7 @@ function BNPLTemplate({ cfg, u }) {
           <SectionHeader label="Historial BNPL" icon="history"/>
           <div className="px-4 pb-4 space-y-2">
             {contratos === null ? (
-              <p className="text-xs text-[#8A8FA8] py-2">Cargando…</p>
+              <p className="text-xs text-[#404255] py-2">Cargando…</p>
             ) : historial.length === 0 ? (
               <EmptyState icon="history" title="Sin financiamientos finalizados" subtitle="Los contratos cerrados, cancelados o declarados incobrables aparecerán aquí."/>
             ) : historial.map(k => <HistorialContratoBNPL key={k.id} contrato={k} abierto={contratoAbierto === k.id} onToggle={() => setContratoAbierto(contratoAbierto === k.id ? null : k.id)}/>)}
@@ -4572,7 +4572,7 @@ function HistorialContratoBNPL({ contrato: k, abierto, onToggle }) {
       <button onClick={onToggle} className="w-full p-3.5 text-left flex justify-between items-center tap-active">
         <div>
           <p className="font-bold text-sm text-[#1C1C1E]">{k.producto}</p>
-          <p className="text-[10px] text-[#8A8FA8]">{k.merchant_nombre} · {k.cuotas} cuotas · {new Date(k.created_at).toLocaleDateString("es-PE")}</p>
+          <p className="text-[10px] text-[#404255]">{k.merchant_nombre} · {k.cuotas} cuotas · {new Date(k.created_at).toLocaleDateString("es-PE")}</p>
         </div>
         <div className="text-right">
           <p className="font-black text-[#1C1C1E] text-sm">S/ {Number(k.monto).toFixed(2)}</p>
@@ -4580,34 +4580,34 @@ function HistorialContratoBNPL({ contrato: k, abierto, onToggle }) {
         </div>
       </button>
       {k.estado === "rechazado" && k.rechazo_motivo && (
-        <p className="px-4 pb-3 text-[11px] text-[#8A8FA8]">Motivo: {k.rechazo_motivo}</p>
+        <p className="px-4 pb-3 text-[11px] text-[#404255]">Motivo: {k.rechazo_motivo}</p>
       )}
       {abierto && (
         <div className="px-4 pb-3 bg-[#EEF2FD]/50 space-y-3">
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-2">
-            <div><span className="text-[#8A8FA8]">Interés</span><p className="font-bold text-[#1C1C1E]">{k.interes_pct || 0}% anual</p></div>
-            <div><span className="text-[#8A8FA8]">Gestión de mora</span><p className="font-bold text-[#1C1C1E]">{k.gestion_mora === "con_cargo" ? "Con cargo" : "Suspensión sin cargo"}</p></div>
+            <div><span className="text-[#404255]">Interés</span><p className="font-bold text-[#1C1C1E]">{k.interes_pct || 0}% anual</p></div>
+            <div><span className="text-[#404255]">Gestión de mora</span><p className="font-bold text-[#1C1C1E]">{k.gestion_mora === "con_cargo" ? "Con cargo" : "Suspensión sin cargo"}</p></div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Cronograma original</p>
+            <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-1">Cronograma original</p>
             {(k.cronograma || []).map(q => (
               <div key={q.n} className="flex justify-between text-[11px] py-0.5">
-                <span className="text-[#8A8FA8]">Cuota {q.n} · {q.fecha} · {q.estado}</span>
+                <span className="text-[#404255]">Cuota {q.n} · {q.fecha} · {q.estado}</span>
                 <span className={`font-bold ${q.estado === "vencida" ? "text-red-500" : "text-[#1C1C1E]"}`}>S/ {Number(q.monto).toFixed(2)}</span>
               </div>
             ))}
-            <p className="text-[10px] text-[#8A8FA8] mt-1">{pagadas.length} de {k.cuotas} cuotas pagadas.</p>
+            <p className="text-[10px] text-[#404255] mt-1">{pagadas.length} de {k.cuotas} cuotas pagadas.</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-1">Modificaciones realizadas</p>
+            <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-1">Modificaciones realizadas</p>
             {mods === null ? (
-              <p className="text-[11px] text-[#8A8FA8]">Cargando…</p>
+              <p className="text-[11px] text-[#404255]">Cargando…</p>
             ) : mods.length === 0 ? (
-              <p className="text-[11px] text-[#8A8FA8]">Sin modificaciones — el contrato se cumplió según lo firmado.</p>
+              <p className="text-[11px] text-[#404255]">Sin modificaciones — el contrato se cumplió según lo firmado.</p>
             ) : mods.map(m => (
               <div key={m.id} className="text-[11px] py-1 border-t border-[#CDD1E4] first:border-t-0">
                 <p className="text-[#1C1C1E]">{m.mensaje}</p>
-                <p className="text-[9px] text-[#8A8FA8]">{new Date(m.created_at).toLocaleString("es-PE")}</p>
+                <p className="text-[9px] text-[#404255]">{new Date(m.created_at).toLocaleString("es-PE")}</p>
               </div>
             ))}
           </div>
@@ -4791,7 +4791,7 @@ function MarketplaceTemplate({ cfg, u }) {
       <SectionCard className="p-6 text-center">
         <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
         <p className="font-black text-[#1C1C1E] text-lg mt-2">Compra realizada</p>
-        <p className="text-sm text-[#8A8FA8] mt-1">Pagaste <b>S/ {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
+        <p className="text-sm text-[#404255] mt-1">Pagaste <b>S/ {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
         <div className="mt-4"><PrimaryBtn label="Seguir comprando" icon="storefront" onClick={() => setResultado(null)}/></div>
       </SectionCard>
     </div>
@@ -4804,7 +4804,7 @@ function MarketplaceTemplate({ cfg, u }) {
         <Icon name="arrow_back" size="text-base" color="text-[#1A3270]"/> Seguir comprando
       </button>
       <SectionCard className="p-5">
-        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">{nombreDe(cartMerchant)}</p>
+        <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">{nombreDe(cartMerchant)}</p>
         <p className="font-black text-lg text-[#1C1C1E] mb-3">Tu pedido</p>
         <div className="space-y-2 mb-4">
           {cart.map(it => (
@@ -4828,13 +4828,13 @@ function MarketplaceTemplate({ cfg, u }) {
             {beneficiarios.map(b => (
               <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
-                <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
+                <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#404255]"}/>
                 {b.nombre}
               </button>
             ))}
           </div>
         )}
-        <p className="text-[10px] text-[#8A8FA8] mb-4">Saldo de {beneficiario.nombre}: S/ {saldoMostrado.toFixed(2)}</p>
+        <p className="text-[10px] text-[#404255] mb-4">Saldo de {beneficiario.nombre}: S/ {saldoMostrado.toFixed(2)}</p>
         {resultado && !resultado.ok && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-3">
             <p className="font-bold text-red-700 text-sm">{resultado.titulo}</p>
@@ -4875,19 +4875,19 @@ function MarketplaceTemplate({ cfg, u }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-black text-[#1C1C1E]">{comercioActivo.nombre}</p>
-                <p className="text-[11px] text-[#8A8FA8]">{visibles.length} {visibles.length === 1 ? "producto" : "productos"} disponibles</p>
+                <p className="text-[11px] text-[#404255]">{visibles.length} {visibles.length === 1 ? "producto" : "productos"} disponibles</p>
               </div>
             </SectionCard>
           )}
 
           {beneficiarios.length > 1 && (
             <div>
-              <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mb-2">Comprando para</p>
+              <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-2">Comprando para</p>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                 {beneficiarios.map(b => (
                   <button key={b.id} onClick={() => setBeneficiarioId(b.id)}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${beneficiarioId === b.id ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
-                    <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#8A8FA8]"}/>
+                    <Icon name={b.tipo === "titular" ? "person" : "face"} size="text-sm" color={beneficiarioId === b.id ? "text-white" : "text-[#404255]"}/>
                     {b.nombre}
                   </button>
                 ))}
@@ -4903,7 +4903,7 @@ function MarketplaceTemplate({ cfg, u }) {
           {productos === null ? (
             <div className="py-8 flex flex-col items-center gap-2">
               <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
-              <p className="text-xs text-[#8A8FA8]">Cargando catálogos…</p>
+              <p className="text-xs text-[#404255]">Cargando catálogos…</p>
             </div>
           ) : visibles.length === 0 ? (
             <SectionCard><EmptyState icon="inventory_2" title="Sin productos" subtitle={filtro === "todos" ? "Los comercios aún no cargan su catálogo." : `${nombreDe(filtro)} aún no carga su catálogo.`}/></SectionCard>
@@ -4919,7 +4919,7 @@ function MarketplaceTemplate({ cfg, u }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[#1C1C1E] text-sm">{p.name}</p>
-                      <p className="text-[10px] text-[#8A8FA8]">{nombreDe(p.merchant_id)}{p.category ? ` · ${p.category}` : ""}</p>
+                      <p className="text-[10px] text-[#404255]">{nombreDe(p.merchant_id)}{p.category ? ` · ${p.category}` : ""}</p>
                       {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -5054,7 +5054,7 @@ export default function ModulePage() {
               <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider">{cfg.mundo.nombre}</p>
             </div>
           }>
-          <p className="text-xs text-[#8A8FA8]">Activo en {cfg.mundo.nombre}</p>
+          <p className="text-xs text-[#404255]">Activo en {cfg.mundo.nombre}</p>
         </ModuleHeader>
 
         {content}

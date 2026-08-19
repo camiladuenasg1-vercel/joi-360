@@ -224,7 +224,7 @@ function EditDrawer({ modId, onClose }) {
         <div className="flex border-b border-outline-variant">
           {[{id:"servicios",label:"Feature Flags"},{id:"config",label:"Config Fields"},{id:"app",label:"Vista en App"}].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-1 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${tab===t.id?"border-primary text-primary":"border-transparent text-secondary hover:text-primary"}`}>
+              className={`flex-1 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${tab===t.id?"border-primary text-primary":"border-transparent text-on-surface-variant hover:text-primary"}`}>
               {t.label}
             </button>
           ))}

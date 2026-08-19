@@ -29,9 +29,9 @@ export function ContratoView() {
       </div>
 
       <div style={{ textAlign: "center", marginBottom: 40, borderBottom: "3px solid #1A3270", paddingBottom: 24 }}>
-        <div style={{ fontSize: 11, letterSpacing: 2, color: "#8A8FA8", marginBottom: 8, fontFamily: "monospace" }}>REDPONTIS S.A.C. · CONTRATO DE SERVICIO JOI 360</div>
+        <div style={{ fontSize: 11, letterSpacing: 2, color: "#404255", marginBottom: 8, fontFamily: "monospace" }}>REDPONTIS S.A.C. · CONTRATO DE SERVICIO JOI 360</div>
         <h1 style={{ fontSize: 22, fontWeight: "bold", margin: "8px 0", fontFamily: "Inter, sans-serif" }}>Propuesta de Acuerdo Comercial</h1>
-        <div style={{ fontSize: 11, color: "#8A8FA8", fontFamily: "monospace" }}>VERSIÓN TENTATIVA · DOCUMENTO GENERADO EL {today.toUpperCase()}</div>
+        <div style={{ fontSize: 11, color: "#404255", fontFamily: "monospace" }}>VERSIÓN TENTATIVA · DOCUMENTO GENERADO EL {today.toUpperCase()}</div>
       </div>
 
       <table style={{ width: "100%", marginBottom: 32, borderCollapse: "collapse" }}>
@@ -91,7 +91,7 @@ export function ContratoView() {
             return (
               <tr key={mm.id} style={{ borderBottom: "1px solid #EEF2FD" }}>
                 <td style={{ padding: "7px 10px", fontFamily: "Inter, sans-serif" }}>{cat?.name || mm.id}</td>
-                <td style={{ padding: "7px 10px", color: "#8A8FA8", fontFamily: "monospace", fontSize: 11 }}>{cat?.category}</td>
+                <td style={{ padding: "7px 10px", color: "#404255", fontFamily: "monospace", fontSize: 11 }}>{cat?.category}</td>
                 {gratuito ? (
                   <td colSpan={3} style={{ padding: "7px 10px", textAlign: "right", color: "#0BA878", fontWeight: "bold", fontSize: 11 }}>GRATUITO POR EL MOMENTO</td>
                 ) : (<>
@@ -126,11 +126,11 @@ export function ContratoView() {
       <div style={{ marginTop: 60, display: "flex", justifyContent: "space-between", gap: 60 }}>
         <div style={{ flex: 1, textAlign: "center", borderTop: "1px solid #1C1C1E", paddingTop: 12 }}>
           <div style={{ fontSize: 12, fontFamily: "monospace", letterSpacing: 1 }}>REDPONTIS S.A.C.</div>
-          <div style={{ fontSize: 11, color: "#8A8FA8", marginTop: 4 }}>RUC 20999888777</div>
+          <div style={{ fontSize: 11, color: "#404255", marginTop: 4 }}>RUC 20999888777</div>
         </div>
         <div style={{ flex: 1, textAlign: "center", borderTop: "1px solid #1C1C1E", paddingTop: 12 }}>
           <div style={{ fontSize: 12, fontFamily: "monospace", letterSpacing: 1 }}>{m.entidadLegal?.toUpperCase() || "SPONSOR"}</div>
-          <div style={{ fontSize: 11, color: "#8A8FA8", marginTop: 4 }}>RUC {m.ruc || "—"} · {m.apoderadoNombre || m.representanteLegal || "Representante Legal"}</div>
+          <div style={{ fontSize: 11, color: "#404255", marginTop: 4 }}>RUC {m.ruc || "—"} · {m.apoderadoNombre || m.representanteLegal || "Representante Legal"}</div>
         </div>
       </div>
 

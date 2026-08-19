@@ -120,7 +120,7 @@ export function MundoDetail() {
       <div className="flex gap-1 mb-8 border-b border-outline-variant">
         {tabs.map(t => (
           <button key={t.k} onClick={() => setTab(t.k)}
-            className={`px-4 py-2.5 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors ${tab === t.k ? "text-primary border-primary font-semibold" : "text-secondary border-transparent hover:text-primary"}`}>
+            className={`px-4 py-2.5 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors ${tab === t.k ? "text-primary border-primary font-semibold" : "text-on-surface-variant border-transparent hover:text-primary"}`}>
             <Icon n={t.icon} className="text-[18px]" />{t.label}
           </button>
         ))}
@@ -1499,7 +1499,7 @@ function ModuleConfigDrawer({ mundoId, modId, onClose }) {
         <div className="flex border-b border-outline-variant overflow-x-auto">
           {TABS.map(t => (
             <button key={t.k} onClick={() => setTab(t.k)}
-              className={`flex-shrink-0 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${tab===t.k?"border-primary text-primary":"border-transparent text-secondary hover:text-on-surface"}`}>
+              className={`flex-shrink-0 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${tab===t.k?"border-primary text-primary":"border-transparent text-on-surface-variant hover:text-on-surface"}`}>
               {t.l}
             </button>
           ))}

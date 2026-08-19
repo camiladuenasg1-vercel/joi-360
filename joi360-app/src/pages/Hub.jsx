@@ -40,7 +40,7 @@ function MenuHoyWidget({ mundoId, nav }) {
             </p>
           ))}
         </div>
-        <span className="material-symbols-outlined text-[#8A8FA8]">chevron_right</span>
+        <span className="material-symbols-outlined text-[#404255]">chevron_right</span>
       </button>
     </div>
   );
@@ -66,7 +66,7 @@ function EventosMundoWidget({ mundoId, mundo, nav }) {
   return (
     <div className="px-5 mb-5">
       <div className="flex justify-between items-center mb-3">
-        <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Eventos</p>
+        <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Eventos</p>
         <button onClick={() => nav("/module/eventos")} className="text-[11px] font-bold text-[#1A3270]">Ver más →</button>
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
@@ -112,9 +112,9 @@ function MiCodigoWidget({ mundoId, verSaldo }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-[#1C1C1E]">Mi código</p>
-            <p className="text-[11px] text-[#8A8FA8]">{verSaldo ? "Para pagos y accesos en este mundo" : "Para accesos en este mundo"}</p>
+            <p className="text-[11px] text-[#404255]">{verSaldo ? "Para pagos y accesos en este mundo" : "Para accesos en este mundo"}</p>
           </div>
-          <span className="material-symbols-outlined text-[#8A8FA8]">chevron_right</span>
+          <span className="material-symbols-outlined text-[#404255]">chevron_right</span>
         </button>
       </div>
       {abierto && (
@@ -127,7 +127,7 @@ function MiCodigoWidget({ mundoId, verSaldo }) {
                   alt="Mi código QR" className="w-full h-full object-contain p-2" />
               </div>
               <p className="font-black text-[#1C1C1E]">Muestra este código</p>
-              <p className="text-xs text-[#8A8FA8] mt-0.5">{verSaldo ? "El comercio lo escanea para cobrarte o para registrar tu acceso." : "Se usa para registrar tu acceso en este mundo."}</p>
+              <p className="text-xs text-[#404255] mt-0.5">{verSaldo ? "El comercio lo escanea para cobrarte o para registrar tu acceso." : "Se usa para registrar tu acceso en este mundo."}</p>
               <button onClick={() => setAbierto(false)} className="w-full mt-6 py-3.5 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active">Listo</button>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function HubPage() {
                 {new Date().getHours() < 12 ? "Buenos días," : new Date().getHours() < 18 ? "Buenas tardes," : "Buenas noches,"}
                 <br />{nombre.split(" ")[0]}
               </h1>
-              <p className="text-[#8A8FA8] text-sm mt-0.5">{activeMundo.nombre}</p>
+              <p className="text-[#404255] text-sm mt-0.5">{activeMundo.nombre}</p>
             </div>
 
             {/* Right icons — order: Avatar → Globe → Bell (Image 2) */}
@@ -244,7 +244,7 @@ export default function HubPage() {
 
         {/* ── Balance ── */}
         <div className="px-5 mb-5 mt-3">
-          <p className="text-[#8A8FA8] text-[11px] font-semibold uppercase tracking-widest mb-1">
+          <p className="text-[#404255] text-[11px] font-semibold uppercase tracking-widest mb-1">
             {verSaldo ? "Saldo disponible" : "Mi identidad"}
           </p>
           {verSaldo ? (
@@ -257,7 +257,7 @@ export default function HubPage() {
               {nombre}
             </p>
           )}
-          <p className="text-[#8A8FA8] text-sm mt-2">{activeMundo.nombre}</p>
+          <p className="text-[#404255] text-sm mt-2">{activeMundo.nombre}</p>
           {hasLoyalty && (
             <button onClick={() => nav("/module/loyalty")}
               className="flex items-center gap-1.5 mt-3 px-3 py-1.5 glass-card rounded-full w-fit tap-active">
@@ -324,7 +324,7 @@ export default function HubPage() {
         {/* Comercios */}
         {comercios.length > 0 && (
           <div className="px-5 mb-5">
-            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-3">Comercios disponibles</p>
+            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-3">Comercios disponibles</p>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2">
               {comercios.map(c => (
                 <button key={c.id} onClick={() => nav("/module/comercios", { state: { filtro: c.id } })}
@@ -345,7 +345,7 @@ export default function HubPage() {
         {txs.length > 0 && (
           <div className="px-5 mb-5">
             <div className="flex justify-between items-center mb-3">
-              <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest">Últimos movimientos</p>
+              <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Últimos movimientos</p>
               <button onClick={() => nav("/activity")} className="text-[11px] font-bold text-[#1A3270]">Ver todo →</button>
             </div>
             <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#CDD1E4]/50">
@@ -358,7 +358,7 @@ export default function HubPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-[#1C1C1E] text-sm font-semibold">{t.titulo}</p>
-                    <p className="text-[#8A8FA8] text-[11px]">{new Date(t.fecha).toLocaleDateString("es-PE")}</p>
+                    <p className="text-[#404255] text-[11px]">{new Date(t.fecha).toLocaleDateString("es-PE")}</p>
                   </div>
                   <p className={`font-black text-sm ${t.monto > 0 ? "text-green-600" : "text-[#1C1C1E]"}`}>
                     {t.monto > 0 ? "+" : ""}S/ {Math.abs(t.monto).toFixed(2)}

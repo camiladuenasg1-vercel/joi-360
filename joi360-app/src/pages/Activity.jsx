@@ -65,15 +65,15 @@ export default function ActivityPage() {
         {/* Header */}
         <div className="px-5 pt-12 pb-4">
           <h1 className="text-3xl font-black text-[#1C1C1E]">Actividad</h1>
-          <p className="text-[#8A8FA8] text-sm mt-1">Todo lo que recargas, pagas y usas</p>
+          <p className="text-[#404255] text-sm mt-1">Todo lo que recargas, pagas y usas</p>
           {/* Summary chips */}
           <div className="flex gap-3 mt-4">
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
-              <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Gastado</p>
+              <p className="text-[#404255] text-[10px] font-semibold uppercase">Gastado</p>
               <p className="text-red-500 font-black text-lg">- S/ {gastos.toFixed(2)}</p>
             </div>
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
-              <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Ingresado</p>
+              <p className="text-[#404255] text-[10px] font-semibold uppercase">Ingresado</p>
               <p className="text-green-600 font-black text-lg">+ S/ {entradas.toFixed(2)}</p>
             </div>
           </div>
@@ -82,9 +82,9 @@ export default function ActivityPage() {
         {/* Filtro por mundo */}
         {memberships.length > 1 && (
           <div className="flex gap-2 overflow-x-auto scrollbar-hide px-5 mb-3">
-            <button onClick={()=>setFilterMundo(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${!filterMundo?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#8A8FA8]"}`}>Todos</button>
+            <button onClick={()=>setFilterMundo(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${!filterMundo?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#404255]"}`}>Todos</button>
             {memberships.map(m=>(
-              <button key={m.id} onClick={()=>setFilterMundo(m.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${filterMundo===m.id?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#8A8FA8]"}`}>{m.nombre}</button>
+              <button key={m.id} onClick={()=>setFilterMundo(m.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${filterMundo===m.id?"border-[#1A3270] bg-[#1A3270]/5 text-[#1A3270]":"border-[#CDD1E4] text-[#404255]"}`}>{m.nombre}</button>
             ))}
           </div>
         )}
@@ -109,7 +109,7 @@ export default function ActivityPage() {
           )}
           {Object.entries(grouped).map(([date, txs]) => (
             <div key={date}>
-              <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-3">{date}</p>
+              <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-3">{date}</p>
               <div className="glass-card rounded-2xl overflow-hidden divide-y divide-[#CDD1E4]/50">
                 {txs.map(t => {
                   const m = (st.mundos||[]).find(x=>x.id===t.mundoId);
@@ -124,7 +124,7 @@ export default function ActivityPage() {
                         <p className="text-[#1C1C1E] text-sm font-semibold">{t.titulo}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {m && <span className="text-[9px] font-bold bg-[#DCE4FA] text-[#1A3270] px-1.5 py-0.5 rounded">{m.nombre}</span>}
-                          <span className="text-[#8A8FA8] text-[11px]">{new Date(t.fecha).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>
+                          <span className="text-[#404255] text-[11px]">{new Date(t.fecha).toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"})}</span>
                         </div>
                       </div>
                       {t.monto !== 0 && (

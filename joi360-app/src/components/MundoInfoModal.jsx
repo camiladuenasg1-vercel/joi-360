@@ -31,7 +31,7 @@ export default function MundoInfoModal({ mundo: m, comerciosCount = 0, mode = "p
               <span className="material-symbols-outlined fill text-green-600 text-3xl">check_circle</span>
             </div>
             <h2 className="text-2xl font-black text-[#1C1C1E]">¡Bienvenido a {m.nombre}!</h2>
-            <p className="text-[#8A8FA8] text-sm mt-2 leading-relaxed">Tu billetera en esta comunidad ya está activa.</p>
+            <p className="text-[#404255] text-sm mt-2 leading-relaxed">Tu billetera en esta comunidad ya está activa.</p>
           </div>
         ) : (
           <div className="px-6 pt-2 pb-2">
@@ -52,7 +52,7 @@ export default function MundoInfoModal({ mundo: m, comerciosCount = 0, mode = "p
 
         {chips.length > 0 && (
           <div className="px-6 py-4">
-            <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold text-[#404255] uppercase tracking-widest mb-3">
               {mode === "success" ? "Ya tienes acceso a" : "Qué vas a tener disponible"}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -67,11 +67,11 @@ export default function MundoInfoModal({ mundo: m, comerciosCount = 0, mode = "p
         )}
 
         <div className="px-6 pb-4 flex flex-wrap gap-4">
-          <span className="text-[#8A8FA8] text-xs flex items-center gap-1">
+          <span className="text-[#404255] text-xs flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">storefront</span>
             <b className="text-[#1C1C1E]">{comerciosCount}</b> comercios
           </span>
-          <span className="text-[#8A8FA8] text-xs flex items-center gap-1">
+          <span className="text-[#404255] text-xs flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">monetization_on</span>
             {m.moneda || "PEN"}
           </span>
@@ -92,7 +92,7 @@ export default function MundoInfoModal({ mundo: m, comerciosCount = 0, mode = "p
             )}
           </button>
           {mode === "preview" && (
-            <button onClick={onClose} className="w-full text-center text-[#8A8FA8] text-sm font-semibold mt-3">Cancelar</button>
+            <button onClick={onClose} className="w-full text-center text-[#404255] text-sm font-semibold mt-3">Cancelar</button>
           )}
         </div>
       </div>

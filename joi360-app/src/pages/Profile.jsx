@@ -128,21 +128,21 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-[#1C1C1E] font-black text-xl">{nombre}</p>
-                <p className="text-[#8A8FA8] text-sm">{email}</p>
+                <p className="text-[#404255] text-sm">{email}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
                 <p className="text-[#1A3270] font-black text-lg">S/ {totalBalance.toFixed(0)}</p>
-                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Total</p>
+                <p className="text-[#404255] text-[10px] font-semibold uppercase">Total</p>
               </div>
               <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
                 <p className="text-[#1A3270] font-black text-lg">{memberships.length}</p>
-                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Mundos</p>
+                <p className="text-[#404255] text-[10px] font-semibold uppercase">Mundos</p>
               </div>
               <div className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
                 <p className="text-[#1A3270] font-black text-lg">{totalTx}</p>
-                <p className="text-[#8A8FA8] text-[10px] font-semibold uppercase">Transacciones</p>
+                <p className="text-[#404255] text-[10px] font-semibold uppercase">Transacciones</p>
               </div>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function ProfilePage() {
           {/* Mi código JOI — identificador único de la cuenta. Ingrésalo (o compártelo)
               donde te pidan un destinatario: transferir P2P, transferir una entrada, etc. */}
           <div className="glass-card rounded-3xl p-5 mb-4">
-            <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-2">Mi código JOI</p>
+            <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest mb-2">Mi código JOI</p>
             <div className="flex items-center justify-between gap-3">
               <p className="font-mono text-sm text-[#1C1C1E] break-all">{myCode}</p>
               <div className="flex gap-2 flex-shrink-0">
@@ -163,7 +163,7 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
-            <p className="text-[#8A8FA8] text-xs mt-2">Compártelo con quien vaya a transferirte saldo o una entrada — lo ingresan como "código del destinatario".</p>
+            <p className="text-[#404255] text-xs mt-2">Compártelo con quien vaya a transferirte saldo o una entrada — lo ingresan como "código del destinatario".</p>
           </div>
 
           {/* Mi Familia — dependientes con bandita NFC/QR, ligados a la wallet
@@ -174,11 +174,11 @@ export default function ProfilePage() {
               <button onClick={() => irAGestionarFamilia(activeMundo?.id)} className="text-xs font-bold text-[#1A3270]">+ Agregar</button>
             </div>
             {familia === null ? (
-              <div className="px-5 py-6 text-center text-sm text-[#8A8FA8]">Cargando…</div>
+              <div className="px-5 py-6 text-center text-sm text-[#404255]">Cargando…</div>
             ) : familia.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <p className="text-[#8A8FA8] text-sm">Aún no tienes familiares registrados.</p>
-                <p className="text-[#8A8FA8] text-xs mt-1">Un familiar es un perfil con su propio saldo, identificado por bandita NFC o QR — solo para consumo. Algunos mundos cobran por vincularlo, otros lo dan gratis.</p>
+                <p className="text-[#404255] text-sm">Aún no tienes familiares registrados.</p>
+                <p className="text-[#404255] text-xs mt-1">Un familiar es un perfil con su propio saldo, identificado por bandita NFC o QR — solo para consumo. Algunos mundos cobran por vincularlo, otros lo dan gratis.</p>
               </div>
             ) : (
               familia.map(d => (
@@ -189,7 +189,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[#1C1C1E] font-bold text-sm truncate">{d.nombre}</p>
-                    <p className="text-[#8A8FA8] text-xs">{d.mundoNombre}{d.alergias ? ` · alergias: ${d.alergias}` : ""}</p>
+                    <p className="text-[#404255] text-xs">{d.mundoNombre}{d.alergias ? ` · alergias: ${d.alergias}` : ""}</p>
                   </div>
                   <p className="text-[#1C1C1E] font-black text-sm flex-shrink-0">S/ {(d.balance||0).toFixed(2)}</p>
                 </button>
@@ -205,7 +205,7 @@ export default function ProfilePage() {
             </div>
             {memberships.length === 0 ? (
               <div className="px-5 py-6 text-center">
-                <p className="text-[#8A8FA8] text-sm">Aún no te has unido.</p>
+                <p className="text-[#404255] text-sm">Aún no te has unido.</p>
                 <button onClick={() => nav("/landing")} className="mt-2 text-[#1A3270] text-sm font-bold">Explorar →</button>
               </div>
             ) : (
@@ -220,12 +220,12 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-[#1C1C1E] font-bold text-sm">{m.nombre}</p>
-                      <p className="text-[#8A8FA8] text-xs">{m.vertical} · {pts.toLocaleString()} pts</p>
+                      <p className="text-[#404255] text-xs">{m.vertical} · {pts.toLocaleString()} pts</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[#1C1C1E] font-black text-sm">S/ {bal.toFixed(2)}</p>
                       {isActive ? <p className="text-[10px] font-mono text-[#1A3270]">ACTIVO</p>
-                        : <button onClick={() => { setActiveMundo(m.id); showToast(`Cambiado a ${m.nombre}`); }} className="text-[10px] font-bold text-[#8A8FA8]">Activar</button>}
+                        : <button onClick={() => { setActiveMundo(m.id); showToast(`Cambiado a ${m.nombre}`); }} className="text-[10px] font-bold text-[#404255]">Activar</button>}
                     </div>
                   </div>
                 );
@@ -235,25 +235,25 @@ export default function ProfilePage() {
 
           {/* Settings */}
           <div className="glass-card rounded-3xl overflow-hidden mb-4">
-            <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest px-5 pt-4 pb-2">Configuración</p>
+            <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest px-5 pt-4 pb-2">Configuración</p>
 
             <button onClick={() => setModal("privacidad")}
               className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#8A8FA8]">privacy_tip</span>
+              <span className="material-symbols-outlined text-[#404255]">privacy_tip</span>
               <span className="text-[#404255] text-sm flex-1">Privacidad y datos</span>
               <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
 
             <button onClick={() => setModal("terminos")}
               className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#8A8FA8]">description</span>
+              <span className="material-symbols-outlined text-[#404255]">description</span>
               <span className="text-[#404255] text-sm flex-1">Términos y condiciones</span>
               <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
 
             <button onClick={() => setModal("ayuda")}
               className="w-full flex items-center gap-3 px-5 py-4 border-t border-[#CDD1E4]/30 tap-active text-left">
-              <span className="material-symbols-outlined text-[#8A8FA8]">support_agent</span>
+              <span className="material-symbols-outlined text-[#404255]">support_agent</span>
               <span className="text-[#404255] text-sm flex-1">Centro de ayuda</span>
               <span className="material-symbols-outlined text-[#CDD1E4] text-sm">chevron_right</span>
             </button>
@@ -286,13 +286,13 @@ export default function ProfilePage() {
                   <div className="text-center py-8">
                     <span className="material-symbols-outlined text-[#1A3270] text-5xl block mb-2">check_circle</span>
                     <p className="text-[#1C1C1E] font-black text-lg">Enviado</p>
-                    <p className="text-[#8A8FA8] text-sm mt-1">{activeMundo?.nombre || "El mundo"} o RedPontis te contactarán pronto.</p>
+                    <p className="text-[#404255] text-sm mt-1">{activeMundo?.nombre || "El mundo"} o RedPontis te contactarán pronto.</p>
                     <button onClick={cerrarAyuda} className="mt-5 w-full py-3 rounded-2xl bg-[#1A3270] text-white font-bold text-sm tap-active">Listo</button>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-2">¿Sobre qué necesitas ayuda?</p>
+                      <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest mb-2">¿Sobre qué necesitas ayuda?</p>
                       <div className="grid grid-cols-2 gap-2">
                         {CATEGORIAS_SOPORTE.map(c => (
                           <button key={c.id} onClick={() => setAyudaForm(f => ({ ...f, categoria: c.id }))}
@@ -303,19 +303,19 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Asunto</p>
+                      <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest mb-1.5">Asunto</p>
                       <input value={ayudaForm.asunto} onChange={e => setAyudaForm(f => ({ ...f, asunto: e.target.value }))}
                         placeholder="Resumen breve" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none" />
                     </div>
                     {ayudaForm.categoria === "devolucion" && (
                       <div>
-                        <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Monto reclamado (S/)</p>
+                        <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest mb-1.5">Monto reclamado (S/)</p>
                         <input value={ayudaForm.monto} onChange={e => setAyudaForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, "") }))}
                           placeholder="0.00" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none" />
                       </div>
                     )}
                     <div>
-                      <p className="text-[#8A8FA8] text-[10px] font-bold uppercase tracking-widest mb-1.5">Cuéntanos qué pasó</p>
+                      <p className="text-[#404255] text-[10px] font-bold uppercase tracking-widest mb-1.5">Cuéntanos qué pasó</p>
                       <textarea value={ayudaForm.detalle} onChange={e => setAyudaForm(f => ({ ...f, detalle: e.target.value }))}
                         rows={4} placeholder="Mientras más detalle, más rápido te ayudamos" className="w-full glass-card rounded-xl px-4 py-3 text-sm text-[#1C1C1E] outline-none resize-none" />
                     </div>

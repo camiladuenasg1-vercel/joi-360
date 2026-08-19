@@ -25,7 +25,7 @@ export function Badge({ label, color = "primary", icon }) {
 export function SectionTitle({ children, action, onAction }) {
   return (
     <div className="flex justify-between items-center mb-3">
-      <p className="text-[11px] font-black text-[#8A8FA8] uppercase tracking-widest">{children}</p>
+      <p className="text-[11px] font-black text-[#404255] uppercase tracking-widest">{children}</p>
       {action && <button onClick={onAction} className="text-[11px] font-bold text-[#1A3270]">{action}</button>}
     </div>
   );
@@ -46,11 +46,11 @@ export function IconBox({ icon, bg, color, size = "md", filled = false }) {
 export function BigNumber({ prefix, value, suffix, sub, color = "text-[#1C1C1E]" }) {
   return (
     <div>
-      {sub && <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-widest mb-1">{sub}</p>}
+      {sub && <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-1">{sub}</p>}
       <div className="flex items-baseline gap-1">
-        {prefix && <span className="text-xl font-bold text-[#8A8FA8]">{prefix}</span>}
+        {prefix && <span className="text-xl font-bold text-[#404255]">{prefix}</span>}
         <span className={`text-5xl font-black tracking-tight leading-none ${color}`}>{value}</span>
-        {suffix && <span className="text-lg text-[#8A8FA8] font-semibold">{suffix}</span>}
+        {suffix && <span className="text-lg text-[#404255] font-semibold">{suffix}</span>}
       </div>
     </div>
   );
@@ -61,7 +61,7 @@ export function StatChip({ label, value, icon, color = "bg-[#EEF2FD]" }) {
   return (
     <div className={`${color} rounded-2xl p-3`}>
       {icon && <span className="material-symbols-outlined fill text-[#1A3270] text-base block mb-1">{icon}</span>}
-      <p className="text-[10px] font-bold text-[#8A8FA8] uppercase">{label}</p>
+      <p className="text-[10px] font-bold text-[#404255] uppercase">{label}</p>
       <p className="font-black text-[#1C1C1E] text-sm mt-0.5">{value}</p>
     </div>
   );
@@ -94,7 +94,7 @@ export function ModuleDisabled({ name, mundo }) {
         <span className="material-symbols-outlined text-[#CDD1E4] text-3xl">block</span>
       </div>
       <p className="text-[#1C1C1E] font-black text-lg">Módulo no disponible</p>
-      <p className="text-[#8A8FA8] text-sm mt-2 max-w-[260px] mx-auto leading-relaxed">
+      <p className="text-[#404255] text-sm mt-2 max-w-[260px] mx-auto leading-relaxed">
         <b>{name}</b> no está habilitado en <b>{mundo?.nombre}</b> por tu comunidad.
       </p>
       <p className="text-[#CDD1E4] text-xs mt-4">Contacta a tu administrador para activarlo.</p>

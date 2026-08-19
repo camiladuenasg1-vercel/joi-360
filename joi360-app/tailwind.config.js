@@ -31,8 +31,12 @@ export default {
         "surface-container-high": "#DCE4FA",
         "surface-container-highest": "#CDD1E4",
         "on-surface": "#1C1C1E",
-        "on-surface-variant": "#8A8FA8",
-        outline: "#8A8FA8",
+        // "Text Secondary" del kit (#8A8FA8) es demasiado claro para texto/
+        // iconos de estado default sobre fondo blanco -- reportado en vivo
+        // (13-ago). Sube a Neutral 600 (#404255, = secondary). outline-variant
+        // (bordes) NO se toca, sigue clara.
+        "on-surface-variant": "#404255",
+        outline: "#404255",
         "outline-variant": "#CDD1E4",
         success: "#0BA878",
         warning: "#E06B00",

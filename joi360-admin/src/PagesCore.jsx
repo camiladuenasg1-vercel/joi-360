@@ -27,7 +27,7 @@ export function AdminDashboard() {
     { label: "Módulos contratados", value: totalModulosActivos, icon: "extension", color: "#2E7FD9", link: "/admin/modulos-mundo" },
     { label: "Comercios en ecosistema", value: totalCom, icon: "storefront", color: "#1A3270", link: "/admin/mundos" },
     { label: "Comisión acumulada", value: `S/ ${comisionTotal.toFixed(0)}`, icon: "account_balance", color: "#0BA878", link: "/admin/liquidacion" },
-    { label: "Liq. pendientes", value: pendientes, icon: "pending_actions", color: pendientes > 0 ? "#E8394B" : "#8A8FA8", link: "/admin/liquidacion" },
+    { label: "Liq. pendientes", value: pendientes, icon: "pending_actions", color: pendientes > 0 ? "#E8394B" : "#404255", link: "/admin/liquidacion" },
     { label: "Tickets abiertos", value: ticketsAbiertos, icon: "support_agent", color: ticketsAbiertos > 2 ? "#E8394B" : "#1A3270", link: "/admin/soporte" },
   ];
 

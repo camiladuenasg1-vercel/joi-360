@@ -67,7 +67,7 @@ export function StatGrid({ stats }) {
         <div key={i} className="bg-[#EEF2FD] rounded-2xl p-3 text-center">
           {s.icon && <Icon name={s.icon} fill size="text-2xl" color={s.iconColor || "text-[#1A3270]"} />}
           <p className={`font-black leading-tight mt-1 ${s.big ? "text-3xl" : "text-xl"} ${s.color || "text-[#1C1C1E]"}`}>{s.value}</p>
-          <p className="text-[10px] font-bold text-[#8A8FA8] uppercase tracking-wider mt-0.5">{s.label}</p>
+          <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mt-0.5">{s.label}</p>
         </div>
       ))}
     </div>
@@ -97,7 +97,7 @@ export function ListItem({ icon, iconBg, iconColor, title, subtitle, right, onCl
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#1C1C1E] truncate">{title}</p>
-        {subtitle && <p className="text-xs text-[#8A8FA8] mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-[#404255] mt-0.5">{subtitle}</p>}
       </div>
       {right && <div className="flex-shrink-0">{right}</div>}
       {onClick && <Icon name="chevron_right" size="text-lg" color="text-[#CDD1E4]" />}
@@ -110,11 +110,11 @@ export function HeroBalance({ label, amount, currency = "S/", subtitle, dark = f
     <div
       className={`rounded-3xl p-8 text-center relative overflow-hidden ${dark ? "text-white" : "text-[#1C1C1E]"}`}
       style={dark ? { background: "linear-gradient(135deg,#1A3270 0%,#3B5BDB 100%)" } : { background: "#EEF2FD" }}>
-      <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${dark ? "text-white/60" : "text-[#8A8FA8]"}`}>{label}</p>
+      <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${dark ? "text-white/60" : "text-[#404255]"}`}>{label}</p>
       <p className={`text-5xl font-black tracking-tight ${dark ? "text-white" : "text-[#1A3270]"}`}>
         {currency} {typeof amount === "number" ? amount.toFixed(2) : amount}
       </p>
-      {subtitle && <p className={`text-xs mt-2 ${dark ? "text-white/50" : "text-[#8A8FA8]"}`}>{subtitle}</p>}
+      {subtitle && <p className={`text-xs mt-2 ${dark ? "text-white/50" : "text-[#404255]"}`}>{subtitle}</p>}
       {children}
     </div>
   );
@@ -127,7 +127,7 @@ export function EmptyState({ icon, title, subtitle, action, onAction }) {
         <Icon name={icon || "inbox"} size="text-3xl" color="text-[#CDD1E4]" />
       </div>
       <p className="font-bold text-[#404255]">{title}</p>
-      {subtitle && <p className="text-sm text-[#8A8FA8] mt-1 leading-relaxed">{subtitle}</p>}
+      {subtitle && <p className="text-sm text-[#404255] mt-1 leading-relaxed">{subtitle}</p>}
       {action && (
         <button onClick={onAction}
           className="mt-4 px-5 py-2.5 rounded-2xl text-white text-sm font-bold tap-active"

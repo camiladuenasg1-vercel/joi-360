@@ -13,7 +13,7 @@ export function TxRow({ icon, iconBg, iconColor, title, sub, amount, amountColor
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[#1C1C1E] text-sm font-semibold truncate">{title}</p>
-        <p className="text-[#8A8FA8] text-[11px]">{sub}</p>
+        <p className="text-[#404255] text-[11px]">{sub}</p>
       </div>
       <div className="text-right flex-shrink-0">
         {amount && <p className={`font-black text-sm ${amountColor || "text-[#1C1C1E]"}`}>{amount}</p>}
@@ -32,7 +32,7 @@ export function ServiceRow({ active, nombre, desc }) {
       </span>
       <div>
         <p className={`text-sm font-semibold ${active ? "text-[#1C1C1E]" : "text-[#CDD1E4]"}`}>{nombre}</p>
-        {desc && <p className="text-[11px] text-[#8A8FA8] mt-0.5 leading-snug">{desc}</p>}
+        {desc && <p className="text-[11px] text-[#404255] mt-0.5 leading-snug">{desc}</p>}
       </div>
     </div>
   );
@@ -55,13 +55,13 @@ export function ReservationCard({ space, hora, status, icon, location }) {
           </div>
           <div>
             <p className="font-bold text-[#1C1C1E] text-sm">{space}</p>
-            {location && <p className="text-xs text-[#8A8FA8]">{location}</p>}
+            {location && <p className="text-xs text-[#404255]">{location}</p>}
           </div>
         </div>
         <Badge label={s.label} color={s.color} />
       </div>
       <div className="flex justify-between pt-2 border-t border-[#CDD1E4]/50">
-        <span className="text-xs text-[#8A8FA8] flex items-center gap-1">
+        <span className="text-xs text-[#404255] flex items-center gap-1">
           <span className="material-symbols-outlined text-[#1A3270] text-sm">schedule</span>
           {hora}
         </span>
@@ -87,7 +87,7 @@ export function EventCard({ nombre, fecha, precio, icono, available, onBuy }) {
           <span className="material-symbols-outlined text-sm">calendar_today</span>{fecha}
         </p>
         {typeof available === "number" && (
-          <p className="text-[10px] text-[#8A8FA8] mt-1">{available} lugares disponibles</p>
+          <p className="text-[10px] text-[#404255] mt-1">{available} lugares disponibles</p>
         )}
         <button onClick={onBuy}
           className="mt-2 w-full py-2.5 rounded-xl text-white text-xs font-black tap-active"
@@ -106,7 +106,7 @@ export function ProgressBar({ value, max, label, sub, color }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1.5">
-        {label && <p className="text-[11px] font-bold text-[#8A8FA8] uppercase">{label}</p>}
+        {label && <p className="text-[11px] font-bold text-[#404255] uppercase">{label}</p>}
         {sub && <p className="text-xs font-black text-[#1C1C1E]">{sub}</p>}
       </div>
       <div className="h-2 bg-[#CDD1E4] rounded-full overflow-hidden">

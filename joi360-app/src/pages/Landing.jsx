@@ -75,7 +75,7 @@ export default function LandingPage() {
               /* Primera vez: solo opción de salir / logout */
               <button
                 onClick={() => { logoutUser(); nav("/auth"); }}
-                className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold hover:text-[#404255] transition-colors">
+                className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold hover:text-[#404255] transition-colors">
                 <span className="material-symbols-outlined text-base">arrow_back</span>
                 Salir
               </button>
@@ -83,7 +83,7 @@ export default function LandingPage() {
               /* Ya tiene mundos: volver al hub */
               <button
                 onClick={() => nav("/hub")}
-                className="flex items-center gap-1.5 text-[#8A8FA8] text-xs font-semibold hover:text-[#404255] transition-colors">
+                className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold hover:text-[#404255] transition-colors">
                 <span className="material-symbols-outlined text-base">arrow_back</span>
                 Mi hub
               </button>
@@ -104,11 +104,11 @@ export default function LandingPage() {
           </div>
 
           {/* Título */}
-          <p className="text-[#8A8FA8] text-[11px] font-mono uppercase tracking-widest mb-2">JOI 360 · ECOSISTEMA</p>
+          <p className="text-[#404255] text-[11px] font-mono uppercase tracking-widest mb-2">JOI 360 · ECOSISTEMA</p>
           <h1 className="text-3xl font-black text-[#1C1C1E] leading-tight">
             {isFirstTime ? "Elige tu\ncomunidad" : "Explorar\ncomunidades"}
           </h1>
-          <p className="text-[#8A8FA8] text-sm mt-2 leading-relaxed">
+          <p className="text-[#404255] text-sm mt-2 leading-relaxed">
             {isFirstTime
               ? "Cada mundo activa módulos, billetera y condiciones propias."
               : "Únete a más comunidades para acceder a sus servicios."}
@@ -131,7 +131,7 @@ export default function LandingPage() {
 
           {/* Search */}
           <div className="flex items-center gap-3 glass-card rounded-2xl px-4 py-3 mt-4">
-            <span className="material-symbols-outlined text-[#8A8FA8] text-xl">search</span>
+            <span className="material-symbols-outlined text-[#404255] text-xl">search</span>
             <input
               className="flex-1 bg-transparent text-[#1C1C1E] placeholder-[#CDD1E4] outline-none text-sm"
               placeholder="Buscar por nombre o tipo..."
@@ -139,7 +139,7 @@ export default function LandingPage() {
               onChange={e => setSearch(e.target.value)}
             />
             {search && (
-              <button onClick={() => setSearch("")} className="text-[#CDD1E4] hover:text-[#8A8FA8] transition-colors">
+              <button onClick={() => setSearch("")} className="text-[#CDD1E4] hover:text-[#404255] transition-colors">
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             )}
@@ -151,7 +151,7 @@ export default function LandingPage() {
               {["Todas", ...verticales].map(v => (
                 <button key={v} onClick={() => setVerticalFiltro(v)}
                   className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
-                    verticalFiltro === v ? "bg-[#1A3270] text-white" : "glass-card text-[#8A8FA8]"}`}>
+                    verticalFiltro === v ? "bg-[#1A3270] text-white" : "glass-card text-[#404255]"}`}>
                   {v}
                 </button>
               ))}
@@ -172,7 +172,7 @@ export default function LandingPage() {
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{background:"linear-gradient(135deg,#3B5BDB,#3B5BDB)"}}>
                     <span className="text-white text-[9px] font-black uppercase tracking-widest">Especial JOI Solutions</span>
                   </div>
-                  <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Siempre disponibles</p>
+                  <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">Siempre disponibles</p>
                 </div>
                 {rpWorlds.map(m=>{
                   const isJoined = joined.includes(m.id);
@@ -239,7 +239,7 @@ export default function LandingPage() {
                 <span className="material-symbols-outlined text-3xl text-[#CDD1E4]">search_off</span>
               </div>
               <p className="text-[#404255] text-sm font-bold">Sin resultados</p>
-              <p className="text-[#8A8FA8] text-xs mt-1">Intenta con otro término</p>
+              <p className="text-[#404255] text-xs mt-1">Intenta con otro término</p>
               <button onClick={() => setSearch("")}
                 className="mt-3 text-[#1A3270] text-xs font-bold hover:underline">
                 Limpiar búsqueda
@@ -254,15 +254,15 @@ export default function LandingPage() {
                 <span className="material-symbols-outlined text-4xl text-[#CDD1E4]">public_off</span>
               </div>
               <p className="text-[#404255] text-base font-bold mb-1">Aún no hay comunidades</p>
-              <p className="text-[#8A8FA8] text-sm leading-relaxed max-w-[220px] mx-auto">
+              <p className="text-[#404255] text-sm leading-relaxed max-w-[220px] mx-auto">
                 Las comunidades las habilita RedPontis desde el panel de administración.
               </p>
               <div className="mt-6 mx-6 p-4 bg-[#EEF2FD] rounded-2xl text-left">
                 <p className="text-[#1A3270] text-xs font-bold mb-1">¿Eres administrador?</p>
-                <p className="text-[#8A8FA8] text-xs">Ve a <b>joi360-admin.vercel.app</b> y crea un mundo en estado ACTIVO.</p>
+                <p className="text-[#404255] text-xs">Ve a <b>joi360-admin.vercel.app</b> y crea un mundo en estado ACTIVO.</p>
               </div>
               <button onClick={() => { logoutUser(); nav("/auth"); }}
-                className="mt-6 text-[#8A8FA8] text-xs font-semibold hover:text-[#404255] transition-colors flex items-center gap-1 mx-auto">
+                className="mt-6 text-[#404255] text-xs font-semibold hover:text-[#404255] transition-colors flex items-center gap-1 mx-auto">
                 <span className="material-symbols-outlined text-sm">logout</span>
                 Cerrar sesión
               </button>
@@ -271,7 +271,7 @@ export default function LandingPage() {
 
           {/* Todas las comunidades — segunda sección, separada de "Especial JOI Solutions" */}
           {filtered.length > 0 && (
-            <p className="text-[11px] font-bold text-[#8A8FA8] uppercase tracking-wider">Todas las comunidades</p>
+            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider">Todas las comunidades</p>
           )}
           {filtered.map(m => {
             const vc = VERTICAL_COLORS[m.vertical] || { bg:"bg-gray-50", border:"border-gray-100", badge:"bg-gray-600", text:"text-gray-700" };
@@ -313,15 +313,15 @@ export default function LandingPage() {
 
                   {/* Meta chips */}
                   <div className="flex flex-wrap gap-3 mt-3">
-                    <span className="text-[#8A8FA8] text-xs flex items-center gap-1">
+                    <span className="text-[#404255] text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">apps</span>
                       <b className="text-[#1C1C1E]">{servCount}</b> servicios
                     </span>
-                    <span className="text-[#8A8FA8] text-xs flex items-center gap-1">
+                    <span className="text-[#404255] text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">storefront</span>
                       <b className="text-[#1C1C1E]">{comCount}</b> comercios
                     </span>
-                    <span className="text-[#8A8FA8] text-xs flex items-center gap-1">
+                    <span className="text-[#404255] text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">monetization_on</span>
                       {m.moneda || "PEN"}
                     </span>
