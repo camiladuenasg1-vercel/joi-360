@@ -1625,6 +1625,25 @@ export async function eliminarPlanSuscripcion(id) {
   await rest(`subscription_plans?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
 }
 
+// ── Suscripciones — membresía real con marca propia (20-ago) ──────────────
+// El mundo (Panel de Mundo, no solo RedPontis) crea sus propios planes:
+// banner/logo/color, categoría de beneficio (sorteo con productos+fecha,
+// descuento, acceso, producto, otro) y comercios afiliados. Ver
+// add-suscripciones-membresia.sql. No reemplaza subscription_plans/la cuota
+// de vincular dependiente — la extiende.
+export async function fetchComerciosDePlan(planId) {
+  return rest(`subscription_plan_merchants?plan_id=eq.${planId}&select=merchant_id`);
+}
+export async function guardarComerciosDePlan(planId, merchantIds) {
+  await rest(`subscription_plan_merchants?plan_id=eq.${planId}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  if (!merchantIds.length) return;
+  const rows = merchantIds.map(merchant_id => ({ plan_id: planId, merchant_id }));
+  await rest("subscription_plan_merchants", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(rows) });
+}
+export async function fetchSuscriptoresDePlan(planId) {
+  return rest(`subscription_suscriptores?plan_id=eq.${planId}&estado=eq.activa&select=id,user_id,proxima_fecha_cobro,fecha_inicio`);
+}
+
 export async function registerPosDeviceRemote(modelo, serial, tipoIngreso = "venta") {
   const rows = await rest("pos_devices", {
     method: "POST", headers: { Prefer: "return=representation" },
@@ -2297,6 +2316,43 @@ export async function moverCashbackWallet(walletId, delta, tipo, worldId, mercha
 export async function fetchCashbackHabilitadoMerchant(merchantId) {
   const rows = await rest(`merchants?id=eq.${merchantId}&select=cashback_habilitado`).catch(() => []);
   return !!rows?.[0]?.cashback_habilitado;
+}
+
+// ── Cashback — solicitudes de cambio del mundo (20-ago) ───────────────────
+// El mundo ve su config de cashback en su propio panel pero no la edita
+// directo (Patrón 2) — pide un cambio, cae en la cola de Aprobaciones de
+// RedPontis (mismo lugar que eventos/altas de comercio). Ver
+// add-cashback-modalidad-solicitudes.sql.
+export async function crearSolicitudCambioCashback(worldId, configActual, configSolicitada, comentario) {
+  await rest("cashback_change_requests", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ world_id: worldId, config_actual: configActual, config_solicitada: configSolicitada, comentario_mundo: comentario || null }),
+  });
+}
+export async function fetchSolicitudesCambioCashbackMundo(worldId) {
+  return rest(`cashback_change_requests?world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+export async function fetchSolicitudesCambioCashbackGlobal() {
+  return rest(`cashback_change_requests?estado=eq.PENDIENTE&select=*&order=created_at`);
+}
+export async function resolverSolicitudCambioCashback(id, estado, motivo) {
+  await rest(`cashback_change_requests?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado, motivo_rechazo: motivo || null, resuelto_at: new Date().toISOString() }),
+  });
+}
+// Desglose de cashback por comercio — derivado de transactions (sin tocar
+// mover_cashback_wallet, cero riesgo sobre dinero real). Solo se usa cuando
+// modalidad="por_comercio"; en "flat" alcanza con wallets.cashback_balance.
+export async function fetchCashbackPorComercio(walletId) {
+  const rows = await rest(`transactions?wallet_id=eq.${walletId}&type=in.(cashback_ganado,cashback_canjeado,cashback_revertido)&select=merchant_id,amount,type`);
+  const porComercio = {};
+  for (const r of rows || []) {
+    if (!r.merchant_id) continue;
+    const signo = r.type === "cashback_canjeado" ? -1 : 1;
+    porComercio[r.merchant_id] = (porComercio[r.merchant_id] || 0) + signo * Number(r.amount);
+  }
+  return porComercio;
 }
 export async function fetchVentasComercio(merchantId, limit = 300) {
   return rest(`transactions?merchant_id=eq.${merchantId}&type=eq.compra&select=id,amount,reference,status,created_at&order=created_at.desc&limit=${limit}`);

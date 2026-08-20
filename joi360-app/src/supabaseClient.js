@@ -544,6 +544,79 @@ export async function fetchPlanesSuscripcionLive(worldId) {
   return rest(`subscription_plans?world_id=eq.${worldId}&activo=eq.true&select=*&order=precio`);
 }
 
+// ── Membresías (20-ago) — planes con marca propia, comercios afiliados y
+// cobro recurrente real. Reusa subscription_plans (mismo fetch de arriba,
+// select=* ya trae banner_url/logo_url/color_hex/categoria_beneficio/
+// beneficio_detalle) pero agrega la parte de "quién está suscrito de
+// verdad" (subscription_suscriptores), que el flujo viejo de "cuota al
+// vincular dependiente" nunca necesitó.
+export async function fetchComerciosDePlanLive(planId) {
+  return rest(`subscription_plan_merchants?plan_id=eq.${planId}&select=merchant_id`);
+}
+export async function fetchMisSuscripcionesMembresia(userId, worldId) {
+  return rest(`subscription_suscriptores?world_id=eq.${worldId}&user_id=eq.${userId}&select=*`);
+}
+// Cobra el primer periodo ahora mismo (mismo mover_saldo_wallet de siempre)
+// y crea el registro de suscriptor con la próxima fecha de cobro ya
+// calculada — el motor de cobro recurrente (useWalletLive) solo tiene que
+// mirar esa fecha desde acá en adelante.
+export async function suscribirseAPlanMembresia(userId, worldId, plan) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  const r = (await rest("rpc/mover_saldo_wallet", {
+    method: "POST",
+    body: JSON.stringify({
+      p_wallet_id: wallet.id, p_delta: -Math.abs(plan.precio), p_tipo: "suscripcion",
+      p_world_id: worldId, p_reference: `Suscripción · ${plan.nombre} · ${Date.now()}`,
+    }),
+  }))?.[0];
+  exigirAutorizacionWallet(r);
+  if (!r?.ok) return { ok: false, motivo: r?.motivo === "SALDO_INSUFICIENTE" ? "saldo" : "sin_wallet", balance: r?.nuevo_saldo != null ? +r.nuevo_saldo : +wallet.balance };
+  const proxima = new Date();
+  if (plan.periodo === "anual") proxima.setFullYear(proxima.getFullYear() + 1); else proxima.setMonth(proxima.getMonth() + 1);
+  await rest("subscription_suscriptores?on_conflict=plan_id,user_id", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({
+      world_id: worldId, plan_id: plan.id, user_id: userId, estado: "activa",
+      proxima_fecha_cobro: proxima.toISOString().slice(0, 10), ultimo_cobro_at: new Date().toISOString(),
+    }),
+  });
+  return { ok: true, balance: +r.nuevo_saldo };
+}
+
+// Motor de cobro recurrente real (patrón sincronizarCicloBNPL): al cargar la
+// wallet, revisa si alguna membresía activa de este usuario en este mundo
+// ya venció su próxima_fecha_cobro y la cobra -- sin esto "periodo" era un
+// campo decorativo, la cuota nunca se repetía sola. metodo_pago hoy solo
+// admite 'saldo_wallet' (lo único real); otros motores (Yape recurrente,
+// etc.) quedan reservados para una integración futura, no se simulan acá.
+export async function sincronizarCicloSuscripcionesMembresia(userId, worldId) {
+  const activas = await rest(`subscription_suscriptores?world_id=eq.${worldId}&user_id=eq.${userId}&estado=eq.activa&select=*,subscription_plans(nombre,precio,periodo)`).catch(() => []);
+  const hoy = new Date().toISOString().slice(0, 10);
+  for (const s of activas || []) {
+    if (s.metodo_pago !== "saldo_wallet" || !s.subscription_plans || s.proxima_fecha_cobro > hoy) continue;
+    const plan = s.subscription_plans;
+    // Si el saldo no alcanza, r.ok queda false y la fecha no avanza -- se
+    // vuelve a intentar sola la próxima vez que la wallet cargue, sin dejar
+    // la suscripción en un estado a medias.
+    const wallet = await getOrCreateWallet(userId, worldId);
+    const r = (await rest("rpc/mover_saldo_wallet", {
+      method: "POST",
+      body: JSON.stringify({
+        p_wallet_id: wallet.id, p_delta: -Math.abs(plan.precio), p_tipo: "suscripcion",
+        p_world_id: worldId, p_reference: `Suscripción · ${plan.nombre} · ciclo ${s.proxima_fecha_cobro}`,
+      }),
+    }).catch(() => null))?.[0];
+    if (r?.ok) {
+      const proxima = new Date(s.proxima_fecha_cobro);
+      if (plan.periodo === "anual") proxima.setFullYear(proxima.getFullYear() + 1); else proxima.setMonth(proxima.getMonth() + 1);
+      await rest(`subscription_suscriptores?id=eq.${s.id}`, {
+        method: "PATCH", headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ proxima_fecha_cobro: proxima.toISOString().slice(0, 10), ultimo_cobro_at: new Date().toISOString() }),
+      }).catch(() => {});
+    }
+  }
+}
+
 // ── Menú — strip calendar + reservas por día (Gantt nuevo, genérico) ──────
 // Antes MenuTemplate reusaba `products` (vitrina de compras puntuales, sin
 // día ni alérgenos). Ahora el calendario lee `menu_programacion` (qué platos
@@ -1132,6 +1205,22 @@ export async function fetchWalletBalance(userId, worldId) {
 export async function fetchCashbackBalance(userId, worldId) {
   const wallet = await getOrCreateWallet(userId, worldId);
   return +(wallet.cashback_balance || 0);
+}
+
+// Desglose de cashback por comercio (20-ago) — solo se usa cuando el mundo
+// eligió modalidad "por_comercio". Derivado de transactions (cashback_ganado
+// / cashback_canjeado / cashback_revertido), no de una tabla nueva — cero
+// cambios en mover_cashback_wallet, cero riesgo sobre dinero real.
+export async function fetchCashbackPorComercio(userId, worldId) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  const rows = await rest(`transactions?wallet_id=eq.${wallet.id}&type=in.(cashback_ganado,cashback_canjeado,cashback_revertido)&select=merchant_id,amount,type`);
+  const porComercio = {};
+  for (const r of rows || []) {
+    if (!r.merchant_id) continue;
+    const signo = r.type === "cashback_canjeado" ? -1 : 1;
+    porComercio[r.merchant_id] = (porComercio[r.merchant_id] || 0) + signo * Number(r.amount);
+  }
+  return porComercio;
 }
 
 // ── Precompra de evento (Backlog #2, Documento Maestro) — el asistente ya

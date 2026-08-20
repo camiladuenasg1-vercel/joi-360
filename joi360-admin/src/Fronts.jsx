@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar, refreshEventosLive } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote, moverCashbackWallet, fetchCashbackHabilitadoMerchant } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote, moverCashbackWallet, fetchCashbackHabilitadoMerchant, fetchMerchantsRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, fetchComerciosDePlan, guardarComerciosDePlan, fetchSuscriptoresDePlan, crearSolicitudCambioCashback, fetchSolicitudesCambioCashbackMundo } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -2781,6 +2781,378 @@ function NotificacionesMundoBell({ worldId }) {
   );
 }
 
+// ── Cashback — el mundo VE su config, pide cambios, RedPontis los aprueba ──
+// Patrón 2: RedPontis pone el techo (mismo ModuleConfigDrawer de siempre en
+// MundoDetail.jsx), el mundo NO edita directo acá — solo ve y pide un
+// cambio, que cae en Gobierno > Aprobaciones. Ver
+// add-cashback-modalidad-solicitudes.sql.
+function SponsorCashbackTab({ m }) {
+  const mod = (m.modulos || []).find(x => x.id === "cashback" && x.enabled);
+  const cfg = mod?.config || {};
+  const modalidad = cfg.modalidad || "flat";
+  const [solicitudes, setSolicitudes] = useState(null);
+  const [pidiendo, setPidiendo] = useState(false);
+  const [f, setF] = useState({ porcentajeDefault: cfg.porcentajeDefault ?? 3, topeMensual: cfg.topeMensual ?? "", modalidad, comentario: "" });
+  const [enviando, setEnviando] = useState(false);
+
+  const cargar = () => fetchSolicitudesCambioCashbackMundo(m.id).then(setSolicitudes).catch(() => setSolicitudes([]));
+  useEffect(() => { cargar(); }, [m.id]);
+
+  const hayPendiente = (solicitudes || []).some(s => s.estado === "PENDIENTE");
+
+  const enviar = async () => {
+    setEnviando(true);
+    try {
+      await crearSolicitudCambioCashback(m.id,
+        { porcentajeDefault: cfg.porcentajeDefault ?? 3, topeMensual: cfg.topeMensual ?? null, modalidad },
+        { porcentajeDefault: +f.porcentajeDefault, topeMensual: f.topeMensual === "" ? null : +f.topeMensual, modalidad: f.modalidad },
+        f.comentario.trim());
+      notify("Solicitud enviada a RedPontis — te avisamos apenas la revisen.");
+      setPidiendo(false);
+      cargar();
+    } catch (e) {
+      notify(`No se pudo enviar la solicitud: ${e.message}`, "error");
+    } finally { setEnviando(false); }
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Cashback en {m.nombre}</h2>
+        <p className="text-on-surface-variant mt-1 text-sm max-w-2xl">
+          Devuelve un % de cada compra como saldo utilizable dentro de tu mundo. RedPontis define los parámetros —
+          si quieres cambiar algo, envía una solicitud y lo ajustamos.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+          <p className="font-mono text-[10px] uppercase text-outline mb-1">% de cashback</p>
+          <p className="text-2xl font-black text-primary">{cfg.porcentajeDefault ?? 3}%</p>
+        </div>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+          <p className="font-mono text-[10px] uppercase text-outline mb-1">Tope mensual por usuario</p>
+          <p className="text-2xl font-black text-primary">{cfg.topeMensual != null ? `S/ ${cfg.topeMensual}` : "Sin tope"}</p>
+        </div>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+          <p className="font-mono text-[10px] uppercase text-outline mb-1">Modalidad</p>
+          <p className="text-lg font-bold text-primary">{modalidad === "por_comercio" ? "Por comercio" : "Flat (un solo total)"}</p>
+          <p className="text-[10px] text-on-surface-variant mt-1">{modalidad === "por_comercio" ? "El usuario ve cuánto ganó en cada comercio, además del total." : "El usuario solo ve un acumulado total en su saldo."}</p>
+        </div>
+      </div>
+
+      {!pidiendo ? (
+        <BtnOutline onClick={() => setPidiendo(true)} disabled={hayPendiente}>
+          <Icon n="edit_note" className="text-[18px]" /> {hayPendiente ? "Ya tienes una solicitud pendiente" : "Solicitar cambio"}
+        </BtnOutline>
+      ) : (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 max-w-lg space-y-3">
+          <p className="text-xs font-bold text-on-surface">Pedir un cambio de configuración</p>
+          <div className="flex gap-2">
+            <Field label="% de cashback"><input type="number" min="0" max="100" className={inputCls} value={f.porcentajeDefault} onChange={e => setF(p => ({ ...p, porcentajeDefault: e.target.value }))} /></Field>
+            <Field label="Tope mensual (vacío = sin tope)"><input type="number" min="0" className={inputCls} value={f.topeMensual} onChange={e => setF(p => ({ ...p, topeMensual: e.target.value }))} /></Field>
+          </div>
+          <Field label="Modalidad">
+            <select className={inputCls} value={f.modalidad} onChange={e => setF(p => ({ ...p, modalidad: e.target.value }))}>
+              <option value="flat">Flat — un solo total</option>
+              <option value="por_comercio">Por comercio — desglose individual</option>
+            </select>
+          </Field>
+          <Field label="Cuéntanos por qué (opcional)"><textarea className={`${inputCls} !h-16`} value={f.comentario} onChange={e => setF(p => ({ ...p, comentario: e.target.value }))} /></Field>
+          <div className="flex gap-2">
+            <BtnOutline className="!text-xs !py-1.5" onClick={() => setPidiendo(false)} disabled={enviando}>Cancelar</BtnOutline>
+            <BtnPrimary className="!text-xs !py-1.5" onClick={enviar} disabled={enviando} loading={enviando} loadingLabel="Enviando…">Enviar solicitud</BtnPrimary>
+          </div>
+        </div>
+      )}
+
+      {solicitudes && solicitudes.length > 0 && (
+        <div className="mt-8">
+          <p className="font-mono text-[10px] uppercase text-outline mb-2">Tus solicitudes</p>
+          <div className="space-y-1.5">
+            {solicitudes.map(s => (
+              <div key={s.id} className="flex items-center justify-between px-3 py-2 bg-surface-container-low rounded-lg text-xs">
+                <span>{s.config_solicitada.porcentajeDefault}% · {s.config_solicitada.modalidad === "por_comercio" ? "por comercio" : "flat"} · {new Date(s.created_at).toLocaleDateString("es-PE")}</span>
+                <Pill color={s.estado === "APROBADA" ? "bg-secondary-container" : s.estado === "RECHAZADA" ? "bg-error-container text-error" : "bg-tertiary"}>{s.estado}</Pill>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Suscripciones — el mundo crea su propia membresía con marca propia ────
+// Patrón 3 (igual que Promociones): RedPontis solo prende la capacidad,
+// el mundo crea y administra sus propios planes — branding, categoría de
+// beneficio (sorteo con productos+fecha, descuento, acceso, producto,
+// otro), comercios afiliados. Pedido explícito de Camila (20-ago),
+// modelo de referencia YOKI. No toca subscription_plans.periodo/precio
+// (Task #174, cuota al vincular dependiente) — es el mismo catálogo de
+// planes, extendido, no un sistema paralelo.
+const CATEGORIAS_BENEFICIO = [
+  { id: "sorteo", l: "Sorteo", i: "redeem" },
+  { id: "descuento", l: "Descuento", i: "percent" },
+  { id: "acceso", l: "Acceso especial", i: "vpn_key" },
+  { id: "producto", l: "Producto incluido", i: "inventory_2" },
+  { id: "otro", l: "Otro beneficio", i: "star" },
+];
+const PERIODO_LABEL_MUNDO = { mensual: "Mensual", anual: "Anual" };
+
+function SponsorSuscripcionesTab({ m }) {
+  const [planes, setPlanes] = useState(null);
+  const [comerciosMundo, setComerciosMundo] = useState([]);
+  const [abierto, setAbierto] = useState(false);
+  const [editando, setEditando] = useState(null); // plan.id, o null = nuevo
+  const [guardando, setGuardando] = useState(false);
+  const [subiendo, setSubiendo] = useState(null); // "banner" | "logo" | null
+  const BLANK = {
+    nombre: "", descripcion: "", precio: "", periodo: "mensual", descuento_pct: "",
+    banner_url: "", logo_url: "", color_hex: "#1A3270",
+    categoria_beneficio: "descuento", beneficio_texto: "", sorteo_productos: "", sorteo_fecha: "",
+    comercios: [],
+  };
+  const [f, setF] = useState(BLANK);
+  const [suscriptoresPorPlan, setSuscriptoresPorPlan] = useState({});
+
+  const cargar = () => fetchPlanesSuscripcion(m.id).then(async rows => {
+    setPlanes(rows || []);
+    const entries = await Promise.all((rows || []).map(p => fetchSuscriptoresDePlan(p.id).then(s => [p.id, s.length]).catch(() => [p.id, 0])));
+    setSuscriptoresPorPlan(Object.fromEntries(entries));
+  }).catch(() => setPlanes([]));
+  useEffect(() => { cargar(); fetchMerchantsRemote(m.id).then(setComerciosMundo).catch(() => setComerciosMundo([])); }, [m.id]);
+
+  const abrirNuevo = () => { setF(BLANK); setEditando(null); setAbierto(true); };
+  const abrirEditar = async (p) => {
+    const comercios = await fetchComerciosDePlan(p.id).then(rows => rows.map(r => r.merchant_id)).catch(() => []);
+    setF({
+      nombre: p.nombre, descripcion: p.descripcion || "", precio: String(p.precio), periodo: p.periodo,
+      descuento_pct: p.descuento_pct != null ? String(p.descuento_pct) : "",
+      banner_url: p.banner_url || "", logo_url: p.logo_url || "", color_hex: p.color_hex || "#1A3270",
+      categoria_beneficio: p.categoria_beneficio || "descuento",
+      beneficio_texto: p.categoria_beneficio !== "sorteo" ? (p.beneficio_detalle?.texto || "") : "",
+      sorteo_productos: p.categoria_beneficio === "sorteo" ? (p.beneficio_detalle?.productos || []).join("\n") : "",
+      sorteo_fecha: p.categoria_beneficio === "sorteo" ? (p.beneficio_detalle?.fecha_sorteo || "") : "",
+      comercios,
+    });
+    setEditando(p.id); setAbierto(true);
+  };
+
+  const subirImagen = async (campo, file) => {
+    if (!file) return;
+    setSubiendo(campo);
+    try {
+      const path = `suscripciones/${m.id}/${campo}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const url = await uploadArchivo("joi360-media", path, file);
+      setF(prev => ({ ...prev, [campo === "banner" ? "banner_url" : "logo_url"]: url }));
+    } catch (e) {
+      notify(`No se pudo subir la imagen: ${e.message}`, "error");
+    } finally { setSubiendo(null); }
+  };
+
+  const toggleComercio = (id) => setF(prev => ({
+    ...prev, comercios: prev.comercios.includes(id) ? prev.comercios.filter(x => x !== id) : [...prev.comercios, id],
+  }));
+
+  const guardar = async () => {
+    if (!f.nombre.trim() || !(+f.precio > 0)) { notify("Nombre y precio son obligatorios.", "error"); return; }
+    setGuardando(true);
+    try {
+      const beneficio_detalle = f.categoria_beneficio === "sorteo"
+        ? { productos: f.sorteo_productos.split("\n").map(x => x.trim()).filter(Boolean), fecha_sorteo: f.sorteo_fecha || null }
+        : { texto: f.beneficio_texto.trim() || null };
+      const payload = {
+        nombre: f.nombre.trim(), descripcion: f.descripcion.trim() || null,
+        precio: +f.precio, periodo: f.periodo, descuento_pct: f.descuento_pct ? +f.descuento_pct : null,
+        banner_url: f.banner_url || null, logo_url: f.logo_url || null, color_hex: f.color_hex,
+        categoria_beneficio: f.categoria_beneficio, beneficio_detalle,
+      };
+      let planId = editando;
+      if (editando) await actualizarPlanSuscripcion(editando, payload);
+      else { const creado = await crearPlanSuscripcion(m.id, { ...payload, activo: true }); planId = creado?.id; }
+      if (planId) await guardarComerciosDePlan(planId, f.comercios);
+      notify(`Plan "${f.nombre}" guardado — ya se ve en la superapp de ${m.nombre}.`);
+      setAbierto(false);
+      cargar();
+    } catch (e) {
+      notify(`No se pudo guardar el plan: ${e.message}`, "error");
+    } finally { setGuardando(false); }
+  };
+
+  const toggleActivo = async (p) => { await actualizarPlanSuscripcion(p.id, { activo: !p.activo }); cargar(); };
+  const eliminar = async (p) => {
+    if (!confirm(`¿Eliminar "${p.nombre}"? Deja de verse en la app para nuevos suscriptores. No afecta a quienes ya lo tienen.`)) return;
+    await eliminarPlanSuscripcion(p.id);
+    cargar();
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Suscripciones de {m.nombre}</h2>
+          <p className="text-on-surface-variant mt-1 text-sm max-w-2xl">
+            Crea tus propios planes de membresía: tu marca, tu precio, tus beneficios. Se cobran solos cada
+            {" "}{f.periodo === "anual" ? "año" : "mes"} desde el saldo del usuario y se ven en la app con tu banner y tu color.
+          </p>
+        </div>
+        <BtnPrimary onClick={abrirNuevo}><Icon n="add" className="text-[18px]" /> Nuevo plan</BtnPrimary>
+      </div>
+
+      {planes === null ? (
+        <p className="text-on-surface-variant py-8 text-center">Cargando…</p>
+      ) : planes.length === 0 ? (
+        <div className="text-center py-16 border-2 border-dashed border-outline-variant rounded-xl text-on-surface-variant">
+          <Icon n="subscriptions" className="text-[48px] text-outline mb-3 block mx-auto" />
+          Sin planes todavía. Crea el primero para empezar a cobrar membresías.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {planes.map(p => {
+            const cat = CATEGORIAS_BENEFICIO.find(c => c.id === p.categoria_beneficio) || CATEGORIAS_BENEFICIO[1];
+            return (
+              <div key={p.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+                <div className="h-20 relative flex items-end p-3" style={{ background: p.banner_url ? `url(${p.banner_url}) center/cover` : (p.color_hex || "#1A3270") }}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  {p.logo_url && <img src={p.logo_url} alt="" className="w-9 h-9 rounded-lg object-cover border-2 border-white relative z-10" />}
+                  <p className="text-white font-bold text-sm relative z-10 ml-2 drop-shadow">{p.nombre}</p>
+                </div>
+                <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+                  <div>
+                    <p className="font-mono text-xs font-bold">S/ {Number(p.precio).toFixed(2)} <span className="text-on-surface-variant font-normal">/ {PERIODO_LABEL_MUNDO[p.periodo] || p.periodo}</span></p>
+                    <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5"><Icon n={cat.i} className="text-[12px]" />{cat.l}</p>
+                  </div>
+                  <Pill color={p.activo ? "bg-secondary-container" : "bg-surface-container"}>{p.activo ? "Activo" : "Inactivo"}</Pill>
+                </div>
+                <div className="px-4 py-2.5 flex items-center justify-between text-[11px] text-on-surface-variant">
+                  <span className="flex items-center gap-1"><Icon n="group" className="text-[13px]" />{suscriptoresPorPlan[p.id] ?? 0} suscriptor{(suscriptoresPorPlan[p.id] ?? 0) === 1 ? "" : "es"}</span>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => toggleActivo(p)} className="hover:text-primary">{p.activo ? "Pausar" : "Activar"}</button>
+                    <button onClick={() => abrirEditar(p)} className="hover:text-primary">Editar</button>
+                    <button onClick={() => eliminar(p)} className="text-error hover:underline">Eliminar</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Drawer open={abierto} onClose={() => setAbierto(false)} icon="subscriptions"
+        title={editando ? "Editar plan" : "Nuevo plan de suscripción"} subtitle={m.nombre} width="w-[640px]"
+        footer={<>
+          <BtnOutline onClick={() => setAbierto(false)} disabled={guardando}>Cancelar</BtnOutline>
+          <BtnPrimary onClick={guardar} disabled={!f.nombre.trim() || !(+f.precio > 0) || guardando} loading={guardando} loadingLabel="Guardando…">
+            {editando ? "Guardar cambios" : "Crear plan"}
+          </BtnPrimary>
+        </>}>
+        <div className="space-y-5">
+          <div>
+            <p className="text-xs font-bold text-on-surface mb-2 flex items-center gap-1.5"><Icon n="palette" className="text-[16px] text-secondary" /> Tu marca</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-outline block mb-1.5">Banner</label>
+                {f.banner_url ? (
+                  <div className="relative h-16 rounded-lg overflow-hidden group">
+                    <img src={f.banner_url} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => setF(p => ({ ...p, banner_url: "" }))} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px] flex items-center justify-center">✕</button>
+                  </div>
+                ) : (
+                  <label className="h-16 flex items-center justify-center rounded-lg border-2 border-dashed border-outline-variant text-[11px] text-on-surface-variant cursor-pointer hover:border-primary">
+                    {subiendo === "banner" ? "Subiendo…" : "Subir banner"}
+                    <input type="file" accept="image/*" className="hidden" disabled={!!subiendo} onChange={e => subirImagen("banner", e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase text-outline block mb-1.5">Logo</label>
+                {f.logo_url ? (
+                  <div className="flex items-center gap-2 h-16">
+                    <img src={f.logo_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                    <button onClick={() => setF(p => ({ ...p, logo_url: "" }))} className="text-[10px] text-error">Quitar</button>
+                  </div>
+                ) : (
+                  <label className="h-16 flex items-center justify-center rounded-lg border-2 border-dashed border-outline-variant text-[11px] text-on-surface-variant cursor-pointer hover:border-primary">
+                    {subiendo === "logo" ? "Subiendo…" : "Subir logo"}
+                    <input type="file" accept="image/*" className="hidden" disabled={!!subiendo} onChange={e => subirImagen("logo", e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="text-[10px] font-mono uppercase text-outline">Color exacto</label>
+              <input type="color" value={f.color_hex} onChange={e => setF(p => ({ ...p, color_hex: e.target.value }))}
+                className="w-9 h-9 rounded-lg border border-outline-variant cursor-pointer" title="Elige el color con el cuentagotas o escribe el HEX" />
+              <input className={`${inputCls} !w-28 font-mono !py-1.5 text-xs`} value={f.color_hex} onChange={e => setF(p => ({ ...p, color_hex: e.target.value }))} />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-outline-variant/60">
+            <p className="text-xs font-bold text-on-surface mb-2">Descripción del plan</p>
+            <Field label="Nombre"><input className={inputCls} value={f.nombre} onChange={e => setF(p => ({ ...p, nombre: e.target.value }))} placeholder="Ej. Membresía Oro" /></Field>
+            <Field label="Descripción (se muestra arriba del precio en la app)"><textarea className={`${inputCls} !h-16`} value={f.descripcion} onChange={e => setF(p => ({ ...p, descripcion: e.target.value }))} placeholder="Una línea que explique el plan" /></Field>
+          </div>
+
+          <div className="pt-4 border-t border-outline-variant/60">
+            <p className="text-xs font-bold text-on-surface mb-2">Precio y cobro</p>
+            <div className="flex gap-2">
+              <Field label={`Precio (${moneda_de(m)})`}><input type="number" min="0" step="0.01" className={inputCls} value={f.precio} onChange={e => setF(p => ({ ...p, precio: e.target.value }))} /></Field>
+              <Field label="Frecuencia">
+                <select className={inputCls} value={f.periodo} onChange={e => setF(p => ({ ...p, periodo: e.target.value }))}>
+                  <option value="mensual">Mensual</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </Field>
+              <Field label="% desc. promo"><input type="number" min="0" max="100" className={inputCls} value={f.descuento_pct} onChange={e => setF(p => ({ ...p, descuento_pct: e.target.value }))} /></Field>
+            </div>
+            <p className="text-[10px] text-on-surface-variant italic mt-1">El cobro se descuenta solo del saldo del usuario cada {f.periodo === "anual" ? "año" : "mes"}. Otros métodos de pago (ej. Yape recurrente) están planeados, no activos todavía.</p>
+          </div>
+
+          <div className="pt-4 border-t border-outline-variant/60">
+            <p className="text-xs font-bold text-on-surface mb-2">Beneficio incluido</p>
+            <div className="grid grid-cols-5 gap-1.5 mb-3">
+              {CATEGORIAS_BENEFICIO.map(c => (
+                <button key={c.id} onClick={() => setF(p => ({ ...p, categoria_beneficio: c.id }))}
+                  className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[10px] font-bold ${f.categoria_beneficio === c.id ? "bg-primary text-white border-primary" : "border-outline-variant text-on-surface-variant"}`}>
+                  <Icon n={c.i} className="text-[16px]" />{c.l}
+                </button>
+              ))}
+            </div>
+            {f.categoria_beneficio === "sorteo" ? (
+              <div className="space-y-2">
+                <Field label="Productos que entran al sorteo (uno por línea)">
+                  <textarea className={`${inputCls} !h-20`} value={f.sorteo_productos} onChange={e => setF(p => ({ ...p, sorteo_productos: e.target.value }))} placeholder={"Ej.\nEntradas VIP x2\nGift card S/100"} />
+                </Field>
+                <Field label="Fecha del sorteo"><input type="date" className={inputCls} value={f.sorteo_fecha} onChange={e => setF(p => ({ ...p, sorteo_fecha: e.target.value }))} /></Field>
+              </div>
+            ) : (
+              <Field label="¿Qué incluye este beneficio?"><textarea className={`${inputCls} !h-16`} value={f.beneficio_texto} onChange={e => setF(p => ({ ...p, beneficio_texto: e.target.value }))} placeholder="Ej. 15% de descuento en todos los comercios afiliados" /></Field>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-outline-variant/60">
+            <p className="text-xs font-bold text-on-surface mb-2">Comercios afiliados <span className="text-on-surface-variant font-normal">({f.comercios.length} elegido{f.comercios.length === 1 ? "" : "s"})</span></p>
+            {comerciosMundo.length === 0 ? (
+              <p className="text-[11px] text-on-surface-variant italic">Este mundo todavía no tiene comercios cargados.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                {comerciosMundo.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-outline-variant text-xs cursor-pointer hover:bg-surface-container-low">
+                    <input type="checkbox" checked={f.comercios.includes(c.id)} onChange={() => toggleComercio(c.id)} />
+                    {c.nombre}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Drawer>
+    </div>
+  );
+}
+function moneda_de(m) { return m?.moneda || "PEN"; }
+
 function SponsorDashboard({ m, st, preview }) {
   const [tab, setTab] = useState("resumen");
   const comercios = (st.comercios||[]).filter(c => c.mundoId === m.id);
@@ -2800,6 +3172,8 @@ function SponsorDashboard({ m, st, preview }) {
   const bnplActivo = moduloActivo("bnpl");
   const eventosEmbebidoOn = moduloActivo("eventos") && modosDeMundo(m).includes("embebido");
   const accesosActivo = moduloActivo("accesos");
+  const cashbackActivo = moduloActivo("cashback");
+  const suscripcionesActivo = moduloActivo("suscripciones");
   // Cada módulo activo es su propia sección — nada se agrupa bajo un "Mis
   // módulos" genérico. comercios/bnpl/eventos/accesos ya tenían su propia
   // pestaña rica; el resto usa un tab de KPIs reales (sin edición de
@@ -2820,6 +3194,8 @@ function SponsorDashboard({ m, st, preview }) {
     ...(bnplActivo ? [{ k: "bnpl", l: "BNPL / SNPL", i: "calendar_clock" }] : []),
     ...(eventosEmbebidoOn ? [{ k: "eventos", l: "Eventos", i: "confirmation_number" }] : []),
     ...(accesosActivo ? [{ k: "accesos", l: "Control de Accesos", i: "door_open" }] : []),
+    ...(cashbackActivo ? [{ k: "cashback", l: "Cashback", i: "currency_exchange" }] : []),
+    ...(suscripcionesActivo ? [{ k: "suscripciones", l: "Suscripciones", i: "subscriptions" }] : []),
     { k: "usuarios", l: "Usuarios", i: "group" },
     { k: "hardware", l: "Hardware", i: "devices" },
     { k: "liquidacion", l: "Liquidación", i: "account_balance" },
@@ -2979,6 +3355,8 @@ function SponsorDashboard({ m, st, preview }) {
           )}
           {tab === "eventos" && <SponsorEventosTab m={m} eventos={eventos} />}
           {tab === "accesos" && <SponsorAccesos m={m} />}
+          {tab === "cashback" && <SponsorCashbackTab m={m} />}
+          {tab === "suscripciones" && <SponsorSuscripcionesTab m={m} />}
           {tab === "usuarios" && <UsuariosMundoTab m={m} />}
           {tab === "hardware" && <HardwareMundoTab m={m} />}
           {tab === "liquidacion" && <LiquidacionMundoTab m={m} />}

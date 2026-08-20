@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
 import { getState, subscribe } from "./store";
 import { useUser } from "./userStore.js";
-import { getSyntheticUserId, fetchWalletBalance, fetchCashbackBalance, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive } from "./supabaseClient.js";
+import { getSyntheticUserId, fetchWalletBalance, fetchCashbackBalance, fetchCashbackPorComercio, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive, sincronizarCicloSuscripcionesMembresia } from "./supabaseClient.js";
 import { MODULES } from "./modules.js";
 
 let snapshot = getState();
@@ -80,6 +80,7 @@ export function useModuleConfig(moduleId) {
 export function useWalletLive(worldId) {
   const [saldo, setSaldo] = useState(0);
   const [cashback, setCashback] = useState(0);
+  const [cashbackPorComercio, setCashbackPorComercio] = useState({});
   const [canales, setCanales] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,14 +90,22 @@ export function useWalletLive(worldId) {
     if (!worldId) return;
     setLoading(true);
     try {
-      const [bal, cb, chs, hist] = await Promise.all([
+      // Motor de cobro recurrente de membresías (Suscripciones, 20-ago) — se
+      // dispara ANTES de leer el saldo, para que un cobro que justo venció
+      // se refleje de una en el número que ve el usuario, no en el próximo
+      // refresh. Silencioso a propósito: un fallo acá no debe romper la
+      // pantalla de Wallet, la próxima carga lo vuelve a intentar solo.
+      await sincronizarCicloSuscripcionesMembresia(userId, worldId).catch(() => {});
+      const [bal, cb, cbPorComercio, chs, hist] = await Promise.all([
         fetchWalletBalance(userId, worldId),
         fetchCashbackBalance(userId, worldId),
+        fetchCashbackPorComercio(userId, worldId).catch(() => ({})),
         canalesHabilitadosDeMundoLive(worldId),
         fetchTxHistory(userId, worldId),
       ]);
       setSaldo(bal);
       setCashback(cb);
+      setCashbackPorComercio(cbPorComercio);
       setCanales(chs);
       setHistorial(hist || []);
     } finally {
@@ -119,7 +128,7 @@ export function useWalletLive(worldId) {
     return r.ok;
   }, [worldId, userId, refresh]);
 
-  return { saldo, cashback, canales, historial, loading, refresh, recargar, pagar };
+  return { saldo, cashback, cashbackPorComercio, canales, historial, loading, refresh, recargar, pagar };
 }
 
 /**

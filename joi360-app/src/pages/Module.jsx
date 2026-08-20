@@ -12,7 +12,7 @@ import {
   fetchMisDependientes, crearDependienteRemote, actualizarDependienteAlergiasRemote, actualizarDependientePerfilRemote, fetchDependienteBalance,
   verificarBloqueoEliminarDependiente, eliminarDependienteRemote,
   fetchRestriccionesDependiente, fetchRestriccionesDependientesBulk, guardarRestriccionesDependiente,
-  fetchPlanesSuscripcionLive,
+  fetchPlanesSuscripcionLive, fetchComerciosDePlanLive, fetchMisSuscripcionesMembresia, suscribirseAPlanMembresia,
   transferirP2PRemote, fetchP2PEnviadoHoy, solicitarBanditaNfc, fetchMiSolicitudNfc, fetchMiBanditaVigencia, reportarBanditaPerdidaRemote, vincularBanditaDirectoRemote, crearEventoB2CRemote, fetchMisEventosCreados, fetchAgendaEventoLive, fetchPromocionesLive,
   fetchMiCodigoJoi, buscarPorCodigoJoiRemote, buscarPorDniRemote, crearTicketSoporteRemote,
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
@@ -96,7 +96,13 @@ function ModuleHeader({ title, icon, iconBg, iconColor, onBack, action, children
 function WalletTemplate({ cfg, u }) {
   const nav = useNavigate();
   const mundoId = cfg.mundo.id;
-  const { saldo, cashback, historial, canales, refresh } = useWalletLive(mundoId);
+  const { saldo, cashback, cashbackPorComercio, historial, canales, refresh } = useWalletLive(mundoId);
+  // Modalidad de cashback (flat | por_comercio) — config propia de la
+  // capacidad "cashback", no de Wallet (20-ago). Sin ella, o si Cashback no
+  // está activo en este mundo, se asume "flat" (comportamiento de siempre).
+  const cashbackCfg = useModuleConfig("cashback");
+  const cashbackModalidad = cashbackCfg?.config?.modalidad || "flat";
+  const comerciosCashback = useMerchantsLive(mundoId);
   const puntos = u?.puntos?.[mundoId] || 0;
   const [hidden, setHidden] = useState(false);
   const txs = historial.slice(0,5);
@@ -331,6 +337,25 @@ function WalletTemplate({ cfg, u }) {
           {hidden ? "Mostrar" : "Ocultar"}
         </button>
       </div>
+      )}
+
+      {/* Cashback por comercio — solo si el mundo eligió esa modalidad (RedPontis
+          la define, ver Cashback en el Panel de Mundo). En "flat" el total de
+          arriba ya alcanza, no se repite acá. */}
+      {!hidden && cashbackModalidad === "por_comercio" && Object.keys(cashbackPorComercio || {}).some(id => cashbackPorComercio[id] > 0) && (
+        <SectionCard className="p-4">
+          <p className="text-[10px] font-bold text-[#404255] uppercase tracking-wider mb-2 flex items-center gap-1">
+            <Icon name="redeem" size="text-xs" color="text-[#F5C200]" /> Cashback ganado por comercio
+          </p>
+          <div className="space-y-1.5">
+            {Object.entries(cashbackPorComercio).filter(([, monto]) => monto > 0).map(([merchantId, monto]) => (
+              <div key={merchantId} className="flex items-center justify-between text-sm">
+                <span className="text-[#1C1C1E]">{comerciosCashback.find(c => c.id === merchantId)?.nombre || "Comercio"}</span>
+                <span className="font-bold text-[#F5C200]">{currency} {monto.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
       )}
 
       {/* Actions */}
@@ -5101,6 +5126,128 @@ function MarketplaceTemplate({ cfg, u }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// TEMPLATE: SUSCRIPCIONES — membresías con marca propia del mundo (20-ago)
+// Distinto del cargo por vincular dependiente (RestriccionesTemplate) —
+// esto es una membresía real que cualquier usuario contrata para sí mismo,
+// con branding del mundo, beneficio (sorteo/descuento/acceso/producto) y
+// cobro recurrente real (ver sincronizarCicloSuscripcionesMembresia).
+// ══════════════════════════════════════════════════════════════════════════════
+function SuscripcionesTemplate({ cfg, u }) {
+  const worldId = cfg.mundo.id;
+  const userId = getSyntheticUserId();
+  const comercios = useMerchantsLive(worldId);
+  const [planes, setPlanes] = useState(null);
+  const [misSuscripciones, setMisSuscripciones] = useState(null);
+  const [comerciosPorPlan, setComerciosPorPlan] = useState({});
+  const [suscribiendo, setSuscribiendo] = useState(null); // plan.id
+  const [resultado, setResultado] = useState(null); // {ok, mensaje}
+
+  const cargar = () => {
+    fetchPlanesSuscripcionLive(worldId).then(async rows => {
+      setPlanes(rows || []);
+      const entries = await Promise.all((rows || []).map(p => fetchComerciosDePlanLive(p.id).then(cs => [p.id, cs.map(c => c.merchant_id)]).catch(() => [p.id, []])));
+      setComerciosPorPlan(Object.fromEntries(entries));
+    }).catch(() => setPlanes([]));
+    fetchMisSuscripcionesMembresia(userId, worldId).then(setMisSuscripciones).catch(() => setMisSuscripciones([]));
+  };
+  useEffect(() => { cargar(); }, [worldId]);
+
+  const suscribirse = async (plan) => {
+    setSuscribiendo(plan.id); setResultado(null);
+    try {
+      const r = await suscribirseAPlanMembresia(userId, worldId, plan);
+      if (r.ok) {
+        setResultado({ ok: true, mensaje: `Ya eres parte de "${plan.nombre}" — el próximo cobro es en un ${plan.periodo === "anual" ? "año" : "mes"}.` });
+        cargar();
+      } else {
+        const err = await errorControlado("saldo_insuficiente");
+        setResultado({ ok: false, mensaje: `${err.mensaje} Saldo actual: S/ ${(r.balance ?? 0).toFixed(2)}.` });
+      }
+    } catch (e) {
+      const err = await mensajeDeError(e, "operacion_no_completada");
+      setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+    } finally { setSuscribiendo(null); }
+  };
+
+  const miSuscripcion = (planId) => (misSuscripciones || []).find(s => s.plan_id === planId && s.estado === "activa");
+
+  if (planes === null) return (
+    <div className="px-5 py-10 flex flex-col items-center gap-2">
+      <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+      <p className="text-xs text-[#404255]">Cargando planes…</p>
+    </div>
+  );
+  if (!planes.length) return (
+    <div className="px-5"><SectionCard><EmptyState icon="subscriptions" title="Sin planes todavía" subtitle="Este mundo todavía no tiene membresías disponibles."/></SectionCard></div>
+  );
+
+  return (
+    <div className="px-5 space-y-4 pb-8">
+      {resultado && (
+        <div className={`px-4 py-3 rounded-2xl text-sm font-semibold ${resultado.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+          {resultado.mensaje}
+        </div>
+      )}
+      {planes.map(p => {
+        const mia = miSuscripcion(p.id);
+        const precioFinal = p.descuento_pct > 0 ? p.precio * (1 - p.descuento_pct / 100) : p.precio;
+        const comerciosDelPlan = (comerciosPorPlan[p.id] || []).map(id => comercios.find(c => c.id === id)?.nombre).filter(Boolean);
+        return (
+          <div key={p.id} className="rounded-3xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
+            <div className="h-24 relative flex items-end p-4" style={{ background: p.banner_url ? `url(${p.banner_url}) center/cover` : (p.color_hex || "#1A3270") }}>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+              <div className="relative z-10 flex items-center gap-2">
+                {p.logo_url && <img src={p.logo_url} alt="" className="w-9 h-9 rounded-xl object-cover border-2 border-white" />}
+                <div>
+                  <p className="text-white font-black text-base drop-shadow">{p.nombre}</p>
+                  {p.descripcion && <p className="text-white/80 text-[11px] drop-shadow">{p.descripcion}</p>}
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 space-y-3">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-2xl font-black text-[#1C1C1E]">S/ {precioFinal.toFixed(2)}<span className="text-xs font-medium text-[#404255]"> / {p.periodo === "anual" ? "año" : "mes"}</span></p>
+                  {p.descuento_pct > 0 && <p className="text-[11px] text-green-600 font-bold">-{p.descuento_pct}% de descuento</p>}
+                </div>
+                {mia ? (
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full flex items-center gap-1"><Icon name="check_circle" size="text-sm" color="text-green-600"/>Suscrito</span>
+                ) : (
+                  <button onClick={() => suscribirse(p)} disabled={suscribiendo === p.id}
+                    className="bg-[#1A3270] text-white text-xs font-black px-4 py-2.5 rounded-2xl tap-active disabled:opacity-50">
+                    {suscribiendo === p.id ? "Procesando…" : "Suscribirme"}
+                  </button>
+                )}
+              </div>
+
+              {p.categoria_beneficio === "sorteo" && p.beneficio_detalle?.productos?.length > 0 && (
+                <div className="bg-[#FBF3DC] rounded-2xl p-3">
+                  <p className="text-[10px] font-bold text-[#8E6200] uppercase tracking-wider mb-1 flex items-center gap-1"><Icon name="redeem" size="text-xs" color="#8E6200"/>Sorteo incluido</p>
+                  <ul className="text-xs text-[#1C1C1E] space-y-0.5">
+                    {p.beneficio_detalle.productos.map((prod, i) => <li key={i}>· {prod}</li>)}
+                  </ul>
+                  {p.beneficio_detalle.fecha_sorteo && <p className="text-[10px] text-[#8E6200] mt-1.5">Sorteo el {new Date(p.beneficio_detalle.fecha_sorteo + "T00:00").toLocaleDateString("es-PE", { day: "numeric", month: "long", year: "numeric" })}</p>}
+                </div>
+              )}
+              {p.categoria_beneficio !== "sorteo" && p.beneficio_detalle?.texto && (
+                <p className="text-xs text-[#404255] bg-[#EEF2FD] rounded-2xl p-3">{p.beneficio_detalle.texto}</p>
+              )}
+
+              {mia && (
+                <p className="text-[10px] text-[#404255]">Próximo cobro: {new Date(mia.proxima_fecha_cobro + "T00:00").toLocaleDateString("es-PE")}</p>
+              )}
+              {comerciosDelPlan.length > 0 && (
+                <p className="text-[10px] text-[#404255]">Válido en: {comerciosDelPlan.join(", ")}</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const TEMPLATE_MAP = {
   wallet:          (cfg, u) => <WalletTemplate cfg={cfg} u={u}/>,
   loyalty:         (cfg, u) => <LoyaltyTemplate cfg={cfg} u={u}/>,
@@ -5121,6 +5268,7 @@ const TEMPLATE_MAP = {
   transporte:      (cfg, u) => <TransporteTemplate cfg={cfg} u={u}/>,
   bnpl:            (cfg, u) => <BNPLTemplate cfg={cfg} u={u}/>,
   consumos:        (cfg, u) => <ConsumosTemplate cfg={cfg} u={u}/>,
+  suscripciones:   (cfg, u) => <SuscripcionesTemplate cfg={cfg} u={u}/>,
 };
 
 const MODULE_META = {

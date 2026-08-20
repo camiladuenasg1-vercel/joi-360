@@ -17,7 +17,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, Pill, BtnPrimary, BtnOutline, notify, Field, inputCls } from "./ui";
 import { useStore } from "./hooks";
-import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote, crearAdminUserRemote, actualizarPasswordAdminRemote, fetchTicketTypesDeEvento, fetchEventMerchants, fetchMerchantsRemote } from "./supabase";
+import { update } from "./store";
+import { fetchEventosPendientesGlobal, setEventoEstadoRemote, errorControlado, logErrorControlado, fetchEventosGlobalTodos, fetchTicketsGlobalTodos, fetchSolicitudesComercioGlobal, resolverSolicitudComercio, addMerchantRemote, crearAlertaMundo, fetchEventosResueltosGlobal, fetchSolicitudesComercioResueltasGlobal, fetchAdminUsersRemote, crearAdminUserRemote, actualizarPasswordAdminRemote, fetchTicketTypesDeEvento, fetchEventMerchants, fetchMerchantsRemote, fetchSolicitudesCambioCashbackGlobal, resolverSolicitudCambioCashback } from "./supabase";
 
 export function Gobierno() {
   const st = useStore();
@@ -40,6 +41,35 @@ export function Gobierno() {
   const [nuevoAdmin, setNuevoAdmin] = useState(null); // { email, name, password } | null = cerrado
   const [cambiandoClave, setCambiandoClave] = useState(null); // { id, nombre, password } | null
   const [guardandoAdmin, setGuardandoAdmin] = useState(false);
+  const [solicitudesCashback, setSolicitudesCashback] = useState(null);
+  const [busyCashback, setBusyCashback] = useState(null);
+  const [rechazandoCashback, setRechazandoCashback] = useState(null); // solicitud | null
+  const [motivoCashback, setMotivoCashback] = useState("");
+
+  const cargarSolicitudesCashback = () => fetchSolicitudesCambioCashbackGlobal().then(rows => setSolicitudesCashback(rows || [])).catch(() => setSolicitudesCashback([]));
+  useEffect(() => { cargarSolicitudesCashback(); }, [reload]);
+
+  const resolverCashback = async (sol, estado, motivo) => {
+    setBusyCashback(sol.id);
+    try {
+      await resolverSolicitudCambioCashback(sol.id, estado, motivo);
+      if (estado === "APROBADA") {
+        update(s => {
+          const mu = (s.mundos || []).find(x => x.id === sol.world_id);
+          const mo = mu?.modulos?.find(x => x.id === "cashback");
+          if (mo) mo.config = { ...mo.config, ...sol.config_solicitada };
+        });
+      }
+      await crearAlertaMundo(sol.world_id, "cashback_solicitud_resuelta",
+        estado === "APROBADA" ? "Cambio de Cashback aprobado" : "Cambio de Cashback rechazado",
+        estado === "APROBADA" ? "RedPontis aplicó el cambio que pediste en Cashback." : `RedPontis rechazó tu solicitud: ${motivo}`, sol.id);
+      notify(estado === "APROBADA" ? "Cambio aplicado al mundo." : "Solicitud rechazada.");
+      setRechazandoCashback(null); setMotivoCashback("");
+      cargarSolicitudesCashback();
+    } catch (e) {
+      notify(`No se pudo resolver: ${e.message}`, "error");
+    } finally { setBusyCashback(null); }
+  };
 
   useEffect(() => {
     let vivo = true;
@@ -154,7 +184,7 @@ export function Gobierno() {
   const mundos = st.mundos || [];
   const comercios = st.comercios || [];
   const capacidadesActivas = mundos.reduce((a, m) => a + (m.modulos || []).filter(x => x.enabled).length, 0);
-  const totalPendientes = (pendientes?.length || 0) + (solicitudesComercio?.length || 0);
+  const totalPendientes = (pendientes?.length || 0) + (solicitudesComercio?.length || 0) + (solicitudesCashback?.length || 0);
   const pendientesF = filtroTipo === "comercios" ? [] : (pendientes || []);
   const solicitudesF = filtroTipo === "eventos" ? [] : (solicitudesComercio || []);
   const resueltosRechazados = [
@@ -223,6 +253,42 @@ export function Gobierno() {
               </button>
             ))}
           </div>
+
+          {solicitudesCashback && solicitudesCashback.length > 0 && (
+            <div className="mb-6">
+              <p className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant mb-2 flex items-center gap-1.5">
+                <Icon n="currency_exchange" className="text-[14px]" /> Cambios de Cashback pedidos por un mundo ({solicitudesCashback.length})
+              </p>
+              <div className="space-y-2">
+                {solicitudesCashback.map(sol => (
+                  <div key={sol.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-semibold text-sm">{mundoNombre(sol.world_id)}</p>
+                        <p className="text-xs text-on-surface-variant mt-0.5">{new Date(sol.created_at).toLocaleString("es-PE")}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs mb-2">
+                      <div className="bg-surface-container-low rounded-lg p-2.5">
+                        <p className="font-mono text-[9px] uppercase text-outline mb-1">Config actual</p>
+                        <p>{sol.config_actual.porcentajeDefault}% · tope {sol.config_actual.topeMensual ?? "sin tope"} · {sol.config_actual.modalidad === "por_comercio" ? "por comercio" : "flat"}</p>
+                      </div>
+                      <div className="bg-primary-fixed rounded-lg p-2.5">
+                        <p className="font-mono text-[9px] uppercase text-primary mb-1">Pide cambiar a</p>
+                        <p className="text-primary font-semibold">{sol.config_solicitada.porcentajeDefault}% · tope {sol.config_solicitada.topeMensual ?? "sin tope"} · {sol.config_solicitada.modalidad === "por_comercio" ? "por comercio" : "flat"}</p>
+                      </div>
+                    </div>
+                    {sol.comentario_mundo && <p className="text-xs text-on-surface-variant italic mb-3">"{sol.comentario_mundo}"</p>}
+                    <div className="flex gap-2">
+                      <BtnPrimary className="!py-1.5 !px-3 !text-xs" disabled={busyCashback === sol.id} loading={busyCashback === sol.id} onClick={() => resolverCashback(sol, "APROBADA")}>Aprobar y aplicar</BtnPrimary>
+                      <BtnOutline className="!py-1.5 !px-3 !text-xs" disabled={busyCashback === sol.id} onClick={() => setRechazandoCashback(sol)}>Rechazar</BtnOutline>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {pendientes === null || solicitudesComercio === null ? (
             <p className="text-on-surface-variant py-8 text-center">Cargando cola…</p>
           ) : pendientesF.length === 0 && solicitudesF.length === 0 ? (
@@ -357,6 +423,25 @@ export function Gobierno() {
             <div className="flex gap-3 mt-5">
               <BtnOutline className="flex-1" onClick={() => { setRechazando(null); setMotivo(""); }}>Cancelar</BtnOutline>
               <BtnPrimary className="flex-1 !bg-error" disabled={!motivo.trim()} onClick={confirmarRechazo}>
+                <Icon n="close" className="text-[16px]" /> Confirmar rechazo
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rechazandoCashback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setRechazandoCashback(null)}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg mb-1 flex items-center gap-2"><Icon n="cancel" className="text-error text-[20px]" /> Motivo del rechazo</h3>
+            <p className="text-sm text-on-surface-variant mb-4">Se envía como alerta real a <b>{mundoNombre(rechazandoCashback.world_id)}</b>.</p>
+            <Field label="Motivo">
+              <textarea className={`${inputCls} !h-24 resize-none`} value={motivoCashback} onChange={e => setMotivoCashback(e.target.value)}
+                placeholder="Ej. El % pedido excede el margen que soporta la Liquidación de ese mundo…" autoFocus />
+            </Field>
+            <div className="flex gap-3 mt-5">
+              <BtnOutline className="flex-1" onClick={() => { setRechazandoCashback(null); setMotivoCashback(""); }}>Cancelar</BtnOutline>
+              <BtnPrimary className="flex-1 !bg-error" disabled={!motivoCashback.trim()} onClick={() => resolverCashback(rechazandoCashback, "RECHAZADA", motivoCashback.trim())}>
                 <Icon n="close" className="text-[16px]" /> Confirmar rechazo
               </BtnPrimary>
             </div>

@@ -342,6 +342,8 @@ export const MODULE_CATALOG = [
     servicios: ["% de retorno sobre venta", "Tope de cashback por usuario / mes", "Categorías con cashback diferenciado", "Vigencia del cashback acumulado", "Historial de retornos"],
     pricing: { modelo: "transaccional", porTx: 0.5, setup: 0, moneda: "PEN" },
     configFields: [
+      { key: "modalidad", label: "Modalidad de cashback", type: "select", options: ["flat", "por_comercio"],
+        optionLabels: { flat: "Flat — mismo % para todos, un solo saldo total", por_comercio: "Por comercio — desglose individual de cuánto se ganó en cada uno" }, default: "flat" },
       { key: "porcentajeDefault", label: "Porcentaje de cashback sobre el monto de compra", type: "percent", default: 3 },
       { key: "topeMensual",       label: "Tope máximo de cashback mensual por usuario", type: "currency", default: 50, nullable: true, nullLabel: "Sin tope mensual" },
     ],
