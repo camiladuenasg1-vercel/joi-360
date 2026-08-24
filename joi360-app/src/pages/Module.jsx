@@ -1783,17 +1783,23 @@ function AccesosTemplate({ cfg, u }) {
 // config: porcentajeDefault, topeMensual
 // ══════════════════════════════════════════════════════════════════════════════
 function CashbackTemplate({ cfg, u }) {
+  const mundoId = cfg.mundo.id;
+  const { cashback, cashbackPorComercio, historial } = useWalletLive(mundoId);
+  const comercios = useMerchantsLive(mundoId);
   const pct = cfg.config.porcentajeDefault || 3;
   const tope = cfg.config.topeMensual;
+  // Historial de cashback ya viene en el mismo historial de movimientos de
+  // la wallet (mismo wallet_id) — se filtra por tipo, sin un segundo fetch.
+  const movimientos = (historial || []).filter(h => h.tipo === "CASHBACK_GANADO" || h.tipo === "CASHBACK_CANJEADO").slice(0, 10);
+  const topComercioId = Object.entries(cashbackPorComercio || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topComercioNombre = comercios.find(c => c.id === topComercioId)?.nombre;
 
   return (
     <div className="px-5 space-y-4 pb-8">
       <div className="rounded-3xl p-6 text-white" style={{background:"linear-gradient(135deg,#8E6200 0%,#a44100 100%)"}}>
         <p className="text-[11px] font-bold text-white/60 uppercase tracking-widest mb-1">Cashback disponible</p>
-        <p className="text-5xl font-black">S/ 24.50</p>
-        <p className="text-white/60 text-xs mt-2">+ S/ 8.30 pendiente de acreditar</p>
+        <p className="text-5xl font-black">S/ {cashback.toFixed(2)}</p>
         {tope && <p className="text-white/40 text-[10px] mt-1">Tope mensual: S/ {tope}</p>}
-        <button className="mt-4 bg-white text-[#8E6200] text-sm font-black px-5 py-2.5 rounded-2xl tap-active">Transferir a billetera</button>
       </div>
 
       <SectionCard className="p-4">
@@ -1802,19 +1808,24 @@ function CashbackTemplate({ cfg, u }) {
           <span className="text-2xl font-black text-[#8E6200]">{pct}%</span>
         </div>
         <p className="text-xs text-[#404255] mt-1">Por cada S/ 100 que gastas recibes S/ {pct} de vuelta.</p>
-        <div className="mt-3 p-3 bg-orange-50 rounded-2xl">
-          <p className="text-xs text-orange-700">💡 Gasta en <b>Cafetería Central</b> para acumular más rápido</p>
-        </div>
+        {topComercioNombre && (
+          <div className="mt-3 p-3 bg-orange-50 rounded-2xl">
+            <p className="text-xs text-orange-700">💡 Gasta en <b>{topComercioNombre}</b> para acumular más rápido</p>
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard>
         <SectionHeader label="Historial de cashback" icon="history"/>
-        {[{l:"Cafetería Central",s:"+S/ 1.55",t:"Hoy",ic:"restaurant",bg:"bg-orange-50",c:"text-orange-500"},
-          {l:"Librería Campus",s:"+S/ 4.20",t:"Ayer",ic:"menu_book",bg:"bg-blue-50",c:"text-blue-500"},
-          {l:"Tienda JOI",s:"+S/ 18.75",t:"Hace 3d",ic:"storefront",bg:"bg-purple-50",c:"text-purple-500"}].map((h,i)=>(
-          <ListItem key={i} icon={h.ic} iconBg={h.bg} iconColor={h.c} title={h.l} subtitle={h.t}
-            right={<span className="font-black text-sm text-orange-600">{h.s}</span>}/>
-        ))}
+        {movimientos.length === 0
+          ? <EmptyState icon="history" title="Sin cashback todavía" subtitle="Tus créditos de cashback aparecerán aquí." />
+          : movimientos.map(h => (
+            <ListItem key={h.id} icon="redeem" iconBg="bg-orange-50" iconColor="text-orange-500"
+              title={h.tipo === "CASHBACK_CANJEADO" ? "Cashback canjeado" : "Cashback ganado"}
+              subtitle={new Date(h.fecha).toLocaleDateString("es-PE")}
+              right={<span className="font-black text-sm text-orange-600">{h.monto > 0 ? "+" : ""}S/ {Math.abs(h.monto).toFixed(2)}</span>}
+            />
+          ))}
       </SectionCard>
     </div>
   );
