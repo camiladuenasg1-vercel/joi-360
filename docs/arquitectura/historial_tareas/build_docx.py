@@ -22,7 +22,7 @@ from docx.oxml import OxmlElement
 BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, "src")
 
-VERSION = "1.0"
+VERSION = "1.2"
 OUT_NAME = f"JOI360_Historial_Tareas_y_Commits_v{VERSION}.docx"
 OUT_PATHS = [
     os.path.join(BASE, OUT_NAME),

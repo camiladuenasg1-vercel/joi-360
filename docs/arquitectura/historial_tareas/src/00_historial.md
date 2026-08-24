@@ -1,8 +1,8 @@
 # JOI360 — Historial de Tareas y Commits
 
-Documento vivo · Versión **1.1** · 12 de agosto de 2026
+Documento vivo · Versión **1.2** · 24 de agosto de 2026
 
-Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`) y de los 163 commits reales de git que representan el código que efectivamente cambió, organizados en 7 fases cronológicas — del 1 al 12 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.
+Registro completo de las 142 tareas trabajadas en este monorepo (`#102`–`#243`) y de los 184 commits reales de git que representan el código que efectivamente cambió, organizados en 8 fases cronológicas — del 1 de agosto al 24 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.
 
 ## Historial de versiones
 
@@ -10,19 +10,20 @@ Registro completo de las 132 tareas trabajadas en este monorepo (`#102`–`#233`
 |---|---|---|
 | 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases cronológicas. |
 | 1.1 | 2026-08-12 | Cada tarea ahora describe qué se pidió, qué se resolvió, el flujo/diseño, el flujo de usuario, y el journey UX unificado (touchpoints encadenados en base a los commits reales) — no solo título + commit. |
+| 1.2 | 2026-08-24 | Corte semanal — 11 tareas nuevas (`#234`–`#243`): rebranding JoiSolutions, PWA, 2 bugs de formato/regresión de seguridad, Suscripciones real (modelo YOKI) + Cashback por comercio, 2 bugs encontrados y corregidos en verificación en vivo, y el roadmap para el CTO. Solo se agregan los cambios desde el corte anterior — el histórico previo no se reescribe. |
 
-*Corte semanal: domingo. Próxima actualización: 16-ago-2026.*
+*Corte semanal: viernes. Próxima actualización: 28-ago-2026.*
 
 ## Resumen ejecutivo
 
 | Métrica | Valor |
 |---|---|
-| Tareas registradas | 132 |
-| Tareas completadas | 130 |
+| Tareas registradas | 142 |
+| Tareas completadas | 140 |
 | Tareas pendientes | 2 |
-| Commits reales en el repo | 164 |
+| Commits reales en el repo | 184 |
 | Commits con tarea identificada | 46 |
-| Rango de fechas | 2026-08-01 a 2026-08-12 |
+| Rango de fechas | 2026-08-01 a 2026-08-24 |
 
 ## Cómo leer este documento
 
@@ -1976,5 +1977,165 @@ Estado: 🟢 Completado
 | 2026-08-12 | `306cae0` | fix(admin): contraseña del sponsor quedaba en blanco al reabrir la entrega |
 | 2026-08-12 | `1fbed89` | fix(admin): mensaje honesto sobre la contraseña del sponsor — no es recuperable por diseño |
 | 2026-08-12 | `fa184a7` | docs: historial de tareas y commits (v1.0) — segundo documento vivo |
+| 2026-08-12 | `ed7d564` | docs: enriquecer Historial de Tareas y Commits (v1.1) con flujo, UX y journeys unificados |
+| 2026-08-12 | `1665143` | fix(admin): repetir el filtro de mundos retirados en syncAllWorlds, no solo en load() |
+| 2026-08-12 | `f39912c` | feat(admin): edicion de ficha de mundo (RUC/Entidad legal/Pais/Descripcion) con autoguardado |
+| 2026-08-12 | `85d448e` | fix(admin): quitar Banco/CCI del wizard de creacion de mundo |
+| 2026-08-12 | `2c30b48` | feat: Cashback MACRO cerrado a comercios habilitados (POS + superapp) |
+| 2026-08-12 | `0410c8f` | polish(admin): reflejar Cashback como capacidad real en Ficha/Capacidades |
+| 2026-08-12 | `dbbe419` | docs: actualizar Cashback (construido) y conceptualizar Loyalty en el maestro |
+| 2026-08-12 | `3480603` | feat: Centro de Ayuda real en superapp (canal de soporte al usuario) |
+| 2026-08-12 | `be1ecc4` | feat(admin): procesar devoluciones reales desde un ticket (step-up de password) |
 
-*16 commits en esta fase.*
+*25 commits en esta fase.*
+
+# Fase: Rebranding JoiSolutions, PWA, Suscripciones real + Cashback por comercio, dos bugs en vivo
+*19-ago a 24-ago*
+
+### #234 — Rebranding completo a JoiSolutions Design System v1.0 (Navy + Gold) — admin + superapp
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Aplicar el nuevo sistema de diseño JoiSolutions (paleta Navy + Gold) de forma consistente en los dos frentes de código -- admin y superapp -- reemplazando la paleta anterior sin dejar pantallas a medio migrar.
+
+**Qué se resolvió:** Rebranding completo aplicado en ambos proyectos por separado el mismo día (commit `a4baf25` en admin, `ef3ee5a` en superapp) -- tokens de color, botones, tabs y superficies heredan la paleta nueva desde el design system compartido.
+
+**Flujo / diseño técnico:** Tokens de color (Navy #1A3270 + dorado de acento) actualizados en un solo lugar del design system -- componentes ya construidos (botones, pills, tabs, headers) heredan la paleta nueva automáticamente, sin tocarlos pantalla por pantalla.
+
+**Flujo de usuario:** Cambio visual en todas las pantallas de ambos productos el mismo día -- mismo comportamiento e interacciones, paleta de marca nueva.
+
+**Journey UX unificado:** Admin RedPontis + Panel de Mundo + Superapp (los tres frentes comparten el mismo design system, así que el rebrandeo aplica a los tres a la vez, sin desfase visual entre plataformas).
+
+### #235 — Fix: line endings del rebrandeo + contraste de tabs inactivos en admin
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Después del rebrandeo masivo, cerrar dos papercuts reales encontrados en revisión: line endings corruptos por el cambio de archivos a gran escala, contraste insuficiente en tabs inactivos del admin, y el gris de texto de estado "default" (sin dato / inactivo) con muy poco contraste contra el fondo claro en varias pantallas de ambos productos.
+
+**Qué se resolvió:** Fix de line endings + contraste de tabs inactivos (commit `540b36f`), más un ajuste del tono de gris en los tokens de estado default compartidos (commit `1634a48`) -- ambos aplicados el mismo día como cierre directo del rebrandeo.
+
+**Flujo / diseño técnico:** Un solo token de color reutilizado en badges/pills/estado por defecto en todo el sistema de diseño -- el ajuste se propaga a cada lugar que lo usa sin tocarlos uno por uno.
+
+**Flujo de usuario:** Texto de estado (ej. "Sin actividad", "Pendiente") y tabs inactivos ahora se leen con contraste suficiente en cualquier pantalla de ambos productos.
+
+**Journey UX unificado:** Admin RedPontis + Superapp (mismo token de diseño, mismo fix, ambos frentes). Fix de accesibilidad transversal, sin journey de usuario propio más allá de "ahora se puede leer".
+
+### #236 — Instalar JOI 360 como PWA en móvil, landing→superapp completo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Que la superapp se pueda instalar como PWA desde el celular, con un landing real antes de entrar -- no solo funcionar dentro de una pestaña del navegador.
+
+**Qué se resolvió:** Manifest + landing de instalación conectados de punta a punta -- desde el landing público hasta la superapp instalada como ícono nativo en el celular (commit `c8498af`).
+
+**Flujo / diseño técnico:** El manifest declara ícono, nombre y colores de la PWA -- el navegador (Chrome/Android) detecta que es instalable y ofrece "Agregar a pantalla de inicio"; una vez instalada, abre directo en la superapp sin barra de navegador.
+
+**Flujo de usuario:** El usuario entra al link desde el celular, ve el landing, y puede instalar JOI 360 como cualquier app nativa -- queda con su propio ícono, sin depender de tener el navegador abierto cada vez.
+
+**Journey UX unificado:** Superapp (landing → instalación PWA → superapp instalada). Un solo touchpoint, pero cambia de raíz cómo el usuario accede de ahí en adelante -- de "abrir un link" a "abrir una app".
+
+### #237 — Bug: saldo mostraba "2 37.14" en vez de "S/ 37.14" — moneda corrupta
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Corregir este bug real: el saldo de wallet se mostraba como "2 37.14" en vez de "S/ 37.14" en la superapp -- el símbolo de moneda salía corrupto.
+
+**Qué se resolvió:** El formateo del monto concatenaba mal el símbolo de moneda (perdía la "S/" y dejaba un "2" residual al inicio) -- corregido en el punto exacto donde se arma el string de saldo mostrado (commit `9a19d06`).
+
+**Flujo / diseño técnico:** Bug de formato puro en la función que arma el texto del saldo -- ver el commit real para la línea exacta corregida.
+
+**Flujo de usuario:** El saldo de wallet ahora se lee correctamente como "S/ 37.14" en la pantalla principal de cualquier usuario con saldo, en vez de mostrar un símbolo corrupto que generaba desconfianza sobre el monto real.
+
+**Journey UX unificado:** Superapp (un solo touchpoint, sin handoff a otra plataforma). Bug de formato visible directamente donde el usuario mira su saldo.
+
+### #238 — Precompra de evento — lado del asistente + entrega en comercio
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar el tramo que la tarea #231 había dejado pendiente a propósito: que el asistente pueda comprar los productos de precompra desde la superapp tras comprar su entrada, y que el comercio pueda marcar la entrega en el punto de evento.
+
+**Qué se resolvió:** Pantalla de precompra en la superapp conectada al catálogo real de productos por evento (mismo mecanismo `event_id` que ya usaba la autoría del lado del organizador), más la vista de entrega del lado del comercio para marcar qué se retiró (commit `e3ebfe5`).
+
+**Flujo / diseño técnico:** Asistente compra su entrada -> ve los productos de precompra disponibles para ese evento -> compra con su saldo real -> el pedido queda pendiente de entrega -> el comercio, en su panel o el POS del evento, lo marca como entregado.
+
+**Flujo de usuario:** El asistente no solo compra su entrada -- también puede pre-comprar comida o merchandising del evento con anticipación y solo pasar a recogerlo, sin hacer fila para comprar en el momento.
+
+**Journey UX unificado:** Superapp (el asistente compra el producto de precompra) → Panel de Merchant / POS del evento (marca la entrega). Cierra el journey que la tarea #231 había dejado abierto a propósito -- ahora la autoría (comercio carga producto) y el consumo (asistente compra, comercio entrega) están conectados de punta a punta.
+
+### #239 — SQL: restaurar validación de dueño en mover_saldo_wallet (regresión de #181 sobre #121)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Restaurar la validación de dueño/turno en `mover_saldo_wallet` que la tarea #121 había cerrado -- una migración posterior (fix-181, restricciones granulares de dependiente) reescribió la función completa y, sin querer, no conservó esa validación, dejando otra vez abierto el hueco de seguridad que #121 había cerrado.
+
+**Qué se resolvió:** Nueva versión de la función que combina ambas validaciones en un solo cuerpo -- la de dueño/turno de #121 y las de restricciones de dependiente de #181 -- documentada en `fix-234-restaurar-dueno-wallet.sql`, sin que ninguna de las dos pise a la otra.
+
+**Flujo / diseño técnico:** La función valida en el mismo paso: turno de POS abierto O dueño/apoderado autenticado, Y las restricciones del dependiente (horario, límite diario, productos bloqueados) si aplica -- todo antes de tocar cualquier fila de saldo.
+
+**Flujo de usuario:** Transparente para el usuario legítimo -- el efecto es que un gap de seguridad real (cualquiera con la llave anónima podía volver a mover saldo ajeno) queda cerrado de nuevo, sin reabrir el problema de restricciones que #181 había resuelto.
+
+**Journey UX unificado:** Superapp / POS (origen del movimiento) → RPC de wallet (valida dueño/turno + restricciones en un solo paso) → Wallet. Journey de seguridad restaurado -- mismo patrón que #121, ahora robusto contra la regresión que #181 había introducido sin querer.
+
+### #240 — Suscripciones (membresía real, modelo YOKI) + Cashback modalidad por_comercio
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Construir Suscripciones como membresía real (modelo YOKI): que el mundo cree planes desde su propio Panel de Mundo con branding propio (banner, logo, color exacto en cuentagotas), categoría de beneficio (sorteo, descuento, acceso, producto, otro) y comercios afiliados -- con cobro RECURRENTE real contra la wallet del usuario, no solo el cobro único al vincular un dependiente que ya existía. En paralelo, construir Cashback con dos modalidades configurables por RedPontis (flat o por_comercio) y una cola de aprobación para que el mundo solo pueda solicitar cambios, nunca aplicarlos directo.
+
+**Qué se resolvió:** `subscription_plans` extendida con branding y categoría de beneficio, más `subscription_plan_merchants` (comercios afiliados) y `subscription_suscriptores` (suscriptor real, con `proxima_fecha_cobro`) -- habilitando cobro recurrente de verdad. Un motor de ciclo (`sincronizarCicloSuscripcionesMembresia`) corre en cada carga de Wallet, igual que ya hacía el motor de BNPL, cobrando cuando la fecha vence y avanzando el período. Cashback sumó el campo `modalidad` (flat/por_comercio) al config de la capacidad, un cálculo de cashback-por-comercio derivado de `transactions` (sin tocar la función que mueve dinero real), y `cashback_change_requests` para que el mundo pida cambios que RedPontis aprueba desde Gobierno.
+
+**Flujo / diseño técnico:** Mundo activa Suscripciones -> crea un plan con su marca (banner/logo/color), elige categoría de beneficio y comercios afiliados -> el usuario se suscribe, paga el primer período -> desde ahí, cada vez que abre su Wallet, el sistema revisa si tocaba cobrar y lo hace solo, sin que nadie tenga que apretar un botón. Cashback: RedPontis define la modalidad -> el mundo puede pedir un cambio -> RedPontis aprueba o rechaza con motivo -> si aprueba, se aplica.
+
+**Flujo de usuario:** El usuario ve el plan con la marca del mundo (no un plan genérico), se suscribe una vez, y su saldo se descuenta solo cada período sin que tenga que volver a confirmar nada. En Wallet, si el mundo eligió cashback por comercio, ve el desglose de cuánto ganó en cada tienda; si eligió flat, ve solo el acumulado total.
+
+**Journey UX unificado:** Panel de Mundo (crea el plan con marca propia, o pide cambio de modalidad de cashback) → Admin RedPontis / Gobierno (aprueba solicitudes de cashback) → Superapp (usuario se suscribe, cobro recurrente automático en cada carga de Wallet; ve su cashback acumulado o desglosado). Journey nuevo de punta a punta: es el primer motor de cobro recurrente real del ecosistema fuera de BNPL, y la primera capacidad donde el mundo pide un cambio en vez de aplicarlo directo.
+
+### #241 — Bug: comercios afiliados en Suscripciones no mostraban nombre (encontrado y corregido en vivo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Verificación en vivo, pedida explícitamente: confirmar que la superapp renderiza correctamente las capacidades recién construidas (Suscripciones, Cashback) contra datos reales de Supabase, no solo contra el código.
+
+**Qué se resolvió:** Al crear un plan real de prueba en el Panel de Mundo, el selector de "comercios afiliados" mostraba checkboxes sin ningún nombre -- imposible saber a qué comercio se estaba afiliando el plan. La causa: el componente leía `c.nombre`, pero la función que trae los comercios desde Supabase devuelve filas crudas con la columna `name` (no `nombre`, que es el campo usado en el resto del código local). Corregido cambiando la lectura a `c.name`.
+
+**Flujo / diseño técnico:** `fetchMerchantsRemote` hace `select=*` directo contra la tabla `merchants` de Supabase -- devuelve el nombre de columna real de la base (`name`), distinto del campo `nombre` que usa el resto de la app (mapeado desde el store local). El checkbox de comercios afiliados fue el único punto que leyó ese resultado crudo sin pasar por el mapeo.
+
+**Flujo de usuario:** Antes del fix: el mundo no podía saber qué comercio estaba afiliando a un plan de Suscripciones -- el checkbox aparecía vacío. Después: cada comercio se ve con su nombre real, se puede elegir con confianza.
+
+**Journey UX unificado:** Panel de Mundo (crear/editar plan de Suscripción, elegir comercios afiliados) → Supabase (`merchants`). Bug encontrado en vivo durante la verificación pedida, corregido y desplegado el mismo día.
+
+### #242 — Bug: CashbackTemplate mostraba data mockeada, no real (encontrado y corregido en vivo)
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Continuación de la misma verificación en vivo: confirmar que Cashback también renderiza correctamente en la superapp con datos reales, no mockeados.
+
+**Qué se resolvió:** La tarjeta de Cashback en "Mis módulos" del Home de la superapp (independiente de la que vive embebida dentro de Wallet) seguía mostrando un saldo fijo ("S/ 24.50"), un historial de 3 transacciones hardcodeadas con nombres de comercios que ni siquiera existen en el mundo probado -- nunca se había conectado a los datos reales, pese a que la tarjeta de Wallet sí los usa desde antes. Corregida para usar el mismo hook `useWalletLive` que ya usa Wallet, y `useMerchantsLive` para mostrar el nombre real del comercio donde más cashback se ganó.
+
+**Flujo / diseño técnico:** El componente standalone de Cashback (`CashbackTemplate`) vivía desde una versión anterior con datos de ejemplo escritos directo en el código -- nunca se actualizó cuando Cashback pasó a tener datos reales en Wallet. Ahora lee saldo, desglose por comercio e historial real de transacciones, igual que Wallet.
+
+**Flujo de usuario:** Antes del fix: cualquier usuario que entrara al tile de Cashback veía un saldo y un historial falsos, sin relación con su actividad real -- una desconexión seria entre lo que Wallet mostraba (correcto) y lo que este tile mostraba (mockeado). Después: mismo dato real en los dos lugares donde aparece Cashback.
+
+**Journey UX unificado:** Superapp Home (tile "Cashback" en Mis módulos) → Supabase (`transactions`, vía el mismo hook que usa Wallet). Bug encontrado en vivo durante la verificación pedida, corregido y desplegado el mismo día -- ejemplo real de por qué vale la pena probar cada capacidad en los dos lugares donde renderiza, no solo en uno.
+
+### #243 — Documento Word: Roadmap de entrega para el CTO — mapeo de capacidades, paneles y propuesta de bloques
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Armar un documento en Word, en tono accesible para alguien de negocio/CTO sin conocimiento técnico profundo: qué es cada cosa, cómo se ve el menú lateral de cada panel según qué capacidades están activas, puntos de choque de renderización encontrados, y una propuesta de roadmap de entrega por bloques -- dejando explícito que este ecosistema es un prototipo funcional (no producción) y que la decisión real de qué construir es de desarrollo (Salvador) y del CTO.
+
+**Qué se resolvió:** Documento de 7 secciones con capturas reales tomadas en vivo contra el prototipo (no maquetas): glosario de los 5 frentes, mapa completo del sidebar por panel, capturas del flujo de creación/entrega de mundo, tabla de puntos de choque (incluyendo los dos bugs de #241/#242, encontrados y corregidos en el camino), gaps de marca en la superapp (login sin brandear, sin stepper de bienvenida, sin colorimetría aplicada), y una propuesta de roadmap en 6 bloques -- ajustada después a pedido explícito para usar Colegio Raimondi (no Jockey Plaza) como ejemplo de capacidades de flujo completadas, y para excluir Wallet/Comercios/Compras y Transacciones/Inventario del ejemplo destacado por ser base configurable, no flujo propio de cara al usuario.
+
+**Flujo / diseño técnico:** Generado con python-docx a partir de una auditoría de código real (rutas de sidebar, wizard de 7 pasos, hub de entrega de credenciales) cruzada con verificación en vivo en el navegador -- cada afirmación del documento tiene una captura o una lectura de código real detrás, sin contenido inventado.
+
+**Flujo de usuario:** No aplica -- es un entregable de documentación para stakeholders, no una feature del producto.
+
+**Journey UX unificado:** No aplica -- documento de referencia, no un flujo de usuario del ecosistema.
+
+## Commits reales de esta fase
+
+| Fecha | Hash | Commit |
+|---|---|---|
+| 2026-08-19 | `ef3ee5a` | feat(app): rebrandeo completo a JoiSolutions Design System v1.0 (Navy + Gold) |
+| 2026-08-19 | `9a19d06` | fix(app): saldo mostraba "2 37.14" en vez de "S/ 37.14" -- moneda corrupta |
+| 2026-08-19 | `c8498af` | feat: instalar JOI 360 como PWA en móvil, landing->superapp completo |
+| 2026-08-19 | `a4baf25` | feat(admin): rebrandeo a JoiSolutions Design System v1.0 (Navy + Gold) |
+| 2026-08-19 | `540b36f` | fix: line endings del rebrandeo + contraste de tabs inactivos en admin |
+| 2026-08-19 | `1634a48` | Oscurece el gris de estado default en admin y superapp |
+| 2026-08-19 | `98d3290` | docs: SQL para restaurar validación de dueño en mover_saldo_wallet |
+| 2026-08-19 | `e3ebfe5` | feat: Precompra de evento -- lado del asistente + entrega en comercio |
+| 2026-08-20 | `06a24bd` | feat: Suscripciones (membresia real, modelo YOKI) + Cashback modalidad por_comercio |
+| 2026-08-24 | `94abf3c` | fix(admin): comercios afiliados en Suscripciones no mostraban nombre |
+| 2026-08-24 | `18e0606` | fix(app): CashbackTemplate mostraba data mockeada, no real |
+
+*11 commits en esta fase.*

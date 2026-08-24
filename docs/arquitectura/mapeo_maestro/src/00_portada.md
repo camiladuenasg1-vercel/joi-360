@@ -1,6 +1,6 @@
 # JOI360 — Mapeo de Capacidades, Dependencias y Render
 
-Documento base de arquitectura · Versión **1.0** · 12 de agosto de 2026
+Documento base de arquitectura · Versión **1.1** · 24 de agosto de 2026
 
 Este es el documento vivo que centraliza todo lo construido en JOI360 hasta la fecha: qué capacidad hace qué, cómo se activa, de qué depende, qué renderiza en cada frente (Admin RedPontis, Panel de Mundo, Panel de Merchant, Panel de Organizador, Superapp, POS/Operador), qué tablas de Supabase la sostienen, y qué discrepancias/deuda técnica existen hoy entre lo que el negocio asume y lo que el código realmente hace.
 
@@ -24,5 +24,6 @@ Este documento se le entrega al equipo de desarrollo (incluyendo al desarrollado
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0 | 2026-08-12 | Primera versión del documento base. Cubre las 22 capacidades del plan de negocio (16 construidas total o parcialmente, 6 aún planificadas), los 6 frentes del ecosistema completos con flujos de usuario/experiencia/modelo de datos, el registro de esquema Supabase consolidado (más de 45 tablas), el sistema de diseño de los 2 frentes web (admin + superapp), y 12 discrepancias/hallazgos de deuda técnica priorizados por severidad — incluyendo un hallazgo de seguridad de severidad alta en la RPC de movimiento de saldo (`mover_saldo_wallet`). |
+| 1.1 | 2026-08-24 | Corte semanal. Cerrado el hallazgo de seguridad #1 (`mover_saldo_wallet`, `fix-234`) y el flujo de precompra del lado del asistente. Suscripciones ganó un segundo mecanismo real — membresía recurrente con marca propia (modelo YOKI). Cashback ganó modalidad configurable (flat/por_comercio) y cola de aprobación de cambios. Dos bugs encontrados y corregidos en verificación en vivo (comercios afiliados sin nombre en Suscripciones; tile de Cashback con data mockeada). Dos discrepancias nuevas documentadas (#13 caché de capacidades en el admin, #14 activación informal del POS/Operador de Mundo). Rebranding JoiSolutions (Navy + Gold) e instalación como PWA en ambos frentes. Se entregó además un roadmap de bloques de entrega para el CTO (documento aparte, `Joi360_Roadmap_Entrega_CTO.docx`), dejando explícito que este ecosistema es un prototipo funcional — la decisión de qué construir en el sistema real es de desarrollo (Salvador) y del CTO. |
 
-*Próxima actualización planificada: tras cerrar (a) el flujo de compra/redención de Precompra en la superapp, y (b) el fix del bug reportado de contraseña en blanco / campos NULL en la entrega del Panel de Mundo.*
+*Corte semanal: viernes. Próxima actualización: 28-ago-2026.*

@@ -22,7 +22,7 @@ from docx.oxml import OxmlElement
 BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, "src")
 
-VERSION = "1.0"
+VERSION = "1.1"
 OUT_NAME = f"JOI360_Mapeo_Capacidades_Dependencias_Render_v{VERSION}.docx"
 OUT_PATHS = [
     os.path.join(BASE, OUT_NAME),
