@@ -179,16 +179,23 @@ function TarjetaOperadorMundo({ m }) {
   const [ver, setVer] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const dirty = pin !== (m.posPin || "");
+  // Canal formal, no un campo de texto suelto (discrepancia #14 del maestro):
+  // el estado real es "¿hay una clave guardada?" — igual que cualquier otro
+  // canal de emisión/adquirencia del proyecto, con su propio pill de
+  // Activo/Inactivo y un apagado explícito en vez de "borra el texto y
+  // acuérdate de guardar".
+  const activo = !!m.posPin;
 
-  const guardar = async () => {
+  const guardar = async (nuevoPin) => {
     setGuardando(true);
     try {
-      await actualizarPosPinMundoRemote(m.id, pin.trim() || null);
+      await actualizarPosPinMundoRemote(m.id, nuevoPin.trim() || null);
       update(s => {
         const mu = (s.mundos||[]).find(x => x.id === m.id);
-        if (mu) mu.posPin = pin.trim() || null;
+        if (mu) mu.posPin = nuevoPin.trim() || null;
       });
-      notify(pin.trim() ? "Clave de operador del mundo guardada." : "Clave de operador del mundo eliminada.");
+      setPin(nuevoPin.trim());
+      notify(nuevoPin.trim() ? "Canal de Operador de Mundo activado." : "Canal de Operador de Mundo desactivado.");
     } catch (e) {
       notify("No se pudo guardar la clave. Intenta de nuevo.", "error");
     } finally {
@@ -196,6 +203,7 @@ function TarjetaOperadorMundo({ m }) {
     }
   };
   const generar = () => setPin(String(Math.floor(1000 + Math.random() * 9000)));
+  const desactivar = () => guardar("");
 
   return (
     <div className="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col gap-3 min-w-0">
@@ -203,10 +211,11 @@ function TarjetaOperadorMundo({ m }) {
         <div className="w-9 h-9 rounded-lg bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
           <Icon n="badge" className="text-[18px]" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-tight">POS / Operador del Mundo</p>
           <p className="font-mono text-[9px] uppercase text-on-surface-variant tracking-wider">Código {m.codigo}</p>
         </div>
+        <Pill color={activo ? "bg-secondary-container" : "bg-surface-container"}>{activo ? "Activo" : "Inactivo"}</Pill>
       </div>
       <p className="text-xs text-on-surface-variant">Clave para portero, banditas o mesa de ayuda — sin cobrar saldo.</p>
       <div className="flex items-center gap-1">
@@ -218,8 +227,14 @@ function TarjetaOperadorMundo({ m }) {
       </div>
       <div className="flex gap-1.5">
         <BtnOutline onClick={generar} className="flex-1 !px-2 !py-2 text-xs"><Icon n="casino" className="text-[14px]"/> Generar</BtnOutline>
-        <BtnPrimary onClick={guardar} disabled={!dirty} loading={guardando} loadingLabel="Guardando…" className="flex-1 !px-2 !py-2 text-xs"><Icon n="save" className="text-[14px]"/> Guardar</BtnPrimary>
+        <BtnPrimary onClick={() => guardar(pin)} disabled={!dirty} loading={guardando} loadingLabel="Guardando…" className="flex-1 !px-2 !py-2 text-xs"><Icon n="save" className="text-[14px]"/> Guardar</BtnPrimary>
       </div>
+      {activo && (
+        <button type="button" onClick={desactivar} disabled={guardando}
+          className="text-[11px] text-error hover:underline self-start disabled:opacity-50">
+          Desactivar canal
+        </button>
+      )}
       <a href={`${window.location.origin}${window.location.pathname}#/operador-mundo/${m.id}`} target="_blank" rel="noreferrer"
         className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary text-xs font-medium transition-colors">
         <Icon n="open_in_new" className="text-[14px]"/> Abrir POS del Mundo

@@ -819,9 +819,16 @@ export async function refreshMundosLive() {
       const base = byId.get(w.id);
       if (base) {
         Object.assign(base, patch);
-        // Mundo ya reconciliado antes con modulos vacíos (capacity_configs no
-        // existían todavía en ese momento) — reintenta el backfill.
-        if (!(base.modulos || []).length) base.modulos = modulosDe(w.id);
+        // refreshMundosLive() corre una sola vez por sesión de pestaña (App.jsx,
+        // useEffect con deps vacías) — es la única reconciliación con Supabase
+        // que va a pasar en todo el ciclo de vida de esta pestaña. Antes solo
+        // pisaba `modulos` si la lista local estaba vacía (backfill de una
+        // carrera puntual), así que una capacidad activada desde OTRA pestaña
+        // u otro admin nunca aparecía acá hasta limpiar el caché local a mano
+        // (hallado en vivo, 24-ago). Como es la única vez que se sincroniza,
+        // no hay ninguna edición local "a medio hacer" que este refresh pueda
+        // pisar — Supabase manda siempre en este punto.
+        base.modulos = modulosDe(w.id);
         // La base manda sobre lo que tuviera esta pestaña en memoria.
         const ec = eventosConfigDe(w.id);
         if (ec) base.eventosConfig = ec;
