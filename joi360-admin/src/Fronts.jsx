@@ -3140,7 +3140,7 @@ function SponsorSuscripcionesTab({ m }) {
                 {comerciosMundo.map(c => (
                   <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-outline-variant text-xs cursor-pointer hover:bg-surface-container-low">
                     <input type="checkbox" checked={f.comercios.includes(c.id)} onChange={() => toggleComercio(c.id)} />
-                    {c.nombre}
+                    {c.name}
                   </label>
                 ))}
               </div>
