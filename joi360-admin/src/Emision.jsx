@@ -3,11 +3,41 @@
  * Muestra canales agrupados por categoría (billetera_digital | pasarela_pago | transferencia)
  * y el catálogo de PSP/Proveedores con su estado de integración.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CANALES_EMISION, PSP_PROVIDERS, CATEGORIAS_EMISION, canalesPorCategoria, update, getState } from "./store";
 import { Icon, Toggle, BtnPrimary, BtnOutline, Field, inputCls, notify, InfoTip, NumInput } from "./ui";
-import { syncEmissionChannels, pruneStaleEmissionChannels } from "./supabase";
+import { syncEmissionChannels, pruneStaleEmissionChannels, fetchEmissionChannelsAdmin } from "./supabase";
+
+// Discrepancia real (24-ago): el catálogo global solo vivía en localStorage
+// de quien lo editó — pushChannelsToSupabase subía cada guardado, pero
+// nadie volvía a leer de Supabase al montar. Dos sesiones de RedPontis
+// editando el mismo catálogo se pisaban en silencio (mismo patrón que la
+// discrepancia #13 de capacidades de mundo, ahora al nivel de catálogo
+// global). Solo se sobreescriben los campos que Supabase realmente
+// rastrea — categoría/icono/descripción quedan del catálogo local, que es
+// donde de verdad se editan hoy.
+function mergeRemoteEmisionChannels(local, remoteRows) {
+  const remoteById = new Map((remoteRows || []).map(r => [r.id, r]));
+  return local.map(ch => {
+    const r = remoteById.get(ch.id);
+    if (!r) return ch;
+    const psp = PSP_PROVIDERS.find(p => p.nombre === r.psp_name);
+    return {
+      ...ch,
+      disponible: r.global_active,
+      psp_id: psp ? psp.id : ch.psp_id,
+      checkout_type: r.channel_type || ch.checkout_type,
+      montoMin: r.monto_min ?? ch.montoMin,
+      montoMax: r.monto_max ?? ch.montoMax,
+      comisionPSP: r.comision_psp ?? ch.comisionPSP,
+      comisionTarget: r.comision_target || ch.comisionTarget,
+      tiempoAcreditacion: r.acreditacion_time || ch.tiempoAcreditacion,
+      horarioGlobal: r.horario_global || ch.horarioGlobal,
+      monedas: r.monedas || ch.monedas,
+    };
+  });
+}
 
 // Empuja el catálogo global a `emission_channels` (Supabase) — antes esta
 // tabla era un seed manual congelado que joi360-app leía sin que el admin
@@ -43,6 +73,15 @@ export function Emision() {
   const [editing, setEditing] = useState(null);
   const [channels, setChannels] = useState(() => getState().emisionChannels || CANALES_EMISION);
   const [f, setF] = useState(null);
+
+  useEffect(() => {
+    fetchEmissionChannelsAdmin().then(rows => {
+      if (!rows || !rows.length) return;
+      const merged = mergeRemoteEmisionChannels(getState().emisionChannels || CANALES_EMISION, rows);
+      update(s => { s.emisionChannels = merged; });
+      setChannels(merged);
+    }).catch(e => console.warn("[emission_channels fetch]", e));
+  }, []);
 
   const grupos = canalesPorCategoria(channels);
 

@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "./hooks";
-import { update, uid, HARDWARE_CATALOG, REDES_PAGO } from "./store";
+import { update, HARDWARE_CATALOG, REDES_PAGO, CANALES_ADQUIRENCIA } from "./store";
 import { Icon, Pill, Drawer, BtnPrimary, BtnOutline, Field, inputCls, Toggle, notify, NumInput } from "./ui";
-import { syncAcquiringChannels, pruneStaleAcquiringChannels } from "./supabase";
+import { syncAcquiringChannels, pruneStaleAcquiringChannels, fetchAcquiringChannelsAdmin } from "./supabase";
 
 // Mismo patrón que Emision.jsx/emission_channels: empuja el catálogo a
 // Supabase en cada guardado — antes esto solo vivía en localStorage de quien
@@ -17,12 +17,47 @@ function pushChannelsToSupabase(channels) {
   pruneStaleAcquiringChannels(channels.map(ch => ch.id)).catch(e => console.warn("[acquiring_channels prune]", e));
 }
 
-const CHANNELS_SEED = [
-  { id: "pos", icon: "point_of_sale", nombre: "POS Físico", desc: "Terminales físicas de cobro en los comercios del ecosistema", liquidacion: "Al día siguiente hábil", mdr: 1.5, fijoTx: 0.10, habilitado: true, redIds: ["visa", "mc", "joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
-  { id: "qr", icon: "qr_code_scanner", nombre: "Pagos con QR", desc: "Billeteras y QR interoperable", liquidacion: "Acreditación inmediata", mdr: 0.8, fijoTx: 0, habilitado: true, redIds: ["joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
-  { id: "online", icon: "language", nombre: "Gateway en línea", desc: "Pagos desde e-commerce y links de pago generados en el app", liquidacion: "A los 2 días hábiles", mdr: 2.0, fijoTx: 0.20, habilitado: true, redIds: ["visa", "mc", "amex"] },
-  { id: "tap2phone", icon: "tap_and_play", nombre: "Tap2Phone (App POS)", desc: "NFC en el celular del dependiente. Sin hardware adicional.", liquidacion: "Acreditación inmediata", mdr: 1.2, fijoTx: 0, habilitado: false, redIds: ["joi_bandita", "joi_wallet"] },
-];
+// Discrepancia real (24-ago): este catálogo comercial (MDR/liquidación) tenía
+// su propio set de ids (pos/qr/online/tap2phone) totalmente distinto del que
+// un mundo realmente puede activar en Módulos → Comercios
+// (CANALES_ADQUIRENCIA: pos_fisico/app_operador/qr_estatico/tap2phone, ver
+// store.js). Resultado: configurar MDR/liquidación acá nunca podía
+// corresponder a lo que el mundo activaba — eran dos catálogos que sonaban
+// parecido pero no se tocaban. Se deriva directo de CANALES_ADQUIRENCIA (id/
+// nombre/desc/icono canónicos) y se le agregan encima los parámetros
+// comerciales. "Gateway en línea" salía del set anterior porque no
+// corresponde a ningún canal que un mundo pueda activar hoy.
+const COMERCIAL_DEFAULTS = {
+  pos_fisico:    { liquidacion: "Al día siguiente hábil",   mdr: 1.5, fijoTx: 0.10, redIds: ["visa", "mc", "joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
+  app_operador:  { liquidacion: "Acreditación inmediata",   mdr: 0.8, fijoTx: 0,    redIds: ["joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
+  qr_estatico:   { liquidacion: "Acreditación inmediata",   mdr: 0.8, fijoTx: 0,    redIds: ["joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
+  tap2phone:     { liquidacion: "Acreditación inmediata",   mdr: 1.2, fijoTx: 0,    redIds: ["joi_bandita", "joi_wallet"] },
+};
+const CHANNELS_SEED = CANALES_ADQUIRENCIA.map(ch => ({
+  id: ch.id, icon: ch.icon, nombre: ch.nombre, desc: ch.desc,
+  habilitado: ch.disponible,
+  ...(COMERCIAL_DEFAULTS[ch.id] || { liquidacion: "Al día siguiente hábil", mdr: 1.5, fijoTx: 0, redIds: ["joi_wallet", "joi_bandita"] }),
+}));
+
+// Igual que en Emision.jsx: solo se pisan los campos que Supabase de verdad
+// rastrea (comercial + on/off global) — id/nombre/desc/icono quedan del
+// catálogo canónico (CANALES_ADQUIRENCIA), que es la fuente real de verdad
+// de qué canales existen.
+function mergeRemoteAcquiringChannels(local, remoteRows) {
+  const remoteById = new Map((remoteRows || []).map(r => [r.id, r]));
+  return local.map(ch => {
+    const r = remoteById.get(ch.id);
+    if (!r) return ch;
+    return {
+      ...ch,
+      habilitado: r.global_active,
+      liquidacion: r.settlement_policy || ch.liquidacion,
+      mdr: r.mdr ?? ch.mdr,
+      fijoTx: r.fijo_tx ?? ch.fijoTx,
+      redIds: r.networks && r.networks.length ? r.networks : ch.redIds,
+    };
+  });
+}
 
 const LIQUIDACIONES = [
   { v: "Acreditación inmediata", d: "El monto se refleja en la cuenta virtual del comercio en el momento que se confirma la transacción." },
@@ -30,17 +65,20 @@ const LIQUIDACIONES = [
   { v: "A los 2 días hábiles", d: "Corte a las 19:00 PE. El saldo se acredita 2 días hábiles después del corte." },
 ];
 
-const CANAL_BLANK = {
-  id: "", icon: "point_of_sale", nombre: "", desc: "", liquidacion: "Al día siguiente hábil",
-  mdr: 1.5, fijoTx: 0, habilitado: true, redIds: ["joi_wallet", "joi_bandita"],
-};
-
 export function Adquirencia() {
   const st = useStore();
   const channels = st.adqChannels || CHANNELS_SEED;
   const [editing, setEditing] = useState(null);
-  const [newCanalOpen, setNewCanalOpen] = useState(false);
   const [hwTab, setHwTab] = useState(false);
+
+  useEffect(() => {
+    fetchAcquiringChannelsAdmin().then(rows => {
+      if (!rows || !rows.length) return;
+      const merged = mergeRemoteAcquiringChannels(st.adqChannels || CHANNELS_SEED, rows);
+      update(s => { s.adqChannels = merged; });
+    }).catch(e => console.warn("[acquiring_channels fetch]", e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const totalCom = (st.comercios||[]).length;
   const totalMundos = (st.mundos||[]).filter(m => (m.modulos||[]).some(x => x.id === "comercios" && x.enabled)).length;
@@ -75,9 +113,6 @@ export function Adquirencia() {
           <BtnOutline onClick={() => setHwTab(!hwTab)}>
             <Icon n="devices" className="text-[18px]" /> {hwTab ? "Ver canales" : "Ver hardware"}
           </BtnOutline>
-          <BtnPrimary onClick={() => { setEditing(null); setNewCanalOpen(true); }}>
-            <Icon n="add" className="text-[18px]" /> Nuevo canal
-          </BtnPrimary>
         </div>
       </div>
 
@@ -174,7 +209,6 @@ export function Adquirencia() {
       )}
 
       <ChannelDrawer ch={editing} onClose={() => setEditing(null)} channels={channels} />
-      <NuevoCanalDrawer open={newCanalOpen} onClose={() => setNewCanalOpen(false)} channels={channels} />
     </div>
   );
 }
@@ -262,66 +296,8 @@ function ChannelDrawer({ ch, onClose, channels }) {
   );
 }
 
-/* ---- Drawer: Nuevo canal ---- */
-function NuevoCanalDrawer({ open, onClose, channels }) {
-  const [f, setF] = useState({ ...CANAL_BLANK, redIds: ["joi_wallet"] });
-  const cats = [...new Set(REDES_PAGO.map(r => r.categoria))];
-  const toggleRed = (rid) => setF({ ...f, redIds: f.redIds.includes(rid) ? f.redIds.filter(x => x !== rid) : [...f.redIds, rid] });
-
-  const save = () => {
-    if (!f.nombre) { notify("El nombre del canal es obligatorio.", "error"); return; }
-    let next = channels;
-    update(s => {
-      if (!s.adqChannels) s.adqChannels = JSON.parse(JSON.stringify(CHANNELS_SEED));
-      s.adqChannels.push({ ...f, id: uid("canal"), habilitado: true });
-      next = s.adqChannels;
-    });
-    pushChannelsToSupabase(next);
-    notify(`Canal "${f.nombre}" creado y habilitado.`);
-    setF({ ...CANAL_BLANK, redIds: ["joi_wallet"] });
-    onClose();
-  };
-
-  return (
-    <Drawer open={open} onClose={onClose} icon="add_circle" title="Crear nuevo canal de cobro" subtitle="Adquirencia Global" width="w-[520px]"
-      footer={<><BtnOutline onClick={onClose}>Cancelar</BtnOutline><BtnPrimary disabled={!f.nombre} onClick={save}><Icon n="add" className="text-[16px]" /> Crear canal</BtnPrimary></>}>
-      <div className="space-y-6">
-        <Field label="Nombre del canal *"><input className={inputCls} value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} placeholder="Ej. Cobro en evento, NFC Wearable…" /></Field>
-        <Field label="Descripción"><input className={inputCls} value={f.desc} onChange={e => setF({ ...f, desc: e.target.value })} placeholder="Breve descripción del canal" /></Field>
-
-        <Field label="Política de liquidación">
-          <div className="space-y-2">
-            {LIQUIDACIONES.map(l => (
-              <label key={l.v} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${f.liquidacion === l.v ? "border-primary bg-primary-fixed/20" : "border-outline-variant hover:border-primary/40"}`}>
-                <input type="radio" checked={f.liquidacion === l.v} onChange={() => setF({ ...f, liquidacion: l.v })} className="mt-0.5 text-primary" />
-                <div><p className="text-sm font-medium">{l.v}</p><p className="text-xs text-on-surface-variant">{l.d}</p></div>
-              </label>
-            ))}
-          </div>
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="MDR (%) — tasa sobre el monto"><NumInput className={inputCls} step="0.1" value={f.mdr} onChange={v => setF({ ...f, mdr: v })} /></Field>
-          <Field label="Cargo fijo por transacción (PEN)"><NumInput className={inputCls} step="0.01" value={f.fijoTx} onChange={v => setF({ ...f, fijoTx: v })} /></Field>
-        </div>
-
-        <section>
-          <h4 className="font-semibold text-sm mb-3">Redes de pago disponibles</h4>
-          {cats.map(cat => (
-            <div key={cat} className="mb-3">
-              <p className="font-mono text-[10px] uppercase text-outline mb-2">{cat}</p>
-              <div className="space-y-1.5">
-                {REDES_PAGO.filter(r => r.categoria === cat).map(r => (
-                  <label key={r.id} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${f.redIds.includes(r.id) ? "border-primary/40 bg-primary-fixed/10" : "border-outline-variant hover:border-primary/30"}`}>
-                    <input type="checkbox" checked={f.redIds.includes(r.id)} onChange={() => toggleRed(r.id)} className="w-4 h-4 rounded text-primary" />
-                    <span className="text-sm">{r.nombre}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
-      </div>
-    </Drawer>
-  );
-}
+// "Nuevo canal" (creación libre con id arbitrario) se retiró: un canal
+// custom nunca podía activarse por mundo, porque MundoDetail.jsx itera un
+// set fijo (CANALES_ADQUIRENCIA) — crear uno acá era una pantalla que
+// prometía algo que el resto del sistema no podía cumplir. El catálogo
+// ahora se deriva 1:1 de CANALES_ADQUIRENCIA (ver arriba).
