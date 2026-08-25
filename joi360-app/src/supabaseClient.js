@@ -462,11 +462,10 @@ export async function crearDependienteRemote(worldId, guardianUserId, nombre, dn
     method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({ world_id: worldId, guardian_user_id: guardianUserId, dependent_user_id: dependentUserId, nombre, dni: dni || null, alergias: alergias || null, alias: alias || null }),
   });
-  const moneda = await monedaDeMundo(worldId);
-  await rest("wallets?on_conflict=user_id,world_id", {
-    method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
-    body: JSON.stringify({ user_id: dependentUserId, world_id: worldId, balance: 0, currency: moneda }),
-  });
+  // getOrCreateWallet ya resuelve la sucursal dueña de la wallet compartida
+  // (si el mundo comparte saldo de grupo) — el dependiente debe caer en la
+  // misma fila que el titular, no en una wallet propia de esta sucursal.
+  await getOrCreateWallet(dependentUserId, worldId);
   // "Cobro por vinculación de perfil" (configField perfiles_suscripcion): si el
   // mundo lo exige, se cobra al tutor al vincular un dependiente nuevo. Va
   // neto a la recaudación de RedPontis, no al mundo — por eso el tipo es
@@ -486,17 +485,24 @@ export async function fetchDependienteBalance(dependentUserId, worldId) {
 // wallet (ese dinero es del titular, no se puede simplemente desaparecer)
 // y, si no, limpia también su bandita vinculada antes de borrar la fila.
 export async function verificarBloqueoEliminarDependiente(dependentUserId, worldId) {
-  const rows = await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${worldId}&select=balance`).catch(() => []);
+  const walletWorldId = await resolverWorldIdWallet(worldId);
+  const rows = await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${walletWorldId}&select=balance`).catch(() => []);
   return { balance: rows?.[0]?.balance != null ? +rows[0].balance : 0 };
 }
 export async function eliminarDependienteRemote(dependentUserId, worldId) {
+  const walletWorldId = await resolverWorldIdWallet(worldId);
   await rest(`nfc_bands?linked_user_id=eq.${dependentUserId}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ linked_user_id: null, estado: "disponible" }),
   }).catch(() => {});
-  await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${worldId}`, {
-    method: "DELETE", headers: { Prefer: "return=minimal" },
-  }).catch(() => {});
+  // Si la wallet es compartida con otras sucursales del grupo, no se borra —
+  // eliminar al dependiente de ESTA sucursal no debe borrarle el saldo real
+  // que sigue viviendo (y sigue siendo visible) para el resto del grupo.
+  if (walletWorldId === worldId) {
+    await rest(`wallets?user_id=eq.${dependentUserId}&world_id=eq.${walletWorldId}`, {
+      method: "DELETE", headers: { Prefer: "return=minimal" },
+    }).catch(() => {});
+  }
   await rest(`dependents?dependent_user_id=eq.${dependentUserId}&world_id=eq.${worldId}`, {
     method: "DELETE", headers: { Prefer: "return=minimal" },
   });
@@ -1031,7 +1037,36 @@ async function monedaDeMundo(worldId) {
   const rows = await rest(`worlds?id=eq.${worldId}&select=moneda`).catch(() => []);
   return rows?.[0]?.moneda || "PEN";
 }
+
+// ── Sucursales — saldo compartido (Etapa B) ─────────────────────────────────
+// Un mundo con comparte_saldo_grupo=true no tiene su propia wallet: todas las
+// sucursales del mismo grupo que también comparten saldo resuelven a la MISMA
+// fila de `wallets`, en vez de inventar una entidad "wallet de grupo" nueva —
+// se elige siempre la sucursal más antigua del grupo (created_at asc) como
+// dueña real de esa fila, así ningún otro código que asuma wallets.world_id
+// = un mundo real (moneda, liquidación, reportes) se rompe. Cacheado en
+// memoria de la pestaña: el grupo de un mundo no cambia en caliente durante
+// una sesión.
+const _walletWorldCache = new Map();
+async function resolverWorldIdWallet(worldId) {
+  if (_walletWorldCache.has(worldId)) return _walletWorldCache.get(worldId);
+  const rows = await rest(`worlds?id=eq.${worldId}&select=grupo_id,comparte_saldo_grupo`).catch(() => []);
+  const w = rows?.[0];
+  if (!w?.grupo_id || !w.comparte_saldo_grupo) {
+    _walletWorldCache.set(worldId, worldId);
+    return worldId;
+  }
+  const hermanos = await rest(`worlds?grupo_id=eq.${w.grupo_id}&comparte_saldo_grupo=eq.true&select=id&order=created_at.asc`).catch(() => []);
+  const principal = hermanos?.[0]?.id || worldId;
+  _walletWorldCache.set(worldId, principal);
+  return principal;
+}
 export async function getOrCreateWallet(userId, worldId) {
+  // Resuelve a la sucursal dueña de la wallet compartida, si aplica — de acá
+  // para abajo, `worldId` YA es el mundo real donde vive la fila de wallets;
+  // toda la función queda igual, solo cambia de qué mundo se lee/crea.
+  worldId = await resolverWorldIdWallet(worldId);
+
   // 1) Camino feliz: la wallet ya existe (caso normal en todo acceso post-creación).
   const existing = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`);
   if (existing && existing.length) return existing[0];

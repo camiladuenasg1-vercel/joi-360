@@ -396,6 +396,20 @@ export async function syncEmissionChannels(rows) {
   });
 }
 
+// Discrepancia real (24-ago): Emision.jsx/Adquirencia.jsx empujaban cada
+// guardado a Supabase pero nunca leían de vuelta al montar — el catálogo
+// global mostrado seguía siendo el último editado en ESA pestaña/localStorage,
+// no lo realmente vigente en Supabase. Dos sesiones de RedPontis editando el
+// mismo catálogo se pisaban en silencio sin que ninguna lo notara (mismo bug
+// de discrepancia #13 ya corregido para capacidades de mundo, ahora a nivel
+// de catálogo global). Se llama al montar cada pantalla.
+export async function fetchEmissionChannelsAdmin() {
+  return rest("emission_channels?select=*&order=id");
+}
+export async function fetchAcquiringChannelsAdmin() {
+  return rest("acquiring_channels?select=*&order=id");
+}
+
 // Gap real encontrado 27-jul: ids retirados del catálogo (ej. "yape"/"plin"
 // unificados en "qr_billetera", "card" renombrado a "culqi") quedaban
 // global_active=true en Supabase para siempre porque el upsert de arriba
@@ -1525,11 +1539,34 @@ export async function actualizarTicketSoporteRemote(id, patch) {
   });
 }
 
+// ── Sucursales — saldo compartido (Etapa B) ─────────────────────────────────
+// Mismo mecanismo que su contraparte en joi360-app (supabaseClient.js): un
+// mundo con comparte_saldo_grupo=true no tiene wallet propia -- todas las
+// sucursales del grupo que también comparten saldo resuelven a la fila real
+// de la sucursal más antigua del grupo, en vez de inventar una entidad
+// "wallet de grupo". Duplicado a propósito (los dos proyectos no comparten
+// módulos) en vez de intentar compartir código entre admin y superapp.
+const _walletWorldCacheAdmin = new Map();
+async function resolverWorldIdWallet(worldId) {
+  if (_walletWorldCacheAdmin.has(worldId)) return _walletWorldCacheAdmin.get(worldId);
+  const rows = await rest(`worlds?id=eq.${worldId}&select=grupo_id,comparte_saldo_grupo`).catch(() => []);
+  const w = rows?.[0];
+  if (!w?.grupo_id || !w.comparte_saldo_grupo) {
+    _walletWorldCacheAdmin.set(worldId, worldId);
+    return worldId;
+  }
+  const hermanos = await rest(`worlds?grupo_id=eq.${w.grupo_id}&comparte_saldo_grupo=eq.true&select=id&order=created_at.asc`).catch(() => []);
+  const principal = hermanos?.[0]?.id || worldId;
+  _walletWorldCacheAdmin.set(worldId, principal);
+  return principal;
+}
+
 // Devuelve el id de wallet real del usuario que reclamó el ticket, en el
 // mundo del ticket -- lo que necesita procesarDevolucionRemote para saber a
 // quién acreditar.
 export async function fetchWalletIdDeUsuario(userId, worldId) {
-  const rows = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).catch(() => []);
+  const walletWorldId = await resolverWorldIdWallet(worldId);
+  const rows = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${walletWorldId}&select=id`).catch(() => []);
   return rows?.[0]?.id || null;
 }
 
@@ -2204,10 +2241,15 @@ export async function buscarWalletPorCodigo(codigo, worldId) {
   const v = String(codigo || "").trim();
   const porCodigo = await rest(`app_profiles?codigo=eq.${encodeURIComponent(v.toUpperCase())}&select=id`).catch(() => []);
   const userId = porCodigo?.[0]?.id || v;
+  // Si esta sucursal comparte saldo de grupo, la wallet real vive en la
+  // sucursal principal del grupo -- sin esto, identificar al cliente desde
+  // cualquier sucursal que NO sea la principal devolvía "sin wallet" aunque
+  // sí tuviera saldo real compartido.
+  const walletWorldId = await resolverWorldIdWallet(worldId);
   // cashback_balance viaja acá también (Cashback macro, 13-ago) para que el
   // POS pueda mostrar cuánto cashback tiene disponible ni bien identifica al
   // cliente, sin un segundo round-trip.
-  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${worldId}&select=id,user_id,balance,cashback_balance`);
+  const rows = await rest(`wallets?user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${walletWorldId}&select=id,user_id,balance,cashback_balance`);
   return rows?.[0] || null;
 }
 // Bug real #114: hasta acá el balance se leía y se volvía a escribir con un
@@ -2261,7 +2303,11 @@ export async function cancelarChargeRequestRemote(id) {
 }
 
 export async function cobrarPOSRemote(userId, worldId, merchantId, monto, referencia, turnoId) {
-  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
+  // p_world_id sigue siendo la sucursal real (restricciones/contexto se
+  // validan por sucursal) -- solo la wallet a debitar cambia si el grupo
+  // comparte saldo.
+  const walletWorldId = await resolverWorldIdWallet(worldId);
+  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${walletWorldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
   const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
@@ -2276,7 +2322,8 @@ export async function cobrarPOSRemote(userId, worldId, merchantId, monto, refere
 // Recarga presencial en POS (efectivo / tarjeta presente) — el operador recibe
 // el pago físico y acredita el monto a la billetera del cliente ya identificado.
 export async function recargarPOSRemote(userId, worldId, merchantId, monto, canalId, referencia, turnoId) {
-  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${worldId}&select=id`).then(r => r?.[0]);
+  const walletWorldId = await resolverWorldIdWallet(worldId);
+  const wallet = await rest(`wallets?user_id=eq.${userId}&world_id=eq.${walletWorldId}&select=id`).then(r => r?.[0]);
   if (!wallet) return { ok: false, motivo: "sin_wallet" };
   const r = (await rest("rpc/mover_saldo_wallet", {
     method: "POST",
