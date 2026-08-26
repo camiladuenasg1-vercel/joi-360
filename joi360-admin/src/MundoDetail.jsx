@@ -7,6 +7,7 @@ import { EntregaMerchantDrawer } from "./EntregaMerchant";
 import { deleteWorldRemote, addMerchantRemote, reconciliarComerciosMundo, crearOrganizadorRemote, fetchOrganizadoresRemote, desactivarOrganizadorRemote, actualizarOrganizadorRemote, errorControlado, logErrorControlado, fetchPosDevicesDeMundo, fetchVolumenPorComercioMundo, fetchPromocionesMundo, crearPromocionRemote, actualizarPromocionRemote, eliminarPromocionRemote, actualizarEstadoMerchantRemote, actualizarMerchantRemote, eliminarMerchantRemote, verificarBloqueosEliminacionMerchant, verificarBloqueosEliminacionMundo, uploadArchivo, actualizarLogoMundoRemote, actualizarPosPinMundoRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, entregarMundoRemote } from "./supabase.js";
 import { MODOS_EVENTO } from "./OrganizadorFront.jsx";
 import { cashbackConfigDelMundo } from "./Fronts.jsx";
+import { CHANNELS_SEED as ADQ_CHANNELS_SEED } from "./Adquirencia.jsx";
 
 // Cola de aprobación de eventos: movida a /admin/gobierno (30-jul). Ahora es
 // cross-mundo y también cubre solicitudes de alta de comercio, con filtros,
@@ -62,6 +63,14 @@ export function MundoDetail() {
 
   const comercios = (st.comercios||[]).filter(c => c.mundoId === id);
   const eventosOn = (m.modulos||[]).some(x => x.id === "eventos" && x.enabled) || m.type === "eventos_rp" || m.type === "eventos";
+  // Promociones (TabPromos) ya es 100% real contra Supabase con world_id
+  // genérico (world_id: m.id, ver fetchPromocionesMundo) -- antes la pestaña
+  // solo se abría para el mundo especial mundo-promos-rp (retirado del
+  // alcance), dejando la capacidad "promociones" del catálogo (MODULE_CATALOG)
+  // huérfana pese a estar activable como cualquier otra. Mismo patrón que
+  // eventosOn: capacidad activada O tipo legacy, para no romper el mundo
+  // especial si algún día vuelve.
+  const promosOn = (m.modulos||[]).some(x => x.id === "promociones" && x.enabled) || m.type === "promos" || m.type === "promos_rp";
   const ws = worldStatus(m, comercios);
   const readyForDelivery = ws.k === "LISTO" || ws.k === "ENTREGADO";
   const tabs = [
@@ -73,7 +82,7 @@ export function MundoDetail() {
     ...(eventosOn ? [
       { k: "eventos", label: "Motor de Eventos", icon: "settings" },
     ] : []),
-    ...((m.type === "promos" || m.type === "promos_rp") ? [{ k: "promos", label: "Promociones", icon: "campaign" }] : []),
+    ...(promosOn ? [{ k: "promos", label: "Promociones", icon: "campaign" }] : []),
   ];
 
   return (
@@ -130,7 +139,7 @@ export function MundoDetail() {
       {tab === "perfil" && <PerfilMundoPanel m={m} />}
       {tab === "modulos" && <TabModulos m={m} />}
       {tab === "comercios" && <TabComercios m={m} comercios={comercios} st={st} jumpTo={actorJump} onConsumeJump={() => setActorJump(null)} />}
-      {tab === "acuerdo" && <TabAcuerdo m={m} />}
+      {tab === "acuerdo" && <TabAcuerdo m={m} st={st} />}
       {tab === "eventos" && <TabEventos m={m} st={st} goto={setTab} />}
       {tab === "promos" && <TabPromos m={m} st={st} />}
       <EntregaHubDrawer m={m} open={entregaHubOpen} onClose={() => setEntregaHubOpen(false)} readyForDelivery={readyForDelivery}
@@ -2817,7 +2826,7 @@ function ModeloRow({ k, v }) {
 }
 
 /* ── TabAcuerdo — Acuerdo Comercial del mundo (Sheet 10) ─────────────── */
-function TabAcuerdo({ m }) {
+function TabAcuerdo({ m, st }) {
   const comerciosMod = (m.modulos || []).find(x => x.id === "comercios");
   const cfg = comerciosMod?.config || {};
   const acuerdo = m.acuerdo || null;
@@ -2833,6 +2842,21 @@ function TabAcuerdo({ m }) {
   const [dirty, setDirty] = useState(false);
   const set = patch => { setF({ ...f, ...patch }); setDirty(true); };
 
+  // Techo global de MDR (Discrepancia #8 del mapeo maestro, 25-ago): Adquirencia
+  // Global ya define una "Tasa base" por canal, pero nada la hacía cumplir --
+  // un mundo podía poner cualquier MDR/fijo a sus merchants sin relación real
+  // con ese catálogo. Mismo patrón ya resuelto en Emisión (InfoTip de esa
+  // pantalla: "el mundo puede restringir esos límites, nunca ampliarlos").
+  // El default de un mundo (flat, no por canal) queda acotado por el canal
+  // global más caro habilitado -- hoy coincide exacto con pos_fisico (1.5% /
+  // S/0.10), así que ningún mundo existente queda fuera de rango con este fix.
+  const adqChannels = (st?.adqChannels && st.adqChannels.length) ? st.adqChannels : ADQ_CHANNELS_SEED;
+  const habilitados = adqChannels.filter(c => c.habilitado);
+  const techoMdr = habilitados.length ? Math.max(...habilitados.map(c => +c.mdr || 0)) : Infinity;
+  const techoFijoTx = habilitados.length ? Math.max(...habilitados.map(c => +c.fijoTx || 0)) : Infinity;
+  const mdrExcede = +f.mdrDefault > techoMdr;
+  const fijoTxExcede = +f.fijoTxDefault > techoFijoTx;
+
   // Todo se guarda dentro de comerciosMod.config — es lo único de este tab que
   // syncAllWorlds() realmente sube a Supabase (world_capacity_configs.config).
   // Antes: frecuencia/retención/vigencia se guardaban en mundo.acuerdoComercial,
@@ -2840,6 +2864,10 @@ function TabAcuerdo({ m }) {
   // otra sesión. modeloRecaudacion reusa la misma key que el tab Microservicios
   // (liquidacion_modeloRecaudacion) para que ambas vistas queden sincronizadas.
   const save = () => {
+    if (mdrExcede || fijoTxExcede) {
+      notify(`La tarifa a merchants no puede superar el techo global de Adquirencia (MDR ${techoMdr}%${techoFijoTx ? ` + S/ ${techoFijoTx}` : ""}). Ajusta el valor o cambia el techo desde Catálogos → Adquirencia.`, "error");
+      return;
+    }
     update(st => {
       const mundo = st.mundos.find(x => x.id === m.id);
       const com = (mundo.modulos || []).find(x => x.id === "comercios");
@@ -2917,13 +2945,17 @@ function TabAcuerdo({ m }) {
               Aplica a todo merchant nuevo. Un merchant individual puede tener su propia tarifa (override) al crearlo o editarlo en Actores.
             </p>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="MDR — Merchant Discount Rate (%)">
+              <Field label="MDR — Merchant Discount Rate (%)"
+                hint={isFinite(techoMdr) ? `Techo global: ${techoMdr}% (Catálogos → Adquirencia)` : undefined}>
                 <input className={inputCls} type="number" step="0.1" min="0" max="10" value={f.mdrDefault}
                   onChange={e => set({ mdrDefault: e.target.value })}/>
+                {mdrExcede && <p className="text-error text-[11px] font-semibold mt-1">Supera el techo global de {techoMdr}%.</p>}
               </Field>
-              <Field label={`Comisión fija por Tx (${m.moneda})`}>
+              <Field label={`Comisión fija por Tx (${m.moneda})`}
+                hint={isFinite(techoFijoTx) ? `Techo global: ${m.moneda} ${techoFijoTx} (Catálogos → Adquirencia)` : undefined}>
                 <input className={inputCls} type="number" step="0.01" min="0" value={f.fijoTxDefault}
                   onChange={e => set({ fijoTxDefault: e.target.value })}/>
+                {fijoTxExcede && <p className="text-error text-[11px] font-semibold mt-1">Supera el techo global de {m.moneda} {techoFijoTx}.</p>}
               </Field>
             </div>
           </div>
@@ -2985,7 +3017,7 @@ function TabAcuerdo({ m }) {
           </div>
 
           <div className="flex justify-end">
-            <BtnPrimary onClick={save} disabled={!dirty}>
+            <BtnPrimary onClick={save} disabled={!dirty || mdrExcede || fijoTxExcede}>
               <Icon n="save" className="text-[16px]"/> Guardar tarifas
             </BtnPrimary>
           </div>

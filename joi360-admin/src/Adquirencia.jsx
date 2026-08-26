@@ -33,7 +33,10 @@ const COMERCIAL_DEFAULTS = {
   qr_estatico:   { liquidacion: "Acreditación inmediata",   mdr: 0.8, fijoTx: 0,    redIds: ["joi_wallet", "joi_bandita", "yape", "plin", "qr_bim"] },
   tap2phone:     { liquidacion: "Acreditación inmediata",   mdr: 1.2, fijoTx: 0,    redIds: ["joi_bandita", "joi_wallet"] },
 };
-const CHANNELS_SEED = CANALES_ADQUIRENCIA.map(ch => ({
+// Exportado: TabAcuerdo (MundoDetail.jsx) lo usa como fallback para calcular
+// el techo global de MDR cuando st.adqChannels todavía no fue tocado por
+// nadie (nunca se seedea hasta el primer guardado real en esta pantalla).
+export const CHANNELS_SEED = CANALES_ADQUIRENCIA.map(ch => ({
   id: ch.id, icon: ch.icon, nombre: ch.nombre, desc: ch.desc,
   habilitado: ch.disponible,
   ...(COMERCIAL_DEFAULTS[ch.id] || { liquidacion: "Al día siguiente hábil", mdr: 1.5, fijoTx: 0, redIds: ["joi_wallet", "joi_bandita"] }),

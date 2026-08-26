@@ -361,11 +361,15 @@ function EsperandoConfirmacion({ datos, onConfirmado, onVolver }) {
 }
 
 function Marco({ children }) {
+  // Fondo en Surface Hero (#0D1A45) -- el token real del contrato de marca
+  // JoiSolutions para "fondos hero / superficies oscuras de marca" (ver
+  // JoiSolutions_Design_System_Import_SwiftUI_v1.0.docx), no los 3 hex
+  // inventados que traía antes y que no pertenecen a la paleta documentada.
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f1530] via-[#151d3b] to-[#0a0f26] flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0D1A45] flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#1A3270]/15 blur-[80px]" />
-        <div className="absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#1A3270]/10 blur-[80px]" />
+        <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#1A3270]/25 blur-[80px]" />
+        <div className="absolute -bottom-32 -left-16 w-72 h-72 rounded-full bg-[#1A3270]/20 blur-[80px]" />
       </div>
       <div className="w-full max-w-[390px] relative z-10">
         <div className="text-center mb-8">
@@ -373,7 +377,7 @@ function Marco({ children }) {
             <span className="text-white font-black text-xl tracking-tighter">JOI</span>
           </div>
           <h1 className="text-white text-3xl font-black tracking-tight">JOI 360</h1>
-          <p className="text-white/40 text-xs mt-1 font-mono uppercase tracking-widest">Ecosistema cerrado de pagos</p>
+          <p className="text-white/40 text-xs mt-1 font-mono uppercase tracking-widest">JOI Solutions · Ecosistema cerrado de pagos</p>
         </div>
         <div className="rounded-3xl p-6" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
           {children}

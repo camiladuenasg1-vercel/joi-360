@@ -393,8 +393,13 @@ export const MODULE_CATALOG = [
   },
 
   { id: "promociones", name: "Promociones", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "campaign",
-    desc: "Campañas, cupones, banners y redención QR. Activación contextual del beneficio por compra, visita o acción del usuario.",
-    servicios: ["Cupón QR", "Banner en home del app", "Push segmentado por segmento", "A/B testing de campañas"],
+    // Salió de MODULOS_PROXIMAMENTE el 25-ago: la parte real (cupón QR, canje
+    // en el POS del comercio) ya sale de este alcance recortado. Banner/push/
+    // A-B testing quedan fuera de `servicios` a propósito -- nunca se
+    // construyeron, y listarlos acá le prometería al admin algo que la
+    // capacidad todavía no hace. Si se construyen después, se agregan recién ahí.
+    desc: "Cupones de descuento o cashback con canje por código QR en el POS del comercio afiliado.",
+    servicios: ["Cupón QR", "Canje en el POS del comercio", "Vigencia y cupo de usos por cupón"],
     pricing: { modelo: "mixto", fijoMensual: 150, porTx: 0.1, setup: 0, moneda: "PEN" },
     configFields: [
       { key: "maxCuponesUsuario", label: "Máximo de cupones activos simultáneos por usuario", type: "number", default: 5 },

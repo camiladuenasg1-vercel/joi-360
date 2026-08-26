@@ -4,6 +4,7 @@ import { useStore } from "../hooks.js";
 import { useUser, joinMundo, setActiveMundo, logoutUser } from "../userStore.js";
 import { getSyntheticUserId, getOrCreateWallet } from "../supabaseClient.js";
 import MundoInfoModal from "../components/MundoInfoModal.jsx";
+import WelcomeStepper, { bienvenidaYaVista } from "../components/WelcomeStepper.jsx";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -30,6 +31,7 @@ export default function LandingPage() {
   );
   const joined = u?.memberships || [];
   const isFirstTime = joined.length === 0;
+  const [mostrarBienvenida, setMostrarBienvenida] = useState(() => isFirstTime && !bienvenidaYaVista());
 
   const VERTICAL_COLORS = {
     "Educación":          { bg:"bg-blue-50",   border:"border-blue-100",   badge:"bg-blue-600",   text:"text-blue-700" },
@@ -61,6 +63,10 @@ export default function LandingPage() {
   };
 
   const irAlHub = () => nav("/hub");
+
+  if (mostrarBienvenida) {
+    return <WelcomeStepper onFinish={() => setMostrarBienvenida(false)} />;
+  }
 
   return (
     <div className="min-h-screen aura-bg">

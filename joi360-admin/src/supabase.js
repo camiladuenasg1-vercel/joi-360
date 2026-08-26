@@ -197,10 +197,13 @@ export async function fetchAllFeatureFlags() {
 // sale ya (macro, cerrado a comercios habilitados) — ver mover_cashback_wallet
 // en add-cashback.sql y CobrarPanel (Fronts.jsx). Loyalty sigue Próximamente
 // a propósito: se conceptualiza pero no se construye todavía.
+// "promociones" salió de este set (25-ago): TabPromos y PromocionesTemplate ya
+// son reales de punta a punta contra Supabase (world_id genérico) -- solo la
+// pestaña del admin estaba cerrada a un mundo especial retirado (ver
+// promosOn en MundoDetail.jsx). Las demás siguen genuinamente sin construir.
 export const MODULOS_PROXIMAMENTE = new Set([
   "facturacion", "reservas", "loyalty", "credito", "subsidio",
   "estacionamiento", "asistencia", "turnos", "transporte",
-  "promociones",
 ]);
 
 // Canales de emisión activables por mundo (claves emision_<id> en config de wallet)
@@ -1140,8 +1143,10 @@ export async function marcarPedidoEventoEntregadoRemote(id) {
 // Alcance mínimo viable confirmado por la usuaria 28-jul: antes TabPromos
 // (MundoDetail.jsx) y PromocionesTemplate (app) eran 100% mock local
 // (st.promos en memoria) — 'promociones' seguía en MODULOS_PROXIMAMENTE por
-// eso. Ahora hay tabla real; el catálogo sigue en MODULOS_PROXIMAMENTE
-// porque banners/push/A-B testing (el resto del spec) siguen sin construir.
+// eso. Ahora hay tabla real. Salió de MODULOS_PROXIMAMENTE el 25-ago
+// (decisión de Camila: integrar al flujo estándar de capacidades) — el
+// MODULE_CATALOG se recortó a lo que de verdad existe (cupón QR); banners/
+// push/A-B testing siguen sin construir, fuera del `servicios` del catálogo.
 export async function fetchPromocionesMundo(worldId) {
   return rest(`promociones?world_id=eq.${worldId}&select=*&order=created_at.desc`);
 }
