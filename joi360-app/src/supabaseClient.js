@@ -1242,6 +1242,46 @@ export async function fetchCashbackBalance(userId, worldId) {
   return +(wallet.cashback_balance || 0);
 }
 
+// Loyalty v1.0.0 (26-ago) — acumulación real, derivada de transactions
+// (type=compra) igual que fetchCashbackPorComercio, en vez de una columna
+// de saldo propia + RPC nueva. Deliberado: mover_saldo_wallet ya tuvo 3
+// reescrituras por temas de seguridad (Discrepancia #1 del maestro) -- no se
+// le agrega lógica de puntos sin testeo dedicado en esta misma tanda. Este
+// primer corte es de solo lectura: saldo de puntos y el detalle de qué compra
+// lo generó son 100% reales, pero el canje (gastar puntos) queda para una
+// versión posterior que sí amerite tocar el RPC con cuidado.
+export async function fetchLoyaltyPuntos(userId, worldId, equivalencia = 0.10, caducidadMeses = null) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  let query = `transactions?wallet_id=eq.${wallet.id}&type=eq.compra&select=amount,merchant_id,created_at&order=created_at.desc`;
+  if (caducidadMeses) {
+    const desde = new Date();
+    desde.setMonth(desde.getMonth() - caducidadMeses);
+    query += `&created_at=gte.${desde.toISOString()}`;
+  }
+  const rows = await rest(query);
+  const compras = rows || [];
+  const totalGastado = compras.reduce((a, r) => a + Number(r.amount), 0);
+  const puntos = equivalencia > 0 ? Math.floor(totalGastado / equivalencia) : 0;
+  return { puntos, compras };
+}
+
+// Puntos por varios mundos a la vez (Profile → "Mis comunidades") — mismo
+// patrón fan-out que fetchWalletBalancesBatch, no una sola query SQL. Un
+// mundo sin Loyalty activo devuelve 0 sin fetch extra.
+export async function fetchLoyaltyPuntosBatch(userId, worldIds) {
+  if (!worldIds || !worldIds.length) return {};
+  const entries = await Promise.all(worldIds.map(async id => {
+    try {
+      const cfg = await fetchWorldConfigLive(id);
+      const mod = (cfg?.modulos || []).find(m => m.id === "loyalty" && m.enabled);
+      if (!mod) return [id, 0];
+      const r = await fetchLoyaltyPuntos(userId, id, mod.config?.equivalencia || 0.10, mod.config?.caducidadMeses ?? null);
+      return [id, r.puntos];
+    } catch { return [id, 0]; }
+  }));
+  return Object.fromEntries(entries);
+}
+
 // Desglose de cashback por comercio (20-ago) — solo se usa cuando el mundo
 // eligió modalidad "por_comercio". Derivado de transactions (cashback_ganado
 // / cashback_canjeado / cashback_revertido), no de una tabla nueva — cero

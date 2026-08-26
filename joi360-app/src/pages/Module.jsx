@@ -18,6 +18,7 @@ import {
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
   fetchProductosEventoLive, fetchMisPedidosEvento, crearPedidoEvento,
+  fetchLoyaltyPuntos,
 } from "../supabaseClient.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -103,7 +104,6 @@ function WalletTemplate({ cfg, u }) {
   const cashbackCfg = useModuleConfig("cashback");
   const cashbackModalidad = cashbackCfg?.config?.modalidad || "flat";
   const comerciosCashback = useMerchantsLive(mundoId);
-  const puntos = u?.puntos?.[mundoId] || 0;
   const [hidden, setHidden] = useState(false);
   const txs = historial.slice(0,5);
   const maxPorRecarga = cfg.config.maxPorRecarga;
@@ -713,14 +713,31 @@ function VincularBanditaWebNfcModal({ mundoId, beneficiarioId, beneficiarioNombr
 // config: equivalencia, caducidadMeses
 // servicios: saldo de puntos, canje en app, canje en comercio, niveles, caducidad
 // ══════════════════════════════════════════════════════════════════════════════
+// Loyalty v1.0.0 (26-ago) -- acumulación real derivada de compras reales
+// (fetchLoyaltyPuntos, transactions type=compra), ya no del mock local
+// u.puntos. El canje (gastar puntos) todavía no está construido -- se
+// muestra como "Próximamente" en vez de un catálogo de vouchers inventado,
+// mismo criterio ya aplicado a Promociones/Adquirencia esta semana: no
+// mostrar como disponible algo que no tiene nada real detrás.
 function LoyaltyTemplate({ cfg, u }) {
   const mundoId = cfg.mundo.id;
-  const puntos = u?.puntos?.[mundoId] || 0;
   const equiv = cfg.config.equivalencia || 0.10;
   const cad = cfg.config.caducidadMeses;
+  const comercios = useMerchantsLive(mundoId);
+  const [data, setData] = useState(null); // { puntos, compras }
+
+  useEffect(() => {
+    let vivo = true;
+    fetchLoyaltyPuntos(getSyntheticUserId(), mundoId, equiv, cad)
+      .then(r => { if (vivo) setData(r); })
+      .catch(() => { if (vivo) setData({ puntos: 0, compras: [] }); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mundoId, equiv, cad]);
+
+  const puntos = data?.puntos || 0;
   const nivel = puntos<500?"Bronce":puntos<2000?"Plata":"Oro";
   const nextPts = puntos<500?500:puntos<2000?2000:5000;
-  const pct = Math.min((puntos/nextPts)*100,100);
   const cashValue = (puntos * equiv).toFixed(2);
 
   return (
@@ -730,12 +747,12 @@ function LoyaltyTemplate({ cfg, u }) {
         <div className="flex justify-between items-start mb-4">
           <div>
             <p className="text-[11px] font-bold text-[#1A3270]/70 uppercase tracking-widest">Puntos acumulados</p>
-            <p className="text-5xl font-black text-[#1A3270] mt-1">{puntos.toLocaleString()}</p>
+            <p className="text-5xl font-black text-[#1A3270] mt-1">{data === null ? "···" : puntos.toLocaleString()}</p>
             <p className="text-xs text-[#404255] mt-1">≈ S/ {cashValue} de valor</p>
           </div>
           <div className="text-right">
             <Chip label={nivel} color="bg-[#FEF3B0] text-[#8E6200]" />
-            {cad && <p className="text-[10px] text-[#404255] mt-2">Caducan en {cad} meses</p>}
+            {cad && <p className="text-[10px] text-[#404255] mt-2">Puntos de compras de los últimos {cad} meses</p>}
           </div>
         </div>
         <p className="text-xs text-[#404255] mb-1.5 flex justify-between">
@@ -745,53 +762,41 @@ function LoyaltyTemplate({ cfg, u }) {
         <ProgressBar value={puntos} max={nextPts} />
         <div className="mt-3 p-3 bg-[#EEF2FD] rounded-2xl">
           <p className="text-[11px] text-[#404255]">
-            Equivalencia · <b className="text-[#1A3270]">1 punto = S/ {equiv.toFixed(2)}</b>
+            Equivalencia · <b className="text-[#1A3270]">1 punto = S/ {equiv.toFixed(2)}</b> · 1 punto por cada S/ {equiv.toFixed(2)} gastado en comercios del mundo
           </p>
         </div>
       </SectionCard>
 
-      {/* Categories */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          {icon:"confirmation_number", label:"Vouchers", sub:"Cupones", color:"bg-[#DCE4FA]", c:"text-[#1A3270]"},
-          {icon:"payments", label:"Cashback", sub:"A tu saldo", color:"bg-[#FEF3B0]", c:"text-[#8E6200]"},
-          {icon:"redeem", label:"Exclusivos", sub:"Artículos", color:"bg-[#E6F7F1]", c:"text-[#0BA878]"},
-        ].map((cat,i)=>(
-          <SectionCard key={i} className="p-3 flex flex-col items-center gap-2 tap-active cursor-pointer">
-            <div className={`w-10 h-10 rounded-xl ${cat.color} flex items-center justify-center`}>
-              <Icon name={cat.icon} fill size="text-xl" color={cat.c} />
-            </div>
-            <p className="text-xs font-bold text-[#1C1C1E]">{cat.label}</p>
-            <p className="text-[10px] text-[#404255]">{cat.sub}</p>
-          </SectionCard>
-        ))}
-      </div>
-
-      {/* Featured rewards */}
-      <SectionCard>
-        <SectionHeader label="Destacados para ti" icon="stars" action="Ver todo" />
-        <div className="p-4 flex gap-3 overflow-x-auto scrollbar-hide">
-          {[{pts:250,label:"Voucher Cafetería",sub:"10% descuento"},{pts:800,label:"Entrada Evento",sub:"Acceso premium"},{pts:1500,label:"Artículo Exclusivo",sub:"Edición limitada"}].map((r,i)=>(
-            <div key={i} className="flex-shrink-0 w-40 rounded-2xl border border-[#CDD1E4] overflow-hidden tap-active">
-              <div className="h-20 bg-[#EEF2FD] flex items-center justify-center relative">
-                <Icon name="redeem" fill size="text-4xl" color="text-[#1A3270]" />
-                <span className="absolute top-2 right-2 bg-[#1A3270] text-white text-[9px] font-black px-1.5 py-0.5 rounded">{r.pts} pts</span>
-              </div>
-              <div className="p-2.5"><p className="text-xs font-bold text-[#1C1C1E]">{r.label}</p><p className="text-[10px] text-[#404255]">{r.sub}</p></div>
-            </div>
-          ))}
+      {/* Canje -- todavía no construido, honesto en vez de un catálogo falso */}
+      <SectionCard className="p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[#EEF2FD] flex items-center justify-center flex-shrink-0">
+          <Icon name="redeem" fill size="text-xl" color="text-[#1A3270]" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-[#1C1C1E]">Canje de puntos</p>
+          <p className="text-[11px] text-[#404255]">Próximamente podrás usar tus puntos como descuento o vouchers.</p>
         </div>
       </SectionCard>
 
-      {/* Activity */}
+      {/* Activity -- compras reales que generaron puntos */}
       <SectionCard>
-        <SectionHeader label="Actividad de puntos" icon="history" />
-        {[{pts:"+45",desc:"Compra en Cafetería",t:"Hace 2h",ic:"add",bg:"bg-green-50",c:"text-green-600"},
-          {pts:"+100",desc:"Bono de asistencia",t:"Ayer",ic:"military_tech",bg:"bg-[#DCE4FA]",c:"text-[#1A3270]"},
-          {pts:"-250",desc:"Canje de voucher",t:"Hace 3d",ic:"redeem",bg:"bg-amber-50",c:"text-amber-600"}].map((h,i)=>(
-          <ListItem key={i} icon={h.ic} iconBg={h.bg} iconColor={h.c} title={h.desc} subtitle={h.t}
-            right={<span className={`font-black text-sm ${h.pts.startsWith("+")?"text-green-600":"text-amber-600"}`}>{h.pts}</span>} />
-        ))}
+        <SectionHeader label="Compras que generaron puntos" icon="history" />
+        {data === null ? (
+          <div className="py-8 flex justify-center">
+            <span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/>
+          </div>
+        ) : data.compras.length === 0 ? (
+          <EmptyState icon="history" title="Sin puntos todavía" subtitle="Cada compra en un comercio de este mundo te da puntos." />
+        ) : data.compras.slice(0, 10).map((c, i) => {
+          const nombreComercio = comercios.find(m => m.id === c.merchant_id)?.nombre || "Comercio";
+          const pts = equiv > 0 ? Math.floor(Number(c.amount) / equiv) : 0;
+          return (
+            <ListItem key={i} icon="add" iconBg="bg-green-50" iconColor="text-green-600"
+              title={`Compra en ${nombreComercio}`}
+              subtitle={new Date(c.created_at).toLocaleDateString("es-PE", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
+              right={<span className="font-black text-sm text-green-600">+{pts}</span>} />
+          );
+        })}
       </SectionCard>
     </div>
   );

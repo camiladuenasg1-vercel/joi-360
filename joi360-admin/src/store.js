@@ -25,6 +25,7 @@ export const MODULE_CATALOG = [
 
   // ── CORE ──────────────────────────────────────────────────────────────────
   { id: "wallet", name: "Wallet", tier: "CORE", category: "Emisión", e: true, a: false, icon: "account_balance_wallet",
+    version: "1.0.0",
     desc: "Núcleo de identidad digital del ecosistema. Gestiona perfiles, cuentas, saldos y la relación del usuario con el mundo. Centraliza identificación, pertenencia y capacidad transaccional.",
     servicios: [
       { id:"balance",   nombre:"Balance y saldo",       desc:"Pantalla principal de saldo en tiempo real. Siempre visible si Wallet está activa." },
@@ -83,6 +84,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "comercios", name: "Comercios", tier: "CORE", category: "Adquirencia", e: false, a: true, icon: "storefront",
+    version: "1.0.0",
     desc: "Administra los puntos de atención, venta o prestación de servicios que operan dentro del ecosistema. Centraliza creación, configuración y operación de los comercios habilitados por el sponsor.",
     servicios: [
       { id:"registro",    nombre:"Registro de comercio", desc:"Alta del merchant: datos, tarifa, operación. Aparece en el directorio del mundo en la Super App." },
@@ -150,6 +152,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "consumos", name: "Compras y Transacciones", tier: "CORE", category: "Adquirencia", e: false, a: true, icon: "point_of_sale",
+    version: "1.0.0",
     desc: "Motor transaccional del backoffice del mundo. Procesa operaciones económicas: compras, pagos, devoluciones, anulaciones y movimientos de saldo en el POS y app.",
     servicios: [
       { id:"venta_pos",   nombre:"Venta y anulación POS", desc:"El cajero registra ventas y puede anular dentro del plazo configurado." },
@@ -170,6 +173,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "inventario", name: "Inventario", tier: "CORE", category: "Adquirencia", e: false, a: true, icon: "inventory_2",
+    version: "1.0.0",
     desc: "Administra categorías, productos, stock y disponibilidad de artículos o servicios comercializados dentro del ecosistema. Soporta Consumos, Menú y Motor de Eventos.",
     servicios: [
       { id: "subir_productos",  nombre: "Subir productos",                desc: "El merchant carga su catálogo con nombre, precio, imagen y descripción." },
@@ -189,6 +193,7 @@ export const MODULE_CATALOG = [
 
   // ── PREMIUM ────────────────────────────────────────────────────────────────
   { id: "facturacion", name: "Facturación", tier: "PREMIUM", category: "Adquirencia", e: false, a: true, icon: "receipt_long",
+    version: "0.0.0",
     desc: "Genera comprobantes electrónicos asociados a transacciones del ecosistema: boletas, facturas y notas de crédito. Integración con proveedor PSE y SUNAT.",
     servicios: ["Integración con proveedor PSE", "Emisión de boletas/facturas para suscripciones", "Emisión de boletas/facturas para compras a comercios", "Nota de crédito", "Integración SUNAT"],
     pricing: { modelo: "transaccional", porTx: 0.15, setup: 500, moneda: "PEN" },
@@ -201,6 +206,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "perfil_ext", name: "Perfil extendido", tier: "PREMIUM", category: "Datos", e: false, a: false, icon: "badge",
+    version: "1.0.0",
     desc: "Almacena información adicional de usuarios más allá de los datos básicos, adaptándose a las necesidades de cada sponsor (salud, emergencia, identificación TAQ/QR).",
     servicios: [
       { id: "tipo_sangre",         nombre: "Tipo de sangre",           desc: "Campo de tipo de sangre en el perfil extendido del usuario." },
@@ -217,6 +223,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "accesos", name: "Accesos", tier: "PREMIUM", category: "Emisión", e: true, a: true, icon: "door_open",
+    version: "1.0.0",
     desc: "Controla el ingreso y salida de personas mediante TAQ/QR, registrando eventos y restricciones por zona, horario y tipo de usuario.",
     servicios: [
       { id: "identificacion",     nombre: "Identificación del usuario con TAQ o QR", desc: "Escaneo real de bandita NFC, QR o búsqueda por DNI en el POS." },
@@ -234,6 +241,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "reservas", name: "Reservas", tier: "PREMIUM", category: "Mixto", e: true, a: true, icon: "event_available",
+    version: "0.0.0",
     desc: "Reserva de recursos, espacios, servicios o actividades para fechas y horarios específicos. El usuario reserva (E) y el operador valida/cobra (A).",
     servicios: ["Identificación del usuario con TAQ o QR", "Consulta en POS", "Registro de zonas o servicios por mundo", "Registro de horarios y capacidad", "Reservar desde la app", "Lista de espera", "Recordatorios push"],
     pricing: { modelo: "mixto", fijoMensual: 220, porTx: 0.2, setup: 0, moneda: "PEN" },
@@ -254,6 +262,7 @@ export const MODULE_CATALOG = [
   // en MundoDetail.jsx) — solo la hace visible y activable por sí misma en
   // vez de agazapada dentro de otra capacidad.
   { id: "suscripciones", name: "Suscripciones", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "subscriptions",
+    version: "1.0.0",
     desc: "Cobra al padre/tutor una cuota real al vincular cada nuevo dependiente. Depende de Wallet — usa la misma billetera para el cobro. Sin planes creados, el mundo no puede cobrar (nunca cae a un monto por defecto sin definir).",
     servicios: [
       { id:"planes",  nombre:"Planes de suscripción", desc:"El mundo crea uno o más planes (nombre, precio, periodo, % de descuento). Se cobran al vincular un dependiente." },
@@ -265,13 +274,17 @@ export const MODULE_CATALOG = [
   },
 
   { id: "loyalty", name: "Puntos Loyalty", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "loyalty",
-    desc: "Acumula, consulta y redime puntos generados por actividades o consumos dentro del ecosistema. Devengo en comercio (A), saldo en wallet (E).",
+    // v1.0.0 (26-ago): acumulación y saldo son reales, derivados de compras
+    // reales (transactions type=compra) -- ver fetchLoyaltyPuntos en la
+    // superapp. Canje (app/POS) todavía NO está construido -- se sacó de
+    // `servicios` para no prometerlo (mismo criterio ya aplicado a
+    // Promociones); vuelve a esta lista cuando tenga lógica real detrás.
+    version: "1.0.0",
+    desc: "Acumula y consulta puntos generados por compras reales dentro del ecosistema. Saldo en wallet (E), devengo en comercio (A). Canje: próxima versión.",
     servicios: [
-      { id:"acumulacion", nombre:"Acumulación automática", desc:"Por cada compra el usuario gana puntos según la equivalencia configurada." },
-      { id:"saldo_pts",   nombre:"Saldo de puntos",       desc:"Contador visible en el Hub y en el módulo de Lealtad." },
-      { id:"canje_app",   nombre:"Canje en la app",       desc:"El usuario canjea puntos por vouchers, descuentos o artículos desde la Super App." },
-      { id:"canje_pos",   nombre:"Canje en comercio",     desc:"El usuario usa puntos como medio de pago en el POS del merchant." },
-      { id:"niveles",     nombre:"Niveles / Tiers",       desc:"Bronce, Plata, Oro — barra de progreso visible al usuario." },
+      { id:"acumulacion", nombre:"Acumulación automática", desc:"Por cada compra real el usuario gana puntos según la equivalencia configurada. Derivado de transacciones reales, sin simulación." },
+      { id:"saldo_pts",   nombre:"Saldo de puntos",       desc:"Contador real visible en el módulo de Lealtad, con el detalle de qué compra generó cada punto." },
+      { id:"niveles",     nombre:"Niveles / Tiers",       desc:"Bronce, Plata, Oro — calculado en vivo a partir del saldo real de puntos." },
     ],
     pricing: { modelo: "transaccional", porTx: 0.6, setup: 300, moneda: "PEN" },
     configFields: [
@@ -282,6 +295,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "eventos", name: "Motor de Eventos", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "confirmation_number",
+    version: "1.0.0",
     desc: "Comercializa entradas para eventos, actividades o experiencias. Gestiona disponibilidad, validación y control de asistencia. Incluye capacidad de preventa y pedido anticipado.",
     servicios: [
       { id:"crear",       nombre:"Crear evento",         desc:"Admin o usuario B2C puede crear eventos con título, fecha, lugar, categoría y aforo." },
@@ -300,6 +314,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "credito", name: "Crédito", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "credit_score",
+    version: "0.0.0",
     desc: "Otorga líneas de crédito o saldo financiado a usuarios para realizar consumos dentro del ecosistema. Alto control regulatorio.",
     servicios: ["Scoring básico de riesgo", "Línea revolvente", "Cuotas fijas", "Recordatorios de cobranza", "Historial crediticio"],
     pricing: { modelo: "transaccional", porTx: 2.5, setup: 1500, moneda: "PEN" },
@@ -310,6 +325,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "subsidio", name: "Subsidio", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "volunteer_activism",
+    version: "0.0.0",
     desc: "Asigna fondos con reglas específicas de uso para determinados usuarios, grupos o categorías. Saldo dirigido con vigencia y segmentación.",
     servicios: ["Saldo segmentado por grupo o usuario", "Categorías de gasto permitidas", "Vigencia del subsidio", "Reportería sponsor", "Recarga masiva de subsidios"],
     pricing: { modelo: "fijo", fijoMensual: 400, setup: 600, moneda: "PEN" },
@@ -320,6 +336,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "estacionamiento", name: "Estacionamiento", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "local_parking",
+    version: "0.0.0",
     desc: "Gestiona accesos, permanencia, reservas y pagos relacionados con espacios de estacionamiento. Reutiliza Accesos + Reservas + Consumos.",
     servicios: ["Pago por hora", "Pago por día / mensualidad", "Reserva de slot anticipada", "Validación QR o placa", "Control de permanencia"],
     pricing: { modelo: "transaccional", porTx: 1.5, setup: 400, moneda: "PEN" },
@@ -330,6 +347,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "asistencia", name: "Asistencia", tier: "OPCIONAL", category: "Mixto", e: false, a: false, icon: "health_and_safety",
+    version: "0.0.0",
     desc: "Próximamente: registro y consulta de presencia de usuarios en actividades, clases o instalaciones. Reporte a padres, justificaciones y reportería por mundo. Aún no construido en la app — sin parámetros configurables todavía.",
     servicios: ["Marcaciones de entrada y salida", "Reporte automático a padres/tutores", "Justificaciones de inasistencia", "Reportería de asistencia por mundo", "Identificación TAQ o QR"],
     pricing: { modelo: "fijo", fijoMensual: 600, setup: 1000, moneda: "PEN" },
@@ -338,6 +356,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "cashback", name: "Cashback", tier: "OPCIONAL", category: "Adquirencia", e: true, a: true, icon: "currency_exchange",
+    version: "1.0.0",
     desc: "Devuelve un porcentaje del consumo a la wallet del usuario. Se devenga en el comercio (A) y se acredita en la wallet (E). Motor de growth y retención.",
     servicios: ["% de retorno sobre venta", "Tope de cashback por usuario / mes", "Categorías con cashback diferenciado", "Vigencia del cashback acumulado", "Historial de retornos"],
     pricing: { modelo: "transaccional", porTx: 0.5, setup: 0, moneda: "PEN" },
@@ -350,6 +369,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "control", name: "Restricciones", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "shield_lock",
+    version: "1.0.0",
     desc: "Establece reglas de uso sobre saldo, productos, horarios, comercios o categorías autorizadas. Control parental: límites, bloqueos horarios y alergias para dependientes.",
     servicios: [
       { id: "reglas_mundo",   nombre: "Reglas por mundo",            desc: "Límites y restricciones que aplican a TODOS los usuarios del mundo (tope diario global, categorías bloqueadas)." },
@@ -374,6 +394,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "menu", name: "Menú", tier: "OPCIONAL", category: "Datos", e: false, a: false, icon: "restaurant_menu",
+    version: "1.0.0",
     desc: "El padre/usuario programa el menú y el concesionario valida y entrega. Catálogo diario con cupos, restricciones alimentarias y pre-orden.",
     servicios: [
       { id: "calendario",                nombre: "Calendario semanal de menú",   desc: "El comercio programa las opciones de cada día." },
@@ -393,6 +414,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "promociones", name: "Promociones", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "campaign",
+    version: "1.0.0",
     // Salió de MODULOS_PROXIMAMENTE el 25-ago: la parte real (cupón QR, canje
     // en el POS del comercio) ya sale de este alcance recortado. Banner/push/
     // A-B testing quedan fuera de `servicios` a propósito -- nunca se
@@ -407,6 +429,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "turnos", name: "Turnos", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "schedule",
+    version: "0.0.0",
     desc: "Gestiona citas o turnos programados para atención, servicios o actividades con capacidad limitada. Especialización de Reservas.",
     servicios: ["Cita individual agendada", "Cita grupal con cupo", "Recordatorio automático 24h antes", "Recordatorio automático 1h antes", "Cancelación y reagendamiento"],
     pricing: { modelo: "fijo", fijoMensual: 180, setup: 0, moneda: "PEN" },
@@ -416,6 +439,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "bnpl", name: "BNPL", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "calendar_clock",
+    version: "1.0.0",
     desc: "Compra ahora paga después en marca blanca. El Mundo lo habilita y define el techo; el Comercio lo activa y configura su programa. Jerarquía de 4 microservicios (Casos TEC V2.0 — Caso Mok).",
     servicios: [
       { id:"elegibilidad", nombre:"Elegibilidad / Evaluación",   desc:"Mecanismo de evaluación crediticia, incluida la opción 'sin evaluación' (marca blanca). Requiere Wallet activo: la identidad la resuelve el mundo." },
@@ -467,6 +491,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "transporte", name: "Transporte", tier: "OPCIONAL", category: "Emisión", e: true, a: true, icon: "directions_bus",
+    version: "0.0.0",
     desc: "Derecho de viaje y cobro por uso. Gestiona rutas, tarifas y acceso al transporte dentro del mundo. Reutiliza Accesos + Wallet.",
     servicios: ["Pago tap NFC", "QR de abordaje", "Registro de rutas", "Precio fijo por viaje", "Tarifa por zona"],
     pricing: { modelo: "transaccional", porTx: 0.5, setup: 300, moneda: "PEN" },
@@ -1431,14 +1456,21 @@ export const CANALES_EMISION = [
   // cualquier billetera puede escanear — el proveedor (Ligo agrega todas
   // las redes vía estándar ASBANC; Culqi como alternativa) es elegible
   // desde este mismo canal, sin duplicar configuración por billetera.
-  { id:"qr_billetera", categoria:"billetera_digital", nombre:"QR", icon:"qr_code_2", disponible:true,
+  // disponible:false (26-ago) -- ninguna de las dos pasarelas de abajo tiene
+  // convenio/API real conectada (ver PSP_PROVIDERS: ligo y culqi, ambos
+  // api_ready:false). Antes decían "disponible" pese a eso -- un mundo podía
+  // activarlas para usuarios reales sin que hubiera nada procesando el cobro
+  // detrás. Mismo criterio ya aplicado a tap2phone en CANALES_ADQUIRENCIA.
+  // CanalEmisionRow (MundoDetail.jsx) ya sabe deshabilitar el toggle y
+  // mostrar "Próximamente" cuando disponible:false -- no hizo falta tocar UI.
+  { id:"qr_billetera", categoria:"billetera_digital", nombre:"QR", icon:"qr_code_2", disponible:false,
     psp_id:"ligo",  checkout_type:"qr",
     montoMin:1, montoMax:2000,  comisionPSP:0,    comisionTarget:"plataforma",
     tiempoAcreditacion:"Inmediato", horarioGlobal:"00:00-23:59", monedas:["PEN"],
     desc:"QR genérico interoperable: un solo código aceptado por cualquier billetera (Yape, Plin y demás), vía Ligo (agrega todas las redes por estándar ASBANC). Canal separado de 'Tarjeta (Culqi)'. Pendiente de integración (requiere convenio Ligo)." },
 
   // ── PASARELAS DE PAGO (checkout embebido en app) ──────────────────
-  { id:"culqi",   categoria:"pasarela_pago",    nombre:"Tarjeta (Culqi)",  icon:"credit_card", disponible:true,
+  { id:"culqi",   categoria:"pasarela_pago",    nombre:"Tarjeta (Culqi)",  icon:"credit_card", disponible:false,
     psp_id:"culqi",     checkout_type:"form",
     montoMin:5, montoMax:10000, comisionPSP:2.99, comisionTarget:"sponsor",
     tiempoAcreditacion:"1-2 min", horarioGlobal:"00:00-23:59", monedas:["PEN","USD"],

@@ -106,7 +106,10 @@ export function Catalogo() {
                         </div>
                       </div>
 
-                      <h3 className="font-semibold text-on-surface mb-1">{m.name}</h3>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h3 className="font-semibold text-on-surface">{m.name}</h3>
+                        {m.version && <span className="font-mono text-[9px] text-outline">v{m.version}</span>}
+                      </div>
                       <p className="text-xs text-on-surface-variant leading-relaxed mb-4 line-clamp-3">{m.desc}</p>
 
                       {/* Nature: what it does in the ecosystem */}

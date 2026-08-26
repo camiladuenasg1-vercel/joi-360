@@ -195,14 +195,18 @@ export async function fetchAllFeatureFlags() {
 // prendía y se encontraba con pestañas vacías.
 // "cashback" salió de acá 13-ago: es la capacidad que Camila confirmó que
 // sale ya (macro, cerrado a comercios habilitados) — ver mover_cashback_wallet
-// en add-cashback.sql y CobrarPanel (Fronts.jsx). Loyalty sigue Próximamente
-// a propósito: se conceptualiza pero no se construye todavía.
+// en add-cashback.sql y CobrarPanel (Fronts.jsx).
 // "promociones" salió de este set (25-ago): TabPromos y PromocionesTemplate ya
 // son reales de punta a punta contra Supabase (world_id genérico) -- solo la
 // pestaña del admin estaba cerrada a un mundo especial retirado (ver
-// promosOn en MundoDetail.jsx). Las demás siguen genuinamente sin construir.
+// promosOn en MundoDetail.jsx).
+// "loyalty" salió de este set (26-ago, v1.0.0): acumulación y saldo de
+// puntos ya son reales, derivados de compras reales (fetchLoyaltyPuntos en
+// la superapp) -- el canje todavía no, ver nota en su propia entrada del
+// catálogo. Las demás siguen genuinamente sin construir; ver el plan por
+// capacidad en docs/arquitectura/mapeo_maestro/src/09_backlog.md.
 export const MODULOS_PROXIMAMENTE = new Set([
-  "facturacion", "reservas", "loyalty", "credito", "subsidio",
+  "facturacion", "reservas", "credito", "subsidio",
   "estacionamiento", "asistencia", "turnos", "transporte",
 ]);
 

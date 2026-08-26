@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
 import { getState, subscribe } from "./store";
 import { useUser } from "./userStore.js";
-import { getSyntheticUserId, fetchWalletBalance, fetchCashbackBalance, fetchCashbackPorComercio, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive, sincronizarCicloSuscripcionesMembresia } from "./supabaseClient.js";
+import { getSyntheticUserId, fetchWalletBalance, fetchCashbackBalance, fetchCashbackPorComercio, fetchWalletBalancesBatch, canalesHabilitadosDeMundoLive, recargarSupabase, pagarSupabase, fetchTxHistory, fetchWorldConfigLive, fetchMerchantsLive, fetchCapacitiesLive, sincronizarCicloSuscripcionesMembresia, fetchLoyaltyPuntos, fetchLoyaltyPuntosBatch } from "./supabaseClient.js";
 import { MODULES } from "./modules.js";
 
 let snapshot = getState();
@@ -69,6 +69,35 @@ export function useModuleConfig(moduleId) {
     // Un flag cuenta como activo solo si está explícitamente en true.
     has: (flagCode) => mod.servicios?.[flagCode] === true,
   };
+}
+
+/**
+ * useLoyaltyPuntos(worldId) — Loyalty v1.0.0 (26-ago)
+ * Saldo real de puntos, derivado de compras reales (fetchLoyaltyPuntos).
+ * Compartido por Hub (widget), Profile (resumen por mundo) y el módulo
+ * Lealtad completo -- antes cada uno leía el mismo mock local (u.puntos) por
+ * separado, así que quedar reales en un solo lugar y mock en otro (mismo
+ * bug ya encontrado y corregido en Cashback, Task #242) era cuestión de
+ * tiempo. Devuelve 0 mientras carga o si Loyalty no está activo en el mundo.
+ */
+export function useLoyaltyPuntos(worldId) {
+  const { modulos, loading: loadingCfg } = useWorldConfig(worldId);
+  const mod = (modulos || []).find(m => m.id === "loyalty" && m.enabled);
+  const equiv = mod?.config?.equivalencia || 0.10;
+  const cad = mod?.config?.caducidadMeses ?? null;
+  const [puntos, setPuntos] = useState(0);
+
+  useEffect(() => {
+    let vivo = true;
+    if (!worldId || loadingCfg || !mod) { setPuntos(0); return; }
+    fetchLoyaltyPuntos(getSyntheticUserId(), worldId, equiv, cad)
+      .then(r => { if (vivo) setPuntos(r.puntos); })
+      .catch(() => { if (vivo) setPuntos(0); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId, loadingCfg, !!mod, equiv, cad]);
+
+  return puntos;
 }
 
 /**
@@ -193,4 +222,21 @@ export function useWalletBalances(worldIds) {
   }, [key, userId]);
 
   return balances;
+}
+
+/**
+ * useLoyaltyPuntosBatch(worldIds) — mismo patrón que useWalletBalances, para
+ * la lista "Mis comunidades" de Profile. Un mundo sin Loyalty activo queda en 0.
+ */
+export function useLoyaltyPuntosBatch(worldIds) {
+  const [puntos, setPuntos] = useState({});
+  const key = (worldIds || []).join(",");
+  const userId = getSyntheticUserId();
+
+  useEffect(() => {
+    if (!worldIds || !worldIds.length) return;
+    fetchLoyaltyPuntosBatch(userId, worldIds).then(setPuntos);
+  }, [key, userId]);
+
+  return puntos;
 }

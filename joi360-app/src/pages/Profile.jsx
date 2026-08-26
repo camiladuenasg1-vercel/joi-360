@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useStore, useWalletBalances, useWalletLive } from "../hooks.js";
+import { useStore, useWalletBalances, useWalletLive, useLoyaltyPuntosBatch } from "../hooks.js";
 import { useUser, logoutUser, setActiveMundo } from "../userStore.js";
 import { getSyntheticUserId, fetchMisDependientes, fetchDependienteBalance, crearTicketSoporteRemote } from "../supabaseClient.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -52,6 +52,7 @@ export default function ProfilePage() {
   const memberships = (u?.memberships||[]).map(id=>(st.mundos||[]).find(m=>m.id===id)).filter(Boolean);
   const activeMundo = (st.mundos||[]).find(m=>m.id===u?.activeMundoId);
   const balances = useWalletBalances(memberships.map(m => m.id));
+  const puntosPorMundo = useLoyaltyPuntosBatch(memberships.map(m => m.id));
   const { historial } = useWalletLive(activeMundo?.id);
   const totalBalance = memberships.reduce((a,m)=>a+(balances[m.id]||0),0);
   const totalTx = historial.length;
@@ -211,7 +212,7 @@ export default function ProfilePage() {
             ) : (
               memberships.map(m => {
                 const bal = balances[m.id] || 0;
-                const pts = u?.puntos?.[m.id] || 0;
+                const pts = puntosPorMundo[m.id] || 0;
                 const isActive = m.id === activeMundo?.id;
                 return (
                   <div key={m.id} className={`flex items-center gap-3 px-5 py-4 border-b border-[#CDD1E4]/30 last:border-0 ${isActive?"bg-[#F2F2F7]":""}`}>

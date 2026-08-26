@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useStore, useWalletLive, useWorldConfig, useMerchantsLive, useCatalogLive } from "../hooks.js";
+import { useStore, useWalletLive, useWorldConfig, useMerchantsLive, useCatalogLive, useLoyaltyPuntos } from "../hooks.js";
 import { useUser } from "../userStore.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -159,7 +159,7 @@ export default function HubPage() {
   const activeMundo = (st.mundos || []).find(m => m.id === u?.activeMundoId) || memberships[0];
   const { saldo, historial, canales, recargar: recargarLive, pagar: pagarLive } = useWalletLive(activeMundo?.id);
   const wc = useWorldConfig(activeMundo?.id);
-  const puntos = u?.puntos?.[activeMundo?.id] || 0;
+  const puntos = useLoyaltyPuntos(activeMundo?.id);
   const nombre = u?.auth?.nombre || "JOI";
   const initials = nombre.split(" ").map(p => p[0]).join("").toUpperCase().slice(0, 2);
   // ── Todo derivado de la config VIVA del mundo (Supabase) ──────────────
