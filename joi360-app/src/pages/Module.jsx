@@ -18,7 +18,9 @@ import {
   fetchMenuDelDia, fetchReservasDeFecha, fetchMisReservasMenu, crearReservaMenu,
   fetchAlertasConsumo, marcarAlertaConsumoLeida, fetchAcquiringChannelsLive,
   fetchProductosEventoLive, fetchMisPedidosEvento, crearPedidoEvento,
-  fetchLoyaltyPuntos,
+  fetchLoyaltyPuntos, fetchMisPedidosTurno, fetchMisViajesTransporte,
+  fetchMisReservas, fetchOcupacionRecurso, crearReservaRemote, cancelarReservaRemote,
+  fetchSesionEstacionamientoActiva, ingresarEstacionamientoRemote, fetchMisSesionesEstacionamiento, salirEstacionamientoRemote,
 } from "../supabaseClient.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -807,93 +809,124 @@ function LoyaltyTemplate({ cfg, u }) {
 // config: anticipoMin, ventanaCancelacion
 // servicios: reservar desde app, zonas, horarios, lista de espera
 // ══════════════════════════════════════════════════════════════════════════════
+// Reservas v1.0.0 (26-ago) -- reserva real persistida en Supabase, sin
+// cobro (anticipoMin queda sin aplicar hasta una v1.1 dedicada). Recursos
+// vienen del config real del mundo (recursos, separados por coma) en vez de
+// una lista inventada de espacios que no existían de verdad.
 function ReservasTemplate({ cfg, u }) {
-  const [tab, setTab] = useState("proximas");
-  const [showNew, setShowNew] = useState(false);
-  const [selectedSpace, setSelectedSpace] = useState(null);
+  const mundoId = cfg.mundo.id;
+  const userId = getSyntheticUserId();
   const anticipo = cfg.config.anticipoMin;
   const cancelHrs = cfg.config.ventanaCancelacion;
+  const recursos = (cfg.config.recursos || "Comedor,Gimnasio,Laboratorio").split(",").map(r => r.trim()).filter(Boolean);
 
-  const SPACES = [
-    {id:"comedor",label:"Comedor",icon:"restaurant",avail:"Alta",color:"bg-green-50",c:"text-green-700"},
-    {id:"gym",label:"Gym",icon:"fitness_center",avail:"Media",color:"bg-amber-50",c:"text-amber-700"},
-    {id:"lab",label:"Laboratorio",icon:"biotech",avail:"Con tutor",color:"bg-blue-50",c:"text-blue-700"},
-    {id:"biblio",label:"Biblioteca",icon:"menu_book",avail:"Silencio",color:"bg-purple-50",c:"text-purple-700"},
-  ];
+  const [showNew, setShowNew] = useState(false);
+  const [recurso, setRecurso] = useState(null);
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [hora, setHora] = useState("");
+  const [ocupacion, setOcupacion] = useState(null);
+  const [reservando, setReservando] = useState(false);
+  const [reservas, setReservas] = useState(null);
+  const [reload, setReload] = useState(0);
 
-  const NEXT = [
-    {space:"Comedor Central",icon:"restaurant",hora:"12:30–13:15",status:"Confirmada",statusColor:"text-green-700 bg-green-100"},
-    {space:"Sala reuniones B",icon:"groups",hora:"15:00–16:30",status:"Pendiente",statusColor:"text-amber-700 bg-amber-100"},
-  ];
+  const cargar = () => fetchMisReservas(userId, mundoId).then(r => setReservas(r || [])).catch(() => setReservas([]));
+  useEffect(() => { cargar(); }, [mundoId, reload]);
+
+  useEffect(() => {
+    if (!recurso || !fecha || !hora) { setOcupacion(null); return; }
+    let vivo = true;
+    fetchOcupacionRecurso(mundoId, recurso, fecha, hora).then(n => { if (vivo) setOcupacion(n); }).catch(() => { if (vivo) setOcupacion(null); });
+    return () => { vivo = false; };
+  }, [mundoId, recurso, fecha, hora]);
+
+  const confirmar = async () => {
+    setReservando(true);
+    try {
+      await crearReservaRemote(mundoId, userId, recurso, fecha, hora);
+      setShowNew(false); setRecurso(null); setHora("");
+      cargar();
+    } catch {
+      showToast("No se pudo crear la reserva. Intenta de nuevo.");
+    } finally { setReservando(false); }
+  };
+
+  const cancelar = async (id) => {
+    await cancelarReservaRemote(id).catch(() => {});
+    cargar();
+  };
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const proximas = (reservas || []).filter(r => r.fecha >= hoy);
+  const pasadas = (reservas || []).filter(r => r.fecha < hoy);
 
   if (showNew) return (
     <div className="px-5 pb-8">
-      <button onClick={()=>{setShowNew(false);setSelectedSpace(null);}} className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold mb-5 tap-active">
+      <button onClick={()=>{setShowNew(false);setRecurso(null);setHora("");}} className="flex items-center gap-1.5 text-[#404255] text-xs font-semibold mb-5 tap-active">
         <Icon name="arrow_back" size="text-base" color="text-[#404255]" /> Volver
       </button>
-      <div className="flex gap-2 mb-5">
-        {[1,2,3].map(n=>(
-          <div key={n} className={`flex-1 h-1.5 rounded-full ${n===1?"bg-[#1A3270]":"bg-[#CDD1E4]"}`}/>
-        ))}
-      </div>
-      <h2 className="text-2xl font-black text-[#1C1C1E] mb-1">Selecciona un espacio</h2>
-      <p className="text-sm text-[#404255] mb-5">Elige el área que deseas reservar.</p>
-      {anticipo && <ConfigBanner icon="payments" message={`Esta reserva requiere un anticipo mínimo del ${anticipo}%.`} color="amber" />}
-      {anticipo && <div className="mb-4"/>}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {SPACES.map(s=>(
-          <button key={s.id} onClick={()=>setSelectedSpace(s.id)}
-            className={`glass-card rounded-2xl p-4 flex flex-col gap-3 text-left tap-active transition-all ${selectedSpace===s.id?"border-2 border-[#1A3270] bg-[#EEF2FD]":""}`}>
-            <div className={`w-11 h-11 rounded-xl ${selectedSpace===s.id?"bg-[#1A3270]/10":"bg-[#EEF2FD]"} flex items-center justify-center`}>
-              <Icon name={s.icon} fill size="text-2xl" color={selectedSpace===s.id?"text-[#1A3270]":"text-[#404255]"} />
-            </div>
-            <div>
-              <p className="font-bold text-sm text-[#1C1C1E]">{s.label}</p>
-              <span className={`text-[10px] font-bold ${s.c} ${s.color} px-2 py-0.5 rounded-full`}>{s.avail}</span>
-            </div>
+      <h2 className="text-2xl font-black text-[#1C1C1E] mb-1">Nueva reserva</h2>
+      <p className="text-sm text-[#404255] mb-5">Elige el recurso, fecha y hora.</p>
+      {anticipo && <ConfigBanner icon="payments" message={`Este mundo pide un anticipo del ${anticipo}% — el cobro llega en una próxima versión.`} color="amber" />}
+
+      <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-2 mt-4">Recurso</p>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {recursos.map(r => (
+          <button key={r} onClick={() => setRecurso(r)}
+            className={`glass-card rounded-2xl p-3 text-left tap-active transition-all ${recurso===r?"border-2 border-[#1A3270] bg-[#EEF2FD]":""}`}>
+            <p className="font-bold text-sm text-[#1C1C1E]">{r}</p>
           </button>
         ))}
       </div>
+
+      <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-2">Fecha</p>
+      <input type="date" value={fecha} min={hoy} onChange={e => setFecha(e.target.value)}
+        className="w-full rounded-2xl px-4 py-3.5 text-sm mb-4 glass-card outline-none" />
+
+      <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest mb-2">Hora</p>
+      <input type="time" value={hora} onChange={e => setHora(e.target.value)}
+        className="w-full rounded-2xl px-4 py-3.5 text-sm mb-2 glass-card outline-none" />
+      {ocupacion !== null && (
+        <p className="text-xs text-[#404255] mb-4">{ocupacion === 0 ? "Nadie más ha reservado este horario todavía." : `Ya hay ${ocupacion} reserva${ocupacion===1?"":"s"} para este mismo horario.`}</p>
+      )}
+
       {cancelHrs && <p className="text-xs text-[#404255] text-center mb-4">Cancela sin costo hasta {cancelHrs}h antes.</p>}
-      <PrimaryBtn label="Continuar" icon="arrow_forward" disabled={!selectedSpace} onClick={()=>{setShowNew(false);setSelectedSpace(null);}} />
+      <PrimaryBtn label={reservando ? "Reservando…" : "Confirmar reserva"} icon="check_circle" disabled={!recurso || !fecha || !hora || reservando} onClick={confirmar} />
     </div>
   );
 
   return (
     <div className="px-5 space-y-4 pb-8">
       <PrimaryBtn label="Nueva Reserva" icon="add_circle" onClick={()=>setShowNew(true)} />
-      <div className="flex gap-1 glass-card rounded-2xl p-1">
-        {["proximas","historial"].map(t=>(
-          <button key={t} onClick={()=>setTab(t)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab===t?"bg-[#1A3270] text-white":"text-[#404255]"}`}>
-            {t==="proximas"?"Próximas":"Historial"}
-          </button>
-        ))}
-      </div>
-      {tab==="proximas" ? (
-        <SectionCard>
-          {NEXT.map((r,i)=>(
-            <div key={i} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-[#DCE4FA] flex items-center justify-center">
-                    <Icon name={r.icon} fill size="text-xl" color="text-[#1A3270]" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-[#1C1C1E]">{r.space}</p>
-                    <p className="text-xs text-[#404255]">{cfg.mundo.nombre}</p>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-black px-2 py-1 rounded-full ${r.statusColor}`}>{r.status}</span>
+      <SectionCard>
+        <SectionHeader label="Próximas" icon="event_available"/>
+        {reservas === null ? (
+          <div className="py-8 flex justify-center"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
+        ) : proximas.length === 0 ? (
+          <EmptyState icon="event_busy" title="Sin reservas próximas" subtitle="Crea una reserva con el botón de arriba."/>
+        ) : proximas.map(r => (
+          <div key={r.id} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-bold text-[#1C1C1E]">{r.recurso}</p>
+                <p className="text-xs text-[#404255]">{cfg.mundo.nombre}</p>
               </div>
-              <div className="flex gap-4 pt-2 border-t border-[#CDD1E4]/40">
-                <span className="text-xs text-[#1A3270] font-semibold flex items-center gap-1"><Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>{r.hora}</span>
-              </div>
+              <button onClick={() => cancelar(r.id)} className="text-xs font-bold text-red-600 hover:underline">Cancelar</button>
             </div>
+            <span className="text-xs text-[#1A3270] font-semibold flex items-center gap-1">
+              <Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>
+              {new Date(r.fecha + "T00:00:00").toLocaleDateString("es-PE", { day: "2-digit", month: "short" })} · {r.hora}
+            </span>
+          </div>
+        ))}
+      </SectionCard>
+      {pasadas.length > 0 && (
+        <SectionCard>
+          <SectionHeader label="Historial" icon="history"/>
+          {pasadas.slice(0, 10).map(r => (
+            <ListItem key={r.id} icon="event_available" iconBg="bg-[#F2F2F7]" iconColor="text-[#404255]"
+              title={r.recurso} subtitle={`${r.fecha} · ${r.hora}`} />
           ))}
         </SectionCard>
-      ) : (
-        <SectionCard><EmptyState icon="history" title="Sin historial" subtitle="Tus reservas anteriores aparecerán aquí." /></SectionCard>
       )}
     </div>
   );
@@ -3998,25 +4031,64 @@ function PerfilExtTemplate({ cfg, u }) {
 // TEMPLATE: ESTACIONAMIENTO
 // config: tarifaHora, graciaMinutos
 // ══════════════════════════════════════════════════════════════════════════════
+// Estacionamiento v1.0.0 (26-ago) -- sesión real (ingreso/salida en
+// estacionamiento_sesiones) con cobro real al salir, calculado sobre la
+// duración real transcurrida -- mismo RPC de pago que el resto del
+// ecosistema (pagarSupabase vía useWalletLive.pagar), nunca cobra por
+// adelantado. UX conservada del template original (contador en vivo).
 function EstacionamientoTemplate({ cfg, u }) {
+  const mundoId = cfg.mundo.id;
+  const userId = getSyntheticUserId();
   const tarifa = cfg.config.tarifaHora || 5;
   const gracia = cfg.config.graciaMinutos || 15;
-  const [active, setActive] = useState(false);
-  const [mins, setMins] = useState(0);
+  const { pagar } = useWalletLive(mundoId);
 
-  React.useEffect(() => {
-    if (!active) return;
-    const t = setInterval(()=>setMins(m=>m+1), 60000);
-    return ()=>clearInterval(t);
-  }, [active]);
+  const [sesion, setSesion] = useState(undefined); // undefined=cargando, null=sin sesión activa
+  const [mins, setMins] = useState(0);
+  const [historial, setHistorial] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const cargarSesion = () => fetchSesionEstacionamientoActiva(userId, mundoId).then(setSesion).catch(() => setSesion(null));
+  const cargarHistorial = () => fetchMisSesionesEstacionamiento(userId, mundoId).then(r => setHistorial(r || [])).catch(() => setHistorial([]));
+  useEffect(() => { cargarSesion(); cargarHistorial(); }, [mundoId]);
+
+  useEffect(() => {
+    if (!sesion) return;
+    const calc = () => setMins(Math.max(0, Math.floor((Date.now() - new Date(sesion.entrada_at).getTime()) / 60000)));
+    calc();
+    const t = setInterval(calc, 30000);
+    return () => clearInterval(t);
+  }, [sesion]);
 
   const costo = Math.max(0, ((mins - gracia) / 60) * tarifa);
+
+  const ingresar = async () => {
+    setBusy(true); setError(null);
+    try { await ingresarEstacionamientoRemote(mundoId, userId, null); await cargarSesion(); }
+    catch { setError("No se pudo registrar el ingreso."); }
+    finally { setBusy(false); }
+  };
+
+  const salir = async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await salirEstacionamientoRemote(userId, mundoId, sesion, +costo.toFixed(2), pagar);
+      if (!r.ok) { setError("Saldo insuficiente para pagar el estacionamiento."); return; }
+      setSesion(null); cargarHistorial();
+    } catch {
+      setError("No se pudo procesar la salida. Intenta de nuevo.");
+    } finally { setBusy(false); }
+  };
 
   return (
     <div className="px-5 space-y-4 pb-8">
       <ConfigBanner icon="timer" message={`Tarifa: S/ ${tarifa}/hora · ${gracia} min de gracia al ingreso/egreso.`} color="blue"/>
+      {error && <div className="p-3 bg-red-50 rounded-xl text-xs text-red-600 font-semibold">{error}</div>}
 
-      {active ? (
+      {sesion === undefined ? (
+        <div className="py-10 flex justify-center"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
+      ) : sesion ? (
         <SectionCard className="p-6 text-center">
           <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-3" style={{boxShadow:"0 0 24px rgba(34,197,94,0.4)"}}>
             <Icon name="local_parking" fill size="text-3xl" color="text-white"/>
@@ -4025,9 +4097,9 @@ function EstacionamientoTemplate({ cfg, u }) {
           <p className="text-4xl font-black text-[#1C1C1E] mt-1">{mins}min</p>
           <p className="text-2xl font-black text-[#1A3270] mt-1">S/ {costo.toFixed(2)}</p>
           <p className="text-xs text-[#404255] mt-1">{gracia > mins ? `${gracia - mins} min de gracia restantes` : `Cobro activo · S/ ${tarifa}/hr`}</p>
-          <button onClick={()=>{setActive(false);setMins(0);}}
-            className="mt-4 w-full py-3 rounded-2xl bg-red-500 text-white font-black tap-active">
-            Registrar salida
+          <button onClick={salir} disabled={busy}
+            className="mt-4 w-full py-3 rounded-2xl bg-red-500 text-white font-black tap-active disabled:opacity-50">
+            {busy ? "Procesando…" : "Registrar salida y pagar"}
           </button>
         </SectionCard>
       ) : (
@@ -4036,17 +4108,23 @@ function EstacionamientoTemplate({ cfg, u }) {
             <Icon name="local_parking" fill size="text-3xl" color="text-[#1A3270]"/>
           </div>
           <p className="text-[#404255] text-sm mb-4">Sin estacionamiento activo</p>
-          <PrimaryBtn label="Registrar entrada" icon="login" onClick={()=>setActive(true)}/>
+          <PrimaryBtn label={busy ? "Registrando…" : "Registrar entrada"} icon="login" disabled={busy} onClick={ingresar}/>
         </SectionCard>
       )}
 
       <SectionCard>
         <SectionHeader label="Historial" icon="history"/>
-        {[{d:"Hoy · 2h 15min",v:"S/ 10.00"},{d:"Ayer · 45min",v:"S/ 0.00 (gracia)"},{d:"Lunes · 3h",v:"S/ 15.00"}].map((h,i)=>(
-          <ListItem key={i} icon="local_parking" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
-            title={h.d} subtitle={cfg.mundo.nombre}
-            right={<span className="font-black text-sm text-[#1C1C1E]">{h.v}</span>}/>
-        ))}
+        {historial === null ? null : historial.length === 0 ? (
+          <EmptyState icon="local_parking" title="Sin historial" subtitle="Tus sesiones de estacionamiento aparecerán acá."/>
+        ) : historial.map(h => {
+          const dur = Math.round((new Date(h.salida_at) - new Date(h.entrada_at)) / 60000);
+          return (
+            <ListItem key={h.id} icon="local_parking" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
+              title={`${new Date(h.entrada_at).toLocaleDateString("es-PE", { day:"2-digit", month:"short" })} · ${dur}min`}
+              subtitle={cfg.mundo.nombre}
+              right={<span className="font-black text-sm text-[#1C1C1E]">S/ {Number(h.monto || 0).toFixed(2)}</span>}/>
+          );
+        })}
       </SectionCard>
     </div>
   );
@@ -4148,40 +4226,79 @@ function PromocionesTemplate({ cfg, u }) {
 // TEMPLATE: TURNOS
 // config: duracionDefault
 // ══════════════════════════════════════════════════════════════════════════════
+// Turnos v1.0.0 (26-ago) -- enfoque real confirmado por la usuaria: food
+// court/restaurantes, no agendamiento de citas. Sin pantalla de "crear
+// pedido" propia -- el pedido nace al comprar en un comercio (Compras y
+// Transacciones, ya real), y esta pantalla solo muestra el estado real de
+// preparación (crearSeguimientoTurno lo crea automáticamente al pagar).
+const TURNO_ESTADO_UI = {
+  recibido:   { label: "Recibido",           color: "bg-[#EEF2FD] text-[#1A3270]", icon: "receipt_long" },
+  preparando: { label: "Preparando",         color: "bg-amber-50 text-amber-700",  icon: "outdoor_grill" },
+  listo:      { label: "¡Listo para recojo!",color: "bg-green-50 text-green-700",  icon: "check_circle" },
+  entregado:  { label: "Entregado",          color: "bg-[#F2F2F7] text-[#404255]", icon: "task_alt" },
+};
 function TurnosTemplate({ cfg, u }) {
-  const duracion = cfg.config.duracionDefault || 30;
+  const mundoId = cfg.mundo.id;
+  const comercios = useMerchantsLive(mundoId);
+  const [pedidos, setPedidos] = useState(null);
 
-  const CITAS = [
-    {titulo:"Consulta médica",servicio:"Tópico escolar",fecha:"Mañana 10:00 AM",estado:"Confirmada",icon:"medical_services"},
-    {titulo:"Reunión de padres",servicio:"Salón 3B",fecha:"Vie 15 Nov · 3 PM",estado:"Pendiente",icon:"groups"},
-  ];
+  useEffect(() => {
+    let vivo = true;
+    const cargar = () => fetchMisPedidosTurno(getSyntheticUserId(), mundoId).then(r => { if (vivo) setPedidos(r || []); }).catch(() => { if (vivo) setPedidos([]); });
+    cargar();
+    // Poll simple mientras la pantalla está abierta -- el estado lo cambia
+    // el comercio desde su propio panel, no hay push en tiempo real todavía.
+    const t = setInterval(cargar, 8000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [mundoId]);
+
+  const activos = (pedidos || []).filter(p => p.estado !== "entregado");
+  const historial = (pedidos || []).filter(p => p.estado === "entregado");
+  const nombreComercio = id => comercios.find(c => c.id === id)?.nombre || "Comercio";
 
   return (
     <div className="px-5 space-y-4 pb-8">
-      <ConfigBanner icon="timer" message={`Duración estándar por turno: ${duracion} minutos.`} color="blue"/>
-      <PrimaryBtn label="Agendar nuevo turno" icon="add_circle"/>
+      <ConfigBanner icon="soup_kitchen" message="Compra en cualquier comercio de food court de esta comunidad — el estado de tu pedido aparece acá en vivo." color="blue"/>
+
       <SectionCard>
-        <SectionHeader label="Mis citas" icon="calendar_month"/>
-        {CITAS.length === 0
-          ? <EmptyState icon="event_busy" title="Sin citas agendadas" subtitle="Agenda tu primera cita usando el botón de arriba."/>
-          : CITAS.map((c,i)=>(
-            <div key={i} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
+        <SectionHeader label="Pedidos en curso" icon="local_dining"/>
+        {pedidos === null ? (
+          <div className="py-8 flex justify-center"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
+        ) : activos.length === 0 ? (
+          <EmptyState icon="soup_kitchen" title="Sin pedidos en curso" subtitle="Compra en un comercio del mundo y tu pedido aparecerá acá con su estado real."/>
+        ) : activos.map(p => {
+          const ui = TURNO_ESTADO_UI[p.estado] || TURNO_ESTADO_UI.recibido;
+          return (
+            <div key={p.id} className="p-4 border-b border-[#CDD1E4]/40 last:border-0">
               <div className="flex items-start gap-3 mb-2">
                 <div className="w-11 h-11 rounded-xl bg-[#EAF3FC] flex items-center justify-center flex-shrink-0">
-                  <Icon name={c.icon} fill size="text-xl" color="text-cyan-700"/>
+                  <Icon name={ui.icon} fill size="text-xl" color="text-cyan-700"/>
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-[#1C1C1E]">{c.titulo}</p>
-                  <p className="text-xs text-[#404255]">{c.servicio}</p>
+                  <p className="font-bold text-[#1C1C1E]">{nombreComercio(p.merchant_id)}</p>
+                  <p className="text-xs text-[#404255]">{(p.items || []).map(it => `${it.cantidad}× ${it.nombre}`).join(", ")}</p>
                 </div>
-                <Chip label={c.estado} color={c.estado==="Confirmada"?"bg-green-100 text-green-700":"bg-amber-100 text-amber-700"}/>
+                <Chip label={ui.label} color={ui.color}/>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#1A3270] font-semibold ml-14">
-                <Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>{c.fecha}
+              <div className="flex items-center justify-between ml-14">
+                <span className="text-xs text-[#404255]">{new Date(p.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="font-mono text-xs font-bold text-[#1A3270]">S/ {Number(p.monto).toFixed(2)}</span>
               </div>
             </div>
-          ))}
+          );
+        })}
       </SectionCard>
+
+      {historial.length > 0 && (
+        <SectionCard>
+          <SectionHeader label="Entregados hoy" icon="history"/>
+          {historial.slice(0, 5).map(p => (
+            <ListItem key={p.id} icon="task_alt" iconBg="bg-[#F2F2F7]" iconColor="text-[#404255]"
+              title={nombreComercio(p.merchant_id)} subtitle={(p.items || []).map(it => it.nombre).join(", ")}
+              right={<span className="font-black text-sm text-[#1C1C1E]">S/ {Number(p.monto).toFixed(2)}</span>} />
+          ))}
+        </SectionCard>
+      )}
     </div>
   );
 }
@@ -4190,10 +4307,34 @@ function TurnosTemplate({ cfg, u }) {
 // TEMPLATE: TRANSPORTE
 // config: tarifaPlana
 // ══════════════════════════════════════════════════════════════════════════════
+// Transporte v1.0.0 (26-ago) -- pasaje real: cobra con el mismo RPC de
+// pago ya probado (pagarSupabase, vía useWalletLive.pagar), sin tabla ni
+// lógica de cobro nueva. "Rutas" queda fuera de v1.0.0 -- el config real
+// hoy solo trae una tarifa plana por mundo, no un catálogo de rutas; mostrar
+// rutas con nombre inventado sería lo mismo que el mock de puntos de ayer.
 function TransporteTemplate({ cfg, u }) {
   const tarifa = cfg.config.tarifaPlana || 2.5;
   const mundoId = cfg.mundo.id;
-  const { saldo } = useWalletLive(mundoId);
+  const userId = getSyntheticUserId();
+  const { saldo, pagar, refresh } = useWalletLive(mundoId);
+  const [viajes, setViajes] = useState(null);
+  const [pagando, setPagando] = useState(false);
+  const [resultado, setResultado] = useState(null); // {ok, mensaje}
+
+  const cargarViajes = () => fetchMisViajesTransporte(userId, mundoId).then(r => setViajes(r || [])).catch(() => setViajes([]));
+  useEffect(() => { cargarViajes(); }, [mundoId]);
+
+  const pagarPasaje = async () => {
+    setPagando(true);
+    setResultado(null);
+    try {
+      const ok = await pagar(tarifa, "Transporte");
+      setResultado(ok ? { ok: true, mensaje: "Pasaje pagado." } : { ok: false, mensaje: "Saldo insuficiente para el pasaje." });
+      if (ok) cargarViajes();
+    } catch {
+      setResultado({ ok: false, mensaje: "No se pudo procesar el pago. Intenta de nuevo." });
+    } finally { setPagando(false); }
+  };
 
   return (
     <div className="px-5 space-y-4 pb-8">
@@ -4204,43 +4345,28 @@ function TransporteTemplate({ cfg, u }) {
         <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Tarifa por viaje</p>
         <p className="text-4xl font-black text-blue-600 mt-1">S/ {tarifa.toFixed(2)}</p>
         <p className="text-xs text-[#404255] mt-1">Saldo disponible: S/ {saldo.toFixed(2)}</p>
-        <div className="flex gap-2 mt-4">
-          <PrimaryBtn label="Pagar con TAQ" icon="contactless" full={false}/>
-          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
-            <Icon name="qr_code" size="text-base" color="text-[#404255]"/>QR
-          </button>
-        </div>
+        {resultado && (
+          <p className={`text-xs font-semibold mt-2 ${resultado.ok ? "text-green-600" : "text-red-600"}`}>{resultado.mensaje}</p>
+        )}
+        <button onClick={pagarPasaje} disabled={pagando}
+          className="w-full mt-4 py-4 rounded-2xl font-black text-base text-white tap-active transition-all disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg,#1A3270,#3B5BDB)", boxShadow: "0 8px 24px rgba(26,50,112,0.25)" }}>
+          {pagando ? "Procesando…" : `Pagar pasaje · S/ ${tarifa.toFixed(2)}`}
+        </button>
       </SectionCard>
 
       <SectionCard>
         <SectionHeader label="Mis viajes recientes" icon="history"/>
-        {[
-          {r:`Ruta A · ${cfg.mundo.nombre} → Comedor`,t:"Hoy 12:10",v:`S/ ${tarifa.toFixed(2)}`,ic:"directions_bus"},
-          {r:`Ruta B · Comedor → ${cfg.mundo.nombre}`,t:"Hoy 13:45",v:`S/ ${tarifa.toFixed(2)}`,ic:"directions_bus"},
-          {r:`Ruta Expresa · ${cfg.mundo.nombre} ↔ Centro`,t:"Ayer 08:05",v:`S/ ${(tarifa*1.5).toFixed(2)}`,ic:"airport_shuttle"},
-        ].map((h,i)=>(
-          <ListItem key={i} icon={h.ic} iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
-            title={h.r} subtitle={h.t}
-            right={<span className="font-black text-sm text-[#1C1C1E]">{h.v}</span>}/>
+        {viajes === null ? (
+          <div className="py-8 flex justify-center"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
+        ) : viajes.length === 0 ? (
+          <EmptyState icon="directions_bus" title="Sin viajes todavía" subtitle="Tus pasajes pagados aparecerán acá."/>
+        ) : viajes.map((v, i) => (
+          <ListItem key={i} icon="directions_bus" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
+            title={`Transporte · ${cfg.mundo.nombre}`}
+            subtitle={new Date(v.created_at).toLocaleString("es-PE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+            right={<span className="font-black text-sm text-[#1C1C1E]">S/ {Number(v.amount).toFixed(2)}</span>}/>
         ))}
-      </SectionCard>
-
-      {/* Route map stub */}
-      <SectionCard className="overflow-hidden">
-        <SectionHeader label="Rutas activas" icon="route"/>
-        <div className="h-32 bg-gradient-to-br from-blue-50 to-[#EAF3FC] flex items-center justify-center">
-          <div className="text-center">
-            <Icon name="map" fill size="text-4xl" color="text-blue-300"/>
-            <p className="text-xs text-blue-400 font-semibold mt-1">Mapa de rutas · {cfg.mundo.nombre}</p>
-          </div>
-        </div>
-        <div className="divide-y divide-[#CDD1E4]/40">
-          {["Ruta A · Principal","Ruta B · Express","Ruta C · Nocturna"].map((r,i)=>(
-            <ListItem key={i} icon="directions_bus" iconBg="bg-[#EAF3FC]" iconColor="text-blue-600"
-              title={r} subtitle={`S/ ${tarifa.toFixed(2)} por viaje`}
-              right={<Chip label={i<2?"Activa":"Suspendida"} color={i<2?"bg-green-100 text-green-700":"bg-[#EEF2FD] text-[#404255]"}/>}/>
-          ))}
-        </div>
       </SectionCard>
     </div>
   );

@@ -3065,6 +3065,22 @@ function TabEventos({ m, st, goto }) {
         </div>
         <BtnOutline onClick={() => nav("/admin/gobierno")}><Icon n="approval" className="text-[18px]"/> Ir a Cola de aprobación</BtnOutline>
       </div>
+
+      {/* Gestión real del evento (comercios afiliados, precompra con stock por
+          producto, asistencia, liquidaciones) vive en el panel Organizador --
+          antes esta pestaña no enlazaba ahí, así que era inalcanzable desde el
+          flujo normal de RedPontis admin pese a estar 100% construida.
+          isPreviewRP (OrganizadorFront.jsx) da acceso completo con la sesión
+          de admin ya activa -- sin credenciales de organizador aparte. */}
+      <div className="p-4 bg-primary-fixed/15 border border-primary/20 rounded-xl flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Icon n="storefront" className="text-primary text-[18px]"/> Comercios, precompra y stock por evento</p>
+          <p className="text-xs text-on-surface-variant mt-0.5">Afiliar comercios, cargar productos de precompra con stock real, asistencia y liquidaciones — panel completo del organizador, en vista de RedPontis.</p>
+        </div>
+        <BtnPrimary onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/organizador/${m.id}`, "_blank")}>
+          <Icon n="open_in_new" className="text-[16px]"/> Abrir panel de eventos
+        </BtnPrimary>
+      </div>
     </div>
   );
 }

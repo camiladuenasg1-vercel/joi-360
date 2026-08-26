@@ -240,13 +240,24 @@ export const MODULE_CATALOG = [
     posiblesIngresos: ["Mensualidad por módulo"],
   },
 
-  { id: "reservas", name: "Reservas", tier: "PREMIUM", category: "Mixto", e: true, a: true, icon: "event_available",
-    version: "0.0.0",
-    desc: "Reserva de recursos, espacios, servicios o actividades para fechas y horarios específicos. El usuario reserva (E) y el operador valida/cobra (A).",
-    servicios: ["Identificación del usuario con TAQ o QR", "Consulta en POS", "Registro de zonas o servicios por mundo", "Registro de horarios y capacidad", "Reservar desde la app", "Lista de espera", "Recordatorios push"],
+  // v1.0.0 (26-ago): reserva real de un recurso del mundo por fecha/hora,
+  // con cancelación real. Sin cobro obligatorio todavía -- anticipoMin queda
+  // definido pero sin aplicar hasta una v1.1 que sí cobre (no podemos
+  // automatizar todo de una). "Identificación TAQ/QR"/"Consulta en POS" del
+  // desc viejo eran copia literal del servicio de Accesos, nunca construidos
+  // así para Reservas -- se sacaron del alcance real.
+  { id: "reservas", name: "Reservas", tier: "PREMIUM", category: "Mixto", e: true, a: false, icon: "event_available",
+    version: "1.0.0",
+    desc: "Reserva real de un recurso del mundo (comedor, gym, laboratorio, cancha) para una fecha y hora específicas, con cancelación real. El cobro de anticipo queda para una versión posterior.",
+    servicios: [
+      { id:"reservar", nombre:"Reservar desde la app", desc:"El usuario elige recurso, fecha y hora reales; la reserva queda persistida." },
+      { id:"cancelar",  nombre:"Cancelar reserva", desc:"El usuario cancela su propia reserva; libera el horario para los demás." },
+      { id:"ocupacion", nombre:"Ver ocupación real", desc:"Cuántas personas ya reservaron ese mismo recurso/fecha/hora, informativo (sin bloqueo de cupo todavía)." },
+    ],
     pricing: { modelo: "mixto", fijoMensual: 220, porTx: 0.2, setup: 0, moneda: "PEN" },
     configFields: [
-      { key: "anticipoMin",        label: "Porcentaje mínimo de anticipo al reservar", type: "percent", default: 30, nullable: true, nullLabel: "Sin anticipo obligatorio" },
+      { key: "recursos",           label: "Recursos reservables (separados por coma)", type: "text", default: "Comedor,Gimnasio,Laboratorio" },
+      { key: "anticipoMin",        label: "Porcentaje mínimo de anticipo al reservar (sin aplicar todavía)", type: "percent", default: 30, nullable: true, nullLabel: "Sin anticipo obligatorio" },
       { key: "ventanaCancelacion", label: "Horas antes de la reserva para cancelar sin penalidad", type: "number", default: 24, nullable: true, nullLabel: "Cancelación gratuita siempre" },
     ],
     posiblesIngresos: ["Mensualidad por módulo"],
@@ -335,10 +346,19 @@ export const MODULE_CATALOG = [
     ],
   },
 
-  { id: "estacionamiento", name: "Estacionamiento", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "local_parking",
-    version: "0.0.0",
-    desc: "Gestiona accesos, permanencia, reservas y pagos relacionados con espacios de estacionamiento. Reutiliza Accesos + Reservas + Consumos.",
-    servicios: ["Pago por hora", "Pago por día / mensualidad", "Reserva de slot anticipada", "Validación QR o placa", "Control de permanencia"],
+  // v1.0.0 (26-ago): sesión real de ingreso/salida con cobro real por
+  // permanencia (tarifaHora x horas, con gracia), calculado al salir y
+  // cobrado con el mismo RPC de pago ya probado. "Reserva de slot
+  // anticipada"/"Validación QR o placa" quedan fuera hasta que se decida si
+  // valen la pena para esta capacidad (Reservas ya cubre el caso de reservar
+  // con anticipación para otros recursos).
+  { id: "estacionamiento", name: "Estacionamiento", tier: "OPCIONAL", category: "Mixto", e: true, a: false, icon: "local_parking",
+    version: "1.0.0",
+    desc: "Sesión real de ingreso/salida de estacionamiento, con cobro real por el tiempo de permanencia (tarifa por hora, con minutos de gracia) contra la wallet del usuario.",
+    servicios: [
+      { id:"sesion", nombre:"Ingreso y salida real", desc:"El usuario registra su ingreso; al salir se calcula el tiempo real transcurrido." },
+      { id:"cobro_permanencia", nombre:"Cobro por permanencia", desc:"Tarifa por hora real, con minutos de gracia, cobrada al salir contra la wallet — nunca por adelantado." },
+    ],
     pricing: { modelo: "transaccional", porTx: 1.5, setup: 400, moneda: "PEN" },
     configFields: [
       { key: "tarifaHora",    label: "Tarifa estándar por hora de estacionamiento", type: "currency", default: 5 },
@@ -428,14 +448,24 @@ export const MODULE_CATALOG = [
     ],
   },
 
-  { id: "turnos", name: "Turnos", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "schedule",
-    version: "0.0.0",
-    desc: "Gestiona citas o turnos programados para atención, servicios o actividades con capacidad limitada. Especialización de Reservas.",
-    servicios: ["Cita individual agendada", "Cita grupal con cupo", "Recordatorio automático 24h antes", "Recordatorio automático 1h antes", "Cancelación y reagendamiento"],
-    pricing: { modelo: "fijo", fijoMensual: 180, setup: 0, moneda: "PEN" },
-    configFields: [
-      { key: "duracionDefault", label: "Duración predeterminada de cada turno (minutos)", type: "number", default: 30 },
+  // v1.0.0 (26-ago): enfoque real confirmado por Camila -- food court /
+  // restaurantes, NO agendar citas (el desc/servicios viejos describían un
+  // motor de citas que nunca se construyó así). El cobro ya ocurre por
+  // Compras y Transacciones (real); esta capacidad solo agrega el estado de
+  // preparación del pedido -- recibido/preparando/listo/entregado -- visible
+  // para el usuario y editable por el comercio desde su panel Operador.
+  // No se renombra el id "turnos" pese a la colisión ya documentada con
+  // pos_turnos/access_shifts (Discrepancia #9) -- decisión explícita de
+  // Camila de no tocar nombres todavía.
+  { id: "turnos", name: "Turnos", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "soup_kitchen",
+    version: "1.0.0",
+    desc: "Estado real de preparación de pedidos para comercios de food court/restaurantes: recibido, preparando, listo para recojo, entregado. El cobro ya ocurre en Compras y Transacciones — esta capacidad no mueve dinero.",
+    servicios: [
+      { id:"seguimiento", nombre:"Seguimiento de pedido", desc:"Cada compra real en un comercio de este mundo crea un registro de estado, visible al usuario en vivo." },
+      { id:"cola_comercio", nombre:"Cola de cocina del comercio", desc:"El operador del comercio avanza el estado desde su panel — recibido → preparando → listo → entregado." },
     ],
+    pricing: { modelo: "fijo", fijoMensual: 180, setup: 0, moneda: "PEN" },
+    configFields: [],
   },
 
   { id: "bnpl", name: "BNPL", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "calendar_clock",
@@ -490,16 +520,22 @@ export const MODULE_CATALOG = [
     ],
   },
 
-  { id: "transporte", name: "Transporte", tier: "OPCIONAL", category: "Emisión", e: true, a: true, icon: "directions_bus",
-    version: "0.0.0",
-    desc: "Derecho de viaje y cobro por uso. Gestiona rutas, tarifas y acceso al transporte dentro del mundo. Reutiliza Accesos + Wallet.",
-    servicios: ["Pago tap NFC", "QR de abordaje", "Registro de rutas", "Precio fijo por viaje", "Tarifa por zona"],
+  // v1.0.0 (26-ago): pasaje de tarifa plana real, cobrado con el mismo RPC
+  // de pago ya probado (pagarSupabase) -- sin tabla ni endpoint nuevo. Rutas
+  // por nombre / tarifa por zona quedan fuera hasta que haya un catálogo real
+  // de rutas configurable (hoy solo existe una tarifa única por mundo).
+  { id: "transporte", name: "Transporte", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "directions_bus",
+    version: "1.0.0",
+    desc: "Cobra una tarifa plana real por viaje dentro del mundo, contra la wallet del usuario. Reutiliza el mismo RPC de pago que el resto del ecosistema.",
+    servicios: [
+      { id:"pasaje", nombre:"Pago de pasaje", desc:"Tarifa plana real, cobrada contra la wallet del usuario con el mismo mecanismo de pago ya probado." },
+      { id:"historial", nombre:"Mis viajes", desc:"Historial real de pasajes pagados, derivado de las transacciones reales del usuario." },
+    ],
     pricing: { modelo: "transaccional", porTx: 0.5, setup: 300, moneda: "PEN" },
     configFields: [
       { key: "tarifaPlana", label: "Precio fijo por viaje o uso del transporte dentro del mundo", type: "currency", default: 2.5 },
     ],
   },
-
 ];
 
 // Verticales R1 según storytelling de flujo real (7 verticales de negocio +

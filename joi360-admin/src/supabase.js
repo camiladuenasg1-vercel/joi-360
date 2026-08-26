@@ -203,11 +203,22 @@ export async function fetchAllFeatureFlags() {
 // "loyalty" salió de este set (26-ago, v1.0.0): acumulación y saldo de
 // puntos ya son reales, derivados de compras reales (fetchLoyaltyPuntos en
 // la superapp) -- el canje todavía no, ver nota en su propia entrada del
-// catálogo. Las demás siguen genuinamente sin construir; ver el plan por
-// capacidad en docs/arquitectura/mapeo_maestro/src/09_backlog.md.
+// catálogo.
+// "turnos" salió de este set (26-ago, v1.0.0): requiere `turno_pedidos` en
+// Supabase (supabase-turnos-food-court.sql, todavía sin correr por Camila al
+// cerrar esta tanda) -- el código ya está listo para cuando esa tabla exista.
+// "transporte" salió de este set (26-ago, v1.0.0): cobra con el mismo
+// pagarSupabase ya probado, sin tabla nueva -- ya funciona hoy.
+// "reservas" salió de este set (26-ago, v1.0.0): requiere `reservas` en
+// Supabase (supabase-reservas.sql, todavía sin correr por Camila al cerrar
+// esta tanda) -- el código ya está listo para cuando esa tabla exista.
+// "estacionamiento" salió de este set (26-ago, v1.0.0): requiere
+// `estacionamiento_sesiones` en Supabase (supabase-estacionamiento.sql,
+// todavía sin correr) -- el código ya está listo para cuando esa tabla exista.
+// Las demás siguen genuinamente sin construir; ver el plan por capacidad en
+// docs/arquitectura/mapeo_maestro/src/09_backlog.md.
 export const MODULOS_PROXIMAMENTE = new Set([
-  "facturacion", "reservas", "credito", "subsidio",
-  "estacionamiento", "asistencia", "turnos", "transporte",
+  "facturacion", "credito", "subsidio", "asistencia",
 ]);
 
 // Canales de emisión activables por mundo (claves emision_<id> en config de wallet)
@@ -1140,6 +1151,20 @@ export async function marcarPedidoEventoEntregadoRemote(id) {
   await rest(`event_product_orders?id=eq.${id}`, {
     method: "PATCH", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ estado: "ENTREGADA", entregado_at: new Date().toISOString() }),
+  });
+}
+
+// ── Turnos v1.0.0 (26-ago) — cola de preparación del comercio. El cobro ya
+// ocurrió (comprarProductosLive -> crearSeguimientoTurno); esto es el estado
+// de cocina: recibido -> preparando -> listo -> entregado. Mismo patrón que
+// Precompra de evento, pero con estados intermedios en vez de un solo paso.
+export async function fetchPedidosTurnoMerchant(merchantId) {
+  return rest(`turno_pedidos?merchant_id=eq.${merchantId}&select=*&order=created_at.desc`);
+}
+export async function avanzarEstadoPedidoTurnoRemote(id, estado) {
+  await rest(`turno_pedidos?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado, updated_at: new Date().toISOString() }),
   });
 }
 

@@ -1138,6 +1138,74 @@ export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Co
   return { ok: true, balance: nuevoSaldo };
 }
 
+// Reservas v1.0.0 (26-ago) -- reserva real de un recurso del mundo, sin
+// cobro obligatorio todavía (ver nota en el catálogo de capacidades).
+export async function fetchMisReservas(userId, worldId) {
+  return rest(`reservas?user_id=eq.${userId}&world_id=eq.${worldId}&estado=eq.confirmada&select=*&order=fecha.asc,hora.asc`);
+}
+export async function fetchOcupacionRecurso(worldId, recurso, fecha, hora) {
+  const rows = await rest(`reservas?world_id=eq.${worldId}&recurso=eq.${encodeURIComponent(recurso)}&fecha=eq.${fecha}&hora=eq.${encodeURIComponent(hora)}&estado=eq.confirmada&select=id`);
+  return (rows || []).length;
+}
+export async function crearReservaRemote(worldId, userId, recurso, fecha, hora) {
+  const rows = await rest("reservas", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, user_id: userId, recurso, fecha, hora, estado: "confirmada" }),
+  });
+  return rows?.[0];
+}
+export async function cancelarReservaRemote(id) {
+  await rest(`reservas?id=eq.${id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "cancelada" }),
+  });
+}
+
+// Estacionamiento v1.0.0 (26-ago) -- sesión real de ingreso/salida; el cobro
+// en sí reutiliza pagarSupabase (mismo RPC ya probado), calculado al salir
+// según la duración real -- nunca antes, para no cobrar por adelantado un
+// tiempo que todavía no se usó.
+export async function fetchSesionEstacionamientoActiva(userId, worldId) {
+  const rows = await rest(`estacionamiento_sesiones?user_id=eq.${userId}&world_id=eq.${worldId}&salida_at=is.null&select=*&order=entrada_at.desc&limit=1`);
+  return rows?.[0] || null;
+}
+export async function ingresarEstacionamientoRemote(worldId, userId, placa) {
+  const rows = await rest("estacionamiento_sesiones", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ world_id: worldId, user_id: userId, placa: placa || null, entrada_at: new Date().toISOString() }),
+  });
+  return rows?.[0];
+}
+export async function fetchMisSesionesEstacionamiento(userId, worldId) {
+  return rest(`estacionamiento_sesiones?user_id=eq.${userId}&world_id=eq.${worldId}&salida_at=not.is.null&select=*&order=entrada_at.desc&limit=10`);
+}
+// El monto se calcula en el cliente (duración real x tarifaHora, con
+// gracia) y se cobra con el mismo pagarSupabase que el resto del
+// ecosistema -- si el pago falla (saldo insuficiente), la sesión NO se
+// cierra, para no dejar una salida registrada sin su cobro real.
+export async function salirEstacionamientoRemote(userId, worldId, sesion, monto, pagarFn) {
+  if (monto > 0) {
+    const ok = await pagarFn(monto, "Estacionamiento");
+    if (!ok) return { ok: false };
+  }
+  await rest(`estacionamiento_sesiones?id=eq.${sesion.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ salida_at: new Date().toISOString(), monto }),
+  });
+  return { ok: true };
+}
+
+// Transporte v1.0.0 (26-ago) -- sin tabla nueva, sin tocar mover_saldo_wallet:
+// el pasaje se cobra con el mismo pagarSupabase ya probado (comercioNombre
+// fijo "Transporte"), y el historial de viajes se deriva filtrando
+// transactions por ese mismo patrón de reference -- mismo principio que
+// Loyalty (derivar de datos reales ya existentes, cero riesgo sobre el RPC
+// crítico de pagos).
+export async function fetchMisViajesTransporte(userId, worldId) {
+  const wallet = await getOrCreateWallet(userId, worldId);
+  return rest(`transactions?wallet_id=eq.${wallet.id}&world_id=eq.${worldId}&type=eq.compra&reference=like.pago-Transporte-*&select=amount,reference,created_at&order=created_at.desc&limit=20`);
+}
+
 // ── Perfil extendido (Gantt #93) — datos médicos/emergencia reales ────────
 export async function fetchMiPerfilExtendido(userId, worldId) {
   const rows = await rest(`user_profiles?user_id=eq.${userId}&world_id=eq.${worldId}&select=*`);
@@ -1220,7 +1288,33 @@ export async function comprarProductosLive(userId, worldId, merchantId, items) {
     }
   }
 
+  // Turnos v1.0.0 (26-ago) -- si el mundo tiene la capacidad activa, cada
+  // compra real (esta función, ya sea marketplace directo o precompra de
+  // evento vía crearPedidoEvento) crea su propio registro de seguimiento de
+  // preparación. No bloquea el pago si falla -- mismo criterio que el
+  // motor de suscripciones (silencioso a propósito).
+  crearSeguimientoTurno(worldId, merchantId, userId, items, total).catch(() => {});
+
   return { ok: true, balance: nuevoSaldo, total };
+}
+
+// Pedidos del propio usuario en este mundo, más recientes primero -- usado
+// por TurnosTemplate para mostrar el estado real de preparación.
+export async function fetchMisPedidosTurno(userId, worldId) {
+  return rest(`turno_pedidos?user_id=eq.${userId}&world_id=eq.${worldId}&select=*&order=created_at.desc&limit=20`);
+}
+
+async function crearSeguimientoTurno(worldId, merchantId, userId, items, monto) {
+  const cfg = await fetchWorldConfigLive(worldId);
+  if (!cfg?.activo?.("turnos")) return;
+  await rest("turno_pedidos", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      world_id: worldId, merchant_id: merchantId, user_id: userId,
+      items: items.map(it => ({ nombre: it.product.name, cantidad: it.qty, precio: +it.product.price })),
+      monto, estado: "recibido",
+    }),
+  });
 }
 
 export async function fetchWalletBalancesBatch(userId, worldIds) {

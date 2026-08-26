@@ -55,6 +55,17 @@ Reutilizan patrones ya probados (ledger de saldo tipo Wallet/Cashback, capacidad
 
 **Cómo se va a trabajar:** una capacidad a la vez (no en paralelo) — schema en Supabase, activación en Catálogo de Capacidades, config por mundo, template real en la superapp con datos reales (no mock). Cada una sube su `version` de `0.0.0` a `1.0.0` cuando tiene su primera versión funcional real, y ese salto de versión queda registrado en el corte semanal correspondiente.
 
+**Checklist de ejecución (26-ago, orden de menor a mayor riesgo — lo que mueve dinero real va al final, con más cuidado):**
+- [x] **Loyalty** — v1.0.0, cerrada. Verificada en vivo end-to-end (Hub, módulo, Profile).
+- [x] **Turnos** (food court) — v1.0.0, código completo. Nueva tabla `turno_pedidos` (estado recibido/preparando/listo/entregado), sin RPC de dinero nueva — se crea sola al pagar en Comercios/Consumos (`crearSeguimientoTurno`, no bloquea el pago si falla). Panel de cocina real en el Operador del comercio. **Bloqueado hasta correr `supabase-turnos-food-court.sql`** — sin la tabla, la creación del pedido falla silenciosamente (try/catch a propósito) y el panel del operador queda vacío.
+- [x] **Transporte** — v1.0.0, código completo y verificado contra el RPC real (mismo `pagarSupabase`/`useWalletLive.pagar` que usa el resto del ecosistema, sin tabla ni lógica de cobro nueva — el historial de viajes se deriva de `transactions` filtrando por referencia). Ya funciona hoy, sin SQL pendiente.
+- [x] **Reservas** — v1.0.0, código completo. Nueva tabla `reservas` (recurso/fecha/hora, cancelación real), sin cobro obligatorio (anticipoMin queda definido pero sin aplicar). Recursos reservables vienen de un config nuevo (`recursos`, separados por coma) en vez de una lista inventada. **Bloqueado hasta correr `supabase-reservas.sql`.**
+- [x] **Estacionamiento** — v1.0.0, código completo. Nueva tabla `estacionamiento_sesiones` (ingreso/salida real); el cobro se calcula al salir según el tiempo real transcurrido y se cobra con el mismo RPC de pago ya probado — nunca por adelantado. **Bloqueado hasta correr `supabase-estacionamiento.sql`.**
+- [ ] **Subsidio** — la única que de verdad necesita acreditar saldo real segmentado a un usuario (no es solo lectura derivada, ni un cobro por algo ya ganado) — pendiente de una definición rápida con Camila antes de construir: ¿quién acredita (RedPontis, el mundo, o ambos), y cómo (acción manual por usuario, o carga masiva)?
+- [ ] Asistencia y Facturación/Crédito quedan fuera de este checklist (ver clasificación 🟡/🔴 arriba).
+
+**Pendiente operativo — 3 archivos SQL escritos, todavía sin correr:** `supabase-turnos-food-court.sql`, `supabase-reservas.sql`, `supabase-estacionamiento.sql` (en la raíz de `JOI360/`). El código admin+superapp de las 3 capacidades ya está desplegado y activable desde el Catálogo de Capacidades, pero no funcionará de verdad hasta correr cada script en el SQL Editor de Supabase — son idempotentes, se pueden correr en cualquier orden y las veces que haga falta.
+
 ---
 
 *Este backlog se actualiza junto con el documento en cada nueva versión — al cerrar un ítem, se mueve a un changelog de "resuelto en v1.x" en la Portada, en vez de borrarse, para mantener trazabilidad de qué se decidió y cuándo.*
