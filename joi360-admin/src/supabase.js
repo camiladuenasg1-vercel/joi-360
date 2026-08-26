@@ -215,10 +215,13 @@ export async function fetchAllFeatureFlags() {
 // "estacionamiento" salió de este set (26-ago, v1.0.0): requiere
 // `estacionamiento_sesiones` en Supabase (supabase-estacionamiento.sql,
 // todavía sin correr) -- el código ya está listo para cuando esa tabla exista.
+// "subsidio" salió de este set (26-ago, v1.0.0): requiere `subsidios` en
+// Supabase (supabase-subsidio.sql, todavía sin correr) -- RedPontis acredita
+// desde Usuarios → detalle de la persona (SubsidioPanel), uno a la vez.
 // Las demás siguen genuinamente sin construir; ver el plan por capacidad en
 // docs/arquitectura/mapeo_maestro/src/09_backlog.md.
 export const MODULOS_PROXIMAMENTE = new Set([
-  "facturacion", "credito", "subsidio", "asistencia",
+  "facturacion", "credito", "asistencia",
 ]);
 
 // Canales de emisión activables por mundo (claves emision_<id> en config de wallet)
@@ -2735,6 +2738,26 @@ export async function fetchDetalleUsuario(userId) {
     recargado,
     saldoTotal: (wallets || []).reduce((a, w) => a + (Number(w.balance) || 0), 0),
   };
+}
+
+// ── Subsidio v1.0.0 (26-ago) — RedPontis acredita saldo dirigido a un
+// usuario, uno a la vez (decisión de Camila). Ledger propio en `subsidios`,
+// sin tocar wallets.balance ni mover_saldo_wallet -- el consumo real del
+// subsidio queda para una v1.1 dedicada. acreditado_por queda como rastro de
+// auditoría de qué admin lo acreditó.
+export async function fetchSubsidiosUsuario(worldId, userId) {
+  return rest(`subsidios?world_id=eq.${worldId}&user_id=eq.${userId}&select=*&order=created_at.desc`);
+}
+export async function acreditarSubsidioRemote(worldId, userId, monto, categorias, vigenteHasta, acreditadoPor) {
+  const rows = await rest("subsidios", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      world_id: worldId, user_id: userId, monto: +monto,
+      categorias: categorias || null, vigente_hasta: vigenteHasta || null,
+      acreditado_por: acreditadoPor || null,
+    }),
+  });
+  return rows?.[0] || null;
 }
 
 // ── Requerimiento de equipos (POS, tótem, lectores) ────────────────────────

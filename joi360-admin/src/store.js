@@ -335,10 +335,20 @@ export const MODULE_CATALOG = [
     ],
   },
 
+  // v1.0.0 (26-ago): saldo dirigido real, acreditado por RedPontis a un
+  // usuario a la vez -- decisión de Camila: solo Plataforma acredita (sin
+  // autoservicio del mundo), uno por uno (sin carga masiva todavía). El
+  // panel real vive en Usuarios → detalle de la persona (SubsidioPanel),
+  // condicionado a que el mundo tenga la capacidad activa. El consumo real
+  // del subsidio (gastarlo en una compra) queda para una v1.1 -- por ahora
+  // es saldo dirigido visible y auditable, sin tocar wallets.balance.
   { id: "subsidio", name: "Subsidio", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "volunteer_activism",
-    version: "0.0.0",
-    desc: "Asigna fondos con reglas específicas de uso para determinados usuarios, grupos o categorías. Saldo dirigido con vigencia y segmentación.",
-    servicios: ["Saldo segmentado por grupo o usuario", "Categorías de gasto permitidas", "Vigencia del subsidio", "Reportería sponsor", "Recarga masiva de subsidios"],
+    version: "1.0.0",
+    desc: "Saldo dirigido real, acreditado por RedPontis a un usuario específico, con categorías de gasto permitidas y vigencia. Uno a la vez -- sin carga masiva todavía.",
+    servicios: [
+      { id:"acreditacion", nombre:"Acreditación por RedPontis", desc:"Plataforma acredita un monto real a un usuario específico desde su ficha, con categorías y vigencia." },
+      { id:"saldo_visible", nombre:"Saldo dirigido visible", desc:"El usuario ve su saldo subsidiado real, categorías permitidas y cuándo vence." },
+    ],
     pricing: { modelo: "fijo", fijoMensual: 400, setup: 600, moneda: "PEN" },
     configFields: [
       { key: "categorias",   label: "Categorías de comercio donde se puede usar el saldo subsidiado", type: "text", default: "F&B,Educación" },
@@ -1216,6 +1226,8 @@ export const FLAG_DEV_MAP = {
   "reservas:ocupacion":         { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
   "estacionamiento:sesion":          { status: "in_progress", api: "propio · estacionamiento_sesiones, pendiente supabase-estacionamiento.sql" },
   "estacionamiento:cobro_permanencia": { status: "in_progress", api: "propio · pagarSupabase, pendiente supabase-estacionamiento.sql" },
+  "subsidio:acreditacion":      { status: "in_progress", api: "propio · subsidios, pendiente supabase-subsidio.sql" },
+  "subsidio:saldo_visible":     { status: "in_progress", api: "propio · subsidios, pendiente supabase-subsidio.sql" },
 };
 const FLAG_TIER_DEFAULT = { CORE: "in_progress", "MOTOR BASE": "in_progress", PREMIUM: "planned", OPCIONAL: "planned", FUTURO: "planned" };
 

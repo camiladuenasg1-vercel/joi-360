@@ -21,6 +21,7 @@ import {
   fetchLoyaltyPuntos, fetchMisPedidosTurno, fetchMisViajesTransporte,
   fetchMisReservas, fetchOcupacionRecurso, crearReservaRemote, cancelarReservaRemote,
   fetchSesionEstacionamientoActiva, ingresarEstacionamientoRemote, fetchMisSesionesEstacionamiento, salirEstacionamientoRemote,
+  fetchMisSubsidios,
 } from "../supabaseClient.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
@@ -3707,42 +3708,76 @@ function GenericTemplate({ cfg, moduleId }) {
 // TEMPLATE: SUBSIDIO
 // config: categorias, vigenciaDias
 // ══════════════════════════════════════════════════════════════════════════════
+// Subsidio v1.0.0 (26-ago) -- saldo dirigido real, acreditado por RedPontis
+// (AcreditarSubsidioRemote, panel de Usuario del admin), sin tocar
+// wallets.balance. El consumo real (gastarlo en una compra) todavía no está
+// integrado con el pago -- se muestra honesto como "Próximamente" en vez de
+// un historial de gastos inventado.
 function SubsidioTemplate({ cfg, u }) {
   const mundoId = cfg.mundo.id;
-  const cats = (cfg.config.categorias || "F&B,Educación").split(",").map(c=>c.trim());
-  const vig = cfg.config.vigenciaDias;
-  const saldo = 85.00; // demo
+  const userId = getSyntheticUserId();
+  const cats = (cfg.config.categorias || "").split(",").map(c=>c.trim()).filter(Boolean);
+  const [subsidios, setSubsidios] = useState(null);
+
+  useEffect(() => {
+    let vivo = true;
+    fetchMisSubsidios(userId, mundoId).then(r => { if (vivo) setSubsidios(r || []); }).catch(() => { if (vivo) setSubsidios([]); });
+    return () => { vivo = false; };
+  }, [mundoId]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const activos = (subsidios || []).filter(s => !s.vigente_hasta || s.vigente_hasta >= hoy);
+  const disponible = activos.reduce((a, s) => a + (Number(s.monto) - Number(s.monto_usado || 0)), 0);
+  const proximoVencimiento = activos.filter(s => s.vigente_hasta).sort((a,b) => a.vigente_hasta.localeCompare(b.vigente_hasta))[0]?.vigente_hasta;
 
   return (
     <div className="px-5 space-y-4 pb-8">
       <div className="rounded-3xl p-8 text-center text-white" style={{background:"linear-gradient(135deg,#1A3270 0%,#7c3aed 100%)"}}>
         <p className="text-[11px] font-bold text-white/60 uppercase tracking-widest mb-2">Saldo subsidiado</p>
-        <p className="text-5xl font-black">S/ {saldo.toFixed(2)}</p>
-        <p className="text-white/50 text-xs mt-2">{vig ? `Vence en ${vig} días` : "Sin caducidad"}</p>
+        <p className="text-5xl font-black">{subsidios === null ? "···" : `S/ ${disponible.toFixed(2)}`}</p>
+        <p className="text-white/50 text-xs mt-2">{proximoVencimiento ? `Próximo vencimiento: ${new Date(proximoVencimiento+"T00:00:00").toLocaleDateString("es-PE",{day:"2-digit",month:"short"})}` : "Sin caducidad"}</p>
       </div>
-      <SectionCard className="p-4">
-        <p className="text-sm font-bold text-[#1C1C1E] mb-3">Válido solo en estas categorías</p>
-        <div className="flex flex-wrap gap-2">
-          {cats.map(c=>(
-            <div key={c} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 border border-purple-200">
-              <Icon name="check_circle" fill size="text-sm" color="text-purple-600"/>
-              <span className="text-xs font-bold text-purple-700">{c}</span>
-            </div>
-          ))}
+
+      {cats.length > 0 && (
+        <SectionCard className="p-4">
+          <p className="text-sm font-bold text-[#1C1C1E] mb-3">Válido solo en estas categorías</p>
+          <div className="flex flex-wrap gap-2">
+            {cats.map(c=>(
+              <div key={c} className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-purple-50 border border-purple-200">
+                <Icon name="check_circle" fill size="text-sm" color="text-purple-600"/>
+                <span className="text-xs font-bold text-purple-700">{c}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-[#404255] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
+        </SectionCard>
+      )}
+
+      <SectionCard className="p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[#EEF2FD] flex items-center justify-center flex-shrink-0">
+          <Icon name="shopping_bag" fill size="text-xl" color="text-[#1A3270]" />
         </div>
-        <p className="text-[11px] text-[#404255] mt-3">Solo puedes usar este saldo en comercios de estas categorías dentro de {cfg.mundo.nombre}.</p>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-[#1C1C1E]">Uso del subsidio en compras</p>
+          <p className="text-[11px] text-[#404255]">Próximamente podrás pagar directamente con este saldo en los comercios habilitados.</p>
+        </div>
       </SectionCard>
+
       <SectionCard>
-        <SectionHeader label="Historial de subsidio" icon="history"/>
-        {[{l:"Cafetería Central",s:"-S/ 12.50",t:"Hoy",cat:"F&B"},
-          {l:"Librería Campus",s:"-S/ 8.00",t:"Ayer",cat:"Educación"},
-          {l:"Recarga de subsidio",s:"+S/ 100.00",t:"Lunes",cat:"Sistema"}].map((h,i)=>(
-          <ListItem key={i} icon={h.s.startsWith("-")?"shopping_bag":"add_card"}
-            iconBg={h.s.startsWith("-")?"bg-purple-50":"bg-green-50"}
-            iconColor={h.s.startsWith("-")?"text-purple-600":"text-green-600"}
-            title={h.l} subtitle={`${h.cat} · ${h.t}`}
-            right={<span className={`font-black text-sm ${h.s.startsWith("-")?"text-[#1C1C1E]":"text-green-600"}`}>{h.s}</span>}/>
-        ))}
+        <SectionHeader label="Acreditaciones" icon="history"/>
+        {subsidios === null ? (
+          <div className="py-8 flex justify-center"><span className="w-6 h-6 border-2 border-[#CDD1E4] border-t-[#1A3270] rounded-full animate-spin"/></div>
+        ) : subsidios.length === 0 ? (
+          <EmptyState icon="volunteer_activism" title="Sin subsidio todavía" subtitle="Cuando RedPontis te acredite un subsidio, aparecerá acá."/>
+        ) : subsidios.map(s => {
+          const vencido = s.vigente_hasta && s.vigente_hasta < hoy;
+          return (
+            <ListItem key={s.id} icon="add_card" iconBg="bg-green-50" iconColor="text-green-600"
+              title={s.categorias || "Sin categoría restringida"}
+              subtitle={`${new Date(s.created_at).toLocaleDateString("es-PE",{day:"2-digit",month:"short"})}${vencido ? " · Vencido" : ""}`}
+              right={<span className={`font-black text-sm ${vencido ? "text-[#CDD1E4]" : "text-green-600"}`}>+S/ {Number(s.monto).toFixed(2)}</span>}/>
+          );
+        })}
       </SectionCard>
     </div>
   );

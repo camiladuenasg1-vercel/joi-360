@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useStore } from "./hooks";
-import { fetchUsuariosDeMundo, fetchDetalleUsuario, fetchUsuarioResumen, liberarNfcBandRemote } from "./supabase.js";
-import { Icon, Pill, BtnOutline, inputCls, notify } from "./ui";
-import { nomenclaturaFamiliar } from "./store";
+import { fetchUsuariosDeMundo, fetchDetalleUsuario, fetchUsuarioResumen, liberarNfcBandRemote, fetchSubsidiosUsuario, acreditarSubsidioRemote } from "./supabase.js";
+import { Icon, Pill, BtnPrimary, BtnOutline, Field, inputCls, notify } from "./ui";
+import { nomenclaturaFamiliar, session } from "./store";
 
 const soles = n => `S/ ${(Number(n) || 0).toFixed(2)}`;
 const fecha = s => (s ? new Date(s).toLocaleDateString("es-PE", { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -397,6 +397,10 @@ export function UsuarioDetallePage() {
               )}
           </Seccion>
 
+          {mundoId && mundoContexto && (mundoContexto.modulos || []).some(x => x.id === "subsidio" && x.enabled) && (
+            <SubsidioPanel worldId={mundoId} userId={userId} mundoContexto={mundoContexto} />
+          )}
+
           <Seccion titulo={`Movimientos (${d.movimientos.length})`}>
             {d.movimientos.length === 0 ? (
               <p className="text-sm text-on-surface-variant">
@@ -444,5 +448,106 @@ function Seccion({ titulo, children }) {
       <h3 className="text-[11px] uppercase tracking-wider font-semibold text-on-surface-variant mb-2">{titulo}</h3>
       {children}
     </div>
+  );
+}
+
+// ── Subsidio v1.0.0 (26-ago) — RedPontis acredita saldo dirigido a esta
+// persona, uno a la vez (decisión de Camila: solo Plataforma acredita, sin
+// autoservicio del mundo, mismo criterio que el pricing en Acuerdo
+// Comercial). Ledger propio (`subsidios`), sin tocar wallets.balance -- el
+// consumo real queda para una v1.1 dedicada, por ahora es saldo dirigido
+// visible y auditable.
+function SubsidioPanel({ worldId, userId, mundoContexto }) {
+  const mod = (mundoContexto.modulos || []).find(x => x.id === "subsidio");
+  const categoriasDefault = mod?.config?.categorias || "";
+  const vigenciaDiasDefault = mod?.config?.vigenciaDias;
+
+  const [subsidios, setSubsidios] = useState(null);
+  const [abierto, setAbierto] = useState(false);
+  const [monto, setMonto] = useState("");
+  const [categorias, setCategorias] = useState(categoriasDefault);
+  const [guardando, setGuardando] = useState(false);
+
+  const cargar = () => fetchSubsidiosUsuario(worldId, userId).then(r => setSubsidios(r || [])).catch(() => setSubsidios([]));
+  useEffect(() => { cargar(); }, [worldId, userId]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const activos = (subsidios || []).filter(s => !s.vigente_hasta || s.vigente_hasta >= hoy);
+  const disponibleTotal = activos.reduce((a, s) => a + (Number(s.monto) - Number(s.monto_usado || 0)), 0);
+
+  const acreditar = async () => {
+    if (!monto || +monto <= 0) return;
+    setGuardando(true);
+    try {
+      let vigenteHasta = null;
+      if (vigenciaDiasDefault) {
+        const d = new Date();
+        d.setDate(d.getDate() + +vigenciaDiasDefault);
+        vigenteHasta = d.toISOString().slice(0, 10);
+      }
+      await acreditarSubsidioRemote(worldId, userId, +monto, categorias || null, vigenteHasta, session()?.email || null);
+      notify(`Subsidio de S/ ${(+monto).toFixed(2)} acreditado.`);
+      setMonto(""); setAbierto(false);
+      cargar();
+    } catch {
+      notify("No se pudo acreditar el subsidio.", "error");
+    } finally { setGuardando(false); }
+  };
+
+  return (
+    <Seccion titulo="Subsidio">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 space-y-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-xs text-on-surface-variant">Saldo dirigido disponible</p>
+            <p className="text-2xl font-black tabular-nums">{soles(disponibleTotal)}</p>
+          </div>
+          <BtnOutline onClick={() => setAbierto(o => !o)}>
+            <Icon n="volunteer_activism" className="text-[16px]" /> {abierto ? "Cancelar" : "Acreditar subsidio"}
+          </BtnOutline>
+        </div>
+
+        {abierto && (
+          <div className="border-t border-outline-variant/60 pt-3 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Monto a acreditar (S/)">
+                <input type="number" className={inputCls} value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" />
+              </Field>
+              <Field label="Categorías permitidas">
+                <input className={inputCls} value={categorias} onChange={e => setCategorias(e.target.value)} placeholder="F&B,Educación" />
+              </Field>
+            </div>
+            <p className="text-[11px] text-on-surface-variant">
+              {vigenciaDiasDefault ? `Vence a los ${vigenciaDiasDefault} días de acreditado (config del mundo).` : "Sin caducidad (config del mundo)."}
+            </p>
+            <BtnPrimary onClick={acreditar} disabled={guardando || !monto || +monto <= 0}>
+              {guardando ? "Acreditando…" : "Confirmar acreditación"}
+            </BtnPrimary>
+          </div>
+        )}
+
+        {subsidios === null ? null : subsidios.length === 0 ? (
+          <p className="text-xs text-on-surface-variant">Sin subsidios acreditados todavía.</p>
+        ) : (
+          <div className="divide-y divide-outline-variant/60 border-t border-outline-variant/60 pt-1">
+            {subsidios.map(s => {
+              const vencido = s.vigente_hasta && s.vigente_hasta < hoy;
+              const disponible = Number(s.monto) - Number(s.monto_usado || 0);
+              return (
+                <div key={s.id} className="py-2 flex justify-between items-center text-xs">
+                  <div>
+                    <p className={vencido ? "line-through text-outline" : ""}>{soles(s.monto)} {s.categorias ? `· ${s.categorias}` : ""}</p>
+                    <p className="text-outline font-mono text-[10px]">{fecha(s.created_at)}{s.vigente_hasta ? ` · vence ${fecha(s.vigente_hasta)}` : ""}{s.acreditado_por ? ` · ${s.acreditado_por}` : ""}</p>
+                  </div>
+                  <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${vencido ? "bg-outline-variant text-outline" : "bg-ok/15 text-ok"}`}>
+                    {vencido ? "Vencido" : `Disponible: ${soles(disponible)}`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Seccion>
   );
 }

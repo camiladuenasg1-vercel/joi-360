@@ -1138,6 +1138,14 @@ export async function pagarSupabase(userId, worldId, monto, comercioNombre = "Co
   return { ok: true, balance: nuevoSaldo };
 }
 
+// Subsidio v1.0.0 (26-ago) -- de solo lectura del lado del usuario. La
+// acreditación real la hace RedPontis desde el panel de Usuario del admin
+// (acreditarSubsidioRemote) -- esta función solo lee el ledger propio
+// `subsidios`, sin tocar wallets.balance.
+export async function fetchMisSubsidios(userId, worldId) {
+  return rest(`subsidios?user_id=eq.${userId}&world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+
 // Reservas v1.0.0 (26-ago) -- reserva real de un recurso del mundo, sin
 // cobro obligatorio todavía (ver nota en el catálogo de capacidades).
 export async function fetchMisReservas(userId, worldId) {
