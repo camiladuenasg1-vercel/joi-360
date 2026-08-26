@@ -64,6 +64,15 @@ Reutilizan patrones ya probados (ledger de saldo tipo Wallet/Cashback, capacidad
 - [ ] **Subsidio** — la única que de verdad necesita acreditar saldo real segmentado a un usuario (no es solo lectura derivada, ni un cobro por algo ya ganado) — pendiente de una definición rápida con Camila antes de construir: ¿quién acredita (RedPontis, el mundo, o ambos), y cómo (acción manual por usuario, o carga masiva)?
 - [ ] Asistencia y Facturación/Crédito quedan fuera de este checklist (ver clasificación 🟡/🔴 arriba).
 
+**Auditoría del tablero de capacidades (26-ago) — pedida por Camila: "hay algunas que están hechas pero siguen marcadas como planificadas."** Encontrado: `FLAG_DEV_MAP` (Catálogo de Capacidades → pestaña "Feature Flags" de cada capacidad) es un rastreador GRANULAR por servicio, separado del `version`/`MODULOS_PROXIMAMENTE` a nivel de capacidad — cuando un servicio no tiene entrada ahí, cae al default de su tier (CORE→"En desarrollo", PREMIUM/OPCIONAL→"Planificado"), sin importar si ya está construido. No es solo cosmético: bloquea el botón "Activar todos" para ese flag específico. Verificado contra el código real (no solo contra la descripción) antes de marcar cada uno:
+- `wallet:qr_fijo` — su propio desc ya decía "siempre activo en la práctica"; caía a "En desarrollo".
+- `suscripciones:planes` y `suscripciones:cobro` — Suscripciones cobra dinero real hace semanas (modelo YOKI); al no tener NINGUNA entrada, ambos flags mostraban "Planificado". **Verificado en vivo tras el fix: pasó de mostrar 0/2 a "2/2 listos para activar."**
+- `control:reglas_mundo` — sus config fields (horario, límite diario, límite global) están confirmados reales y aplicados server-side.
+- `menu:restricciones_alimentarias` — bloqueo real por alergia, ya confirmado en una prueba en vivo anterior (30-jul).
+- Capacidades cerradas hoy mismo: `loyalty:*` y `transporte:*` marcadas "ready"; `turnos:*`/`reservas:*`/`estacionamiento:*` marcadas "in_progress" (código listo, bloqueado por SQL pendiente — no "ready" todavía).
+
+**No se tocaron** (verificado que siguen genuinamente sin construir, no es un error de catálogo): `accesos:registro_zonas`/`registro_horarios` y `control:reglas_sponsor`/`aprobaciones` — son banners informativos, no hacen cumplir nada todavía (mismo criterio del audit del 04-ago, documentado en el propio código).
+
 **Pendiente operativo — 3 archivos SQL escritos, todavía sin correr:** `supabase-turnos-food-court.sql`, `supabase-reservas.sql`, `supabase-estacionamiento.sql` (en la raíz de `JOI360/`). El código admin+superapp de las 3 capacidades ya está desplegado y activable desde el Catálogo de Capacidades, pero no funcionará de verdad hasta correr cada script en el SQL Editor de Supabase — son idempotentes, se pueden correr en cualquier orden y las veces que haga falta.
 
 ---

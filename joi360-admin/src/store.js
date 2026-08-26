@@ -1120,6 +1120,11 @@ export const FLAG_DEV_MAP = {
   "wallet:bandita":        { status: "ready",       api: "GET /merchants/session/{tag_id}" },
   "wallet:subwallet":      { status: "ready",       api: "propio" },
   "wallet:notifs":         { status: "planned",     api: "propio" },
+  // Auditoría 26-ago (pedida por Camila): qr_fijo no tenía entrada -- caía
+  // al default de tier CORE ("in_progress") pese a que su propio desc ya
+  // decía "ya está siempre activo en la práctica". El toggle "Activar
+  // todos" (MundoDetail.jsx) lo saltaba en silencio por esto.
+  "wallet:qr_fijo":        { status: "ready",       api: "propio · QR fijo del titular, generado al activar Wallet" },
   // ── Comercios (adquirencia → EcoreGateway) ──
   "comercios:registro":    { status: "ready",       api: "propio" },
   "comercios:plataforma":  { status: "ready",       api: "propio" },
@@ -1172,11 +1177,45 @@ export const FLAG_DEV_MAP = {
 
   "control:perfiles_ctrl": { status: "ready", api: "propio · dependents + P2P a wallet del dependiente" },
   "control:alertas":       { status: "ready", api: "propio · consumo_alertas (límite diario de Menú)" },
+  // Auditoría 26-ago: reglas_mundo faltaba pese a que sus config fields
+  // (horarioConsumo, limiteDiarioPerfil, limiteGlobalMundo) están confirmados
+  // reales y aplicados server-side (bloqueadoPorRestriccion/fueraDeHorario,
+  // Task #181). reglas_sponsor y aprobaciones NO se agregan -- no hay capa
+  // distinta de reglas por sponsor en el código, y "aprobaciones en tiempo
+  // real" sigue siendo un banner informativo (ver auditoría 04-ago arriba).
+  "control:reglas_mundo":  { status: "ready", api: "propio · horarioConsumo/limiteDiarioPerfil/limiteGlobalMundo, validado server-side" },
 
   "menu:calendario": { status: "ready", api: "propio · menu_programacion" },
   "menu:cupos":       { status: "ready", api: "propio · menu_programacion.cupos_max" },
+  // Auditoría 26-ago: faltaba pese a estar probado en vivo (QA 30-jul) --
+  // bloqueo real por alergia al agregar un plato con alérgeno del dependiente.
+  "menu:restricciones_alimentarias": { status: "ready", api: "propio · alergiasArr vs item.alergenos, bloqueo real confirmado en vivo" },
   "menu:preorden":    { status: "ready", api: "propio · crearReservaMenu" },
   "menu:validacion_pos": { status: "ready", api: "propio · marcarMenuReservaEntregadaRemote (POS Operador → Entregar Menú)" },
+
+  // Auditoría 26-ago (pedida por Camila): Suscripciones no tenía NINGUNA
+  // entrada acá pese a cobrar dinero real hace semanas (modelo YOKI, 13-ago
+  // y 20-ago) -- por ser tier OPCIONAL, ambos flags caían al default
+  // "planned", bloqueando "Activar todos" en cualquier mundo nuevo.
+  "suscripciones:planes": { status: "ready", api: "propio · PlanesSuscripcionPanel + subscription_plans" },
+  "suscripciones:cobro":  { status: "ready", api: "propio · crearDependienteRemote + sincronizarCicloSuscripcionesMembresia" },
+
+  // Capacidades cerradas hoy (26-ago) -- ver 09_backlog.md para el detalle
+  // de cada una. Turnos/Reservas/Estacionamiento quedan "in_progress" (no
+  // "ready") a propósito: el código está listo pero bloqueado hasta correr
+  // su migración SQL pendiente -- "ready" sería falso hasta ese paso.
+  "loyalty:acumulacion":        { status: "ready", api: "propio · fetchLoyaltyPuntos, derivado de transactions reales" },
+  "loyalty:saldo_pts":          { status: "ready", api: "propio · useLoyaltyPuntos/useLoyaltyPuntosBatch" },
+  "loyalty:niveles":            { status: "ready", api: "propio · calculado sobre el saldo real de puntos" },
+  "transporte:pasaje":          { status: "ready", api: "propio · pagarSupabase (mismo RPC de pago del ecosistema)" },
+  "transporte:historial":       { status: "ready", api: "propio · transactions filtradas por referencia" },
+  "turnos:seguimiento":         { status: "in_progress", api: "propio · turno_pedidos, pendiente supabase-turnos-food-court.sql" },
+  "turnos:cola_comercio":       { status: "in_progress", api: "propio · Operador, pendiente supabase-turnos-food-court.sql" },
+  "reservas:reservar":          { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
+  "reservas:cancelar":          { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
+  "reservas:ocupacion":         { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
+  "estacionamiento:sesion":          { status: "in_progress", api: "propio · estacionamiento_sesiones, pendiente supabase-estacionamiento.sql" },
+  "estacionamiento:cobro_permanencia": { status: "in_progress", api: "propio · pagarSupabase, pendiente supabase-estacionamiento.sql" },
 };
 const FLAG_TIER_DEFAULT = { CORE: "in_progress", "MOTOR BASE": "in_progress", PREMIUM: "planned", OPCIONAL: "planned", FUTURO: "planned" };
 
