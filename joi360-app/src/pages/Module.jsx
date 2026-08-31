@@ -821,9 +821,22 @@ function ReservasTemplate({ cfg, u }) {
   const cancelHrs = cfg.config.ventanaCancelacion;
   const recursos = (cfg.config.recursos || "Comedor,Gimnasio,Laboratorio").split(",").map(r => r.trim()).filter(Boolean);
 
+  // Fecha local de Perú, no UTC — new Date().toISOString() adelanta el día en
+  // la tarde/noche (UTC-5), lo que hacía que la fecha por defecto, el corte
+  // próximas/pasadas y la etiqueta de la lista cayeran un día corrido. Mismo
+  // fix que el batch de timezone del 30-jul (Menú, Restricciones, Eventos).
+  const fechaLocalHoy = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const fmtFechaCorta = (iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+  };
+
   const [showNew, setShowNew] = useState(false);
   const [recurso, setRecurso] = useState(null);
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(fechaLocalHoy);
   const [hora, setHora] = useState("");
   const [ocupacion, setOcupacion] = useState(null);
   const [reservando, setReservando] = useState(false);
@@ -856,7 +869,7 @@ function ReservasTemplate({ cfg, u }) {
     cargar();
   };
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalHoy();
   const proximas = (reservas || []).filter(r => r.fecha >= hoy);
   const pasadas = (reservas || []).filter(r => r.fecha < hoy);
 
@@ -915,7 +928,7 @@ function ReservasTemplate({ cfg, u }) {
             </div>
             <span className="text-xs text-[#1A3270] font-semibold flex items-center gap-1">
               <Icon name="schedule" size="text-sm" color="text-[#1A3270]"/>
-              {new Date(r.fecha + "T00:00:00").toLocaleDateString("es-PE", { day: "2-digit", month: "short" })} · {r.hora}
+              {fmtFechaCorta(r.fecha)} · {r.hora}
             </span>
           </div>
         ))}

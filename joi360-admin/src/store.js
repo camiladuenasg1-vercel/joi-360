@@ -1210,24 +1210,24 @@ export const FLAG_DEV_MAP = {
   "suscripciones:planes": { status: "ready", api: "propio · PlanesSuscripcionPanel + subscription_plans" },
   "suscripciones:cobro":  { status: "ready", api: "propio · crearDependienteRemote + sincronizarCicloSuscripcionesMembresia" },
 
-  // Capacidades cerradas hoy (26-ago) -- ver 09_backlog.md para el detalle
-  // de cada una. Turnos/Reservas/Estacionamiento quedan "in_progress" (no
-  // "ready") a propósito: el código está listo pero bloqueado hasta correr
-  // su migración SQL pendiente -- "ready" sería falso hasta ese paso.
+  // Capacidades cerradas 26-ago -- ver 09_backlog.md para el detalle de cada
+  // una. Sus 4 migraciones (turno_pedidos / reservas / estacionamiento_sesiones
+  // / subsidios) se corrieron y verificaron en vivo el 28-ago -- las 6
+  // capacidades quedan "ready", ya no bloqueadas por SQL pendiente.
   "loyalty:acumulacion":        { status: "ready", api: "propio · fetchLoyaltyPuntos, derivado de transactions reales" },
   "loyalty:saldo_pts":          { status: "ready", api: "propio · useLoyaltyPuntos/useLoyaltyPuntosBatch" },
   "loyalty:niveles":            { status: "ready", api: "propio · calculado sobre el saldo real de puntos" },
   "transporte:pasaje":          { status: "ready", api: "propio · pagarSupabase (mismo RPC de pago del ecosistema)" },
   "transporte:historial":       { status: "ready", api: "propio · transactions filtradas por referencia" },
-  "turnos:seguimiento":         { status: "in_progress", api: "propio · turno_pedidos, pendiente supabase-turnos-food-court.sql" },
-  "turnos:cola_comercio":       { status: "in_progress", api: "propio · Operador, pendiente supabase-turnos-food-court.sql" },
-  "reservas:reservar":          { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
-  "reservas:cancelar":          { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
-  "reservas:ocupacion":         { status: "in_progress", api: "propio · reservas, pendiente supabase-reservas.sql" },
-  "estacionamiento:sesion":          { status: "in_progress", api: "propio · estacionamiento_sesiones, pendiente supabase-estacionamiento.sql" },
-  "estacionamiento:cobro_permanencia": { status: "in_progress", api: "propio · pagarSupabase, pendiente supabase-estacionamiento.sql" },
-  "subsidio:acreditacion":      { status: "in_progress", api: "propio · subsidios, pendiente supabase-subsidio.sql" },
-  "subsidio:saldo_visible":     { status: "in_progress", api: "propio · subsidios, pendiente supabase-subsidio.sql" },
+  "turnos:seguimiento":         { status: "ready", api: "propio · turno_pedidos" },
+  "turnos:cola_comercio":       { status: "ready", api: "propio · Operador (cola de cocina) sobre turno_pedidos" },
+  "reservas:reservar":          { status: "ready", api: "propio · reservas" },
+  "reservas:cancelar":          { status: "ready", api: "propio · reservas (PATCH estado=cancelada)" },
+  "reservas:ocupacion":         { status: "ready", api: "propio · reservas (count por recurso/fecha/hora)" },
+  "estacionamiento:sesion":          { status: "ready", api: "propio · estacionamiento_sesiones" },
+  "estacionamiento:cobro_permanencia": { status: "ready", api: "propio · pagarSupabase, calculado al salir" },
+  "subsidio:acreditacion":      { status: "ready", api: "propio · subsidios (acredita RedPontis desde ficha)" },
+  "subsidio:saldo_visible":     { status: "ready", api: "propio · subsidios" },
 };
 const FLAG_TIER_DEFAULT = { CORE: "in_progress", "MOTOR BASE": "in_progress", PREMIUM: "planned", OPCIONAL: "planned", FUTURO: "planned" };
 
