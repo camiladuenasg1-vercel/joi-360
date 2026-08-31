@@ -22,7 +22,7 @@ from docx.oxml import OxmlElement
 BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, "src")
 
-VERSION = "1.1"
+VERSION = "1.2"
 OUT_NAME = f"JOI360_Mapeo_Capacidades_Dependencias_Render_v{VERSION}.docx"
 OUT_PATHS = [
     os.path.join(BASE, OUT_NAME),
@@ -42,6 +42,7 @@ SECTION_FILES = [
     "07_design_system.md",
     "08_discrepancias.md",
     "09_backlog.md",
+    "10_anexo_anclado.md",
 ]
 
 PRIMARY = RGBColor(0x00, 0x35, 0xB9)

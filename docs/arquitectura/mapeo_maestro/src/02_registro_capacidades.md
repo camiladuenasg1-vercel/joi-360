@@ -8,6 +8,24 @@ Convención de estado:
 - 🔵 **Planificado** — existe en el catálogo de código como referencia (`MODULOS_PROXIMAMENTE`) pero no es activable ni sincroniza a Supabase; en superapp, si tiene template, ese template es una maqueta con datos hardcodeados.
 - ⚪ **No existe en código todavía** — ni como capacidad del catálogo ni como template.
 
+## Versión de capacidad — de → a (corte 28-ago-2026)
+
+Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) lleva su propio `version` (semver), visible en el Catálogo de Capacidades del admin junto al nombre. El versionado empieza a contar desde este corte — no se reconstruyó el historial previo. Cambios de esta semana:
+
+| Capacidad | Antes | Ahora | Qué cambió esta semana |
+|---|---|---|---|
+| Loyalty (Puntos) | 0.0.0 | **1.0.0** | Puntos reales desde `transactions`, hook compartido Hub/Profile/módulo, niveles en vivo. Canje → v1.1. Verificado en vivo 28-ago. |
+| Turnos (food court) | 0.0.0 | **1.0.0** | `turno_pedidos` + panel de cocina en el Operador. Migración corrida y verificada en vivo 28-ago. |
+| Transporte | 0.0.0 | **1.0.0** | Pasaje contra wallet (RPC ya probado), historial derivado de `transactions`. Sin tabla nueva. Verificado en vivo 28-ago. |
+| Reservas | 0.0.0 | **1.0.0** | `reservas` (recurso/fecha/hora), cancelación real, ocupación informativa. Migración corrida y verificada de punta a punta 28-ago. |
+| Estacionamiento | 0.0.0 | **1.0.0** | `estacionamiento_sesiones`, cobro por permanencia al salir. Migración corrida y verificada en vivo 28-ago. |
+| Subsidio | 0.0.0 | **1.0.0** | Ledger `subsidios`, acreditación por RedPontis desde ficha. Consumo → v1.1. Migración corrida y verificada en vivo 28-ago. |
+| Promociones | 0.0.0 | **1.0.0** | Salió de `MODULOS_PROXIMAMENTE` → flujo estándar de capacidad; catálogo recortado al cupón QR real (25-ago). |
+| 13 capacidades ya construidas antes de hoy | — | **1.0.0** (baseline) | Sin cambios funcionales esta semana; el versionado arranca en 1.0.0 para todas. |
+| Facturación · Crédito · Asistencia | 0.0.0 | 0.0.0 | Siguen planificadas — bloqueadas por convenio PSE+SUNAT / decisión Crédito-vs-BNPL / spec de flujo, respectivamente. |
+
+**Bug encontrado en la verificación en vivo del 28-ago (corregido, commit `4c9851b`)**: `ReservasTemplate` mostraba la fecha de la reserva un día antes — parseo UTC de una fecha date-only en zona Perú (UTC-5). Corregido en 3 puntos (fecha por defecto, corte próximas/pasadas, etiqueta de la lista). Los datos en la base siempre estuvieron correctos; era solo el render.
+
 ---
 
 ## 1. Wallet — 🟢 Construido
@@ -33,13 +51,13 @@ Convención de estado:
 **Render por frente**: Admin (reportes de volumen) · Merchant (Cierre/consulta) · Superapp (`ConsumosTemplate`, recorte del historial de Wallet — sin tabla propia) · POS Operador (cada cobro).
 **Datos**: `transactions` (sin tabla propia — reusa Wallet).
 
-## 4. Promociones — 🟡 Construido, inconsistente (ver discrepancia)
+## 4. Promociones — 🟢 Construido · v1.0.0
 **Qué es**: cupones QR con vigencia, descuento/cashback/2x1, canjeables en el POS de un comercio.
-**Cómo se activa**: hoy convive en dos capas distintas que no están alineadas entre sí (ver discrepancia abajo).
+**Cómo se activa**: Tier OPCIONAL. Como cualquier otra capacidad — se activa en el Catálogo de Capacidades del mundo, sincroniza a `world_capacity_configs`. Config: máximo de cupones por usuario.
 **Depende de**: nada declarada en el mapa de dependencias.
 **Render por frente**: Admin (`TabPromos`, CRUD real completo) · Superapp (`PromocionesTemplate`, real, lee y muestra QR de canje).
 **Datos**: `promociones`, `promociones_canjes`.
-**⚠️ Discrepancia**: en el catálogo general de capacidades (`MODULE_CATALOG`/`MODULOS_PROXIMAMENTE`), Promociones está marcada **Planificada** — no es activable/sincronizable desde el flujo estándar de capacidades. Pero por otro lado existe un `TabPromos` con CRUD 100% real contra Supabase, que solo se renderiza si el mundo es de `type === "promos"/"promos_rp"` — y el único mundo de ese tipo (`mundo-promos-rp`, "JOI Promos") fue retirado activamente del alcance y se purga en cada carga del store. Es decir: **hay backend y UI reales, pero hoy no hay ningún mundo real donde esa UI sea alcanzable**. Para la próxima tanda: decidir si Promociones se integra al flujo estándar de capacidades (como cualquier otra) en vez de depender de un `type` de mundo especial.
+**✅ Resuelto (25-ago-2026, Discrepancia #10)**: por decisión de Camila, Promociones salió de `MODULOS_PROXIMAMENTE` y pasó al flujo estándar de capacidades — la pestaña se activa igual que Eventos (capacidad activada, no `mundo.type`). El catálogo de `servicios` se recortó a lo que existe de verdad (cupón QR): banner, push segmentado y A/B testing quedaron fuera para no prometer algo sin construir — son fase 2, documentada en el Backlog.
 
 ## 5. Perfil extendido — 🟢 Construido
 **Qué es**: ficha médica y de emergencia — tipo de sangre, alergias, clínica, contacto de emergencia — del titular o de cada dependiente.
@@ -100,17 +118,20 @@ Convención de estado:
 **Datos**: `bnpl_programa_comercio`, `bnpl_contratos`, `bnpl_notificaciones`, `bnpl_campanas`.
 **Discrepancia técnica**: el checkout de la primera cuota es un simulador visual tipo Culqi, explícitamente marcado en el código como "simulado para demo" — no hay integración real con ningún PSP todavía. El cálculo de cronograma/interés además vive **duplicado** en dos archivos distintos del cliente en vez de una única fuente de verdad server-side.
 
-## 13. Turnos — 🔵 Planificado como capacidad de negocio · 🟢 ya construido como mecanismo operativo (ver discrepancia)
-**Qué es (como capacidad de negocio)**: agendar y gestionar citas/turnos de atención.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `TurnosTemplate` con citas hardcodeadas, botón "Agendar" sin acción.
-**⚠️ Discrepancia importante — colisión de nombre**: la palabra "turno" ya es infraestructura real y activa en otra parte del sistema: `pos_turnos` (apertura/cierre de caja del comercio) y `access_shifts` (turno de portería en Accesos) son tablas reales, en uso constante, que sostienen operaciones de dinero y de control de acceso — pero son un concepto distinto (sesión de trabajo de un operador), no la capacidad de negocio "Turnos" (citas de atención) que el plan de negocio tiene en mente. Vale la pena que el equipo use un nombre distinto para uno de los dos conceptos antes de construir la capacidad real, para no generar confusión entre "turno de caja" y "turno de cita".
+## 13. Turnos — 🟢 Construido · v1.0.0 (food court / "pedido listo para recojo")
+**Qué es**: seguimiento del estado de preparación de un pedido ya pagado en un comercio de food court — `recibido → preparando → listo → entregado`. Aclaración de Camila (25-ago): NO es agendar citas, es avisar al cliente que su pedido está listo para recoger.
+**Estado en código (26-ago, verificado en vivo 28-ago)**: tabla propia `turno_pedidos`; el registro se crea solo cuando se paga en un comercio del mundo (`comprarProductosLive → crearSeguimientoTurno`, sin bloquear el pago si falla). Superapp: `TurnosTemplate` con poll de 8s muestra el estado real de cada pedido. Operador del comercio: cola de cocina en `OperadorApp.jsx` (`/operador/:id → "Cola de pedidos"`) que avanza el estado.
+**Depende de**: Wallet, Comercio, Compras y transacciones (el cobro ya existe — esta tabla solo trackea el estado, no mueve dinero).
+**Datos**: `turno_pedidos`.
+**⚠️ Colisión de nombre sin resolver (Discrepancia #9)**: la palabra "turno" ya es infraestructura activa — `pos_turnos` (caja del comercio) y `access_shifts` (portería). Se construyó con nombre de tabla propio (`turno_pedidos`) que no choca; el renombre conceptual sigue pendiente de decisión, decisión explícita de Camila del 25-ago de no renombrar por ahora.
 
-## 14. Loyalty — 🔵 Planificado (conceptualizado 13-ago, no construido)
-**Qué es**: acumulación y canje de puntos por consumo — a diferencia de Cashback (macro, un solo % del mundo, ya construido), Loyalty vive **por comercio**: cada comercio puede tener su propio programa de puntos, con su propia tasa de conversión y sus propias reglas de canje, siempre dentro de un marco que el mundo define y aprueba.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `LoyaltyTemplate` con puntos que solo viven en `localStorage` del dispositivo — nunca sincronizados con Supabase; recompensas e historial hardcodeados. No se toca en esta tanda.
-**Depende de (cuando se construya)**: Wallet, Comercios.
+## 14. Loyalty — 🟢 Construido · v1.0.0 (acumulación real; canje = v1.1)
+**Qué es**: acumulación y consulta de puntos por consumo real dentro del mundo.
+**Estado en código (26-ago, verificado en vivo 28-ago)**: puntos 100% reales, derivados de `transactions` (type=compra) con la equivalencia configurada por el mundo — sin columna de saldo nueva ni tocar el RPC crítico `mover_saldo_wallet` (deliberado: ya tuvo 3 reescrituras de seguridad). Hook compartido `useLoyaltyPuntos`/`useLoyaltyPuntosBatch` conecta Hub, Profile y el módulo Lealtad al mismo dato real. Niveles Bronce/Plata/Oro calculados en vivo sobre el saldo real. **Fuera de v1.0.0, a propósito**: el canje de puntos (app/POS) — mostrado como "Próximamente" en vez de un catálogo de vouchers inventado.
+**Depende de**: Wallet, Comercios.
+**Datos**: ninguna tabla propia — deriva de `transactions`.
 
-**Diseño conceptual (Camila, 13-ago-2026) — para aterrizar antes de construir, no construir ahora:**
+**Diseño conceptual (Camila, 13-ago-2026) — referencia para la v1.1 (canje por comercio):**
 
 - **Quién define la regla de negocio.** Dos niveles, no uno: el **mundo** (Jockey Plaza) define el marco general — qué comercios pueden tener programa de Loyalty, y opcionalmente un programa "genérico" del mundo sin comercio asociado (ej. puntos por visitar el mall, no por comprar en un comercio puntual). Cada **comercio habilitado** define su propio programa dentro de ese marco: tasa de conversión (S/ gastados → puntos), y sus propias recompensas/reglas de canje. Es la misma relación mundo↔comercio que ya usa Cashback (`merchants.cashback_habilitado`) pero con una diferencia clave: en Cashback el % es uno solo, del mundo, igual para todos los comercios habilitados; en Loyalty cada comercio habilitado puede tener SU PROPIA tasa y SUS PROPIAS reglas — el mundo no impone un único % para todos.
 - **Dónde vive la configuración.** Panel de Mundo (Jockey Plaza): pantalla de "Programas de Loyalty" — activa/desactiva el módulo por comercio, ve un resumen de los programas activos. Panel del Merchant: cada comercio habilitado entra a su propio "Loyalty" y define su tasa de conversión y sus recompensas — mismo patrón de autonomía delegada que ya existe para el catálogo de productos de Menú (el mundo habilita el módulo, el comercio carga su propio contenido).
@@ -119,10 +140,12 @@ Convención de estado:
 - **Superapp**: el saldo de puntos no es uno solo — es por comercio (o "puntos Jockey Plaza" para el programa genérico del mundo, si existe). El subtítulo bajo el saldo de wallet (mismo lugar donde hoy vive el subtítulo de cashback) tendría que discriminar: si el usuario tiene puntos en varios comercios, no cabe un solo número — probablemente un resumen tipo "Loyalty en 2 comercios" que lleva al detalle, en vez de una cifra directa como cashback (que sí es un solo número porque es del mundo entero).
 - **Por qué no sale en esta tanda**: la complejidad real está en que Cashback tiene UN dueño de la regla (el mundo) y Loyalty tiene un dueño de la regla POR CADA comercio participante — eso multiplica la superficie de configuración (N programas en vez de 1) y la superficie de consulta en el POS (el operador tiene que saber en qué comercio está parado para mostrar los puntos correctos). Cashback macro cerraba con una sola RPC y un solo % configurable; Loyalty necesita, como mínimo, una tabla de programas por comercio (`loyalty_programas`: merchant_id, tasa_conversion, activo) antes de poder construir nada — quedó mapeado para la siguiente iteración, no para salir junto con Cashback.
 
-## 15. Reserva — 🔵 Planificado
-**Qué es**: reserva de espacios/recursos (canchas, salas, laboratorios) con anticipo y ventana de cancelación.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `ReservasTemplate` con espacios y próximas reservas hardcodeados, sin persistencia real.
-**Nota**: el único flujo de "reservar" que sí es 100% real en el ecosistema hoy vive dentro de la capacidad **Menú** (`menu_reservas`) — es un caso particular (reservar un plato de comida), no el motor genérico de reserva de espacios que el plan de negocio contempla.
+## 15. Reserva — 🟢 Construido · v1.0.0 (reserva real; cobro de anticipo = v1.1)
+**Qué es**: reserva de un recurso del mundo (comedor, gimnasio, laboratorio, cancha…) por fecha y hora, con cancelación real.
+**Estado en código (26-ago, verificado en vivo 28-ago — se creó y borró una reserva real de punta a punta)**: tabla propia `reservas`. Los recursos reservables vienen del config del mundo (`recursos`, separados por coma) en vez de una lista inventada. La ocupación ("ya hay N reservas para este horario") se lee en vivo, informativa — sin bloqueo de cupo todavía. Sin cobro obligatorio: `anticipoMin` queda definido en el config pero sin aplicar hasta una v1.1 dedicada.
+**Depende de**: nada propio.
+**Datos**: `reservas`.
+**Nota**: sigue existiendo el flujo de "reservar" de **Menú** (`menu_reservas`) — es un caso particular (reservar un plato), independiente de este motor genérico de recursos.
 
 ## 16. Facturación — 🔵 Planificado
 **Qué es**: comprobantes electrónicos (boleta/factura/nota de crédito) vía integración SUNAT.
@@ -147,20 +170,23 @@ Convención de estado:
 **Render por frente**: Superapp (`RestriccionesTemplate`, CRUD completo de dependientes — crear, editar, eliminar, recargar, restricciones granulares) · esta es también donde vive toda la gestión de dependientes/familiares del ecosistema.
 **Datos**: `dependents`, `dependent_restrictions` (única tabla de config con enforcement real dentro de la RPC de wallet), `consumo_alertas`.
 
-## 19. Subsidio — 🔵 Planificado
-**Qué es**: saldo subsidiado utilizable solo en categorías específicas, con vigencia propia.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `SubsidioTemplate` con saldo `85.00` marcado literalmente `// demo` en el código, historial hardcodeado.
-**Depende de (cuando se construya)**: Wallet.
+## 19. Subsidio — 🟢 Construido · v1.0.0 (acreditación real; consumo = v1.1)
+**Qué es**: saldo dirigido real, acreditado por RedPontis a un usuario a la vez, con categorías de gasto permitidas y vigencia propia.
+**Estado en código (26-ago, verificado en vivo 28-ago)**: ledger propio `subsidios` — NO toca `wallets.balance` ni `mover_saldo_wallet`. Solo RedPontis acredita (decisión de Camila), uno a la vez, desde Usuarios → detalle de la persona (`SubsidioPanel`, visible solo si el mundo tiene la capacidad activa), con monto/categorías/vigencia y rastro de auditoría (`acreditado_por`). Superapp: `SubsidioTemplate` muestra el saldo dirigido real, categorías y vencimiento. **Fuera de v1.0.0**: gastar el subsidio en una compra — queda para una v1.1 que amerite integrarse con el RPC crítico de pagos con cuidado dedicado.
+**Depende de**: Wallet.
+**Datos**: `subsidios`.
 
-## 20. Transporte — 🔵 Planificado
-**Qué es**: pago de tarifa de transporte, rutas, viajes recientes.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `TransporteTemplate` con tarifa y saldo REALES (lee config y wallet de verdad) pero sin flujo de pago funcional — botones sin acción; rutas/viajes hardcodeados.
-**Depende de (cuando se construya)**: Wallet.
+## 20. Transporte — 🟢 Construido · v1.0.0
+**Qué es**: pago de pasaje contra la wallet del usuario, con historial de viajes.
+**Estado en código (26-ago, verificado en vivo 28-ago)**: sin tabla nueva, sin tocar `mover_saldo_wallet` — el pasaje se cobra con el mismo `pagarSupabase` ya probado (referencia fija "Transporte"), y el historial de viajes se deriva filtrando `transactions` por esa referencia. Mismo principio que Loyalty: derivar de datos reales ya existentes, cero riesgo sobre el RPC crítico. **Fuera de v1.0.0**: "rutas" — el config real hoy solo trae una tarifa plana por mundo, no un catálogo de rutas.
+**Depende de**: Wallet.
+**Datos**: ninguna tabla propia — deriva de `transactions`.
 
-## 21. Estacionamiento — 🔵 Planificado
-**Qué es**: registro de entrada/salida de vehículo con cronómetro de costo.
-**Estado en código**: en `MODULOS_PROXIMAMENTE`. En superapp, `EstacionamientoTemplate` con cronómetro solo en memoria (se pierde al salir de la pantalla), historial hardcodeado.
-**Depende de (cuando se construya)**: Acceso, Wallet.
+## 21. Estacionamiento — 🟢 Construido · v1.0.0
+**Qué es**: sesión real de ingreso/salida con cobro por permanencia calculado al salir (tarifa por hora, con minutos de gracia).
+**Estado en código (26-ago, verificado en vivo 28-ago)**: tabla propia `estacionamiento_sesiones` (ingreso/salida real). El cobro se calcula sobre la duración real transcurrida y se cobra con el mismo `pagarSupabase` ya probado — **nunca por adelantado**. Si el pago falla (saldo insuficiente), la sesión NO se cierra, para no dejar una salida registrada sin su cobro. Superapp: `EstacionamientoTemplate` con contador en vivo + costo en tiempo real.
+**Depende de**: Acceso (conceptual), Wallet.
+**Datos**: `estacionamiento_sesiones`.
 
 ## 22. Suscripciones — 🟢 Construido como capacidad propia (13-ago-2026), con membresía real tipo YOKI (20-ago-2026)
 **Qué es**: dos mecanismos distintos, ambos reales, que conviven bajo la misma capacidad:

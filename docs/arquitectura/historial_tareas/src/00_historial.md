@@ -1,8 +1,8 @@
 # JOI360 — Historial de Tareas y Commits
 
-Documento vivo · Versión **1.2** · 24 de agosto de 2026
+Documento vivo · Versión **1.3** · 28 de agosto de 2026
 
-Registro completo de las 142 tareas trabajadas en este monorepo (`#102`–`#243`) y de los 184 commits reales de git que representan el código que efectivamente cambió, organizados en 8 fases cronológicas — del 1 de agosto al 24 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.
+Registro completo de las 150 tareas trabajadas en este monorepo (`#102`–`#251`) y de los 194 commits reales de git que representan el código que efectivamente cambió, organizados en 9 fases cronológicas — del 1 de agosto al 28 de agosto de 2026. Cada tarea describe qué se pidió, qué se resolvió, el flujo/diseño técnico, el flujo de usuario, y el journey UX unificado entre plataformas — pensado para que cualquiera que no haya visto la construcción entienda exactamente qué existe hoy, cómo funciona, y qué recorrido completo vive la persona que lo usa, sin necesitar contexto adicional.
 
 ## Historial de versiones
 
@@ -11,19 +11,20 @@ Registro completo de las 142 tareas trabajadas en este monorepo (`#102`–`#243`
 | 1.0 | 2026-08-12 | Primera versión — 132 tareas (#102–#233), 163 commits, 7 fases cronológicas. |
 | 1.1 | 2026-08-12 | Cada tarea ahora describe qué se pidió, qué se resolvió, el flujo/diseño, el flujo de usuario, y el journey UX unificado (touchpoints encadenados en base a los commits reales) — no solo título + commit. |
 | 1.2 | 2026-08-24 | Corte semanal — 11 tareas nuevas (`#234`–`#243`): rebranding JoiSolutions, PWA, 2 bugs de formato/regresión de seguridad, Suscripciones real (modelo YOKI) + Cashback por comercio, 2 bugs encontrados y corregidos en verificación en vivo, y el roadmap para el CTO. Solo se agregan los cambios desde el corte anterior — el histórico previo no se reescribe. |
+| 1.3 | 2026-08-28 | Corte semanal — 8 tareas nuevas (`#244`–`#251`): versionado semver por capacidad; 6 capacidades planificadas construidas a `v1.0.0` (Loyalty, Turnos food court, Transporte, Reservas, Estacionamiento, Subsidio) con sus 4 migraciones corridas y verificadas en vivo de punta a punta el 28-ago; Promociones al flujo estándar de capacidades; saldo compartido entre sucursales (Etapa B); 2 fixes de admin (refresco de capacidades por sesión, catálogo global de canales) que cierran las Discrepancias #13/#14/#15; 1 bug de timezone en `ReservasTemplate` corregido en la verificación. Solo lo nuevo desde el corte anterior. |
 
-*Corte semanal: viernes. Próxima actualización: 28-ago-2026.*
+*Corte semanal: viernes. Próxima actualización: 04-sep-2026.*
 
 ## Resumen ejecutivo
 
 | Métrica | Valor |
 |---|---|
-| Tareas registradas | 142 |
-| Tareas completadas | 140 |
+| Tareas registradas | 150 |
+| Tareas completadas | 148 |
 | Tareas pendientes | 2 |
-| Commits reales en el repo | 184 |
-| Commits con tarea identificada | 46 |
-| Rango de fechas | 2026-08-01 a 2026-08-24 |
+| Commits reales en el repo | 194 |
+| Commits con tarea identificada | 54 |
+| Rango de fechas | 2026-08-01 a 2026-08-28 |
 
 ## Cómo leer este documento
 
@@ -2137,5 +2138,130 @@ Estado: 🟢 Completado
 | 2026-08-20 | `06a24bd` | feat: Suscripciones (membresia real, modelo YOKI) + Cashback modalidad por_comercio |
 | 2026-08-24 | `94abf3c` | fix(admin): comercios afiliados en Suscripciones no mostraban nombre |
 | 2026-08-24 | `18e0606` | fix(app): CashbackTemplate mostraba data mockeada, no real |
+
+# Fase: Versionado de capacidades + 6 planificadas a v1.0.0
+*24-ago a 28-ago*
+
+Esta fase cierra el "plan de construcción por capacidad" que Camila pidió el 26-ago: darle una versión propia a cada capacidad del catálogo y construir, una por una, las que se podían hacer con software puro. Las 6 capacidades verdes del plan (Loyalty, Turnos, Transporte, Reservas, Estacionamiento, Subsidio) pasaron de `0.0.0` a `1.0.0`; sus 4 migraciones de Supabase se corrieron y se verificó cada capacidad en vivo, de punta a punta, el 28-ago. Quedan 3 planificadas (`0.0.0`): Facturación, Crédito y Asistencia, bloqueadas por convenio externo o por una decisión de producto.
+
+### #244 — Promociones al flujo estándar de capacidades + techo global de MDR + marca del login + stepper de bienvenida
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Sacar Promociones del limbo (backend y UI reales pero inalcanzables porque dependían de un `type` de mundo retirado) e integrarla al flujo estándar de capacidades, como cualquier otra. En paralelo: poner un techo global a la tarifa (MDR) que un mundo puede cobrar a sus merchants, brandear el login de la superapp y agregar un stepper de bienvenida la primera vez que alguien entra sin comunidades.
+
+**Qué se resolvió:** Promociones salió de `MODULOS_PROXIMAMENTE` — la pestaña se activa igual que Eventos (capacidad activada, no `mundo.type`) y sincroniza a `world_capacity_configs`; el catálogo de `servicios` se recortó al cupón QR real (banner/push/A-B testing quedaron como fase 2). El MDR/fijo por Tx que un mundo define para sus merchants ya no puede superar la "Tasa base" del canal correspondiente en Adquirencia Global (techo visible + guardado bloqueado si se excede), mismo patrón que ya regía para Emisión. El fondo del login/signup pasó al token real Surface Hero del design system con "JOI Solutions" como eyebrow; `WelcomeStepper` de 3 pasos se muestra una sola vez a un usuario sin ninguna comunidad (commit `e68db55`).
+
+**Flujo / diseño técnico:** Activación de Promociones por el mismo camino que cualquier capacidad OPCIONAL (Catálogo de Capacidades del mundo → `world_capacity_configs`). El techo de MDR se valida en `Emision.jsx`/`Adquirencia.jsx` contra la tarifa base del canal antes de permitir guardar. El stepper persiste su "ya visto" en `localStorage`.
+
+**Flujo de usuario:** Un mundo puede activar Promociones desde su pestaña de capacidades y el cupón QR aparece de verdad en la superapp de sus usuarios. Un admin que intenta ponerle a un merchant un MDR por encima del techo global ve el bloqueo y el valor máximo permitido. El usuario nuevo ve un login con la marca JOI Solutions y, si todavía no pertenece a ninguna comunidad, un recorrido de bienvenida de 3 pasos antes de la lista de comunidades.
+
+**Journey UX unificado:** Panel de Mundo (activa Promociones / configura MDR con el techo visible) → Admin RedPontis / Adquirencia Global (define la tasa base que actúa de techo) → Superapp (login brandeado → stepper de bienvenida → cupón QR de Promociones en Mis módulos).
+
+### #245 — Versionado semver por capacidad + limpieza de Catálogos Globales + Loyalty v1.0.0
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Ponerle un número de versión propio a cada capacidad del `MODULE_CATALOG` (independiente entre sí, no una versión global del producto), que se actualice siempre después de cada cambio y se refleje en el corte semanal. Aprovechar para limpiar Catálogos Globales (canales de Emisión que se mostraban "disponibles" sin gateway real detrás) y construir Loyalty real.
+
+**Qué se resolvió:** Cada entrada de `MODULE_CATALOG` lleva ahora `version` (semver), visible en el Catálogo de Capacidades del admin junto al nombre — baseline `1.0.0` para las 13 ya construidas, `0.0.0` para las 9 planificadas. Los canales `QR` (Ligo) y `Tarjeta` (Culqi) de Emisión pasaron a `disponible:false` en código y en la fila real de Supabase (`emission_channels`), mismo criterio que `tap2phone` en Adquirencia. Loyalty se construyó a `v1.0.0`: puntos 100% reales derivados de `transactions` (type=compra) con la equivalencia del mundo, sin columna de saldo nueva ni tocar `mover_saldo_wallet`; hook compartido `useLoyaltyPuntos`/`useLoyaltyPuntosBatch` conecta Hub, Profile y el módulo Lealtad al mismo dato; niveles Bronce/Plata/Oro en vivo. El canje de puntos quedó como "Próximamente" a propósito, en vez de un catálogo de vouchers inventado (commit `21d24bc`).
+
+**Flujo / diseño técnico:** `version` es un campo más de cada objeto del catálogo; sube manualmente como parte del cambio que lo amerita. Loyalty no tiene tabla propia — `fetchLoyaltyPuntos` suma `transactions` reales y aplica la equivalencia; deliberado para no agregar lógica al RPC crítico de saldo sin testeo dedicado.
+
+**Flujo de usuario:** En el admin, cada tarjeta de capacidad muestra su versión (`v1.0.0` / `v0.0.0`). En la superapp, el usuario ve sus puntos reales acumulados por sus compras en el mundo, su nivel calculado en vivo, y un aviso honesto de que el canje llega en una versión próxima.
+
+**Journey UX unificado:** Admin RedPontis / Catálogo de Capacidades (versión visible por capacidad) → Panel de Mundo (activa Loyalty, define la equivalencia) → Superapp (Hub + módulo Lealtad + Profile leen el mismo saldo real de puntos).
+
+### #246 — Precompra de eventos alcanzable + Turnos, Transporte, Reservas y Estacionamiento construidas
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Hacer la precompra de eventos realmente alcanzable en el flujo, y construir a `v1.0.0` las 4 capacidades planificadas que se podían hacer con software puro sin dependencia externa: Turnos (food court), Transporte, Reservas y Estacionamiento.
+
+**Qué se resolvió:** **Turnos** — tabla `turno_pedidos` (estado `recibido → preparando → listo → entregado`); el pedido se crea solo al pagar en un comercio del mundo (`crearSeguimientoTurno`, no bloquea el pago si falla), con panel de cocina real en el Operador del comercio. **Transporte** — pasaje contra la wallet con el mismo `pagarSupabase` ya probado, sin tabla nueva; el historial de viajes se deriva de `transactions` por referencia. **Reservas** — tabla `reservas` (recurso/fecha/hora), cancelación real, ocupación informativa; recursos reservables definidos por config del mundo; sin cobro obligatorio todavía. **Estacionamiento** — tabla `estacionamiento_sesiones` (ingreso/salida real); el cobro se calcula sobre el tiempo real transcurrido y se cobra al salir con el RPC de pago ya probado, nunca por adelantado (commit `27069f1`). Las 4 se verificaron en vivo el 28-ago tras correr sus migraciones (`4c9851b` marcó sus feature flags como `ready`).
+
+**Flujo / diseño técnico:** Patrón común: capacidad activable con `configFields` propios + tabla Supabase propia con RLS `demo_anon_all` + template real en la superapp. Ninguna toca `mover_saldo_wallet`: Turnos/Reservas solo trackean estado, Transporte/Estacionamiento cobran con el `pagarSupabase` existente.
+
+**Flujo de usuario:** El asistente a un evento puede pre-comprar productos y solo pasar a recogerlos. En un food court, el cliente ve el estado real de su pedido en vivo mientras el operador lo avanza desde su cocina. El usuario reserva un recurso del mundo por fecha y hora, y puede cancelar. Paga su pasaje de transporte contra su saldo. Registra su entrada al estacionamiento, ve el costo correr en tiempo real, y paga al salir.
+
+**Journey UX unificado:** Panel de Mundo (activa cada capacidad, define config: recursos reservables, tarifa por hora, tarifa de pasaje) → Superapp (módulo dedicado por capacidad con datos reales) → POS/Operador del comercio (cola de cocina de Turnos). Migración SQL corrida vía Management API + verificación en vivo de punta a punta.
+
+### #247 — Fix: el tablero de capacidades marcaba features reales como "Planificado"
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Camila reportó que "hay algunas que están hechas pero siguen marcadas como planificadas" en el Catálogo de Capacidades. Auditar y corregir.
+
+**Qué se resolvió:** `FLAG_DEV_MAP` (la pestaña "Feature Flags" de cada capacidad) es un rastreador granular por servicio, separado del `version` a nivel de capacidad — cuando un servicio no tiene entrada ahí, cae al default de su tier (`PREMIUM`/`OPCIONAL` → "Planificado"), sin importar si ya está construido, y eso bloquea el botón "Activar todos" para ese flag. Verificado contra el código real y corregido: `wallet:qr_fijo` (su desc ya decía "siempre activo en la práctica"), `suscripciones:planes`/`suscripciones:cobro` (Suscripciones cobra dinero real hace semanas — pasó de mostrar 0/2 a 2/2 listos), `control:reglas_mundo`, `menu:restricciones_alimentarias`, y `loyalty:*`/`transporte:*` marcados `ready` (commit `bc49712`). Los flags de `accesos:registro_zonas`/`registro_horarios` y `control:reglas_sponsor`/`aprobaciones` NO se tocaron — se confirmó que siguen siendo banners informativos que no hacen cumplir nada todavía.
+
+**Flujo / diseño técnico:** Cada corrección es una entrada nueva en `FLAG_DEV_MAP` con `status: "ready"` y una nota del endpoint/mecanismo real.
+
+**Flujo de usuario:** Cambio interno del panel de administración — el admin ahora ve el estado de desarrollo correcto de cada servicio y puede usar "Activar todos" donde antes estaba bloqueado sin motivo.
+
+**Journey UX unificado:** Admin RedPontis / Catálogo de Capacidades → pestaña Feature Flags de cada capacidad. Sin journey de usuario final.
+
+### #248 — Subsidio v1.0.0 — cierra el checklist de capacidades planificadas construibles
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Construir Subsidio a `v1.0.0` — saldo dirigido real, acreditado por RedPontis a un usuario a la vez, con categorías de gasto permitidas y vigencia. Con esto se cierra el checklist de las 6 capacidades planificadas que se podían construir con software puro.
+
+**Qué se resolvió:** Ledger propio `subsidios` — NO toca `wallets.balance` ni `mover_saldo_wallet`. Solo RedPontis acredita (decisión de Camila), uno a la vez, desde Usuarios → detalle de la persona (`SubsidioPanel`, visible solo si el mundo tiene la capacidad activa), con monto/categorías/vigencia y rastro de auditoría (`acreditado_por`). La superapp muestra el saldo dirigido real, las categorías permitidas y el vencimiento. Gastar el subsidio en una compra queda para una v1.1 que amerite integrarse con el RPC crítico de pagos con cuidado dedicado (commit `9eaeeeb`). Verificado en vivo el 28-ago.
+
+**Flujo / diseño técnico:** `acreditarSubsidioRemote` inserta en `subsidios` con `acreditado_por = session().email`. `SubsidioTemplate` lee `fetchMisSubsidios` y consolida el saldo disponible (monto − monto_usado) de las acreditaciones vigentes.
+
+**Flujo de usuario:** RedPontis entra a la ficha de una persona en un mundo con Subsidio activo, le acredita un monto con sus categorías y vigencia. Esa persona ve en su superapp "Saldo subsidiado", en qué categorías puede usarlo y cuándo vence, más el historial de acreditaciones.
+
+**Journey UX unificado:** Admin RedPontis / Usuarios → detalle de la persona → SubsidioPanel (acredita) → Superapp / módulo Subsidio (saldo dirigido visible). Ledger propio, sin tocar la wallet.
+
+### #249 — Sucursales Etapa B: saldo y bandita compartidos entre sucursales de un grupo
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar la Etapa B de Sucursales: que un grupo de mundos que comparte saldo (`comparte_saldo_grupo`) resuelva todas las lecturas y escrituras de wallet a la sucursal principal del grupo — alta/baja de dependiente, cobro/recarga en POS, identificación por código, devoluciones.
+
+**Qué se resolvió:** Todas las operaciones de wallet resuelven a la sucursal principal del grupo cuando `comparte_saldo_grupo` está activo, mismo mecanismo ya deployado en `joi-pos-backend`. Verificado en vivo con datos de prueba reales (commit `7f58caf`).
+
+**Flujo / diseño técnico:** Una función de resolución de "mundo efectivo de wallet" se aplica antes de cada acceso a `wallets` — si el mundo pertenece a un grupo con saldo compartido, se usa el `world_id` de la sucursal principal.
+
+**Flujo de usuario:** Un usuario con saldo cargado en una sucursal de un grupo puede consumir y recargar en cualquier otra sucursal del mismo grupo, con el mismo saldo y la misma bandita — no hay saldos separados por local.
+
+**Journey UX unificado:** Panel de Mundo (define el grupo y marca la sucursal principal) → POS/Operador de cualquier sucursal del grupo (cobra/recarga contra el saldo compartido) → Superapp (el usuario ve un solo saldo para todo el grupo).
+
+### #250 — Fix: refresco de capacidades por sesión + POS/Operador de Mundo como canal formal
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar las Discrepancias #13 y #14 del documento maestro: el admin no refrescaba las capacidades de un mundo ya cacheado en la sesión, y la clave del POS/Operador de Mundo era un campo de texto libre sin flujo de activación formal.
+
+**Qué se resolvió:** `refreshMundosLive()` (corre una sola vez por sesión de pestaña) ahora siempre toma lo que dice Supabase para `world_capacity_configs`, no solo para mundos que no existían en el store local — un mundo ya cargado ya no conserva su `modulos[]` viejo. El POS/Operador de Mundo pasa a canal formal con pill de Activo/Inactivo y botón explícito de Desactivar, mismo patrón que Wallet/Comercios (commit `6f04934`).
+
+**Flujo / diseño técnico:** Como `refreshMundosLive()` tiene deps vacías en `App.jsx`, no hay edición local a medio hacer que pueda pisar — es seguro sobrescribir siempre con lo remoto.
+
+**Flujo de usuario:** Un admin que abre un mundo en una pestaña nueva ve sus capacidades reales al instante, sin tener que limpiar caché. La clave del Operador de Mundo se activa/desactiva con un paso formal, no editando un campo suelto.
+
+**Journey UX unificado:** Admin RedPontis / ficha de mundo → pestaña Capacidades (estado fresco desde Supabase) y tarjeta del Operador de Mundo (canal con estado Activo/Inactivo).
+
+### #251 — Fix: el catálogo global de canales no releía de Supabase + ids desalineados
+Estado: 🟢 Completado
+
+**Instrucción de trabajo:** Cerrar la Discrepancia #15: `Emision.jsx` y `Adquirencia.jsx` empujaban cada guardado a Supabase pero nunca volvían a leer al montar (dos sesiones de RedPontis editando el mismo catálogo se pisaban en silencio), y el catálogo comercial de Adquirencia Global tenía un set de ids distinto al que un mundo realmente puede activar.
+
+**Qué se resolvió:** Ambas pantallas jalan el catálogo real al montar. El catálogo de Adquirencia Global se deriva ahora 1:1 de `CANALES_ADQUIRENCIA` (los ids que un mundo sí puede activar en Módulos → Comercios); se retiró "Nuevo canal", que creaba ids que ningún mundo podía activar (commit `2988dd2`).
+
+**Flujo / diseño técnico:** `fetch` del catálogo en el `useEffect` de montaje de cada pantalla, mismo patrón que ya se aplicó a las capacidades de mundo en la Discrepancia #13.
+
+**Flujo de usuario:** Cambio interno del panel de RedPontis — dos personas editando el catálogo global de canales ya no se pisan, y configurar MDR/liquidación en Adquirencia Global siempre corresponde a un canal que un mundo puede activar de verdad.
+
+**Journey UX unificado:** Admin RedPontis / Catálogos Globales → Emisión / Adquirencia. Sin journey de usuario final.
+
+## Commits reales de esta fase
+
+| Fecha | Hash | Commit |
+|---|---|---|
+| 2026-08-24 | `2988dd2` | fix(admin): catalogo global de canales no releia de Supabase + ids desalineados |
+| 2026-08-24 | `7f58caf` | feat: saldo compartido entre sucursales de un grupo (Etapa B) en admin + superapp |
+| 2026-08-24 | `6f04934` | fix(admin): refresco de capacidades por sesion + POS/Operador como canal real |
+| 2026-08-26 | `e68db55` | feat: Promociones al flujo estandar, techo global de MDR, marca del login y stepper de bienvenida |
+| 2026-08-26 | `21d24bc` | feat: versionado de capacidades, limpieza de Catalogos Globales, Loyalty v1.0.0 real |
+| 2026-08-26 | `27069f1` | feat: Precompra de eventos alcanzable + 4 capacidades planificadas construidas (Turnos, Transporte, Reservas, Estacionamiento) |
+| 2026-08-26 | `bc49712` | fix(admin): tablero de capacidades marcaba features reales como "Planificado" |
+| 2026-08-26 | `9eaeeeb` | feat: Subsidio v1.0.0 -- cierra el checklist de capacidades planificadas construibles |
+| 2026-08-28 | `4c9851b` | fix: capacidades v1.0.0 a "ready" (SQL corrido 28-ago) + timezone en ReservasTemplate |
+
+*9 commits en esta fase.*
 
 *11 commits en esta fase.*
