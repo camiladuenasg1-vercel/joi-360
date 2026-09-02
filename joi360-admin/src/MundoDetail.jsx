@@ -2876,6 +2876,11 @@ function TabAcuerdo({ m, st }) {
         com.config.fijoTxDefault = +f.fijoTxDefault;
         com.config.liquidacion_modeloRecaudacion = f.modeloRecaudacion;
         com.config.settlementFrequency = f.settlementFrequency;
+        // Track A: la frecuencia del Acuerdo Comercial ES la que usa el motor
+        // de corte. Antes settlementFrequency solo lo leía la Calculadora y el
+        // motor caía a "diaria". Ahora se escribe también en la clave que
+        // liquidacionConfigDe() lee, para que las dos coincidan.
+        com.config.liquidacion_frecuencia = f.settlementFrequency;
         com.config.retentionPercentage = +f.retentionPercentage;
         com.config.validFrom = f.validFrom;
         com.config.validUntil = f.validUntil || null;

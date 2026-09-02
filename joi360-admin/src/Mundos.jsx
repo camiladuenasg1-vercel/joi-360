@@ -243,6 +243,11 @@ export function MundoWizard({ open, onClose }) {
         modulos: selectedMods.map(m => {
           const config = {};
           (m.configFields || []).forEach(cf => { config[cf.key] = f.moduleConfig[m.id]?.[cf.key] ?? cf.default; });
+          // Track A: sembrar la frecuencia de liquidación elegida en el paso
+          // "Acuerdo comercial" en la clave que el motor de corte lee de
+          // verdad (comercios.config.liquidacion_frecuencia). Sin esto el
+          // motor caía a "diaria" para todo mundo nuevo.
+          if (m.id === "comercios") config.liquidacion_frecuencia = f.acuerdo?.frecuenciaLiquidacion || "diaria";
           const serviciosActivos = {};
           // Bug real: cuando servicios es un array de objetos {id,nombre,desc}
           // (wallet/comercios/consumos/control/eventos/inventario/perfil_ext),

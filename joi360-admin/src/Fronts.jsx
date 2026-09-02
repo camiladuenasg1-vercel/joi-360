@@ -4136,7 +4136,12 @@ function MerchantDashboard({ comercio, m, st }) {
   }, [merchantId, tab]);
   const aprobadas = (txsHoy || []).filter(t => t.status === "completada");
   const totalHoy = aprobadas.reduce((a, t) => a + (+t.amount || 0), 0);
-  const mdrEfectivo = comercio.mdrOverride ? comercio.tarifa : ((st.adqChannels || [])[0]?.mdr || 1.5);
+  // Track A: antes gateaba por `comercio.mdrOverride`, un campo que NUNCA se
+  // escribe en el repo → la condición era siempre falsa y el panel del
+  // comercio mostraba un canal global o 1.5% fijo, nunca su tarifa real.
+  // `comercio.tarifa` viene de merchants.mdr_override (reconciliarComerciosMundo,
+  // default 1.5 si no hay override) — esa ES la MDR real del comercio.
+  const mdrEfectivo = comercio.tarifa != null ? comercio.tarifa : ((st.adqChannels || [])[0]?.mdr || 1.5);
   const comisionHoy = totalHoy * (mdrEfectivo / 100);
   const netoHoy = totalHoy - comisionHoy;
   const tickets = (st.tickets || []).filter(t => t.mundoId === m?.id && t.origen === "merchant" && t.comercioId === comercio.id);

@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "./hooks";
 import { fetchMerchantsRemote, fetchProgramaBNPL } from "./supabase";
+import { liquidacionConfigDe } from "./store";
 import { Icon, Field, inputCls, notify } from "./ui";
 
 export function Calculadora() {
@@ -46,6 +47,11 @@ export function Calculadora() {
   const mdr = merchant?.mdr_override ?? cfg.mdrDefault ?? 0;
   const fijo = merchant?.fixed_fee_override ?? cfg.fijoTxDefault ?? 0;
   const retencion = +cfg.retentionPercentage || 0;
+  // Track A: la frecuencia que muestra este documento es la MISMA que aplica
+  // el motor de corte (resuelta por precedencia), no la clave suelta que solo
+  // leía la Calculadora. Y la retención de arriba ahora sí la descuenta el
+  // corte real — este documento dejó de proyectar un neto que no ocurría.
+  const frecuenciaReal = mundo ? liquidacionConfigDe(mundo).frecuencia : "—";
   const m = +monto || 0;
 
   const calc = useMemo(() => {
@@ -64,7 +70,7 @@ export function Calculadora() {
       `— Comercios —`,
       `MDR: ${mdr}%  ·  Fijo por Tx: ${mundo?.moneda} ${(+fijo).toFixed(2)}${merchant ? " (override del merchant)" : " (default del mundo)"}`,
       `Modelo de recaudación: ${cfg.liquidacion_modeloRecaudacion === "mundo" ? "El Mundo recauda" : "RedPontis recauda"}`,
-      `Frecuencia de liquidación: ${cfg.settlementFrequency || "—"}`,
+      `Frecuencia de liquidación: ${frecuenciaReal}`,
       `Retención RedPontis: ${retencion}%`,
       `Vigencia: ${cfg.validFrom || "—"} a ${cfg.validUntil || "indefinido"}`,
     ];
@@ -142,7 +148,7 @@ export function Calculadora() {
                   <Param label="MDR" val={`${mdr}%`}/>
                   <Param label="Fijo por Tx" val={`${mundo?.moneda} ${(+fijo).toFixed(2)}`}/>
                   <Param label="Modelo recaudación" val={cfg.liquidacion_modeloRecaudacion === "mundo" ? "El Mundo" : "RedPontis"}/>
-                  <Param label="Frecuencia" val={cfg.settlementFrequency || "—"} capitalize/>
+                  <Param label="Frecuencia" val={frecuenciaReal} capitalize/>
                   <Param label="Retención RP" val={`${retencion}%`}/>
                   <Param label="Vigente desde" val={cfg.validFrom || "—"}/>
                   <Param label="Vigente hasta" val={cfg.validUntil || "Indefinido"}/>

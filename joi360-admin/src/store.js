@@ -1707,9 +1707,19 @@ export function liquidacionConfigDe(m) {
   const cfg = (m.modulos || []).find(x => x.id === "comercios")?.config || {};
   return {
     modeloRecaudacion: cfg.liquidacion_modeloRecaudacion || "redpontis",
-    frecuencia: cfg.liquidacion_frecuencia || "diaria",
+    // Track A (02-sep): antes solo se leía `liquidacion_frecuencia`, que solo
+    // seteaba el drawer de Liquidación — el wizard escribía en
+    // `acuerdo.frecuenciaLiquidacion` y TabAcuerdo en `settlementFrequency`,
+    // así que el motor caía a "diaria" para todo. Ahora resuelve por
+    // precedencia: la clave del microservicio > la del Acuerdo Comercial > la
+    // del wizard. (El wizard y TabAcuerdo ahora también escriben la primera.)
+    frecuencia: cfg.liquidacion_frecuencia || cfg.settlementFrequency || m.acuerdo?.frecuenciaLiquidacion || "diaria",
     horaCorte: cfg.liquidacion_horaCorte || "19:00",
     montoMinimo: cfg.liquidacion_montoMinimo ?? null,
+    // Retención confidencial de RedPontis (el sponsor solo ve el neto). Antes
+    // se guardaba y se mostraba en la Calculadora pero el motor NUNCA la
+    // restaba (Discrepancia #5). Default 0 = sin cambio para mundos existentes.
+    retencionPct: +cfg.retentionPercentage || 0,
   };
 }
 
@@ -1806,7 +1816,14 @@ async function procesarLiquidacionMundo(m, today) {
     descuentoHardware = (asignacionesADescontar || []).reduce((a, r) => a + (Number(r.monto_total) || 0), 0);
   } catch { descuentoHardware = 0; asignacionesADescontar = []; }
 
-  const neto = volumen - comision - descuentoHardware;
+  // Track A: la retención confidencial de RedPontis se aplica sobre el neto
+  // ANTES de mostrarlo/acreditarlo al sponsor. Se calcula sobre (volumen −
+  // comisión − descuento hardware) para que sea un % del neto real, no del
+  // bruto. Con retencionPct=0 (default y caso actual de Jockey Plaza) no hay
+  // cambio. Con esto el motor y la Calculadora Comercial dejan de discrepar.
+  const netoAntesRetencion = volumen - comision - descuentoHardware;
+  const retencion = liqCfg.retencionPct > 0 ? netoAntesRetencion * (liqCfg.retencionPct / 100) : 0;
+  const neto = netoAntesRetencion - retencion;
   // Monto mínimo de liquidación: si el neto a acreditar no lo alcanza, el
   // lote se genera igual (para no perder el volumen del período) pero
   // queda marcado RETENIDO en vez de PENDIENTE — no se libera hasta acumular.
@@ -1826,6 +1843,12 @@ async function procesarLiquidacionMundo(m, today) {
     hora_corte: liqCfg.horaCorte, modelo_recaudacion: liqCfg.modeloRecaudacion,
     frecuencia: liqCfg.frecuencia, monto_minimo: liqCfg.montoMinimo,
     periodo_desde: ultimaHasta, periodo_hasta: hastaISO,
+    // La retención confidencial no tiene columna propia en `liquidaciones`;
+    // el neto ya la lleva descontada. Se deja rastro en observación cuando
+    // aplica, para auditoría interna (el sponsor no ve este campo).
+    observacion: retencion > 0
+      ? `Retención RP ${liqCfg.retencionPct}% = ${(Math.round(retencion * 100) / 100).toFixed(2)} (descontada del neto)`
+      : null,
   };
   try {
     const saved = await upsertLoteLiquidacionRemote(lote);

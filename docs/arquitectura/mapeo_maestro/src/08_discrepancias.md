@@ -18,14 +18,14 @@ Reporte textual: *"actualmente no puedo establecer una contraseña para el panel
 
 ## 🟠 Severidad Media
 
-### 5. `retentionPercentage` no tiene ningún efecto real en la liquidación
-Se presenta al admin como el % confidencial que RedPontis retiene de cada liquidación ("el sponsor nunca ve este porcentaje, solo el neto"), pero el motor real de corte (`procesarLiquidacionMundo`) nunca lo resta del cálculo — solo lo usa la Calculadora Comercial, que es una herramienta de proyección, no el corte real. Riesgo: alguien asume que ese % ya se está aplicando cuando no es así.
+### 5. ✅ RESUELTO (02-sep-2026) — `retentionPercentage` no tenía ningún efecto real en la liquidación
+Se presentaba al admin como el % confidencial que RedPontis retiene ("el sponsor solo ve el neto") pero `procesarLiquidacionMundo` nunca lo restaba — solo lo usaba la Calculadora. **Cerrado (Track A):** `liquidacionConfigDe` ahora expone `retencionPct` (de `comercios.config.retentionPercentage`) y `procesarLiquidacionMundo` calcula `retencion = (volumen − comisión − descuentoHardware) × retencionPct/100` y la resta del neto antes de persistir el lote, con rastro en `observacion`. Default 0 = sin cambio para mundos existentes (Jockey Plaza tenía 0). El motor y la Calculadora dejaron de discrepar.
 
-### 6. Dos campos de "frecuencia de liquidación" desincronizados
-`TabAcuerdo` expone `settlementFrequency` (solo lo lee la Calculadora); el corte real lee `liquidacion_frecuencia` (seteado en un tab distinto, "Microservicios"). Cambiar uno no mueve el otro — un admin puede creer que cambió la cadencia de pago real y no lo hizo.
+### 6. ✅ RESUELTO (02-sep-2026) — Frecuencia de liquidación desincronizada (eran 3 campos, no 2)
+El wizard escribía `acuerdo.frecuenciaLiquidacion`, `TabAcuerdo` escribía `settlementFrequency` (solo lo leía la Calculadora), y el corte real solo leía `liquidacion_frecuencia` (que solo seteaba el drawer de Liquidación) → **todo mundo se liquidaba diario**. **Cerrado (Track A):** `liquidacionConfigDe.frecuencia` resuelve por precedencia `liquidacion_frecuencia || settlementFrequency || acuerdo.frecuenciaLiquidacion || "diaria"`; el wizard (`habilitar()`) y `TabAcuerdo` ahora **también** escriben `liquidacion_frecuencia`; la Calculadora y el Contrato leen la frecuencia resuelta, no la clave suelta.
 
-### 7. Vigencia de tarifa (`validFrom`/`validUntil`) sin enforcement
-Se guarda y se muestra, pero ningún flujo de venta ni de liquidación la valida — es puramente informativa hoy.
+### 7. Vigencia de tarifa (`validFrom`/`validUntil`) sin enforcement — SIGUE ABIERTA
+Se guarda y se muestra, pero ningún flujo de venta ni de liquidación la valida — es puramente informativa hoy. (Mitad menor de Track A, no cerrada en la pasada del 02-sep — el enforcement en el camino de venta es un cambio más grande.)
 
 ### 8. `Grupos.jsx` ofrece un camino de edición que no existe en código
 El modal de bloqueo de borrado le dice al admin "Desvincúlalas primero (Editar mundo → Grupo → Ninguno)" — pero no hay ningún control de `grupoId`/`comparte_saldo_grupo` en `MundoDetail.jsx` todavía. Hoy, una sucursal ya ligada a un grupo no se puede desvincular desde la UI.
