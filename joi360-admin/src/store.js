@@ -1335,21 +1335,14 @@ export function sponsorLogout() { update(st => { st.sponsorSession = null; }); }
 
 // ── Organizador B2B — login real (antes: OrganizadorFront solo aceptaba la
 // sesión del Admin RP como "vista previa"; no existía identidad propia). ──
-// Track B: verificación server-side contra el hash (RPC security definer),
-// igual que sponsor / PIN de operador. El fallback local es TRANSITORIO —
-// funciona sin la migración `supabase-auth-organizador-merchant.sql`, pero
-// deja pasar la comparación de contraseña en el cliente. QUITAR el fallback
-// una vez corrida la migración.
+// Track B (02-sep): verificación 100% server-side contra el hash (RPC
+// security definer), igual que sponsor / PIN de operador. La contraseña
+// nunca se compara en el cliente. Migración `supabase-auth-organizador-
+// merchant.sql` aplicada — el fallback local transitorio ya se quitó.
 export async function organizadorLogin(mundoId, usuario, password) {
-  let r = null;
-  try { r = await verificarLoginOrganizadorRemote(mundoId, usuario, password); } catch { r = null; }
+  const r = await verificarLoginOrganizadorRemote(mundoId, usuario, password).catch(() => null);
   if (r?.id) {
     update(st => { st.organizadorSession = { mundoId, organizadorId: r.id, nombre: r.nombre }; });
-    return true;
-  }
-  const org = (load().organizadores || []).find(o => o.mundoId === mundoId && o.credenciales?.usuario === usuario && o.credenciales?.password === password && (o.estado || "").toLowerCase() !== "inactivo");
-  if (org) {
-    update(st => { st.organizadorSession = { mundoId, organizadorId: org.supabaseId || org.id, nombre: org.nombre }; });
     return true;
   }
   return false;
@@ -2004,18 +1997,16 @@ export function enviarTicketAClickUp(id) {
 }
 
 // --- Sesión de Merchant ---
-// Track B: verificación server-side (RPC contra el hash). Fallback local
-// TRANSITORIO — quitar una vez corrida supabase-auth-organizador-merchant.sql.
+// Track B (02-sep): verificación server-side por RPC contra el hash. La
+// contraseña nunca se compara en el cliente; el login funciona cross-device
+// (las credenciales del panel viven en merchants.panel_password_hash, no en
+// el localStorage del navegador que hizo la entrega).
 export async function merchantLogin(comercioId, usuario, password) {
   const c = load().comercios.find(x => x.id === comercioId);
   const worldId = c?.mundoId || c?.world_id || null;
-  let r = null;
-  if (worldId) { try { r = await verificarLoginMerchantRemote(worldId, usuario, password); } catch { r = null; } }
+  if (!worldId) return false;
+  const r = await verificarLoginMerchantRemote(worldId, usuario, password).catch(() => null);
   if (r?.id) {
-    update(st => { st.merchantSession = { comercioId, usuario }; });
-    return true;
-  }
-  if (c?.credenciales?.usuario === usuario && c?.credenciales?.password === password) {
     update(st => { st.merchantSession = { comercioId, usuario }; });
     return true;
   }
