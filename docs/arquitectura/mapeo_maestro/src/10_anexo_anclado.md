@@ -21,6 +21,9 @@ Salvador construye con **Kiro** (IDE agéntico de AWS: `.kiro/specs/` con requir
 | Roadmap de Entrega CTO | Mapa de capacidades/paneles y propuesta de bloques, en tono de negocio | `Escritorio/Joi360_Roadmap_Entrega_CTO.docx` |
 | ESTRUCTURA-CATALOGOS-Y-MUNDOS | Estructura de catálogos globales y configuración de mundos | raíz del repo (`.md`) + artefacto |
 | Discrepancias / deuda técnica consolidada | §6 de este documento — hallazgos por severidad | `mapeo_maestro/src/08_discrepancias.md` |
+| Incongruencias y Plan de Arreglo (auditoría 5 agentes) | Inventario por severidad, matriz de choque capacidad↔capacidad, esquema de versionado, plan de tareas por tracks independientes | `docs/arquitectura/incongruencias_y_plan_28ago.md` |
+| Cotejo Prototipo ↔ Proyecto Real (Salvador / Kiro) | Cruce del corte semanal + auditoría del prototipo + auditoría R2 del proyecto real; directiva tajante de construcción en loop (qué construir y versionar hasta el corte, qué NO replicar) | `docs/arquitectura/cotejo_prototipo_vs_proyecto_real.md` + `Escritorio/JOI360_Cotejo_Prototipo_vs_ProyectoReal.docx` |
+| Estado verificado de BD / RPC | Qué migraciones y RPCs están aplicados en prod | `docs/arquitectura/migraciones_aplicadas.md` + `rpc_versions.md` |
 | Brief vs Realidad | Análisis de brecha entre lo que el brief asume y lo que el código hace | `Escritorio/Joi360_Brief_vs_Realidad.docx` |
 
 ### Artefactos (Claude)
