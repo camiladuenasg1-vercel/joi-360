@@ -1155,7 +1155,6 @@ export const FLAG_DEV_MAP = {
   "bnpl:contratos":        { status: "ready",       api: "stub · contrato Culqi/Qubit (simulado demo)" },
   // ── Motor de Eventos (Caso Kermesse) ──
   "eventos:aforo":         { status: "ready",       api: "propio · tabla events/event_tickets (Supabase)" },
-  "eventos:ticketing":     { status: "ready",       api: "propio · event_ticket_types (Supabase)" },
   "eventos:crear":         { status: "ready",       api: "propio · wizard de creación (portada, mapa, merchants, preventa)" },
   "eventos:entradas":      { status: "ready",       api: "propio · event_ticket_types (Supabase)" },
   "eventos:monitoreo":     { status: "ready",       api: "propio · OrganizadorFront (polling 6s, aforo + asistencia)" },
@@ -1278,7 +1277,7 @@ export const FLAG_UX_MAP = {
   "bnpl:programa":         "Paga después → productos financiables por comercio",
   "bnpl:contratos":        "Paga después → contrato digital + cronograma",
   "eventos:aforo":         "Evento → barra de aforo + bloqueo 'Agotado'",
-  "eventos:ticketing":     "Evento → Ticket Selector + Mis Entradas con QR",
+  "eventos:entradas":      "Evento → Ticket Selector + Mis Entradas con QR",
 };
 export function getFlagUx(modId, flagId) { return FLAG_UX_MAP[`${modId}:${flagId}`] || null; }
 

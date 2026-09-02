@@ -5,6 +5,7 @@ import { useUser } from "../userStore.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
 import { getSyntheticUserId, fetchMisDependientes, fetchMisReservasMenu, fetchEventosLive } from "../supabaseClient.js";
+import { hoyLocalISO } from "../dates.js";
 
 // "Qué te toca hoy" — auto-generado solo si el mundo tiene Menú activo y
 // hay algo programado para hoy (titular o algún dependiente). Sin reserva
@@ -22,7 +23,7 @@ function MenuHoyWidget({ mundoId, nav }) {
     return () => { vivo = false; };
   }, [mundoId]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocalISO();
   const deHoy = (reservas || []).filter(r => r.fecha === hoy);
   if (deHoy.length === 0) return null;
 

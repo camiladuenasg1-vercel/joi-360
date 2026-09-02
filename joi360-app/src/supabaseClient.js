@@ -6,6 +6,7 @@
 // ============================================================
 
 import { CANALES_ADQUIRENCIA } from "./store.js";
+import { hoyLocalISO, toLocalISO, fechaLocalDe } from "./dates.js";
 
 // Antes hardcodeado (funcionaba igual — la anon key es pública por diseño,
 // no un secreto), pero sin variables de entorno el dashboard de Vercel no
@@ -583,7 +584,7 @@ export async function suscribirseAPlanMembresia(userId, worldId, plan) {
     method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify({
       world_id: worldId, plan_id: plan.id, user_id: userId, estado: "activa",
-      proxima_fecha_cobro: proxima.toISOString().slice(0, 10), ultimo_cobro_at: new Date().toISOString(),
+      proxima_fecha_cobro: toLocalISO(proxima), ultimo_cobro_at: new Date().toISOString(),
     }),
   });
   return { ok: true, balance: +r.nuevo_saldo };
@@ -597,7 +598,7 @@ export async function suscribirseAPlanMembresia(userId, worldId, plan) {
 // etc.) quedan reservados para una integración futura, no se simulan acá.
 export async function sincronizarCicloSuscripcionesMembresia(userId, worldId) {
   const activas = await rest(`subscription_suscriptores?world_id=eq.${worldId}&user_id=eq.${userId}&estado=eq.activa&select=*,subscription_plans(nombre,precio,periodo)`).catch(() => []);
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocalISO();
   for (const s of activas || []) {
     if (s.metodo_pago !== "saldo_wallet" || !s.subscription_plans || s.proxima_fecha_cobro > hoy) continue;
     const plan = s.subscription_plans;
@@ -613,11 +614,11 @@ export async function sincronizarCicloSuscripcionesMembresia(userId, worldId) {
       }),
     }).catch(() => null))?.[0];
     if (r?.ok) {
-      const proxima = new Date(s.proxima_fecha_cobro);
+      const proxima = fechaLocalDe(s.proxima_fecha_cobro);
       if (plan.periodo === "anual") proxima.setFullYear(proxima.getFullYear() + 1); else proxima.setMonth(proxima.getMonth() + 1);
       await rest(`subscription_suscriptores?id=eq.${s.id}`, {
         method: "PATCH", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ proxima_fecha_cobro: proxima.toISOString().slice(0, 10), ultimo_cobro_at: new Date().toISOString() }),
+        body: JSON.stringify({ proxima_fecha_cobro: toLocalISO(proxima), ultimo_cobro_at: new Date().toISOString() }),
       }).catch(() => {});
     }
   }

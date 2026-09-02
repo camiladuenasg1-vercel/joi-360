@@ -21,3 +21,5 @@ drop policy if exists "demo_anon_all" on public.estacionamiento_sesiones;
 create policy "demo_anon_all" on public.estacionamiento_sesiones for all to anon, authenticated using (true) with check (true);
 
 create index if not exists estacionamiento_user_idx on public.estacionamiento_sesiones (user_id, world_id);
+
+notify pgrst, 'reload schema';

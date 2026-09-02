@@ -174,7 +174,7 @@ export function MundoWizard({ open, onClose }) {
     docContrato: false, docFichaRuc: false, docContratoUrl: "", docContratoNombre: "",
     docFichaRucUrl: "", docFichaRucNombre: "",
     // Paso 4: servicios/módulos
-    modulos: Object.fromEntries(MODULE_CATALOG.map(m => [m.id, m.tier === "CORE" || m.base])),
+    modulos: Object.fromEntries(MODULE_CATALOG.map(m => [m.id, m.tier === "CORE"])),
     flags: Object.fromEntries(MODULE_CATALOG.map(m => [m.id, { e: m.e, a: m.a }])),
     // Sub-config inicial por módulo, editable inline al togglear (doc: "cada
     // toggle activado despliega su propio sub-formulario de configuración
@@ -611,7 +611,6 @@ function Step4Servicios({ f, set }) {
   );
   const tiers = [
     { t: "CORE", label: "Core (obligatorio en todos los mundos)", color: "text-primary", bg: "bg-primary-fixed" },
-    { t: "MOTOR BASE", label: "Motor Base (incluido automáticamente)", color: "text-secondary", bg: "bg-secondary-fixed" },
     { t: "PREMIUM", label: "Premium", color: "text-tertiary", bg: "bg-tertiary-fixed" },
   ];
   const opcionalMods = filtered("OPCIONAL");
@@ -624,12 +623,12 @@ function Step4Servicios({ f, set }) {
         <p className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
           <Icon n="checklist" className="text-[16px] text-primary"/> Servicios iniciales de este mundo
         </p>
-        <p className="text-[11px] text-on-surface-variant mb-3">Wallet, Comercios y Compras y Transacciones son la base — siempre activos. Reservas y Promociones todavía están en desarrollo y no se pueden activar en un mundo nuevo.</p>
+        <p className="text-[11px] text-on-surface-variant mb-3">Wallet, Comercios y Compras y Transacciones son la base — siempre activos. El resto se elige acá o se agrega después desde el detalle del mundo.</p>
         <div className="space-y-2">
           {serviciosIniciales.map(mod => {
             const proximamente = MODULOS_PROXIMAMENTE.has(mod.id);
             const sel = !proximamente && !!f.modulos[mod.id];
-            const locked = mod.tier === "CORE" || mod.base || proximamente;
+            const locked = mod.tier === "CORE" || proximamente;
             return (
               <div key={mod.id} className={`rounded-lg border transition-colors bg-surface overflow-hidden ${proximamente ? "opacity-60" : sel ? "border-primary/50" : "border-outline-variant hover:border-primary/30"}`}>
                 <label className={`flex items-center gap-3 p-3 ${proximamente ? "cursor-not-allowed" : "cursor-pointer"}`}>
@@ -726,7 +725,7 @@ function Step4Servicios({ f, set }) {
             <div className="space-y-2">
               {mods.map(mod => {
                 const sel = !!f.modulos[mod.id];
-                const locked = mod.tier === "CORE" || mod.base;
+                const locked = mod.tier === "CORE";
                 return (
                   <label key={mod.id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${sel ? `border-primary/40 ${bg}/30` : "border-outline-variant"} ${locked ? "opacity-90" : "hover:border-primary/30"}`}>
                     <input type="checkbox" disabled={locked} checked={sel}

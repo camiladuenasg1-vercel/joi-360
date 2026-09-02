@@ -23,6 +23,7 @@ import {
   fetchSesionEstacionamientoActiva, ingresarEstacionamientoRemote, fetchMisSesionesEstacionamiento, salirEstacionamientoRemote,
   fetchMisSubsidios,
 } from "../supabaseClient.js";
+import { hoyLocalISO, fmtFechaLocal } from "../dates.js";
 import { MODULES } from "../modules.js";
 import BottomNav from "../components/BottomNav.jsx";
 import {
@@ -821,18 +822,10 @@ function ReservasTemplate({ cfg, u }) {
   const cancelHrs = cfg.config.ventanaCancelacion;
   const recursos = (cfg.config.recursos || "Comedor,Gimnasio,Laboratorio").split(",").map(r => r.trim()).filter(Boolean);
 
-  // Fecha local de Perú, no UTC — new Date().toISOString() adelanta el día en
-  // la tarde/noche (UTC-5), lo que hacía que la fecha por defecto, el corte
-  // próximas/pasadas y la etiqueta de la lista cayeran un día corrido. Mismo
-  // fix que el batch de timezone del 30-jul (Menú, Restricciones, Eventos).
-  const fechaLocalHoy = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-  const fmtFechaCorta = (iso) => {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
-  };
+  // Fechas en hora local (helper compartido en ../dates.js) — new Date().
+  // toISOString() adelanta el día en la tarde/noche de Perú (UTC-5).
+  const fechaLocalHoy = hoyLocalISO;
+  const fmtFechaCorta = fmtFechaLocal;
 
   const [showNew, setShowNew] = useState(false);
   const [recurso, setRecurso] = useState(null);
@@ -938,7 +931,7 @@ function ReservasTemplate({ cfg, u }) {
           <SectionHeader label="Historial" icon="history"/>
           {pasadas.slice(0, 10).map(r => (
             <ListItem key={r.id} icon="event_available" iconBg="bg-[#F2F2F7]" iconColor="text-[#404255]"
-              title={r.recurso} subtitle={`${r.fecha} · ${r.hora}`} />
+              title={r.recurso} subtitle={`${fmtFechaCorta(r.fecha)} · ${r.hora}`} />
           ))}
         </SectionCard>
       )}
@@ -946,89 +939,8 @@ function ReservasTemplate({ cfg, u }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// TEMPLATE: ASISTENCIA
-// config: horarioEntrada, horarioSalida
-// ══════════════════════════════════════════════════════════════════════════════
-function AsistenciaTemplate({ cfg, u }) {
-  const [entradas, setEntradas] = useState(8);
-  const [salidas, setSalidas] = useState(7);
-  const horIn = cfg.config.horarioEntrada || "07:30";
-  const horOut = cfg.config.horarioSalida || "14:30";
-
-  const mark = (type) => {
-    if(type==="entrada") setEntradas(e=>e+1); else setSalidas(s=>s+1);
-    showToast(`${type==="entrada"?"Entrada":"Salida"} registrada`);
-  };
-
-  return (
-    <div className="px-5 space-y-4 pb-8">
-      {/* Horario del mundo */}
-      <ConfigBanner icon="schedule" message={`Horario de asistencia: ${horIn} – ${horOut}`} color="blue" />
-
-      {/* Stats */}
-      <SectionCard className="p-5">
-        <div className="flex justify-between items-end mb-4">
-          <div>
-            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-wider mb-1">Registros de hoy</p>
-            <p className="text-5xl font-black text-[#1A3270]">{entradas+salidas}</p>
-          </div>
-          <Chip label="Semana 12" color="bg-[#DCE4FA] text-[#1A3270]" />
-        </div>
-        <div className="h-2 w-full bg-[#CDD1E4] rounded-full overflow-hidden flex gap-0.5">
-          <div className="h-full bg-emerald-500 rounded-full" style={{width:`${(entradas/(entradas+salidas||1))*65}%`}}/>
-          <div className="h-full bg-rose-500 rounded-full" style={{width:`${(salidas/(entradas+salidas||1))*65}%`}}/>
-        </div>
-        <div className="flex justify-between mt-2 text-xs">
-          <span className="text-[#404255] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Entradas: <b>{entradas}</b></span>
-          <span className="text-[#404255] flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"/>Salidas: <b>{salidas}</b></span>
-        </div>
-      </SectionCard>
-
-      {/* Mark buttons */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          {type:"entrada",label:"Entrada",icon:"login",color:"bg-emerald-500",shadow:"shadow-emerald-500/20",tc:"text-emerald-600"},
-          {type:"salida",label:"Salida",icon:"logout",color:"bg-rose-500",shadow:"shadow-rose-500/20",tc:"text-rose-600"},
-        ].map(btn=>(
-          <button key={btn.type} onClick={()=>mark(btn.type)}
-            className="glass-card rounded-3xl p-6 flex flex-col items-center gap-3 tap-active">
-            <div className={`w-14 h-14 rounded-2xl ${btn.color} flex items-center justify-center shadow-lg ${btn.shadow}`}>
-              <Icon name={btn.icon} fill size="text-3xl" color="text-white" />
-            </div>
-            <div className="text-center">
-              <p className={`font-black ${btn.tc}`}>{btn.label}</p>
-              <p className="text-[10px] text-[#404255] uppercase font-bold">Marcar ahora</p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Recent */}
-      <SectionCard>
-        <SectionHeader label="Historial reciente" icon="history" action="Ver todo" />
-        {[
-          {type:"entrada",lugar:"Puerta Principal",hora:"07:42 AM",ok:true},
-          {type:"salida",lugar:"Puerta Secundaria",hora:"Ayer 04:15 PM",ok:null},
-          {type:"entrada",lugar:"Puerta Principal",hora:"Ayer 07:55 AM",ok:false},
-        ].map((h,i)=>(
-          <ListItem key={i}
-            icon={h.type==="entrada"?"login":"logout"}
-            iconBg={h.type==="entrada"?"bg-emerald-100":"bg-rose-100"}
-            iconColor={h.type==="entrada"?"text-emerald-600":"text-rose-600"}
-            title={h.type==="entrada"?"Entrada":"Salida"}
-            subtitle={`${h.lugar} · ${h.hora}`}
-            right={
-              h.ok===true ? <Chip label="A tiempo" color="bg-emerald-100 text-emerald-700"/> :
-              h.ok===false ? <Chip label="Tarde" color="bg-rose-100 text-rose-700"/> :
-              <Chip label="Finalizado" color="bg-[#EEF2FD] text-[#404255]"/>
-            }
-          />
-        ))}
-      </SectionCard>
-    </div>
-  );
-}
+// ── Asistencia: sin template. Capacidad planificada (MODULOS_PROXIMAMENTE),
+// sin flujo real; cae a GenericTemplate. Ver Track F del plan 28-ago.
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TEMPLATE: RESTRICCIONES (CONTROL PARENTAL)
@@ -3738,7 +3650,7 @@ function SubsidioTemplate({ cfg, u }) {
     return () => { vivo = false; };
   }, [mundoId]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocalISO();
   const activos = (subsidios || []).filter(s => !s.vigente_hasta || s.vigente_hasta >= hoy);
   const disponible = activos.reduce((a, s) => a + (Number(s.monto) - Number(s.monto_usado || 0)), 0);
   const proximoVencimiento = activos.filter(s => s.vigente_hasta).sort((a,b) => a.vigente_hasta.localeCompare(b.vigente_hasta))[0]?.vigente_hasta;
@@ -3796,57 +3708,9 @@ function SubsidioTemplate({ cfg, u }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// TEMPLATE: CRÉDITO
-// config: lineaMax, tasaInteres
-// ══════════════════════════════════════════════════════════════════════════════
-function CreditoTemplate({ cfg, u }) {
-  const lineaMax = cfg.config.lineaMax || 1000;
-  const tasa = cfg.config.tasaInteres || 24;
-  const usado = 320;
-  const disponible = lineaMax - usado;
-
-  return (
-    <div className="px-5 space-y-4 pb-8">
-      <SectionCard className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <p className="text-[11px] font-bold text-[#404255] uppercase tracking-widest">Línea disponible</p>
-            <p className="text-4xl font-black text-green-600 mt-1">S/ {disponible.toFixed(2)}</p>
-          </div>
-          <Chip label={`TEA ${tasa}%`} color="bg-amber-100 text-amber-700"/>
-        </div>
-        <div className="mb-2 text-xs text-[#404255] flex justify-between">
-          <span>Usado: S/ {usado.toFixed(2)}</span>
-          <span>Total: S/ {lineaMax.toFixed(2)}</span>
-        </div>
-        <ProgressBar value={usado} max={lineaMax}/>
-      </SectionCard>
-      <div className="grid grid-cols-2 gap-3">
-        <SectionCard className="p-4 text-center">
-          <Icon name="credit_card" fill size="text-3xl" color="text-[#1A3270]"/>
-          <p className="font-bold text-sm text-[#1C1C1E] mt-2">Usar crédito</p>
-          <p className="text-xs text-[#404255]">Al pagar en POS</p>
-        </SectionCard>
-        <SectionCard className="p-4 text-center">
-          <Icon name="payments" fill size="text-3xl" color="text-green-600"/>
-          <p className="font-bold text-sm text-[#1C1C1E] mt-2">Pagar cuota</p>
-          <p className="text-xs text-[#404255]">Vence en 12 días</p>
-        </SectionCard>
-      </div>
-      <SectionCard>
-        <SectionHeader label="Cuotas pendientes" icon="schedule"/>
-        {[{n:"Cuota 1/3",v:106.67,f:"15 Dic",estado:"Pendiente"},
-          {n:"Cuota 2/3",v:106.67,f:"15 Ene",estado:"Futura"},
-          {n:"Cuota 3/3",v:106.66,f:"15 Feb",estado:"Futura"}].map((c,i)=>(
-          <ListItem key={i} icon="receipt" iconBg="bg-[#EEF2FD]" iconColor="text-[#1A3270]"
-            title={c.n} subtitle={`Vence ${c.f}`}
-            right={<div className="text-right"><p className="font-black text-sm text-[#1C1C1E]">S/ {c.v.toFixed(2)}</p><Chip label={c.estado} color={c.estado==="Pendiente"?"bg-amber-100 text-amber-700":"bg-[#EEF2FD] text-[#404255]"}/></div>}/>
-        ))}
-      </SectionCard>
-    </div>
-  );
-}
+// ── Crédito: sin template. Capacidad planificada (MODULOS_PROXIMAMENTE), se
+// solapa con BNPL (ya real); pendiente de decisión de producto. Cae a
+// GenericTemplate. Ver Track F del plan 28-ago.
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TEMPLATE: PERFIL EXTENDIDO
@@ -4206,7 +4070,7 @@ function PromocionesTemplate({ cfg, u }) {
     return {
       id: p.id, titulo: p.titulo, desc: p.merchant_nombre,
       icon: "local_offer", color: activo ? "bg-amber-50" : "bg-[#EEF2FD]", c: activo ? "text-amber-600" : "text-[#404255]",
-      vence: p.vigencia_hasta ? new Date(p.vigencia_hasta).toLocaleDateString("es-PE", { day: "2-digit", month: "short" }) : "Sin vencimiento",
+      vence: p.vigencia_hasta ? fmtFechaLocal(p.vigencia_hasta) : "Sin vencimiento",
       activo, agotada, codigoQR: p.codigo_qr, valor: p.valor, tipo: p.tipo,
     };
   });
@@ -5438,11 +5302,15 @@ function SuscripcionesTemplate({ cfg, u }) {
   );
 }
 
+// asistencia / credito NO se enrutan: sus capacidades están en
+// MODULOS_PROXIMAMENTE (nunca activables) y sus templates eran maquetas 100%
+// hardcodeadas — si un mundo activara la capacidad por error, mostraban
+// asistencia/crédito inventados. Caen a GenericTemplate (banner honesto
+// "sin código dedicado todavía"). Track F del plan de incongruencias 28-ago.
 const TEMPLATE_MAP = {
   wallet:          (cfg, u) => <WalletTemplate cfg={cfg} u={u}/>,
   loyalty:         (cfg, u) => <LoyaltyTemplate cfg={cfg} u={u}/>,
   reservas:        (cfg, u) => <ReservasTemplate cfg={cfg} u={u}/>,
-  asistencia:      (cfg, u) => <AsistenciaTemplate cfg={cfg} u={u}/>,
   control:         (cfg, u) => <RestriccionesTemplate cfg={cfg} u={u}/>,
   accesos:         (cfg, u) => <AccesosTemplate cfg={cfg} u={u}/>,
   cashback:        (cfg, u) => <CashbackTemplate cfg={cfg} u={u}/>,
@@ -5450,7 +5318,6 @@ const TEMPLATE_MAP = {
   comercios:       (cfg, u) => <MarketplaceTemplate cfg={cfg} u={u}/>,
   eventos:         (cfg, u) => <EventosTemplate cfg={cfg} u={u}/>,
   subsidio:        (cfg, u) => <SubsidioTemplate cfg={cfg} u={u}/>,
-  credito:         (cfg, u) => <CreditoTemplate cfg={cfg} u={u}/>,
   perfil_ext:      (cfg, u) => <PerfilExtTemplate cfg={cfg} u={u}/>,
   estacionamiento: (cfg, u) => <EstacionamientoTemplate cfg={cfg} u={u}/>,
   promociones:     (cfg, u) => <PromocionesTemplate cfg={cfg} u={u}/>,

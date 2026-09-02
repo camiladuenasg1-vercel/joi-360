@@ -22,3 +22,5 @@ create policy "demo_anon_all" on public.reservas for all to anon, authenticated 
 
 create index if not exists reservas_recurso_fecha_idx on public.reservas (world_id, recurso, fecha);
 create index if not exists reservas_user_idx on public.reservas (user_id, world_id);
+
+notify pgrst, 'reload schema';

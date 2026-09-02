@@ -16,6 +16,12 @@ export function ContratoView() {
 
   const today = new Date().toLocaleDateString("es-PE", { year: "numeric", month: "long", day: "numeric" });
 
+  // La frecuencia real de corte la define el Acuerdo Comercial del mundo; no
+  // es un dato fijo. (El motor de liquidación hoy lee otra clave —
+  // liquidacion_frecuencia — ver Track A del plan de incongruencias 28-ago.)
+  const FREC_LABEL = { diaria: "Diario", semanal: "Semanal", quincenal: "Quincenal", mensual: "Mensual" };
+  const frecCorte = FREC_LABEL[ac.frecuenciaLiquidacion] || "Según lo pactado en el Acuerdo Comercial";
+
   return (
     <div style={{ fontFamily: "Georgia, serif", maxWidth: 800, margin: "0 auto", padding: "40px 60px", lineHeight: 1.7, color: "#1C1C1E" }}>
       <style>{`@media print { body { margin: 0; } .no-print { display: none; } }`}</style>
@@ -67,7 +73,7 @@ export function ContratoView() {
             )}
             <tr><td style={{ padding: "4px 0", fontSize: 13 }}>Pago único de alta (setup)</td><td style={{ padding: "4px 0", fontSize: 13, fontWeight: "bold" }}>S/ {ac.setup || 0}</td></tr>
             <tr><td style={{ padding: "4px 0", fontSize: 13 }}>Vigencia del acuerdo</td><td style={{ padding: "4px 0", fontSize: 13, fontWeight: "bold" }}>{ac.vigencia || "Por definir"}</td></tr>
-            <tr><td style={{ padding: "4px 0", fontSize: 13 }}>Corte de liquidación</td><td style={{ padding: "4px 0", fontSize: 13, fontWeight: "bold" }}>Diario a las 19:00 PE</td></tr>
+            <tr><td style={{ padding: "4px 0", fontSize: 13 }}>Frecuencia de liquidación</td><td style={{ padding: "4px 0", fontSize: 13, fontWeight: "bold" }}>{frecCorte}</td></tr>
           </tbody>
         </table>
       </div>
@@ -116,7 +122,7 @@ export function ContratoView() {
         {[
           "RedPontis S.A.C. (en adelante el Proveedor) se compromete a habilitar y mantener operativo el ecosistema JOI 360 para el Mundo descrito en este documento, bajo los parámetros técnicos y comerciales acordados.",
           "El Sponsor se compromete a brindar la información legal y operativa necesaria para la configuración del mundo, y a cumplir con los pagos establecidos en el acuerdo comercial dentro de los plazos definidos.",
-          "Las liquidaciones se generarán automáticamente con corte diario a las 19:00 horas (hora Lima, PE). El Proveedor acreditará los montos netos según la frecuencia pactada.",
+          "Las liquidaciones se generarán automáticamente según la frecuencia de corte pactada en este acuerdo (hora Lima, PE). El Proveedor acreditará los montos netos correspondientes en cada corte.",
           "El Proveedor podrá suspender el servicio ante incumplimiento de pago con un aviso previo de 5 días hábiles. La reactivación estará sujeta a la regularización de la deuda más un cargo de reconexión.",
           "Cualquier modificación al acuerdo comercial deberá ser solicitada por escrito y aprobada por ambas partes con al menos 30 días de anticipación.",
           "Este documento es una propuesta tentativa. El contrato definitivo requerirá la firma de ambas partes y tendrá validez legal a partir de esa fecha.",

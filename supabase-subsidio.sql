@@ -23,3 +23,5 @@ drop policy if exists "demo_anon_all" on public.subsidios;
 create policy "demo_anon_all" on public.subsidios for all to anon, authenticated using (true) with check (true);
 
 create index if not exists subsidios_user_idx on public.subsidios (user_id, world_id);
+
+notify pgrst, 'reload schema';

@@ -23,3 +23,5 @@ create policy "demo_anon_all" on public.turno_pedidos for all to anon, authentic
 
 create index if not exists turno_pedidos_merchant_idx on public.turno_pedidos (merchant_id, estado);
 create index if not exists turno_pedidos_user_idx on public.turno_pedidos (user_id, world_id);
+
+notify pgrst, 'reload schema';
