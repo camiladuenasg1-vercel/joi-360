@@ -19,5 +19,5 @@ Las funciones Postgres que **mutan una wallet** son el punto de choque #1 del ec
 | `verificar_admin_login` | 2 | ✅ `fix-admin-users-tabla-real.sql` | admin RedPontis, bcrypt server-side. |
 | `verificar_pin_operador` | 2 | ✅ `fix-pos-pin-hash-y-codigo-comercio.sql` | PIN de POS de comercio/mundo. **Nota Track B:** el `pos_pin_hash` es legible con la anon key (bcrypt cost 6 sobre 4 dígitos → fuerza bruta offline). |
 | `verificar_login_sponsor` | 3 | ❌ **falta** | login del Panel de Mundo. |
-| `verificar_login_organizador` | — | ❌ **no existe** | `organizadores.password` se compara en el cliente contra texto plano (Discrepancia #3 / Track B). |
-| `verificar_login_merchant` | — | ❌ **no existe** | credenciales del Panel de Merchant no llegan a Supabase (Track B). |
+| `verificar_login_organizador` | 3 | ⏳ `supabase-auth-organizador-merchant.sql` (escrito, **pendiente de correr**) | Track B. Trigger `hash_organizador_password` + RPC security definer. Cliente ya lo usa con fallback transitorio. |
+| `verificar_login_merchant` | 3 | ⏳ `supabase-auth-organizador-merchant.sql` (escrito, **pendiente de correr**) | Track B. Columnas `merchants.panel_usuario`/`panel_password`/`panel_password_hash` + trigger + RPC. |

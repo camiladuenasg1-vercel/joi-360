@@ -16,6 +16,12 @@ Regla: todo `.sql` de migración debe terminar con `notify pgrst, 'reload schema
 | 2026-08-28 | `supabase-estacionamiento.sql` | Tabla `estacionamiento_sesiones` (ingreso/salida, cobro al salir) + RLS + índices. | ✅ 2026-08-28 en vivo + Management API (8 columnas, 1 policy). |
 | 2026-08-28 | `supabase-subsidio.sql` | Ledger `subsidios` (monto/categorías/vigencia/acreditado_por) + RLS + índices. | ✅ 2026-08-28 en vivo + Management API (9 columnas, 1 policy). |
 
+## Escritas, PENDIENTES de correr
+
+| Archivo | Qué hace | Estado |
+|---|---|---|
+| `supabase-auth-organizador-merchant.sql` (raíz `JOI360/`) | Track B — triggers de hash bcrypt para `organizadores.password` y `merchants.panel_password`; RPCs `verificar_login_organizador` / `verificar_login_merchant` (security definer); `REVOKE SELECT` de columnas de secreto (`password`, `*_hash`, `pos_pin`, `sponsor_password`) para el rol `anon`. Idempotente. | ⏳ **pendiente de correr en el SQL Editor.** El cliente admin ya despliega el código que la usa, con un fallback local transitorio mientras no esté corrida. |
+
 ## Sin `.sql` versionado en el repo (deuda — Track J)
 
 | Objeto en prod | Qué es | Estado |

@@ -654,6 +654,22 @@ export async function verificarLoginSponsorRemote(mundoId, usuario, password) {
   });
   return rows?.[0] || null;
 }
+// Track B — mismo patrón server-side para Organizador y Panel de Merchant.
+// Requieren supabase-auth-organizador-merchant.sql corrido.
+export async function verificarLoginOrganizadorRemote(worldId, usuario, password) {
+  const rows = await rest("rpc/verificar_login_organizador", {
+    method: "POST",
+    body: JSON.stringify({ p_world_id: worldId, p_usuario: usuario, p_password: password }),
+  });
+  return rows?.[0] || null;
+}
+export async function verificarLoginMerchantRemote(worldId, usuario, password) {
+  const rows = await rest("rpc/verificar_login_merchant", {
+    method: "POST",
+    body: JSON.stringify({ p_world_id: worldId, p_usuario: usuario, p_password: password }),
+  });
+  return rows?.[0] || null;
+}
 // Listado para Gobierno → "Administradores de plataforma" — nunca trae
 // password_hash, solo lo necesario para mostrar quién tiene acceso.
 export async function fetchAdminUsersRemote() {
@@ -711,6 +727,11 @@ export async function actualizarMerchantRemote(merchantId, comercio) {
       banco: comercio.banco || null, cuenta_bancaria: comercio.cuentaBancaria || null, cci: comercio.cci || null,
       codigo: comercio.codigo || null, pos_pin: comercio.posPin || null,
       cashback_habilitado: !!comercio.cashbackHabilitado,
+      // Track B: credenciales del Panel de Merchant a Supabase (el trigger
+      // las hashea). Solo se envían si vienen — para no borrarlas en las
+      // ediciones que no las tocan (corregir RUC, tarifa, etc.).
+      ...(comercio.panelUsuario ? { panel_usuario: comercio.panelUsuario } : {}),
+      ...(comercio.panelPassword ? { panel_password: comercio.panelPassword } : {}),
     }),
   });
 }

@@ -94,10 +94,15 @@ Equipo RedPontis · JOI 360`;
   const entregar = async () => {
     setEntregando(true);
     try {
-      // El código y el PIN tienen que llegar a Supabase — son lo único que
-      // le permite a un operador en OTRO dispositivo (el mostrador real, no
-      // este navegador) entrar sin conocer la URL exacta del comercio.
-      await actualizarMerchantRemote(comercio.supabaseId || comercio.id, { ...comercio, codigo: cred.codigo, posPin: cred.posPin });
+      // El código, el PIN y las credenciales del panel tienen que llegar a
+      // Supabase — son lo único que le permite a un operador en OTRO
+      // dispositivo (el mostrador real, no este navegador) entrar sin
+      // conocer la URL exacta del comercio. Track B: usuario/contraseña del
+      // panel ya no viven solo en el localStorage de este navegador.
+      await actualizarMerchantRemote(comercio.supabaseId || comercio.id, {
+        ...comercio, codigo: cred.codigo, posPin: cred.posPin,
+        panelUsuario: cred.usuario, panelPassword: cred.password,
+      });
     } catch (e) {
       notify(`No se pudo guardar el código en Supabase: ${e.message}`, "error");
       setEntregando(false);

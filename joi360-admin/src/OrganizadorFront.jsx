@@ -203,9 +203,9 @@ const sumIngresos   = tk => (tk || []).filter(t => t.estado !== "anulado").reduc
 function OrganizadorGate({ m, mundoId }) {
   const [f, setF] = useState({ usuario: "", password: "" });
   const [err, setErr] = useState("");
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const ok = organizadorLogin(mundoId, f.usuario, f.password);
+    const ok = await organizadorLogin(mundoId, f.usuario, f.password);
     if (!ok) setErr("Credenciales inválidas. Solicítalas al administrador del mundo.");
   };
   return (

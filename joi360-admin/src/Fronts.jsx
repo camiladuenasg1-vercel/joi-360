@@ -3964,11 +3964,10 @@ export function MerchantGate({ comercio, m }) {
   const [modo, setModo] = useState(comercio.codigo ? "pin" : "credenciales");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!comercio.credenciales) { setErr("Sin credenciales asignadas. Contacta a RedPontis."); return; }
-    const ok = merchantLogin(comercio.id, f.usuario, f.password);
-    if (!ok) setErr("Credenciales inválidas. Solicítalas al administrador del mundo.");
+    const ok = await merchantLogin(comercio.id, f.usuario, f.password);
+    if (!ok) setErr("Credenciales inválidas. Solicítalas al administrador del mundo, o entra con tu código y PIN.");
   };
   const handlePin = async (e) => {
     e.preventDefault();

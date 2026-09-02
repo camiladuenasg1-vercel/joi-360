@@ -6,7 +6,7 @@
 // de donde la superapp lee la configuración en vivo.
 // ============================================================
 
-import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote, verificarLoginSponsorRemote, syncCatalogRemote } from "./supabase.js";
+import { scheduleSync, fetchWorldsLive, fetchAllCapacityConfigs, fetchAllFeatureFlags, fetchEventosDeMundo, fetchTicketTypesDeEvento, fetchTicketsDeEvento, fetchTodasLiquidacionesRemote, fetchLiquidacionesMundoRemote, fetchVolumenPeriodoMundo, upsertLoteLiquidacionRemote, marcarLiquidacionRemote, crearTicketSoporteRemote, fetchTicketsSoporteRemote, actualizarTicketSoporteRemote, reconciliarComerciosMundo, fetchAsignacionesPendientesDescuentoMundo, marcarAsignacionesDescontadasRemote, verificarPinOperadorRemote, verificarAdminLoginRemote, verificarLoginSponsorRemote, verificarLoginOrganizadorRemote, verificarLoginMerchantRemote, syncCatalogRemote } from "./supabase.js";
 
 const KEY = "joi360_state_v3";
 
@@ -1335,8 +1335,19 @@ export function sponsorLogout() { update(st => { st.sponsorSession = null; }); }
 
 // ── Organizador B2B — login real (antes: OrganizadorFront solo aceptaba la
 // sesión del Admin RP como "vista previa"; no existía identidad propia). ──
-export function organizadorLogin(mundoId, usuario, password) {
-  const org = (load().organizadores || []).find(o => o.mundoId === mundoId && o.credenciales?.usuario === usuario && o.credenciales?.password === password && o.estado !== "INACTIVO");
+// Track B: verificación server-side contra el hash (RPC security definer),
+// igual que sponsor / PIN de operador. El fallback local es TRANSITORIO —
+// funciona sin la migración `supabase-auth-organizador-merchant.sql`, pero
+// deja pasar la comparación de contraseña en el cliente. QUITAR el fallback
+// una vez corrida la migración.
+export async function organizadorLogin(mundoId, usuario, password) {
+  let r = null;
+  try { r = await verificarLoginOrganizadorRemote(mundoId, usuario, password); } catch { r = null; }
+  if (r?.id) {
+    update(st => { st.organizadorSession = { mundoId, organizadorId: r.id, nombre: r.nombre }; });
+    return true;
+  }
+  const org = (load().organizadores || []).find(o => o.mundoId === mundoId && o.credenciales?.usuario === usuario && o.credenciales?.password === password && (o.estado || "").toLowerCase() !== "inactivo");
   if (org) {
     update(st => { st.organizadorSession = { mundoId, organizadorId: org.supabaseId || org.id, nombre: org.nombre }; });
     return true;
@@ -1993,8 +2004,17 @@ export function enviarTicketAClickUp(id) {
 }
 
 // --- Sesión de Merchant ---
-export function merchantLogin(comercioId, usuario, password) {
+// Track B: verificación server-side (RPC contra el hash). Fallback local
+// TRANSITORIO — quitar una vez corrida supabase-auth-organizador-merchant.sql.
+export async function merchantLogin(comercioId, usuario, password) {
   const c = load().comercios.find(x => x.id === comercioId);
+  const worldId = c?.mundoId || c?.world_id || null;
+  let r = null;
+  if (worldId) { try { r = await verificarLoginMerchantRemote(worldId, usuario, password); } catch { r = null; } }
+  if (r?.id) {
+    update(st => { st.merchantSession = { comercioId, usuario }; });
+    return true;
+  }
   if (c?.credenciales?.usuario === usuario && c?.credenciales?.password === password) {
     update(st => { st.merchantSession = { comercioId, usuario }; });
     return true;
