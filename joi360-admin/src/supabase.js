@@ -1466,7 +1466,13 @@ export async function syncCatalogRemote(catalog, uxMap = {}) {
         id: c.id, name: c.name || c.id, tier: c.tier || "OPCIONAL", category: c.category || "Mixto",
         description: c.desc || null, icon: c.icon || "extension",
         active_by_default: c.tier === "CORE", forced_active: c.id === "wallet",
-        version: "1.0", status: "activo",
+        // Track E: propagar el semver REAL por capacidad (antes hardcodeaba
+        // "1.0" para las 22 — incl. facturacion/credito/asistencia que son
+        // 0.0.0). Y derivar el status de MODULOS_PROXIMAMENTE ("futuro" es el
+        // valor que admite el CHECK de capacities.status, junto con "activo"
+        // y "en_desarrollo").
+        version: c.version || "0.0.0",
+        status: MODULOS_PROXIMAMENTE.has(c.id) ? "futuro" : "activo",
       }))),
     });
     let flags = 0, uxAsignados = 0;

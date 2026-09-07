@@ -69,7 +69,7 @@ export function CatalogoProductos() {
         s.catalogoProductos.push({ id: uid("prod"), ...f });
       }
     });
-    notify(`Producto "${f.nombre}" ${editing ? "actualizado" : "agregado al catálogo"}. Disponible en todos los selects del sistema.`);
+    notify(`Producto "${f.nombre}" ${editing ? "actualizado" : "agregado al catálogo"}.`);
     setEditing(null); setNewOpen(false);
   };
 
@@ -96,7 +96,7 @@ export function CatalogoProductos() {
             <span>Configuración global</span><Icon n="chevron_right" className="text-[14px]" /><span className="text-primary">Catálogo de Productos</span>
           </div>
           <h1 className="text-3xl font-bold">Catálogo de Productos y Servicios</h1>
-          <p className="text-on-surface-variant mt-1 max-w-2xl">Hardware físico (POS, tótems, banditas NFC) y software (apps, dashboards). Este catálogo es la <b>fuente maestra</b> de datos para todos los selects del sistema. Incluye inventario y precios.</p>
+          <p className="text-on-surface-variant mt-1 max-w-2xl">Hardware físico (POS, tótems, banditas NFC) y software (apps, dashboards), con inventario y precios de referencia. <b>Borrador local</b> — todavía no se sincroniza a Supabase ni alimenta otros selects del sistema (ver Track E del plan de incongruencias).</p>
         </div>
         <BtnPrimary onClick={() => { setEditing(null); setNewOpen(true); }}><Icon n="add" className="text-[18px]" /> Nuevo producto</BtnPrimary>
       </div>
@@ -191,7 +191,7 @@ export function CatalogoProductos() {
 
       <div className="mt-4 bg-primary-fixed border border-primary/20 rounded-lg p-3 flex gap-2 text-xs text-on-surface-variant">
         <Icon n="info" className="text-primary text-[18px]" />
-        <span>Este catálogo es la <b>fuente maestra compartida</b>. Los items de Hardware aparecen en el selector de dispositivos al cargar un comercio. Los items de Bandita NFC permiten gestionar el inventario de pulseras por lote. Los de Software se asignan automáticamente al habilitar un mundo.</span>
+        <span>Borrador local, aún sin persistencia compartida. El selector de dispositivos al dar de alta un comercio usa hoy <b>HARDWARE_CATALOG</b> + <code>hardware_modelos_custom</code> (Supabase), no este catálogo. Pendiente Track E: decidir si se conecta a una tabla real o se retira.</span>
       </div>
 
       <ProductoDrawer open={newOpen} onClose={() => { setNewOpen(false); setEditing(null); }} editing={editing} onSave={save} />

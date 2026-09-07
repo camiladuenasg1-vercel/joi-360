@@ -573,7 +573,7 @@ export const GIROS_POR_VERTICAL = {
 };
 export const CORE_IDS = MODULE_CATALOG.filter(m => m.tier === "CORE").map(m => m.id);
 
-const defaultModuleState = (id) => {
+export const defaultModuleState = (id) => {
   const cat = MODULE_CATALOG.find(m => m.id === id);
   const config = {};
   (cat?.configFields || []).forEach(f => { config[f.key] = f.default; });
