@@ -1,4 +1,8 @@
-# Mapa de navegación
+# Frente: Admin RedPontis
+
+> ⚠️ **Escrito el 12-ago — describe la navegación y los flujos del panel, no el estado punto a punto.** Puntos desactualizados conocidos (ver `docs/arquitectura/incongruencias_y_plan_28ago.md` §2): `MODULOS_PROXIMAMENTE` son 3, no 11 (varias capacidades con dinero — subsidio, cashback, loyalty, promociones — ya son activables); el flujo de "Nuevo canal" en Adquirencia fue eliminado; faltan documentados la cola de aprobación de cambios de Cashback (Gobierno), la acreditación de Subsidio (Usuarios → detalle → SubsidioPanel) y las devoluciones con step-up (Soporte). **Autoridad de estado por capacidad:** `02_registro_capacidades.md`.
+
+## Mapa de navegación
 
 **Sidebar (`NAV`, `joi360-admin/src/ui.jsx:261-282`)** — agrupado en 4 secciones, se renderiza en `Shell` (`ui.jsx:297-374`):
 

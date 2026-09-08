@@ -1,6 +1,9 @@
-# JOI360 — Backbone de Capacidades (Sección Fuente de Verdad)
+# JOI360 — Backbone de Capacidades (mecánica de activación/render)
 
-**Alcance investigado:** `joi360-admin/src/store.js`, `supabase.js`, `Catalogo.jsx`, `ModulosMundo.jsx`, `MundoDetail.jsx`, `Grupos.jsx`, `Mundos.jsx`. Todas las citas son `archivo:línea` exactas al momento de esta investigación.
+> ⚠️ **Este documento describe la MECÁNICA del backbone (cómo se activa y sincroniza una capacidad), no su estado punto a punto.** Fue escrito el 12-ago y varias afirmaciones de estado están desactualizadas — en particular: son **22** capacidades (no 21), y `MODULOS_PROXIMAMENTE` tiene **3** items (`facturacion`, `credito`, `asistencia`), no 11. Los marcadores "Próximamente" por capacidad en la §5 están viejos: Reservas, Loyalty, Subsidio, Estacionamiento, Cashback, Turnos, Transporte y Promociones ya están **Construidas**.
+> **Autoridad de estado por capacidad:** `02_registro_capacidades.md` (con `version` semver). **Qué cambió desde el 12-ago:** `08_discrepancias.md` + `docs/arquitectura/incongruencias_y_plan_28ago.md`.
+
+**Alcance investigado:** `joi360-admin/src/store.js`, `supabase.js`, `Catalogo.jsx`, `ModulosMundo.jsx`, `MundoDetail.jsx`, `Grupos.jsx`, `Mundos.jsx`. Todas las citas son `archivo:línea` exactas al momento de esta investigación (12-ago).
 
 ---
 
@@ -28,7 +31,7 @@
 
 Catálogo de monedas: `MONEDAS_CATALOG` — `store.js:18-21` (`PEN`, `USD`), fuente única para el selector del wizard y el configField `monedaPermitida` de Wallet.
 
-Capacidades "Próximamente" (visibles pero no activables ni sincronizables — fuera del alcance de los 3 casos TEC Raimondi/Kermesse/BNPL): `MODULOS_PROXIMAMENTE` — definido en `supabase.js:182-186` (re-exportado desde `store.js:976` para evitar ciclo de imports): `facturacion, reservas, loyalty, credito, subsidio, estacionamiento, asistencia, cashback, turnos, transporte, promociones`.
+Capacidades "Próximamente" (visibles pero no activables ni sincronizables): `MODULOS_PROXIMAMENTE` — definido en `supabase.js` (re-exportado desde `store.js`). **Al 07-sep son solo 3: `facturacion`, `credito`, `asistencia`.** (El 12-ago eran 11 — reservas/loyalty/subsidio/estacionamiento/cashback/turnos/transporte/promociones salieron del set entre el 13-ago y el 26-ago al construirse.)
 
 ### Verticales y giros
 - `VERTICALS` — `store.js:462-466`: Educación, Evento, Retail, Hospitalidad, Salud, Club Deportivo, Entretenimiento, Empresa (legado), Comunidad (legado), Especial RedPontis (interno, excluido del selector de creación).

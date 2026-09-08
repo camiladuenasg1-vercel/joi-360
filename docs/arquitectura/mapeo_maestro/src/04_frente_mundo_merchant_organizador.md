@@ -1,6 +1,8 @@
-# JOI360 — Fronts operator-facing no-superapp (`joi360-admin/src`)
+# Frente: Panel de Mundo / Merchant / Organizador (`joi360-admin/src`)
 
-Fuente: `Fronts.jsx` (4005 líneas) y `OrganizadorFront.jsx` (1789 líneas), con soporte de `store.js`, `supabase.js`, `App.jsx`. Todas las citas son `archivo:línea`.
+> ⚠️ **Escrito el 12-ago.** Puntos desactualizados conocidos: la tabla de "Cobertura de capacidades" marca Cashback y Suscripciones como "sin UI en ninguno de los 3 fronts" — pero `SponsorCashbackTab` y `SponsorSuscripcionesTab` ya existen y están cableados en `SponsorDashboard`. Discrepancia #4 (contraseña del Panel de Mundo): la variante Mundo está **resuelta**; siguen abiertas Merchant y Organizador (ver `08_discrepancias.md` #3). El techo global de MDR y la clave del POS de Mundo como canal formal ya están construidos. **Autoridad de estado por capacidad:** `02_registro_capacidades.md`.
+
+Fuente: `Fronts.jsx` y `OrganizadorFront.jsx`, con soporte de `store.js`, `supabase.js`, `App.jsx`. Citas `archivo:línea` al 12-ago.
 
 Ruteo (App.jsx:77-83):
 ```

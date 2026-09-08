@@ -1,5 +1,7 @@
 # JOI360 Superapp (`joi360-app`) — Documentación técnica end-to-end
 
+> ⚠️ **Escrito el 12-ago — la sección de estado por template está MUY desactualizada.** Marca como "solo UI / maqueta" a `LoyaltyTemplate`, `ReservasTemplate`, `CashbackTemplate`, `SubsidioTemplate`, `EstacionamientoTemplate`, `TurnosTemplate`, `TransporteTemplate` — **los 7 son reales v1.0.0** y leen/escriben Supabase. Dice que "Suscripciones no existe como capacidad independiente" y que "AsistenciaTemplate no está en `TEMPLATE_MAP`" — lo primero es falso (existe, `SuscripcionesTemplate` es un flujo real de membresía), lo segundo ya se cumplió (Asistencia/Crédito se sacaron de `TEMPLATE_MAP`, Track F). La precompra de evento del lado del asistente **sí está construida** (`PrecompraEventoDrawer`). **Autoridad de estado por capacidad:** `02_registro_capacidades.md`.
+
 *Repo: `JOI360/joi360-app/src` · React + Vite + HashRouter · consume Supabase (PostgREST) directo con `fetch()`, sin SDK.*
 
 ## 0. Mapa de archivos raíz

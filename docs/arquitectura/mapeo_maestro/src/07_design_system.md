@@ -6,6 +6,8 @@ Los dos frentes web (`joi360-admin` y `joi360-app`) usan Tailwind CSS con el **m
 
 **⚠️ Pero — hallazgo importante para el desarrollador que va a construir en paralelo**: aunque el VOCABULARIO de tokens es idéntico, los VALORES HEX detrás de cada token son **distintos y definidos por separado** en cada `tailwind.config.js` — no hay un paquete de tokens compartido entre los dos proyectos.
 
+> ⚠️ **La tabla de abajo es PRE-rebrand (12-ago) y ya no corresponde.** Tras el rebrand JoiSolutions (17/19-ago), muchos tokens quedaron idénticos entre los dos fronts (`primary #1A3270`, `primary-container #3B5BDB`, `on-surface #1C1C1E`, `outline #404255`, `tertiary #8E6200`, `background #F2F2F7`). Las divergencias REALES que quedan hoy: `secondary` (admin `#2E7FD9` vs app `#404255`), `secondary-container`/`secondary-fixed`, `surface`/`surface-bright` (admin `#F2F2F7` vs app `#FFFFFF`), y el token de éxito con **nombre distinto** (`ok` en admin, `success` en app — mismo hex `#0BA878`, pero copiar `text-ok`/`text-success` entre fronts rompe). El fix (paquete de tokens compartido) sigue pendiente — Discrepancia #12.
+
 | Token | `joi360-admin` | `joi360-app` (superapp) |
 |---|---|---|
 | `primary` | `#0035b9` (azul RedPontis) | `#3525cd` (violeta-azul) |

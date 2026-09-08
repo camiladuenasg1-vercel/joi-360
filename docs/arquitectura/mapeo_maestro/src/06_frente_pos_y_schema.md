@@ -1,5 +1,7 @@
 # JOI360 — POS/Operador web front + Registro de esquema backend
 
+> ⚠️ **Escrito el 12-ago.** Correcciones: el "Hallazgo de dependencia crítico" sobre `mover_saldo_wallet` que este doc marca como ABIERTO **ya está resuelto** — `fix-234-restaurar-dueno-wallet.sql` combina el candado de dueño/turno + las restricciones de dependiente (verificado en prod 02-sep, `pronargs=8`; ver `08_discrepancias.md` #1 y `rpc_versions.md`). El Operador tiene 2 modos que este doc no lista: "Cola de pedidos" (Turnos) y "Entregar Precompra". `pos_turnos` tiene columnas de cuadre (`monto_esperado/declarado/diferencia/cerrado_at`) además de las listadas. `mover_cashback_wallet` es una 2ª RPC de dinero del POS, sin `.sql` versionado (deuda Track J). **Autoridad de estado por capacidad:** `02_registro_capacidades.md`.
+
 ## PART 1 — POS/Operador web front
 
 `OperadorApp.jsx`/`WorldOperadorApp.jsx` no son deploys separados: son rutas mobile-first dentro de `joi360-admin` (`/operador/:comercioId`, `/operador-mundo/:worldId`) que reusan la sesión de merchant/mundo y el mismo backend. `PosEntryGate` (`/pos`) es la puerta genérica.
