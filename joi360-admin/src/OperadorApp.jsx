@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "./hooks";
-import { merchantLogout, rubroNombre, update } from "./store";
+import { merchantLogout, rubroNombre, update, BNPL_INTERES_POR_CUOTAS, cronogramaBNPL } from "./store";
 import { Icon, BtnPrimary, BtnOutline, notify, inputCls } from "./ui";
 import { MerchantGate, CobrarPanel, bnplLimitesDelMundo } from "./Fronts.jsx";
 import {
@@ -289,20 +289,11 @@ function SolicitudBNPLOperador({ comercio, m }) {
   };
 
   const cuotasDisponibles = (prog?.cuotas_activas || []).filter(n => (limites?.cuotas || []).includes(n));
-  const INTERES = { 3: 0, 6: 0.18, 12: 0.24 };
-
-  const cronogramaDe = (monto, cuotas, diasGracia, frecuencia) => {
-    const interes = INTERES[cuotas] ?? 0.24;
-    const cuotaMonto = +((monto * (1 + interes)) / cuotas).toFixed(2);
-    const base = new Date();
-    base.setDate(base.getDate() + (diasGracia || 0));
-    const pasoDias = frecuencia === "semanal" ? 7 : frecuencia === "quincenal" ? 15 : null;
-    return Array.from({ length: cuotas }, (_, i) => {
-      const f = new Date(base);
-      if (pasoDias) f.setDate(f.getDate() + pasoDias * (i + 1)); else f.setMonth(f.getMonth() + i + 1);
-      return { n: i + 1, fecha: f.toISOString().slice(0, 10), monto: cuotaMonto, estado: "pendiente" };
-    });
-  };
+  // Track G: cronograma + interés vienen de store.js (única fuente). Antes esta
+  // copia local ignoraba la frecuencia "personalizada" y usaba fecha UTC.
+  const INTERES = BNPL_INTERES_POR_CUOTAS;
+  const cronogramaDe = (monto, cuotas, diasGracia, frecuencia) =>
+    cronogramaBNPL(monto, cuotas, diasGracia, frecuencia, prog?.dias_personalizados);
 
   const solicitar = async () => {
     if (!productoSel || !cuotasSel || !cliente) return;

@@ -1087,6 +1087,32 @@ export const DEPENDENCY_MAP = {
   suscripciones:  ["wallet"],
 };
 
+// ── BNPL: cronograma + interés — ÚNICA fuente (Track G) ───────────────────
+// Antes este literal + el cálculo vivían copiados en 3 archivos del cliente
+// (OperadorApp.jsx, Fronts.jsx, y la superapp Module.jsx) y divergían: la
+// copia del Operador ignoraba la frecuencia "personalizada" → un contrato
+// abierto desde el POS producía fechas de cuota distintas que el mismo
+// contrato abierto desde la app. La superapp tiene su propia copia (otro
+// repo) que DEBE espejar esta.
+export const BNPL_INTERES_POR_CUOTAS = { 3: 0, 6: 0.18, 12: 0.24 };
+
+export function cronogramaBNPL(monto, cuotas, diasGracia, frecuencia = "mensual", diasPersonalizados = 30) {
+  const interes = BNPL_INTERES_POR_CUOTAS[cuotas] ?? 0.24;
+  const cuotaMonto = +((monto * (1 + interes)) / cuotas).toFixed(2);
+  const base = new Date();
+  base.setDate(base.getDate() + (diasGracia || 0));
+  const pasoDias = frecuencia === "semanal" ? 7
+    : frecuencia === "quincenal" ? 15
+    : frecuencia === "personalizada" ? (diasPersonalizados || 30) : null;
+  return Array.from({ length: cuotas }, (_, i) => {
+    const f = new Date(base);
+    if (pasoDias) f.setDate(f.getDate() + pasoDias * (i + 1)); else f.setMonth(f.getMonth() + i + 1);
+    // fecha local (no toISOString/UTC — adelantaba un día en zona Perú)
+    const fecha = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+    return { n: i + 1, fecha, monto: cuotaMonto, estado: "pendiente" };
+  });
+}
+
 // ── Eventos & Promos helpers ──────────────────────────────────────────────
 export function getEventos(mundoId) {
   const st = getState();

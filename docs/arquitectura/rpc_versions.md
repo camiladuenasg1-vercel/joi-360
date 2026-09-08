@@ -9,7 +9,7 @@ Las funciones Postgres que **mutan una wallet** son el punto de choque #1 del ec
 | RPC | `pronargs` | Candado de identidad | Restricciones de dependiente | `.sql` en repo | Notas |
 |---|---|---|---|---|---|
 | `mover_saldo_wallet` | 8 | ✅ dueño/apoderado **o** turno POS válido (`NO_AUTENTICADO`) | ✅ horario / límite diario / productos bloqueados | ✅ `fix-234-restaurar-dueno-wallet.sql` (última reescritura) | Historia: `fix-121` (candado de dueño) → `fix-181` (restricciones, perdió el candado) → `fix-234` (ambos juntos). |
-| `mover_cashback_wallet` | 7 | ✅ tiene candado de dueño/turno | — (no aplica) | ❌ **falta** | Débito de canje + crédito de cashback ganado, con reversión si el cobro principal falla. Usada por `CobrarPanel`. |
+| `mover_cashback_wallet` | 7 | ✅ turno POS válido **o** dueño/apoderado (`TURNO_INVALIDO`/`NO_AUTENTICADO`/`NO_AUTORIZADO`) | — (no aplica) | ✅ `docs/arquitectura/rpc-mover-cashback-wallet.sql` (v1, reconstruida de prod 07-sep) | Débito de canje + crédito de cashback ganado. Usada por `CobrarPanel`. |
 | `transferir_p2p_wallet` | 5 | ✅ dueño | — | ⚠️ referida en `08_discrepancias.md`, sin `.sql` propio confirmado | P2P usuario→usuario. |
 
 ## RPC de login (no mueven dinero, pero son credenciales)
@@ -18,6 +18,6 @@ Las funciones Postgres que **mutan una wallet** son el punto de choque #1 del ec
 |---|---|---|---|
 | `verificar_admin_login` | 2 | ✅ `fix-admin-users-tabla-real.sql` | admin RedPontis, bcrypt server-side. |
 | `verificar_pin_operador` | 2 | ✅ `fix-pos-pin-hash-y-codigo-comercio.sql` | PIN de POS de comercio/mundo. **Nota Track B:** el `pos_pin_hash` es legible con la anon key (bcrypt cost 6 sobre 4 dígitos → fuerza bruta offline). |
-| `verificar_login_sponsor` | 3 | ❌ **falta** | login del Panel de Mundo. |
+| `verificar_login_sponsor` | 3 | ✅ `docs/arquitectura/rpc-verificar-login-sponsor.sql` (v1, reconstruida de prod 07-sep) | login del Panel de Mundo, bcrypt server-side contra `worlds.sponsor_password_hash`. |
 | `verificar_login_organizador` | 3 | ✅ `supabase-auth-organizador-merchant.sql` (aplicada 02-sep) | Track B. Trigger `hash_organizador_password` + RPC security definer. Cliente 100% server-side (fallback quitado). |
 | `verificar_login_merchant` | 3 | ✅ `supabase-auth-organizador-merchant.sql` (aplicada 02-sep) | Track B. Columnas `merchants.panel_usuario`/`panel_password`/`panel_password_hash` + trigger + RPC. |
