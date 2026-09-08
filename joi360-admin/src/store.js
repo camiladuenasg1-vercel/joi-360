@@ -264,24 +264,24 @@ export const MODULE_CATALOG = [
   },
 
   // ── OPCIONAL ───────────────────────────────────────────────────────────────
-  // Formalizada como capacidad propia (12-ago-2026, a pedido explícito de
-  // Camila) — antes vivía escondida como un configField de Wallet
-  // ("perfilesSuscripcion"), pese a que ya cobraba dinero real cada vez que
-  // se vinculaba un dependiente en un mundo con planes creados. Sacarla a su
-  // propia capacidad no cambia el mecanismo de cobro (sigue siendo
-  // crearDependienteRemote + Planes de Suscripción, ver PlanesSuscripcionPanel
-  // en MundoDetail.jsx) — solo la hace visible y activable por sí misma en
-  // vez de agazapada dentro de otra capacidad.
+  // v1.1.0 (07-sep, aclaración de Camila): la CAPACIDAD "Suscripciones" es la
+  // membresía INDEPENDIENTE del mundo (modelo YOKI) — el usuario elige un
+  // plan del mundo, con su marca, y paga una cuota recurrente desde su
+  // wallet. NO tiene ninguna relación con vincular familiares ni con los
+  // perfiles controlados. El cobro de una cuota al vincular un dependiente
+  // es un mecanismo DISTINTO que vive en Restricciones (crearDependienteRemote
+  // con cuotaSuscripcion) y solo reusa `subscription_plans` como catálogo de
+  // montos — no es esta capacidad. Depende SOLO de Wallet.
   { id: "suscripciones", name: "Suscripciones", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "subscriptions",
-    version: "1.0.0",
-    desc: "Cobra al padre/tutor una cuota real al vincular cada nuevo dependiente. Depende de Wallet — usa la misma billetera para el cobro. Sin planes creados, el mundo no puede cobrar (nunca cae a un monto por defecto sin definir).",
+    version: "1.1.0",
+    desc: "Membresía recurrente del mundo (modelo YOKI): el usuario elige un plan del mundo — con su propia marca (banner/logo/color), categoría de beneficio y comercios afiliados — paga el primer período y desde ahí el cobro se repite solo desde su wallet. Es una suscripción del mundo, independiente: NO está asociada a familiares ni a perfiles controlados. Depende solo de Wallet.",
     servicios: [
-      { id:"planes",  nombre:"Planes de suscripción", desc:"El mundo crea uno o más planes (nombre, precio, periodo, % de descuento). Se cobran al vincular un dependiente." },
-      { id:"cobro",   nombre:"Cobro automático al vincular", desc:"Al crear un dependiente, se descuenta el plan elegido de la wallet del tutor vía el mismo RPC de saldo real." },
+      { id:"planes",  nombre:"Planes de membresía del mundo", desc:"El mundo crea uno o más planes con marca propia (banner, logo, color), categoría de beneficio (sorteo/descuento/acceso/producto) y comercios afiliados." },
+      { id:"cobro",   nombre:"Cobro recurrente automático", desc:"El usuario se suscribe y paga el primer período; el motor de ciclo (en cada carga de Wallet) cobra solo cada período vía el RPC de saldo real. Sin dependientes de por medio." },
     ],
     pricing: { modelo: "revenue", revShare: 3, setup: 0, moneda: "PEN" },
     configFields: [],
-    posiblesIngresos: ["Suscripción por perfil"],
+    posiblesIngresos: ["Membresía recurrente del mundo"],
   },
 
   { id: "loyalty", name: "Puntos Loyalty", tier: "OPCIONAL", category: "Mixto", e: true, a: true, icon: "loyalty",
@@ -1070,12 +1070,20 @@ export const DEPENDENCY_MAP = {
   // correctamente, que Wallet y Comercios también estén habilitados").
   bnpl:           ["wallet", "comercios"],
   eventos:        ["wallet", "comercios"],
-  estacionamiento:["accesos", "wallet"],
+  // Estacionamiento se construyó standalone (tabla estacionamiento_sesiones
+  // propia, cobra con el RPC de wallet). "Accesos" era una dependencia
+  // conceptual (para una futura gestión de plazas con cupo) pero hoy NO se
+  // usa — se saca del mapa para no bloquear/advertir la activación sin motivo.
+  estacionamiento:["wallet"],
   transporte:     ["wallet"],
   control:        ["wallet"],
   asistencia:     ["accesos"],
   reservas:       ["wallet"],
-  turnos:         ["wallet"],
+  turnos:         ["wallet", "comercios"],
+  // Suscripciones (v1.1.0): membresía INDEPENDIENTE del mundo. Depende solo
+  // de Wallet (el cobro). NO depende de Restricciones ni de vincular
+  // familiares — esa es otra cosa (cuota al vincular dependiente, vive en
+  // Restricciones vía crearDependienteRemote).
   suscripciones:  ["wallet"],
 };
 
@@ -1206,8 +1214,8 @@ export const FLAG_DEV_MAP = {
   // entrada acá pese a cobrar dinero real hace semanas (modelo YOKI, 13-ago
   // y 20-ago) -- por ser tier OPCIONAL, ambos flags caían al default
   // "planned", bloqueando "Activar todos" en cualquier mundo nuevo.
-  "suscripciones:planes": { status: "ready", api: "propio · PlanesSuscripcionPanel + subscription_plans" },
-  "suscripciones:cobro":  { status: "ready", api: "propio · crearDependienteRemote + sincronizarCicloSuscripcionesMembresia" },
+  "suscripciones:planes": { status: "ready", api: "propio · SponsorSuscripcionesTab + subscription_plans (marca, beneficio, comercios afiliados)" },
+  "suscripciones:cobro":  { status: "ready", api: "propio · suscribirseAPlanMembresia + sincronizarCicloSuscripcionesMembresia (cobro recurrente, sin dependientes)" },
 
   // Capacidades cerradas 26-ago -- ver 09_backlog.md para el detalle de cada
   // una. Sus 4 migraciones (turno_pedidos / reservas / estacionamiento_sesiones

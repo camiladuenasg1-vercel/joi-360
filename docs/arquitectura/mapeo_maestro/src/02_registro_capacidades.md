@@ -26,6 +26,14 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 
 **Bug encontrado en la verificación en vivo del 28-ago (corregido, commit `4c9851b`)**: `ReservasTemplate` mostraba la fecha de la reserva un día antes — parseo UTC de una fecha date-only en zona Perú (UTC-5). Corregido en 3 puntos (fecha por defecto, corte próximas/pasadas, etiqueta de la lista). Los datos en la base siempre estuvieron correctos; era solo el render.
 
+### Cambios de versión posteriores al corte 28-ago (van al próximo corte)
+
+| Capacidad | de → a | Fecha | Qué cambió |
+|---|---|---|---|
+| Suscripciones | 1.0.0 → **1.1.0** | 07-sep | Aclaración de alcance de Camila: la capacidad es la **membresía independiente del mundo** (modelo YOKI) y **no depende de vincular familiares** ni de perfiles controlados. La *cuota al vincular dependiente* se documentó y quedó donde vive de verdad — Restricciones (#18). `desc` y `servicios` del catálogo reescritos; `DEPENDENCY_MAP.suscripciones = ["wallet"]` (sin Restricciones/Control). |
+| Estacionamiento | 1.0.0 → 1.0.0 | 07-sep | Sin cambio de versión — solo se sacó `accesos` de `DEPENDENCY_MAP` (era dependencia conceptual, hoy funciona standalone). |
+| Turnos | 1.0.0 → 1.0.0 | 07-sep | `DEPENDENCY_MAP.turnos` pasa a `["wallet","comercios"]` — el pedido se crea al pagar en un comercio, así que Comercios es requisito real. |
+
 ---
 
 ## 1. Wallet — 🟢 Construido
@@ -164,11 +172,12 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 **⚠️ Hallazgo nuevo (24-ago-2026)**: activar una capacidad recién (como Cashback en un mundo ya cargado en la sesión de un navegador) no se refleja en el Panel de Mundo de esa misma sesión hasta limpiar el caché local — `refreshMundosLive()` solo trae `modulos[]` frescos de Supabase para mundos NUEVOS en el store local; uno ya cacheado conserva su lista vieja a propósito (para no pisar ediciones locales aún no sincronizadas). No es un bug de datos — Supabase siempre tiene la verdad — pero es una demora de sincronización real que puede confundir a un admin que activa algo y no lo ve aparecer. Ver discrepancia #13.
 
 ## 18. Restricciones — 🟢 Construido
-**Qué es**: control parental real — límites de consumo por dependiente, alergias, horarios permitidos, productos bloqueados, aprobación del padre sobre umbral, alertas en tiempo real.
+**Qué es**: control parental real — límites de consumo por dependiente, alergias, horarios permitidos, productos bloqueados, aprobación del padre sobre umbral, alertas en tiempo real. **Acá vive toda la gestión de dependientes/familiares del ecosistema.**
 **Cómo se activa**: Tier OPCIONAL. Tiene la lista de config fields más larga del catálogo.
 **Depende de**: Wallet.
-**Render por frente**: Superapp (`RestriccionesTemplate`, CRUD completo de dependientes — crear, editar, eliminar, recargar, restricciones granulares) · esta es también donde vive toda la gestión de dependientes/familiares del ecosistema.
+**Render por frente**: Superapp (`RestriccionesTemplate`, CRUD completo de dependientes — crear, editar, eliminar, recargar, restricciones granulares).
 **Datos**: `dependents`, `dependent_restrictions` (única tabla de config con enforcement real dentro de la RPC de wallet), `consumo_alertas`.
+**Cuota al vincular dependiente (mecanismo propio de acá, NO de Suscripciones)**: si el mundo tiene planes creados (`subscription_plans`), al vincular un nuevo dependiente desde este template se cobra una cuota fija de la wallet del titular — `crearDependienteRemote(..., cuotaSuscripcion)`, pago real vía `pagarSupabase` con `tipo:"suscripcion"`. Reusa `subscription_plans` **solo como catálogo de montos**. Es una cosa distinta de la capacidad Suscripciones (#22), que es la membresía independiente del mundo y no tiene relación con familiares.
 
 ## 19. Subsidio — 🟢 Construido · v1.0.0 (acreditación real; consumo = v1.1)
 **Qué es**: saldo dirigido real, acreditado por RedPontis a un usuario a la vez, con categorías de gasto permitidas y vigencia propia.
@@ -185,16 +194,15 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 ## 21. Estacionamiento — 🟢 Construido · v1.0.0
 **Qué es**: sesión real de ingreso/salida con cobro por permanencia calculado al salir (tarifa por hora, con minutos de gracia).
 **Estado en código (26-ago, verificado en vivo 28-ago)**: tabla propia `estacionamiento_sesiones` (ingreso/salida real). El cobro se calcula sobre la duración real transcurrida y se cobra con el mismo `pagarSupabase` ya probado — **nunca por adelantado**. Si el pago falla (saldo insuficiente), la sesión NO se cierra, para no dejar una salida registrada sin su cobro. Superapp: `EstacionamientoTemplate` con contador en vivo + costo en tiempo real.
-**Depende de**: Acceso (conceptual), Wallet.
+**Depende de**: Wallet. (Accesos era una dependencia *conceptual* para una futura gestión de plazas con cupo — hoy Estacionamiento funciona standalone y ya NO figura en `DEPENDENCY_MAP` como requisito.)
 **Datos**: `estacionamiento_sesiones`.
 
-## 22. Suscripciones — 🟢 Construido como capacidad propia (13-ago-2026), con membresía real tipo YOKI (20-ago-2026)
-**Qué es**: dos mecanismos distintos, ambos reales, que conviven bajo la misma capacidad:
-1. **Cuota al vincular dependiente** (la original, sin cambios): `perfilesSuscripcion` en la config de Wallet cobra una cuota fija cada vez que un titular vincula un nuevo dependiente (`crearDependienteRemote`, pago real vía `pagarSupabase` con `tipo:"suscripcion"`).
-2. **Membresía real, modelo YOKI** (nuevo, 20-ago): el mundo crea uno o más planes de membresía **con su propia marca** (banner, logo, color exacto vía cuentagotas), una **categoría de beneficio** (sorteo, descuento, acceso, producto, otro — cada una con sus propios campos, ej. sorteo pide lista de productos + fecha) y **comercios afiliados**. El usuario se suscribe, paga el primer período, y desde ahí el cobro es **recurrente de verdad** — no un evento único.
-**✅ Resuelto (13-ago-2026)**: la discrepancia que este documento marcaba como abierta ("¿se gradúa a capacidad propia?") quedó cerrada — Suscripciones tiene su propio ícono, activación y pantalla en el catálogo, ya no vive escondida dentro de Wallet.
-**Cómo se activa (mecanismo 2, membresía)**: Tier OPCIONAL. Sin config fields propios en el catálogo — cada plan se configura individualmente al crearlo (precio, período mensual/anual, % de descuento promocional, branding, beneficio, comercios afiliados).
-**Depende de**: Wallet (el cobro, en ambos mecanismos, se descuenta de la misma billetera).
+## 22. Suscripciones — 🟢 Construido · v1.1.0 (membresía independiente del mundo, modelo YOKI)
+**Qué es**: la **membresía recurrente del mundo**. El usuario elige un plan del mundo — con su propia marca (banner, logo, color exacto vía cuentagotas), una **categoría de beneficio** (sorteo, descuento, acceso, producto, otro — cada una con sus campos, ej. sorteo pide lista de productos + fecha) y **comercios afiliados** — paga el primer período, y desde ahí el cobro es **recurrente de verdad**, solo, desde su wallet.
+**⚠️ Qué NO es (aclaración de Camila, 07-sep → v1.1.0)**: esta capacidad **no tiene ninguna relación con vincular familiares ni con los perfiles controlados**. Es una suscripción del mundo, independiente. La *cuota al vincular un dependiente* es un mecanismo **distinto** que vive en **Restricciones** (#18) — reusa `subscription_plans` solo como catálogo de montos, pero no es esta capacidad. `DEPENDENCY_MAP.suscripciones = ["wallet"]` — solo Wallet, nunca Restricciones/Control.
+**✅ Resuelto (13-ago-2026)**: se graduó a capacidad propia con ícono, activación y pantalla en el catálogo, ya no escondida dentro de Wallet.
+**Cómo se activa**: Tier OPCIONAL. Sin config fields propios en el catálogo — cada plan se configura individualmente al crearlo (precio, período mensual/anual, % de descuento, branding, beneficio, comercios afiliados).
+**Depende de**: Wallet (el cobro se descuenta de la wallet del usuario). Nada más.
 **Motor de cobro recurrente (nuevo, 20-ago)**: `sincronizarCicloSuscripcionesMembresia` corre en cada carga del hook `useWalletLive` (mismo patrón que ya usaba el motor de BNPL) — revisa si `proxima_fecha_cobro <= hoy` para cada suscripción activa del usuario, cobra vía `mover_saldo_wallet` (`p_tipo:"suscripcion"`), y avanza la fecha según el período. Sin saldo suficiente, no cobra parcial ni deja estado intermedio — simplemente reintenta en la próxima carga. No hay cron server-side en este stack (Supabase + Vercel estático) — el disparador vive en el cliente, igual que BNPL.
 **Render por frente**: Panel de Mundo (`SponsorSuscripcionesTab` — CRUD completo de planes: subida de banner/logo, selector de color HEX, categoría de beneficio con campos condicionales, checklist de comercios afiliados, tarjetas con conteo de suscriptores) · Superapp (`SuscripcionesTemplate` — tarjeta con la marca del mundo, precio/período, detalle del beneficio, comercios afiliados, botón "Suscribirme"/"Suscrito").
 **Datos**: `subscription_plans` (extendida con `banner_url`, `logo_url`, `color_hex`, `categoria_beneficio`, `beneficio_detalle` jsonb), `subscription_plan_merchants` (comercios afiliados), `subscription_suscriptores` (suscriptor real: `estado`, `metodo_pago`, `fecha_inicio`, `proxima_fecha_cobro`, `ultimo_cobro_at`).

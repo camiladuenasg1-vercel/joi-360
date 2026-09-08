@@ -1022,12 +1022,14 @@ function RestriccionesTemplate({ cfg, u }) {
   const guardianId = getSyntheticUserId();
   const { maxPerfilesControlados, registroAlergias,
           limiteDiarioPerfil, montoAprobacionPadre, horarioConsumo, notificacionConsumoRealTime } = cfg.config;
-  // Cobro por suscripción: capacidad propia (Suscripciones, depende de
-  // Wallet) desde el 12-ago — antes vivía como configField escondido dentro
-  // de Wallet. Activa = el mundo la prendió; sin eso, ningún dependiente
-  // nuevo cobra cuota, sin importar si hay planes creados.
-  const suscripcionesCfg = useModuleConfig("suscripciones");
-  const perfilesSuscripcion = !!suscripcionesCfg;
+  // Cuota al vincular un dependiente: mecanismo PROPIO de Restricciones —
+  // NO es la capacidad Suscripciones (#22, que es la membresía independiente
+  // del mundo y no tiene relación con familiares; aclaración de Camila
+  // 07-sep). Se dispara si el mundo tiene planes creados (`subscription_plans`,
+  // que hoy sirven de catálogo de montos para las dos cosas). Antes esto se
+  // gateaba en `useModuleConfig("suscripciones")` — se desacopló.
+  // TODO: darle a este mecanismo su propio config field en Control en vez de
+  // reusar `subscription_plans`.
 
   // "Agregar familiar para pedirle su bandita" (Wallet) navega acá con
   // ?agregar=1 — quien vino a pedir una bandita para un dependiente que
@@ -1131,21 +1133,20 @@ function RestriccionesTemplate({ cfg, u }) {
   }, [guardianId, worldId, reload]);
 
   useEffect(() => {
-    if (!perfilesSuscripcion) { setPlanesSuscripcion([]); return; }
     let vivo = true;
     fetchPlanesSuscripcionLive(worldId).then(r => { if (vivo) setPlanesSuscripcion(r || []); }).catch(() => { if (vivo) setPlanesSuscripcion([]); });
     return () => { vivo = false; };
-  }, [worldId, perfilesSuscripcion]);
+  }, [worldId]);
 
   const toggleAlergia = (a) => setNuevo(n => ({ ...n, alergias: n.alergias.includes(a) ? n.alergias.filter(x => x !== a) : [...n.alergias, a] }));
   const precioPlan = p => p.descuento_pct > 0 ? p.precio * (1 - p.descuento_pct / 100) : p.precio;
   const hayPlanes = (planesSuscripcion || []).length > 0;
+  // El mundo cobra una cuota al vincular un dependiente si tiene planes
+  // creados. Independiente de la capacidad Suscripciones (ver comentario arriba).
+  const cobraCuotaVinculacion = hayPlanes;
   const planSeleccionado = (planesSuscripcion || []).find(p => p.id === planSeleccionadoId) || null;
-  // El monto fijo único (montoSuscripcion) se retiró — el plan elegido en el
-  // paso 2 es el único mecanismo real. Con la suscripción activada pero sin
-  // ningún plan creado todavía, no hay forma de cobrar (bloqueado, no un
-  // fallback silencioso a un monto sin definir).
-  const cuotaSuscripcion = !perfilesSuscripcion ? 0 : hayPlanes ? (planSeleccionado ? precioPlan(planSeleccionado) : null) : null;
+  // Sin ningún plan creado no hay forma de cobrar (no cae a un monto sin definir).
+  const cuotaSuscripcion = !cobraCuotaVinculacion ? 0 : (planSeleccionado ? precioPlan(planSeleccionado) : null);
 
   const crear = async () => {
     setCreando(true); setDependienteError(null);
@@ -1167,7 +1168,7 @@ function RestriccionesTemplate({ cfg, u }) {
   // que ya cobra vía pagarSupabase (RPC real, rechaza si el saldo no alcanza).
   const continuar = async () => {
     if (!nuevo.nombre.trim()) return;
-    if (!perfilesSuscripcion) { crear(); return; }
+    if (!cobraCuotaVinculacion) { crear(); return; }
     setDependienteError(null);
     const saldo = await fetchDependienteBalance(guardianId, worldId).catch(() => 0);
     setSaldoGuardian(saldo);
@@ -1275,13 +1276,8 @@ function RestriccionesTemplate({ cfg, u }) {
       <h3 className="text-2xl font-black text-[#1C1C1E] mb-1">Agregar dependiente</h3>
       <p className="text-sm text-[#404255] mb-5">
         Registra un menor para controlar su consumo.
-        {perfilesSuscripcion && hayPlanes && " Este mundo tiene planes de suscripción para vincular perfiles."}
+        {cobraCuotaVinculacion && " Este mundo cobra una cuota al vincular un dependiente — elige un plan en el siguiente paso."}
       </p>
-      {perfilesSuscripcion && !hayPlanes && (
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-          Este mundo todavía no tiene planes de suscripción configurados — no se puede vincular un nuevo dependiente hasta que el administrador cree uno.
-        </p>
-      )}
       <div className="space-y-4">
         <div>
           <label className="text-[11px] font-bold text-[#404255] uppercase tracking-wider block mb-2">Nombre completo</label>
@@ -1318,8 +1314,8 @@ function RestriccionesTemplate({ cfg, u }) {
           </div>
         )}
         {dependienteError && <p className="text-xs text-red-600">{dependienteError}</p>}
-        <PrimaryBtn label={creando ? "Registrando…" : perfilesSuscripcion ? "Continuar" : "Registrar dependiente"}
-          icon={perfilesSuscripcion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando || (perfilesSuscripcion && !hayPlanes)} onClick={continuar} />
+        <PrimaryBtn label={creando ? "Registrando…" : cobraCuotaVinculacion ? "Continuar" : "Registrar dependiente"}
+          icon={cobraCuotaVinculacion ? "arrow_forward" : "person_add"} disabled={!nuevo.nombre.trim() || creando} onClick={continuar} />
       </div>
     </div>
   );
