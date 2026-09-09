@@ -16,6 +16,9 @@ Regla: todo `.sql` de migración debe terminar con `notify pgrst, 'reload schema
 | 2026-08-28 | `supabase-estacionamiento.sql` | Tabla `estacionamiento_sesiones` (ingreso/salida, cobro al salir) + RLS + índices. | ✅ 2026-08-28 en vivo + Management API (8 columnas, 1 policy). |
 | 2026-08-28 | `supabase-subsidio.sql` | Ledger `subsidios` (monto/categorías/vigencia/acreditado_por) + RLS + índices. | ✅ 2026-08-28 en vivo + Management API (9 columnas, 1 policy). |
 | 2026-09-02 | `supabase-auth-organizador-merchant.sql` (raíz `JOI360/`) | Track B — triggers de hash bcrypt para `organizadores.password` y `merchants.panel_password`; RPCs `verificar_login_organizador` / `verificar_login_merchant` (security definer); columnas `merchants.panel_*`; `REVOKE SELECT` de columnas de secreto (`password`, `*_hash`, `pos_pin`, `sponsor_password`) para `anon`. | ✅ 2026-09-02 vía Management API: ambas RPCs existen, columnas de merchant agregadas, 0 contraseñas de organizador en texto plano. El fallback local transitorio del cliente ya se quitó. |
+| 2026-09-09 | `capacities` version/status (E-1, inline) | Track E — `capacities.version` deja de ser "1.0" hardcodeado: `suscripciones=1.1.0`, `facturacion/credito/asistencia=0.0.0/futuro`, resto `1.0.0/activo`. | ✅ verificado (distinct: `0.0.0, 1.0.0, 1.1.0`). |
+| 2026-09-09 | `supabase-limpiar-flags-fantasma.sql` (raíz `JOI360/`) | Track E — borra las 28 filas de `capacity_feature_flags` cuyo `flag_code` era un nombre legible (no un id) y que ningún `world_feature_flags` usaba. | ✅ 96 → 68 filas, 0 fantasma restante. |
+| 2026-09-09 | `supabase-seed-flags-3ox15t.sql` (raíz `JOI360/`) | Track I — enciende `world_feature_flags` de las 6 capacidades v1.0.0 en `mundo-3ox15t` (se habían agregado antes del fix de Track E que siembra `serviciosActivos`). | ✅ 0 → 16 filas. |
 
 ## Sin `.sql` versionado en el repo (deuda — Track J)
 
