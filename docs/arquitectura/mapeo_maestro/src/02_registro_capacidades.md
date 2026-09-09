@@ -34,6 +34,8 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 | Estacionamiento | 1.0.0 → 1.0.0 | 07-sep | Sin cambio de versión — solo se sacó `accesos` de `DEPENDENCY_MAP` (era dependencia conceptual, hoy funciona standalone). |
 | Turnos | 1.0.0 → 1.0.0 | 07-sep | `DEPENDENCY_MAP.turnos` pasa a `["wallet","comercios"]` — el pedido se crea al pagar en un comercio, así que Comercios es requisito real. |
 | Wallet | 1.0.0 → **1.1.0** | 09-sep | Nuevo config field en el microservicio Transferencia (P2P): **"Máximo de transferencias por día (cantidad)"** — un límite de *cantidad* además de los de *monto* (por Tx y por día). Se aplica de verdad en la superapp (`WalletTemplate.enviarP2P`) antes de confirmar. |
+| Cashback | 1.0.0 → **1.0.1** | 09-sep | Fix de signo en el historial de movimientos (`fetchTxHistory`): `cashback_canjeado` y `cashback_revertido` son gastos y ahora salen en negativo (antes el canje aparecía sumando). `CashbackTemplate` ahora también lista los eventos `CASHBACK_REVERTIDO` con su título propio ("Cashback revertido"). Sin cambio de config ni de RPC. |
+| Accesos | 1.0.0 → **1.0.1** | 09-sep | Botón "Compartir mi código" de `AccesosTemplate` ahora funciona (usa `navigator.share`, cae a copiar al portapapeles) — antes eran dos botones sin `onClick` ("Refrescar QR" / "Compartir"). Solo UI de la superapp. |
 
 ---
 

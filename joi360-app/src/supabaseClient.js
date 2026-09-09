@@ -1455,7 +1455,9 @@ export async function fetchTxHistory(userId, worldId) {
     id: r.id,
     tipo: r.type.toUpperCase(),
     titulo: `${TIPO_LABEL[r.type] || r.type} · S/ ${Number(r.amount).toFixed(2)}`,
-    monto: r.type === "compra" ? -Number(r.amount) : Number(r.amount),
+    // Los tipos que RESTAN saldo van con signo negativo (compra, canje de
+    // cashback, reverso de cashback ganado). El resto suma.
+    monto: ["compra", "cashback_canjeado", "cashback_revertido"].includes(r.type) ? -Number(r.amount) : Number(r.amount),
     mundoId: r.world_id,
     fecha: r.created_at,
   }));

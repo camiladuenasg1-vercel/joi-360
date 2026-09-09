@@ -40,3 +40,6 @@ desktop.ini
 docs/maestro/
 
 .vercel
+
+# Claude Code: sesiones, worktrees de agentes, estado local -- nunca al repo
+.claude/

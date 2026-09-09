@@ -1663,12 +1663,10 @@ function AccesosTemplate({ cfg, u }) {
         {cfg.config.validacionDoble && (
           <div className="mt-4"><ConfigBanner icon="security" message="Esta zona requiere doble validación: TAQ NFC + PIN." color="blue"/></div>
         )}
-        <div className="flex gap-2 mt-4">
-          <PrimaryBtn label="Refrescar QR" icon="refresh" full={false} />
-          <button className="flex-1 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
-            <Icon name="share" size="text-base" color="text-[#404255]"/>Compartir
-          </button>
-        </div>
+        <button onClick={() => { if (navigator.share) navigator.share({ title: "Mi código de acceso JOI", text: `Mi código JOI es ${myCode}` }).catch(() => {}); else navigator.clipboard?.writeText(myCode); }}
+          className="w-full mt-4 py-4 glass-card rounded-2xl font-bold text-sm text-[#404255] tap-active flex items-center justify-center gap-2">
+          <Icon name="share" size="text-base" color="text-[#404255]"/>Compartir mi código
+        </button>
       </SectionCard>
 
       <SectionCard>
@@ -1757,7 +1755,7 @@ function CashbackTemplate({ cfg, u }) {
   const tope = cfg.config.topeMensual;
   // Historial de cashback ya viene en el mismo historial de movimientos de
   // la wallet (mismo wallet_id) — se filtra por tipo, sin un segundo fetch.
-  const movimientos = (historial || []).filter(h => h.tipo === "CASHBACK_GANADO" || h.tipo === "CASHBACK_CANJEADO").slice(0, 10);
+  const movimientos = (historial || []).filter(h => h.tipo === "CASHBACK_GANADO" || h.tipo === "CASHBACK_CANJEADO" || h.tipo === "CASHBACK_REVERTIDO").slice(0, 10);
   const topComercioId = Object.entries(cashbackPorComercio || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
   const topComercioNombre = comercios.find(c => c.id === topComercioId)?.nombre;
 
@@ -1788,7 +1786,7 @@ function CashbackTemplate({ cfg, u }) {
           ? <EmptyState icon="history" title="Sin cashback todavía" subtitle="Tus créditos de cashback aparecerán aquí." />
           : movimientos.map(h => (
             <ListItem key={h.id} icon="redeem" iconBg="bg-orange-50" iconColor="text-orange-500"
-              title={h.tipo === "CASHBACK_CANJEADO" ? "Cashback canjeado" : "Cashback ganado"}
+              title={h.tipo === "CASHBACK_CANJEADO" ? "Cashback canjeado" : h.tipo === "CASHBACK_REVERTIDO" ? "Cashback revertido" : "Cashback ganado"}
               subtitle={new Date(h.fecha).toLocaleDateString("es-PE")}
               right={<span className="font-black text-sm text-orange-600">{h.monto > 0 ? "+" : ""}S/ {Math.abs(h.monto).toFixed(2)}</span>}
             />

@@ -1,0 +1,2 @@
+# Los .docx son artefactos generados (build_*.py + fuente .md sí se versionan).
+*.docx

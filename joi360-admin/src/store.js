@@ -226,7 +226,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "accesos", name: "Accesos", tier: "PREMIUM", category: "Emisión", e: true, a: true, icon: "door_open",
-    version: "1.0.0",
+    version: "1.0.1",
     desc: "Controla el ingreso y salida de personas mediante TAQ/QR, registrando eventos y restricciones por zona, horario y tipo de usuario.",
     servicios: [
       { id: "identificacion",     nombre: "Identificación del usuario con TAQ o QR", desc: "Escaneo real de bandita NFC, QR o búsqueda por DNI en el POS." },
@@ -389,7 +389,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "cashback", name: "Cashback", tier: "OPCIONAL", category: "Adquirencia", e: true, a: true, icon: "currency_exchange",
-    version: "1.0.0",
+    version: "1.0.1",
     desc: "Devuelve un porcentaje del consumo a la wallet del usuario. Se devenga en el comercio (A) y se acredita en la wallet (E). Motor de growth y retención.",
     servicios: ["% de retorno sobre venta", "Tope de cashback por usuario / mes", "Categorías con cashback diferenciado", "Vigencia del cashback acumulado", "Historial de retornos"],
     pricing: { modelo: "transaccional", porTx: 0.5, setup: 0, moneda: "PEN" },

@@ -53,7 +53,7 @@ function WorldGate({ m }) {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-on-surface-variant mb-1">Clave del mundo</label>
-            <input className={`${inputCls} font-mono`} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="••••" autoFocus />
+            <input className={`${inputCls} font-mono`} type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="••••" autoFocus />
           </div>
           {err && <p className="text-xs text-error">{err}</p>}
           <BtnPrimary type="submit" disabled={busy} className="w-full"><Icon n="login" className="text-[18px]" /> {busy ? "Verificando…" : "Ingresar"}</BtnPrimary>
