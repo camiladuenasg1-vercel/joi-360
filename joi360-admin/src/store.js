@@ -226,7 +226,7 @@ export const MODULE_CATALOG = [
   },
 
   { id: "accesos", name: "Accesos", tier: "PREMIUM", category: "Emisión", e: true, a: true, icon: "door_open",
-    version: "1.0.1",
+    version: "1.0.2",
     desc: "Controla el ingreso y salida de personas mediante TAQ/QR, registrando eventos y restricciones por zona, horario y tipo de usuario.",
     servicios: [
       { id: "identificacion",     nombre: "Identificación del usuario con TAQ o QR", desc: "Escaneo real de bandita NFC, QR o búsqueda por DNI en el POS." },

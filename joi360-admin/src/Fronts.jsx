@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStore } from "./hooks";
 import { moduleCat, promoVigente, update, uid, session, sponsorLogin, sponsorLogout, anuncianteLogin, anuncianteLogout, getAnunciante, merchantLogin, merchantPinLogin, merchantLogout, generarPassword, rubroNombre, rubrosDeVertical, modosDeMundo, liquidacionConfigDe, generarLiquidacionMundo, HARDWARE_CATALOG, nomenclaturaFamiliar, refreshEventosLive, BNPL_INTERES_POR_CUOTAS } from "./store";
 import { Icon, Pill, Toggle, Drawer, BtnPrimary, BtnOutline, Field, inputCls, notify, NumInput } from "./ui";
-import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote, moverCashbackWallet, fetchCashbackHabilitadoMerchant, fetchMerchantsRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, fetchComerciosDePlan, guardarComerciosDePlan, fetchSuscriptoresDePlan, crearSolicitudCambioCashback, fetchSolicitudesCambioCashbackMundo } from "./supabase.js";
+import { upsertProgramaBNPL, fetchProgramaBNPL, fetchContratosBNPL, sincronizarCicloBNPL, resolverSolicitudBNPL, fetchNotificacionesBNPL, marcarNotificacionBNPLLeida, fetchConsumosMundo, fetchVentasPorComercioMundo, fetchHistorialVentasMundo, fetchProductsRemote, upsertProductRemote, deleteProductRemote, buscarWalletPorCodigo, cobrarPOSRemote, recargarPOSRemote, abrirTurnoRemote, cerrarTurnoPOSRemote, fetchVentasComercio, fetchVentasComercioHoy, fetchTransaccionesMundo, fetchDependientesMundo, fetchSolicitudesNfcMundo, resolverSolicitudNfcRemote, fetchTicketsDeEvento, errorControlado, logErrorControlado, saldoPendienteBNPL, reprogramarCuotasBNPL, modificarFechaCuotaBNPL, refinanciarBNPL, condonarInteresesBNPL, eliminarMoraBNPL, aplicarDescuentoBNPL, registrarPagoManualBNPL, cancelarAnticipadoBNPL, declararIncobrableBNPL, crearSolicitudComercio, fetchSolicitudesComercioMundo, fetchCampanasBNPL, crearCampanaBNPL, eliminarCampanaBNPL, canjearCuponRemote, fetchMenuItemsMerchant, crearMenuItemRemote, actualizarMenuItemRemote, eliminarMenuItemRemote, fetchReservasFuturasDePlato, fetchProgramacionMerchant, guardarProgramacionItem, fetchAccesosMundo, registrarAccesoRemote, resolverUsuarioParaAcceso, MOTIVO_ACCESO_LABEL, actualizarVisibilidadMerchantRemote, crearTicketSoporteRemote, fetchProductosMundo, fetchMenuReservasMundo, fetchAlertasConsumoMundo, fetchPerfilesExtendidosMundo, fetchLiquidacionesMundoRemote, fetchPromocionesMundo, fetchAlertasMundo, marcarAlertaMundoLeida, uploadArchivo, actualizarFotoMerchantRemote, crearSolicitudLoteNfcRemote, fetchSolicitudesLoteNfcMundo, fetchUsuariosDeMundo, crearRequerimientoHardware, fetchRequerimientosHardwareMundo, fetchNfcBandsRemote, fetchTurnosMundo, crearChargeRequestRemote, fetchChargeRequestRemote, cancelarChargeRequestRemote, moverCashbackWallet, fetchCashbackHabilitadoMerchant, fetchMerchantsRemote, fetchPlanesSuscripcion, crearPlanSuscripcion, actualizarPlanSuscripcion, eliminarPlanSuscripcion, fetchComerciosDePlan, guardarComerciosDePlan, fetchSuscriptoresDePlan, crearSolicitudCambioCashback, fetchSolicitudesCambioCashbackMundo } from "./supabase.js";
 import { EventoDrawer, TabComerciosOrganizador, TabAsistenciaOrganizador, TabBanditasEventoOrganizador, TabLiqOrganizador } from "./OrganizadorFront.jsx";
 
 /* ── Recargas recientes del mundo (Panel Mundo — "Ver recargas de padres") ── */
@@ -771,6 +771,12 @@ export function CobrarPanel({ comercio, m }) {
   // cualquier cobro/recarga con merchant_id (gap real cerrado post-#114) —
   // sin esto, cobrar()/recargar() de abajo se rechazan con TURNO_INVALIDO.
   const [turnoId, setTurnoId] = useState(null);
+  // Cierre de turno / cuadre de caja — sin esto el turno que se abre al montar
+  // el panel quedaba abierto indefinidamente (Track G).
+  const [cerrarTurnoAbierto, setCerrarTurnoAbierto] = useState(false);
+  const [montoDeclarado, setMontoDeclarado] = useState("");
+  const [cerrandoTurno, setCerrandoTurno] = useState(false);
+  const [cuadre, setCuadre] = useState(null);
 
   // Cashback MACRO cerrado a comercios habilitados — el % es del mundo, la
   // participación es del comercio. Se consulta fresco (fetchCashbackHabilitadoMerchant)
@@ -855,6 +861,34 @@ export function CobrarPanel({ comercio, m }) {
       logErrorControlado("operacion_admin_fallida", `pos-cobrar:${merchantId}`, m.id);
       setNotFound([err.mensaje, err.accion].filter(Boolean).join(" "));
     } finally { setBuscando(false); }
+  };
+  const cerrarTurno = async () => {
+    if (!turnoId) return;
+    setCerrandoTurno(true);
+    try {
+      const r = await cerrarTurnoPOSRemote(turnoId, montoDeclarado);
+      if (r.ok) {
+        setCuadre(r);
+        setTurnoId(null);
+        setMontoDeclarado("");
+      } else {
+        notify(r.motivo === "ya_cerrado" ? "Este turno ya estaba cerrado." : "No se pudo cerrar el turno.", "error");
+        if (r.motivo === "ya_cerrado") setTurnoId(null);
+      }
+    } catch {
+      notify("No se pudo cerrar el turno.", "error");
+    } finally { setCerrandoTurno(false); }
+  };
+  const abrirTurnoNuevo = async () => {
+    setCerrandoTurno(true);
+    try {
+      const id = await abrirTurnoRemote(merchantId, m.id);
+      setTurnoId(id);
+      setCuadre(null);
+      setCerrarTurnoAbierto(false);
+    } catch {
+      notify("No se pudo abrir un turno nuevo.", "error");
+    } finally { setCerrandoTurno(false); }
   };
   const elegirProducto = (p) => { setProductoSel(p); setMonto(String(p.price)); };
   const reset = () => { setCodigo(""); setCliente(null); setNotFound(false); setProductoSel(null); setMonto(""); setCanalRecarga(null); setResultado(null); setAplicarCashback(false); };
@@ -970,7 +1004,7 @@ export function CobrarPanel({ comercio, m }) {
               <p className="font-mono text-[10px] uppercase text-outline mb-2">Monto a cobrar</p>
               <div className="flex gap-2">
                 <NumInput className={`${inputCls} font-mono`} placeholder="0.00" value={qrMonto} onChange={setQrMonto} onKeyDown={e => e.key === "Enter" && generarQr()} autoFocus />
-                <BtnPrimary disabled={!(+qrMonto > 0) || qrGenerando} onClick={generarQr}>
+                <BtnPrimary disabled={!(+qrMonto > 0) || qrGenerando || !turnoId} onClick={generarQr}>
                   <Icon n="qr_code_2" className="text-[18px]" /> {qrGenerando ? "Generando…" : "Generar QR"}
                 </BtnPrimary>
               </div>
@@ -1113,13 +1147,16 @@ export function CobrarPanel({ comercio, m }) {
         )}
 
         {/* Paso 3: confirmar */}
+        {cliente && !resultado && !turnoId && (
+          <p className="text-xs text-error flex items-center gap-1.5"><Icon n="lock" className="text-[16px]" /> El turno está cerrado. Abre un turno nuevo para cobrar o recargar.</p>
+        )}
         {cliente && !resultado && modo === "cobrar" && (
-          <BtnPrimary className="w-full !bg-secondary hover:!bg-secondary/90" disabled={!monto || +monto <= 0 || cobrando} onClick={cobrar}>
+          <BtnPrimary className="w-full !bg-secondary hover:!bg-secondary/90" disabled={!monto || +monto <= 0 || cobrando || !turnoId} onClick={cobrar}>
             <Icon n="point_of_sale" className="text-[20px]" /> {cobrando ? "Cobrando…" : `Cobrar S/ ${(+monto || 0).toFixed(2)}`}
           </BtnPrimary>
         )}
         {cliente && !resultado && modo === "recargar" && (
-          <BtnPrimary className="w-full !bg-secondary hover:!bg-secondary/90" disabled={!monto || +monto <= 0 || !canalRecarga || cobrando} onClick={recargar}>
+          <BtnPrimary className="w-full !bg-secondary hover:!bg-secondary/90" disabled={!monto || +monto <= 0 || !canalRecarga || cobrando || !turnoId} onClick={recargar}>
             <Icon n="add_card" className="text-[20px]" /> {cobrando ? "Recargando…" : `Recargar S/ ${(+monto || 0).toFixed(2)}`}
           </BtnPrimary>
         )}
@@ -1146,6 +1183,46 @@ export function CobrarPanel({ comercio, m }) {
         )}
       </div>
       )}
+
+      {/* Cierre de turno / cuadre de caja — el turno se abre solo al entrar al
+          panel; esto da la forma de cerrarlo con su arqueo (Track G). */}
+      <div className="max-w-xl mt-4">
+        {cuadre ? (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+            <p className="font-semibold flex items-center gap-2 mb-3"><Icon n="lock" className="text-primary text-[18px]" /> Turno cerrado — cuadre de caja</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><p className="font-mono text-[10px] uppercase text-outline">Esperado</p><p className="font-bold">S/ {cuadre.esperado.toFixed(2)}</p></div>
+              <div><p className="font-mono text-[10px] uppercase text-outline">Declarado</p><p className="font-bold">S/ {cuadre.declarado.toFixed(2)}</p></div>
+              <div><p className="font-mono text-[10px] uppercase text-outline">Diferencia</p><p className={`font-bold ${cuadre.diferencia === 0 ? "text-ok" : "text-error"}`}>S/ {cuadre.diferencia.toFixed(2)}</p></div>
+            </div>
+            <p className="text-[11px] text-on-surface-variant mt-2">{cuadre.ventas} venta{cuadre.ventas === 1 ? "" : "s"} en el turno.</p>
+            <BtnPrimary className="w-full mt-3" disabled={cerrandoTurno} onClick={abrirTurnoNuevo}>
+              <Icon n="lock_open" className="text-[18px]" /> {cerrandoTurno ? "Abriendo…" : "Abrir turno nuevo"}
+            </BtnPrimary>
+          </div>
+        ) : !cerrarTurnoAbierto ? (
+          <button onClick={() => setCerrarTurnoAbierto(true)} disabled={!turnoId}
+            className="text-xs font-bold text-on-surface-variant hover:text-error disabled:opacity-40 flex items-center gap-1.5">
+            <Icon n="lock" className="text-[16px]" /> Cerrar turno / cuadre de caja
+          </button>
+        ) : (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+            <p className="font-semibold flex items-center gap-2 mb-1"><Icon n="lock" className="text-primary text-[18px]" /> Cerrar turno</p>
+            <p className="text-[11px] text-on-surface-variant mb-3">Cuenta el efectivo en caja y decláralo. El sistema compara contra lo cobrado en el turno y guarda la diferencia.</p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg font-bold text-on-surface-variant">S/</span>
+              <NumInput className="text-xl font-black w-full border-b-2 border-outline-variant focus:border-secondary outline-none bg-transparent" step="0.10"
+                value={montoDeclarado} onChange={setMontoDeclarado} placeholder="0.00" autoFocus />
+            </div>
+            <div className="flex gap-2">
+              <BtnPrimary className="flex-1 !bg-error hover:!bg-error/90" disabled={cerrandoTurno || montoDeclarado === ""} onClick={cerrarTurno}>
+                <Icon n="lock" className="text-[18px]" /> {cerrandoTurno ? "Cerrando…" : "Cerrar turno"}
+              </BtnPrimary>
+              <BtnOutline disabled={cerrandoTurno} onClick={() => { setCerrarTurnoAbierto(false); setMontoDeclarado(""); }}>Cancelar</BtnOutline>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -3761,15 +3838,15 @@ function SponsorAccesos({ m }) {
     if (!code) return;
     setBusy(true); setResultado(null);
     try {
-      const w = await buscarWalletPorCodigo(code, m.id);
-      if (!w) {
-        const err = await errorControlado("wallet_no_encontrada");
+      const u = await resolverUsuarioParaAcceso(code, m.id);
+      if (u.error) {
         logErrorControlado("wallet_no_encontrada", `accesos:${m.id}`, m.id);
-        setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+        setResultado({ ok: false, mensaje: MOTIVO_ACCESO_LABEL[u.error] || "No se pudo identificar a la persona." });
         return;
       }
-      await registrarAccesoRemote(m.id, w.user_id, tipo, zona);
-      setResultado({ ok: true, mensaje: `${tipo === "entrada" ? "Entrada" : "Salida"} registrada en ${zona}.` });
+      const r = await registrarAccesoRemote(m.id, u.userId, tipo, zona);
+      const base = `${tipo === "entrada" ? "Entrada" : "Salida"} registrada en ${zona}.`;
+      setResultado({ ok: true, mensaje: r?.avisoApoderado ? `${base} Se avisó a ${r.avisoApoderado}.` : base });
       setCodigo("");
       cargar();
     } catch (e2) {

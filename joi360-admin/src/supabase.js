@@ -542,11 +542,71 @@ export async function fetchErrorCatalogMap() {
 export async function fetchAccesosMundo(worldId, limit = 30) {
   return rest(`access_log?world_id=eq.${worldId}&select=*&order=created_at.desc&limit=${limit}`);
 }
+// Resuelve el código que el operador web tipea/escanea en Control de Accesos
+// a un usuario real, con las MISMAS validaciones de estado de pulsera que el
+// POS T6 nativo (joi-pos-backend/lib/bandResolver.js, origen "manual"): si el
+// código es de una bandita del inventario, se exige que sea de este mundo,
+// no bloqueada, vinculada y vigente. Si no es una bandita, cae al código de
+// cuenta / QR de la app. Devuelve { userId } o { error }.
+export async function resolverUsuarioParaAcceso(codigo, worldId) {
+  const v = String(codigo || "").trim();
+  if (!v) return { error: "NO_ENCONTRADO" };
+  const band = (await rest(
+    `nfc_bands?codigo=eq.${encodeURIComponent(v.toUpperCase())}&select=world_id,estado,linked_user_id,vence_at&limit=1`
+  ).catch(() => []))?.[0];
+  if (band) {
+    if (band.world_id && band.world_id !== worldId) return { error: "OTRO_MUNDO" };
+    if (band.estado === "bloqueada") return { error: "BANDA_BLOQUEADA" };
+    if (!band.linked_user_id) return { error: "BANDA_NO_VINCULADA" };
+    if (band.vence_at && new Date(band.vence_at) < new Date()) return { error: "BANDA_VENCIDA" };
+    return { userId: band.linked_user_id };
+  }
+  const w = await buscarWalletPorCodigo(v, worldId).catch(() => null);
+  if (w?.user_id) return { userId: w.user_id };
+  return { error: "NO_ENCONTRADO" };
+}
+export const MOTIVO_ACCESO_LABEL = {
+  OTRO_MUNDO: "Esta pulsera es de otro mundo.",
+  BANDA_BLOQUEADA: "Esta pulsera está bloqueada.",
+  BANDA_NO_VINCULADA: "Esta pulsera no está vinculada a ninguna cuenta.",
+  BANDA_VENCIDA: "Esta pulsera está vencida.",
+  NO_ENCONTRADO: "No se encontró ninguna cuenta con ese código.",
+};
+
 export async function registrarAccesoRemote(worldId, userId, tipo, zona) {
-  await rest("access_log", {
-    method: "POST", headers: { Prefer: "return=minimal" },
+  const filas = await rest("access_log", {
+    method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({ world_id: worldId, user_id: userId, tipo, zona: zona || null }),
+  }).catch(() => null);
+  const accesoId = filas?.[0]?.id || null;
+  // Paridad con la ruta nativa POS (accesos-validar.js): si quien pasó es un
+  // dependiente, avísale a su apoderado. El aviso no puede tumbar el registro
+  // — la puerta ya se abrió — así que va con catch silencioso.
+  const avisoApoderado = await avisarApoderadoAcceso(worldId, userId, tipo, accesoId).catch(() => null);
+  return { accesoId, avisoApoderado };
+}
+async function avisarApoderadoAcceso(worldId, userId, tipo, accesoId) {
+  const movimiento = tipo === "salida" ? "salida" : "entrada";
+  const vinculos = await rest(
+    `dependents?dependent_user_id=eq.${encodeURIComponent(userId)}&world_id=eq.${encodeURIComponent(worldId)}&select=guardian_user_id,nombre&limit=1`
+  ).catch(() => []);
+  const vinculo = vinculos?.[0];
+  if (!vinculo?.guardian_user_id) return null;
+  const quien = vinculo.nombre || "Tu dependiente";
+  const hora = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Lima" });
+  await rest("user_notifications", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      world_id: worldId,
+      user_id: vinculo.guardian_user_id,
+      sujeto_id: userId,
+      tipo: movimiento === "salida" ? "acceso_salida" : "acceso_ingreso",
+      titulo: movimiento === "salida" ? "Salida registrada" : "Ingreso registrado",
+      mensaje: movimiento === "salida" ? `${quien} salió a las ${hora}.` : `${quien} ingresó a las ${hora}.`,
+      referencia_id: accesoId,
+    }),
   });
+  return quien;
 }
 
 // ── Turnos de Control de Accesos — el operador marca cuándo toma y cuándo
@@ -2343,6 +2403,29 @@ export async function abrirTurnoRemote(merchantId, worldId) {
     body: JSON.stringify({ world_id: worldId, merchant_id: merchantId, device_serial: "web-operador" }),
   }).catch(() => []);
   return creado?.[0]?.id || null;
+}
+
+// Cierra un turno del POS web con su cuadre de caja — misma lógica que la
+// ruta nativa joi-pos-backend/routes/turno-cerrar.js: lo esperado se calcula
+// de las ventas reales del turno (transactions.turno_id), no se declara desde
+// el cliente. Sin esto, cada turno que abre CobrarPanel al montar quedaba
+// abierto para siempre (5 pos_turnos colgados desde 04-ago).
+export async function cerrarTurnoPOSRemote(turnoId, montoDeclarado) {
+  const turno = (await rest(`pos_turnos?id=eq.${turnoId}&select=estado`).catch(() => []))?.[0];
+  if (!turno) return { ok: false, motivo: "no_encontrado" };
+  if (turno.estado === "cerrado") return { ok: false, motivo: "ya_cerrado" };
+  const ventas = await rest(
+    `transactions?turno_id=eq.${turnoId}&type=eq.compra&status=eq.completada&select=amount`
+  ).catch(() => []);
+  const esperado = +(ventas || []).reduce((a, t) => a + (+t.amount || 0), 0).toFixed(2);
+  const declarado = +montoDeclarado || 0;
+  const diferencia = +(declarado - esperado).toFixed(2);
+  await rest(`pos_turnos?id=eq.${turnoId}&estado=eq.abierto`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ estado: "cerrado", monto_declarado: declarado, monto_esperado: esperado, diferencia, cerrado_at: new Date().toISOString() }),
+  });
+  return { ok: true, esperado, declarado, diferencia, ventas: (ventas || []).length };
 }
 
 // ── Pago por QR generado por el comercio — el operador tipea el monto y

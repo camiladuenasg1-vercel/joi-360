@@ -36,6 +36,7 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 | Wallet | 1.0.0 → **1.1.0** | 09-sep | Nuevo config field en el microservicio Transferencia (P2P): **"Máximo de transferencias por día (cantidad)"** — un límite de *cantidad* además de los de *monto* (por Tx y por día). Se aplica de verdad en la superapp (`WalletTemplate.enviarP2P`) antes de confirmar. |
 | Cashback | 1.0.0 → **1.0.1** | 09-sep | Fix de signo en el historial de movimientos (`fetchTxHistory`): `cashback_canjeado` y `cashback_revertido` son gastos y ahora salen en negativo (antes el canje aparecía sumando). `CashbackTemplate` ahora también lista los eventos `CASHBACK_REVERTIDO` con su título propio ("Cashback revertido"). Sin cambio de config ni de RPC. |
 | Accesos | 1.0.0 → **1.0.1** | 09-sep | Botón "Compartir mi código" de `AccesosTemplate` ahora funciona (usa `navigator.share`, cae a copiar al portapapeles) — antes eran dos botones sin `onClick` ("Refrescar QR" / "Compartir"). Solo UI de la superapp. |
+| Accesos | 1.0.1 → **1.0.2** | 09-sep | Paridad del Operador web con el POS T6 nativo (Track G): al marcar entrada/salida se avisa al apoderado si quien pasó es un dependiente (`user_notifications`, misma lógica que `accesos-validar.js`), y el código se resuelve con validación de estado de pulsera (`nfc_bands`: otro mundo / bloqueada / no vinculada / vencida) igual que `bandResolver.js`. `registrarAccesoRemote` ahora devuelve `{ accesoId, avisoApoderado }`. |
 
 ---
 

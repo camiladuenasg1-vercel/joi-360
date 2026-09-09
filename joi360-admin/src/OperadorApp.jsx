@@ -13,6 +13,7 @@ import { Icon, BtnPrimary, BtnOutline, notify, inputCls } from "./ui";
 import { MerchantGate, CobrarPanel, bnplLimitesDelMundo } from "./Fronts.jsx";
 import {
   fetchAccesosMundo, registrarAccesoRemote, buscarWalletPorCodigo,
+  resolverUsuarioParaAcceso, MOTIVO_ACCESO_LABEL,
   errorControlado, logErrorControlado, fetchProgramaBNPL, fetchProductsRemote,
   crearSolicitudBNPLDesdeOperador, updateContratoBNPL,
   buscarNfcBandPorCodigo, vincularNfcBandRemote, fetchBandaActivaDeUsuarioRemote,
@@ -469,15 +470,15 @@ export function AccesosOperador({ comercio, m }) {
     if (!code) return;
     setBusy(true); setResultado(null);
     try {
-      const w = await buscarWalletPorCodigo(code, m.id);
-      if (!w) {
-        const err = await errorControlado("wallet_no_encontrada");
+      const u = await resolverUsuarioParaAcceso(code, m.id);
+      if (u.error) {
         logErrorControlado("wallet_no_encontrada", `operador-accesos:${m.id}`, m.id);
-        setResultado({ ok: false, mensaje: [err.mensaje, err.accion].filter(Boolean).join(" ") });
+        setResultado({ ok: false, mensaje: MOTIVO_ACCESO_LABEL[u.error] || "No se pudo identificar a la persona." });
         return;
       }
-      await registrarAccesoRemote(m.id, w.user_id, tipo, zona);
-      setResultado({ ok: true, mensaje: `${tipo === "entrada" ? "Entrada" : "Salida"} registrada.` });
+      const r = await registrarAccesoRemote(m.id, u.userId, tipo, zona);
+      const base = `${tipo === "entrada" ? "Entrada" : "Salida"} registrada.`;
+      setResultado({ ok: true, mensaje: r?.avisoApoderado ? `${base} Se avisó a ${r.avisoApoderado}.` : base });
       setCodigo(""); cargar();
     } catch (e) {
       const err = await errorControlado("operacion_admin_fallida");
