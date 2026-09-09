@@ -337,7 +337,6 @@ export function OrganizadorFront() {
               <Icon n="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]" />
               <input className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Buscar evento..." />
             </div>
-            <button className="p-2 rounded-full hover:bg-surface-container-high text-on-surface-variant"><Icon n="notifications" /></button>
             <div className="h-7 w-px bg-outline-variant mx-1"></div>
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold">{isOrganizador ? orgSess.nombre : (m.entidadLegal || m.nombre)}</p>
