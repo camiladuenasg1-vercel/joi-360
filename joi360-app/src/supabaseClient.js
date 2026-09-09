@@ -1419,14 +1419,26 @@ export async function crearPedidoEvento({ worldId, eventId, merchantId, benefici
   const cart = items.map(it => ({ product: { id: it.id, name: it.nombre, price: it.precio }, qty: it.cantidad }));
   const r = await comprarProductosLive(beneficiarioId, worldId, merchantId, cart);
   if (!r.ok) return r;
-  await rest("event_product_orders", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      world_id: worldId, event_id: eventId, merchant_id: merchantId,
-      beneficiario_user_id: beneficiarioId, beneficiario_nombre: beneficiarioNombre,
-      items, monto, estado: "CONFIRMADA",
-    }),
+  // El cobro y el descuento de stock YA ocurrieron (RPC atómica). Si el
+  // insert del pendiente de retiro falla acá, el usuario queda cobrado sin
+  // registro — se reintenta una vez y, si aun así falla, se devuelve un
+  // resultado explícito para que la UI no muestre "no se pudo pagar" (sí se
+  // pudo) sino que avise que el retiro quedó sin registrar.
+  const payload = JSON.stringify({
+    world_id: worldId, event_id: eventId, merchant_id: merchantId,
+    beneficiario_user_id: beneficiarioId, beneficiario_nombre: beneficiarioNombre,
+    items, monto, estado: "CONFIRMADA",
   });
+  let inserto = false;
+  for (let intento = 0; intento < 2 && !inserto; intento++) {
+    try {
+      await rest("event_product_orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: payload });
+      inserto = true;
+    } catch (e) {
+      if (intento === 1) console.error("crearPedidoEvento: cobro OK pero no se registró el pedido", e);
+    }
+  }
+  if (!inserto) return { ok: false, motivo: "orden_no_registrada", cobrado: true, total: r.total };
   return { ok: true, total: r.total };
 }
 

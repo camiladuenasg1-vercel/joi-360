@@ -2821,6 +2821,11 @@ function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose
         cargar();
       } else if (r.motivo === "stock") {
         setResultado({ ok: false, mensaje: `"${r.producto}" solo tiene ${r.stockDisponible} disponible(s) — ajusta la cantidad.` });
+      } else if (r.motivo === "orden_no_registrada") {
+        // El pago SÍ se procesó — no lo mandes a reintentar (cobraría dos veces).
+        setResultado({ ok: true, mensaje: `Tu pago de S/ ${(r.total ?? 0).toFixed(2)} se procesó, pero hubo un problema registrando el retiro. Acércate al stand de ${nombrePorComercio[merchantId] || "el comercio"} con este mensaje o escríbenos.` });
+        setCart(c => { const n = { ...c }; items.forEach(it => delete n[it.id]); return n; });
+        cargar();
       } else {
         const err = await errorControlado("saldo_insuficiente");
         logErrorControlado("saldo_insuficiente", `precompra-evento:${merchantId}`, worldId);
