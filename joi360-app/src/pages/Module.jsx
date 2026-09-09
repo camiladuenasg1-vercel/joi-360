@@ -275,6 +275,7 @@ function WalletTemplate({ cfg, u }) {
   // los leía ni los aplicaba (Task #133).
   const maxPorTxP2P = cfg.config.transferencia_maxPorTx;
   const maxPorDiaP2P = cfg.config.transferencia_maxPorDia;
+  const maxCantidadP2P = cfg.config.transferencia_maxTransferenciasPorDia;
   const enviarP2P = async () => {
     const monto = +p2pMonto;
     if (!(monto > 0) || !p2pDestino || !p2pConfirmoIrreversible) return;
@@ -283,10 +284,14 @@ function WalletTemplate({ cfg, u }) {
       setP2pResult({ ok: false, mensaje: `Este mundo permite transferir hasta S/ ${(+maxPorTxP2P).toFixed(2)} por transacción.` });
       setP2pSending(false); return;
     }
-    if (maxPorDiaP2P != null) {
-      const enviadoHoy = await fetchP2PEnviadoHoy(myCode, mundoId).catch(() => 0);
-      if (enviadoHoy + monto > +maxPorDiaP2P) {
+    if (maxPorDiaP2P != null || maxCantidadP2P != null) {
+      const { monto: enviadoHoy, count: countHoy } = await fetchP2PEnviadoHoy(myCode, mundoId).catch(() => ({ monto: 0, count: 0 }));
+      if (maxPorDiaP2P != null && enviadoHoy + monto > +maxPorDiaP2P) {
         setP2pResult({ ok: false, mensaje: `Ya transferiste S/ ${enviadoHoy.toFixed(2)} hoy — el límite diario de este mundo es S/ ${(+maxPorDiaP2P).toFixed(2)}.` });
+        setP2pSending(false); return;
+      }
+      if (maxCantidadP2P != null && countHoy >= +maxCantidadP2P) {
+        setP2pResult({ ok: false, mensaje: `Ya hiciste ${countHoy} transferencia${countHoy === 1 ? "" : "s"} hoy — este mundo permite ${+maxCantidadP2P} por día.` });
         setP2pSending(false); return;
       }
     }
@@ -467,11 +472,13 @@ function WalletTemplate({ cfg, u }) {
                           <input className="flex-1 text-xl font-black text-[#1C1C1E] bg-transparent py-3 outline-none" type="number"
                             value={p2pMonto} onChange={e=>setP2pMonto(soloImporte(e.target.value))} placeholder="0.00"/>
                         </div>
-                        {(maxPorTxP2P != null || maxPorDiaP2P != null) && (
+                        {(maxPorTxP2P != null || maxPorDiaP2P != null || maxCantidadP2P != null) && (
                           <p className="text-[10px] text-[#404255] mt-1.5">
-                            {maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`}
-                            {maxPorTxP2P != null && maxPorDiaP2P != null && " · "}
-                            {maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`}
+                            {[
+                              maxPorTxP2P != null && `Máx. ${currency} ${(+maxPorTxP2P).toFixed(2)} por transferencia`,
+                              maxPorDiaP2P != null && `Máx. ${currency} ${(+maxPorDiaP2P).toFixed(2)} por día`,
+                              maxCantidadP2P != null && `Máx. ${+maxCantidadP2P} transferencia${+maxCantidadP2P === 1 ? "" : "s"} por día`,
+                            ].filter(Boolean).join(" · ")}
                           </p>
                         )}
                       </div>

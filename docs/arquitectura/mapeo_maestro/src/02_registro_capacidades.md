@@ -33,6 +33,7 @@ Desde el 26-ago cada entrada de `MODULE_CATALOG` (`joi360-admin/src/store.js`) l
 | Suscripciones | 1.0.0 → **1.1.0** | 07-sep | Aclaración de alcance de Camila: la capacidad es la **membresía independiente del mundo** (modelo YOKI) y **no depende de vincular familiares** ni de perfiles controlados. La *cuota al vincular dependiente* se documentó y quedó donde vive de verdad — Restricciones (#18). `desc` y `servicios` del catálogo reescritos; `DEPENDENCY_MAP.suscripciones = ["wallet"]` (sin Restricciones/Control). |
 | Estacionamiento | 1.0.0 → 1.0.0 | 07-sep | Sin cambio de versión — solo se sacó `accesos` de `DEPENDENCY_MAP` (era dependencia conceptual, hoy funciona standalone). |
 | Turnos | 1.0.0 → 1.0.0 | 07-sep | `DEPENDENCY_MAP.turnos` pasa a `["wallet","comercios"]` — el pedido se crea al pagar en un comercio, así que Comercios es requisito real. |
+| Wallet | 1.0.0 → **1.1.0** | 09-sep | Nuevo config field en el microservicio Transferencia (P2P): **"Máximo de transferencias por día (cantidad)"** — un límite de *cantidad* además de los de *monto* (por Tx y por día). Se aplica de verdad en la superapp (`WalletTemplate.enviarP2P`) antes de confirmar. |
 
 ---
 

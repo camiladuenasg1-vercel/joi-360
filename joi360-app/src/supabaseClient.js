@@ -1437,11 +1437,16 @@ const TIPO_LABEL = { recarga: "Recarga", compra: "Pago", transferencia_p2p: "Tra
 // app lo leía ni lo aplicaba — un límite que existía solo en el papel. El
 // de por-transacción se valida contra el monto tipeado; este trae lo ya
 // enviado hoy para poder validar el acumulado diario antes de confirmar.
+// Devuelve el monto total Y la cantidad de transferencias P2P salientes de
+// hoy (para los dos límites: monto por día y cantidad por día).
 export async function fetchP2PEnviadoHoy(userId, worldId) {
   const wallet = await getOrCreateWallet(userId, worldId);
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const rows = await rest(`transactions?wallet_id=eq.${wallet.id}&type=eq.transferencia_p2p&reference=like.*-envio&created_at=gte.${hoy.toISOString()}&select=amount`);
-  return (rows || []).reduce((a, r) => a + (+r.amount || 0), 0);
+  return {
+    monto: (rows || []).reduce((a, r) => a + (+r.amount || 0), 0),
+    count: (rows || []).length,
+  };
 }
 export async function fetchTxHistory(userId, worldId) {
   const wallet = await getOrCreateWallet(userId, worldId);

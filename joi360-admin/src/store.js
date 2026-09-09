@@ -25,7 +25,9 @@ export const MODULE_CATALOG = [
 
   // ── CORE ──────────────────────────────────────────────────────────────────
   { id: "wallet", name: "Wallet", tier: "CORE", category: "Emisión", e: true, a: false, icon: "account_balance_wallet",
-    version: "1.0.0",
+    // v1.1.0 (09-sep): nuevo config field en el microservicio Transferencia —
+    // "Máximo de transferencias por día (cantidad)", aplicado en la superapp.
+    version: "1.1.0",
     desc: "Núcleo de identidad digital del ecosistema. Gestiona perfiles, cuentas, saldos y la relación del usuario con el mundo. Centraliza identificación, pertenencia y capacidad transaccional.",
     servicios: [
       { id:"balance",   nombre:"Balance y saldo",       desc:"Pantalla principal de saldo en tiempo real. Siempre visible si Wallet está activa." },
@@ -76,9 +78,10 @@ export const MODULE_CATALOG = [
         dependsOn: { microservicio: "modelo_perfil", campo: "modelo", valor: "consumo" },
         campos: [
           { key: "maxPorTx", label: "Máximo por transacción", type: "currency", default: null, nullable: true, nullLabel: "Sin límite" },
-          { key: "maxPorDia", label: "Máximo por día", type: "currency", default: null, nullable: true, nullLabel: "Sin límite" },
+          { key: "maxPorDia", label: "Máximo por día (monto)", type: "currency", default: null, nullable: true, nullLabel: "Sin límite" },
+          { key: "maxTransferenciasPorDia", label: "Máximo de transferencias por día (cantidad)", type: "number", default: null, nullable: true, nullLabel: "Sin límite" },
         ],
-        efectos: { app: "Límites aplicados al confirmar una transferencia.", mundo: "Ver transferencias entre usuarios." },
+        efectos: { app: "Límites (monto por Tx, monto por día y cantidad de transferencias por día) aplicados al confirmar una transferencia.", mundo: "Ver transferencias entre usuarios." },
       },
     ],
   },
