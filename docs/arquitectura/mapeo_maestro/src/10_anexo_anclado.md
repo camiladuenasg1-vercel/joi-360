@@ -59,12 +59,16 @@ Salvador construye con **Kiro** (IDE agéntico de AWS: `.kiro/specs/` con requir
 3. **La superapp RENDERIZA dinámicamente**: `useCatalogLive` / `useWorldConfig` leen `world_capacity_configs` en vivo; `TEMPLATE_MAP` resuelve cada `capacity_id` a su template dedicado; si no hay template dedicado, `GenericTemplate` arma la vista desde la config viva. El usuario ve exactamente los módulos que su mundo activó, con la config que su mundo puso.
 4. **Por capacidad**: `configFields` propios (aparecen solos en la UI genérica de configuración) + tabla(s) Supabase propia(s) con RLS + template real en la superapp con datos reales (nunca mock) + su `version` que sube de `0.0.0` a `1.0.0` cuando tiene su primera versión funcional real, y ese salto queda registrado en el corte semanal.
 
-### Steering de Kiro — archivos sugeridos para `.kiro/steering/`
+### Steering de Kiro — archivos listos para instalar en `.kiro/steering/`
 
-- **`render-config.md`** — el contrato de arriba, literal, marcado como *always included*. Es la regla que no se negocia.
-- **`capacidades.md`** — las 22 capacidades con su estado, `version`, `configFields`, tablas y dependencias (derivado de §3 de este documento).
-- **`esquema-datos.md`** — el modelo de datos consolidado (derivado de §4/§6) + el patrón: RLS `demo_anon_all` en modo prototipo, `world_id` text, ids de merchant/user UUID.
+**Ya no son una sugerencia — están escritos y listos para copiar tal cual, en `docs/arquitectura/kiro_steering/` (11-sep-2026):**
+
+- **`render-config.md`** — el contrato de arriba, con la mecánica exacta verificada en código (`TEMPLATE_MAP`/`UX_SURFACE_REGISTRY`/`GenericTemplate`, cadena de resolución de 3 pasos, traducción a render code nativo, el ciclo RENDER-CHECK por capacidad). Marcar *always included*.
+- **`capacidades.md`** — las 22 capacidades con su `version` real (verificada línea por línea contra `MODULE_CATALOG` el 11-sep, no contra docs viejos), `configFields`, `servicios`/flags y dependencias exactas (`DEPENDENCY_MAP`, con 2 correcciones sobre lo que decía este mismo documento en `01_backbone.md`: `turnos` sí depende de `comercios` además de `wallet`, `estacionamiento` NO depende de `accesos`).
 - **`no-mock.md`** — regla dura: ninguna pantalla renderiza datos hardcodeados; si una parte no está construida, se dice explícitamente ("Próximamente"), no se simula. Es el criterio que ya rige todo el prototipo.
+- **`esquema-datos.md`** — pendiente de escribir (el modelo de datos consolidado, derivado de §4/§6 de este documento) — sigue siendo sugerencia, no entregado todavía.
+
+Ver `docs/arquitectura/kiro_steering/README.md` para instrucciones de instalación y el criterio de regeneración por corte semanal.
 
 ### Loop de construcción por capacidad (Kiro spec por capacidad)
 
