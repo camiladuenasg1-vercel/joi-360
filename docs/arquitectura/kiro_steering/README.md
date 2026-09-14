@@ -4,10 +4,11 @@ Estos 3 archivos son el contrato de render config listo para instalar tal cual e
 
 ## Cómo instalarlos
 
-1. Copiar los 3 archivos tal cual a `.kiro/steering/` en el repo `joi360mono`:
+1. Copiar los 4 archivos tal cual a `.kiro/steering/` en el repo `joi360mono`:
    - `render-config.md` → **marcar como always included** (es la regla que no se negocia, debe estar en cada sesión de Kiro).
-   - `capacidades.md` → contexto de referencia (Kiro lo consulta al tocar cualquier capacidad).
    - `no-mock.md` → **marcar como always included**.
+   - `capacidades.md` → contexto de referencia (Kiro lo consulta al tocar cualquier capacidad).
+   - `home-render-config.md` → contexto de referencia, específico de la pantalla Home y las 4 pantallas propias de la barra inferior (Pay/Activity/Profile + el grafo de navegación) — Kiro lo consulta al trabajar la superapp desde el punto de entrada hacia adelante. Incluye el checklist de cotejo contra el panel RedPontis (Admin) del propio proyecto de Salvador — él lo corre contra su código, este documento no tiene visibilidad de su repo.
 2. No editarlos dentro del proyecto de Salvador — si algo queda desactualizado o falta una capacidad nueva, el fix se hace ACÁ (en el prototipo, que es la fuente de verdad) y se vuelve a copiar.
 
 ## Regeneración
