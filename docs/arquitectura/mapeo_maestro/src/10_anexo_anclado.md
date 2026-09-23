@@ -25,7 +25,7 @@ Salvador construye con **Kiro** (IDE agéntico de AWS: `.kiro/specs/` con requir
 | Cotejo Prototipo ↔ Proyecto Real (Salvador / Kiro) | Cruce del corte semanal + auditoría del prototipo + auditoría R2 del proyecto real; directiva tajante de construcción en loop (qué construir y versionar hasta el corte, qué NO replicar) | `docs/arquitectura/cotejo_prototipo_vs_proyecto_real.md` + `Escritorio/JOI360_Cotejo_Prototipo_vs_ProyectoReal.docx` |
 | Estado verificado de BD / RPC | Qué migraciones y RPCs están aplicados en prod | `docs/arquitectura/migraciones_aplicadas.md` + `rpc_versions.md` |
 | Brief vs Realidad | Análisis de brecha entre lo que el brief asume y lo que el código hace | `Escritorio/Joi360_Brief_vs_Realidad.docx` |
-| SPEC Funcional — Motor de Eventos (23-sep-2026) | Especificación funcional completa del Caso 3 (Kermesse): jerarquía de 9 microservicios (mismo patrón que BNPL), modelo de datos completo, reglas de negocio críticas, matriz de componentes por frente | `docs/arquitectura/spec_motor_eventos.md` |
+| SPEC Funcional por Capacidad (23-sep-2026 en adelante) | Carpeta grupal con una especificación funcional completa por cada una de las 22 capacidades del catálogo (Motor de Eventos fue la primera, patrón de referencia) + índice de recopilación para Kiro | `docs/arquitectura/spec_capacidades/` |
 
 ### Artefactos (Claude)
 
