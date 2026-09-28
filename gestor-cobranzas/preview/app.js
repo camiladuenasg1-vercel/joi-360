@@ -44,6 +44,9 @@ function toast(msg, type = "ok") {
 
 const S = {
   tab: "resumen",
+  grupo: "collections-admin",
+  rol: "ADMIN",
+  caja: null,
   planes: [
     { id: "p-esencial", nombre: "YOKI Esencial",    monto: 49,  periodicidad: "MENSUAL", diaCobro: 5,  modoDia: "FIJO", activo: true, permanencia: 0 },
     { id: "p-full",     nombre: "YOKI Full",        monto: 89,  periodicidad: "MENSUAL", diaCobro: 5,  modoDia: "FIJO", activo: true, permanencia: 3 },
@@ -184,9 +187,89 @@ const TABS = [
 
 function renderTabs() {
   document.getElementById("tabs").innerHTML = TABS.map((t) =>
-    `<button class="tab ${S.tab === t.k ? "on" : ""}" data-tab="${t.k}"><span class="msi">${t.i}</span>${t.l}</button>`
+    `<button class="navtab ${S.tab === t.k ? "on" : ""}" data-tab="${t.k}"><span class="msi">${t.i}</span>${t.l}</button>`
   ).join("");
   document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+}
+
+const ROLES = {
+  "collections-admin":    { nivel: "ADMIN",    label: "Administrador", puede: "Todo: planes, precios, reglas, cartera, prorateo y anulaciones." },
+  "collections-operator": { nivel: "OPERADOR", label: "Operador",      puede: "Cargar cartera, cobrar, recordar y registrar pagos. No cambia reglas ni precios." },
+  "collections-readonly": { nivel: "LECTURA",  label: "Solo lectura",  puede: "Ver y exportar. Ninguna escritura." },
+};
+
+const CAJAS = [
+  { id: "yoki", scope: "MERCHANT", code: "yoki", titulo: "YOKI",
+    detalle: "Gestor de Cobranzas · YOKI · Jockey Plaza", sub: "Comercio · RUC 20512345678 · PEN",
+    ruta: "/joi360app/cobranzas/comercio/yoki", ico: "card_membership",
+    grad: "linear-gradient(135deg,#6B4FA3,#3B5BDB)" },
+  { id: "jockey", scope: "WORLD", code: "JOCKEY-01", titulo: "Jockey Plaza",
+    detalle: "Gestor de Cobranzas · Jockey Plaza", sub: "Mundo · cartera propia del mundo · PEN",
+    ruta: "/joi360app/cobranzas/mundo/JOCKEY-01", ico: "public",
+    grad: "linear-gradient(135deg,#1A3270,#1F66B8)" },
+];
+
+function pintarLogin() {
+  const cont = document.getElementById("lroles");
+  cont.innerHTML = Object.entries(ROLES).map(([g, r]) =>
+    `<button class="chip ${S.grupo === g ? "on" : ""}" data-rol="${g}">${r.label}</button>`).join("");
+  document.getElementById("lrolhint").innerHTML =
+    `<span class="mono">${S.grupo}</span> → nivel <b>${ROLES[S.grupo].nivel}</b>. ${ROLES[S.grupo].puede}`;
+  document.querySelectorAll("[data-rol]").forEach((b) => b.onclick = () => { S.grupo = b.dataset.rol; pintarLogin(); });
+
+  document.getElementById("lcajas").innerHTML = CAJAS.map((c) => `
+    <button class="lcaja" data-caja="${c.id}">
+      <span class="ci" style="background:${c.grad}"><span class="msi">${c.ico}</span></span>
+      <span class="cb"><b>${c.titulo}</b><span>${c.detalle}</span><code>${c.ruta}</code></span>
+      <span class="msi" style="color:var(--outline)">chevron_right</span>
+    </button>`).join("");
+  document.querySelectorAll("[data-caja]").forEach((b) => b.onclick = () => entrar(b.dataset.caja));
+}
+
+function entrar(cajaId) {
+  S.caja = CAJAS.find((c) => c.id === cajaId);
+  S.rol = ROLES[S.grupo].nivel;
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("navTitular").textContent = S.caja.titulo;
+  document.getElementById("navRol").textContent = ROLES[S.grupo].label;
+  document.getElementById("topTitle").textContent = `Gestor de Cobranzas · ${S.caja.titulo}`;
+  document.getElementById("topScope").innerHTML =
+    `<span class="dot"></span>${S.caja.scope === "WORLD" ? "Alcance mundo" : "Alcance comercio"}`;
+  document.getElementById("titNombre").textContent = S.caja.titulo;
+  document.getElementById("titSub").innerHTML = esc(S.caja.sub);
+  document.getElementById("titLogo").style.background = S.caja.grad;
+  document.getElementById("titLogo").innerHTML = `<span class="msi">${S.caja.ico}</span>`;
+  S.tab = "resumen";
+  render();
+  toast(`Entraste como ${ROLES[S.grupo].label} a la cartera de ${S.caja.titulo}.`, "info");
+}
+
+function salir() {
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login").style.display = "flex";
+  pintarLogin();
+}
+
+/// El servidor ya bloquea la escritura al nivel LECTURA de forma transversal. Acá se deshabilita
+/// con el motivo visible, en vez de esconder la acción: así el operador entiende por qué no puede.
+function bloquear(selectores, motivo) {
+  selectores.forEach((sel) => document.querySelectorAll(sel).forEach((b) => {
+    b.disabled = true; b.title = motivo; b.style.opacity = ".45"; b.style.cursor = "not-allowed";
+    b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); toast(motivo, "err"); };
+  }));
+}
+
+function aplicarSoloLectura() {
+  if (S.rol === "LECTURA") {
+    bloquear(["#view .btn.bp", "#view .mini", "#view .sw", "#view #drop"],
+      "Tu rol es de solo lectura. Red Pontis puede cambiarlo.");
+    return;
+  }
+  if (S.rol === "OPERADOR") {
+    bloquear(["#view #nuevoPlan", "#view [data-precio]", "#view #okReglas", "#view .sw"],
+      "Cambiar reglas y precios requiere el grupo collections-admin.");
+  }
 }
 
 function render() {
@@ -196,6 +279,16 @@ function render() {
   v.innerHTML = fn();
   const w = { resumen: wResumen, planes: wPlanes, suscriptores: wSuscriptores, carga: wCarga, cobros: wCobros, morosidad: wMorosidad, prorateo: wProrateo, reglas: wReglas }[S.tab];
   if (w) w();
+  document.getElementById("roBanner").innerHTML = S.rol === "LECTURA"
+    ? `<div class="note n-warn"><span class="msi">visibility</span><div>Estás con el grupo
+       <span class="mono">collections-readonly</span>. Podés ver y exportar; las acciones de escritura
+       están deshabilitadas.</div></div>`
+    : S.rol === "OPERADOR"
+      ? `<div class="note n-info"><span class="msi">badge</span><div>Estás con el grupo
+         <span class="mono">collections-operator</span>. Podés operar la cobranza; cambiar reglas y
+         precios de plan requiere <span class="mono">collections-admin</span>.</div></div>`
+      : "";
+  aplicarSoloLectura();
   document.querySelector("main.content").scrollTop = 0;
 }
 
@@ -1355,7 +1448,8 @@ function exportar(nombre, filas) {
 }
 
 seed();
-render();
+pintarLogin();
+document.getElementById("btnSalir").onclick = salir;
 document.getElementById("btnExport").onclick = () => {
   const mapa = { suscriptores: "expSus", cobros: "expCob", morosidad: "expMor" };
   const b = document.getElementById(mapa[S.tab]);

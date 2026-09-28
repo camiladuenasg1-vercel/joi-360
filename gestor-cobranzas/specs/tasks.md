@@ -10,9 +10,17 @@ Convención de verificación del repo: `node --check` sobre los archivos de serv
 
 ---
 
-## Fase 0 — Decisión bloqueante
+## Fase 0 — REEMPLAZADA
 
-### T-01 — Decidir el mecanismo de activación por comercio
+> La Fase 0 y la tarea T-02 están reemplazadas por la sección 9 de `frente-y-accesos.md`, que define
+> T-01 (alcance en el catálogo), T-01b (`merchant_module`), T-01c (grupos de Cognito y accesos),
+> T-01d (`portal_credential`), T-01e (entrega del producto) y T-02 (frente nuevo con su entrada de
+> build y su login).
+>
+> **De T-03 en adelante todo sigue vigente**, con un solo cambio: las pantallas se construyen en
+> `client/src/cobranzas/` y los componentes base en `client/src/shared/`, no en `client/src/admin/`.
+
+### T-01 — Decidir el mecanismo de activación por comercio *(reemplazada — la decisión es Opción A)*
 **Objetivo**: elegir entre `merchant_module` genérico (Opción A) o `collection_settings` propia
 (Opción B), y dejar la decisión escrita.
 **Archivos**: `docs/` nuevo ADR; si es A, también `server/modules/capabilities/catalog.js` para

@@ -1,7 +1,12 @@
 # Gestor de Cobranzas — Requerimientos
 
-Capacidad activable por comercio dentro de Admin RP. Caso de referencia: **YOKI**, comercio de
-suscripciones dentro del mundo **Jockey Plaza**.
+Software de cobranza recurrente con **su propio frente y sus propias credenciales**, activable desde
+el catálogo por mundo o por comercio. Caso de referencia: **YOKI**, comercio de suscripciones dentro
+del mundo **Jockey Plaza**.
+
+> **Los requerimientos REQ-COB-001 a 003 de la sección 1 están reemplazados** por REQ-COB-001 a 007
+> de `frente-y-accesos.md`. El gestor no es una sección de Admin RP: es un frente independiente.
+> Del REQ-COB-010 en adelante todo sigue vigente tal como está escrito.
 
 ---
 
@@ -41,9 +46,13 @@ construye.
 
 ---
 
-# 1. Activación de la capacidad
+# 1. Activación de la capacidad — REEMPLAZADA
 
-### REQ-COB-001 — Activar cobranzas a un comercio
+> Esta sección completa está reemplazada por la sección 8 de `frente-y-accesos.md`, que cubre lo
+> mismo y además el alcance por mundo, las credenciales de Cognito, la entrega del producto y la caja
+> del shell. Se conserva abajo únicamente como registro de la primera versión.
+
+### REQ-COB-001 — Activar cobranzas a un comercio *(reemplazado)*
 
 Como operador de Red Pontis,
 quiero activar la capacidad de cobranzas a un comercio concreto dentro de un mundo,

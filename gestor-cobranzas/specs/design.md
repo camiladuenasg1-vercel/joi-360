@@ -5,6 +5,19 @@ y qué está pendiente de definición.
 
 Todas las rutas de archivo son reales y verificadas en el repositorio.
 
+> **Las secciones 2, 3, 6 y 7 están reemplazadas** por `frente-y-accesos.md`. El gestor no es una
+> sección de Admin RP: es un frente independiente, con su entrada de build, su login y sus
+> credenciales de Cognito, activable por mundo o por comercio.
+>
+> **Sigue vigente sin cambios**: el discovery (§1), el modelo de datos (§8), los contratos de dominio
+> (§9), la carga masiva (§10), las dependencias externas (§11), la fase 2 (§12), la máquina de estados
+> (§13), el motor de prorateo (§14), la exportación (§15), la bitácora (§16), los no funcionales
+> (§17), los tests (§18) y los riesgos (§19).
+>
+> Lo único que cambia de esas secciones: las pantallas y los componentes se construyen en
+> `client/src/cobranzas/`, no en `client/src/admin/`, y los componentes base van a
+> `client/src/shared/` porque los usan los dos frentes.
+
 ---
 
 ## 1. Discovery — qué hay hoy en Admin RP
@@ -51,9 +64,14 @@ Esto es lo importante del discovery. Ninguno de estos puntos se puede asumir.
 
 ---
 
-## 2. Principio de diseño
+## 2. Principio de diseño — REEMPLAZADA por `frente-y-accesos.md` §2
 
-El frente tiene que parecer una sección nativa de Admin RP. En la práctica eso significa:
+> El frente es independiente, no una sección de Admin RP. Lo que sigue vigente de esta sección es el
+> criterio de **consistencia visual y de convenciones**: el portal de cobranzas usa el mismo lenguaje
+> visual, los mismos primitivos y las mismas convenciones de código que el resto del monolito. No
+> introduce otro design system. Lo que ya no aplica es que "viva dentro de Admin RP".
+
+El frente comparte el lenguaje visual del monolito. En la práctica eso significa:
 
 - Usar `Shell`, `NAV`, `Drawer`, `Field`, `inputCls`, `NumInput`, `Toggle`, `Pill`, `BtnPrimary`,
   `BtnOutline`, `notify`. Nada de traer otro design system.
@@ -67,7 +85,13 @@ Lo que sí hay que construir nuevo, porque no existe y se necesita, está en §4
 
 ---
 
-## 3. Ubicación y rutas
+## 3. Ubicación y rutas — REEMPLAZADA por `frente-y-accesos.md` §2
+
+> La ruta real es `/joi360app/cobranzas/:scope/:code`, en su propia entrada de build. **Lo único que
+> sigue vigente de esta sección es la tabla de tabs internos**, que define el contenido del panel:
+> Resumen, Planes, Suscriptores, Cobros, Morosidad, Prorateo y Reglas.
+
+*(Contenido original, conservado por la tabla de tabs)*
 
 El panel vive bajo el comercio, no bajo el mundo.
 
@@ -141,7 +165,14 @@ Cada pantalla resuelve los diez estados de REQ-COB-080. La convención visual:
 
 ---
 
-## 6. Contexto de comercio
+## 6. Contexto de comercio — REEMPLAZADA por `frente-y-accesos.md` §5
+
+> El titular no se elige dentro del panel: **se deriva de la sesión**. `requireCollections(scope, code, req)`
+> resuelve el titular contra los accesos del usuario de Cognito, igual que `requireWorld` y
+> `requireMerchant`. No hay selector de comercio ni hidratación desde un store global: el panel es de
+> un solo titular, el de la credencial con la que se entró.
+
+*(Contenido original, ya no aplica)*
 
 Hoy no existe. Se resuelve así, siguiendo el patrón del mundo:
 
@@ -159,7 +190,12 @@ sesión con el mecanismo de `server/auth/access.js` (`resolverAccesos` ya cruza 
 
 ---
 
-## 7. Activación por comercio — la decisión bloqueante
+## 7. Activación por comercio — DECIDIDA: Opción A
+
+> `frente-y-accesos.md` §3 y §4 cierran esta decisión: **Opción A**, tabla `merchant_module` con
+> `scope` declarado en el catálogo. Las capacidades existentes se declaran `scope: ['WORLD']` y el
+> resolver no cambia de comportamiento para ninguna. El análisis de abajo sigue siendo válido como
+> justificación de la decisión.
 
 Este es el punto que hay que resolver antes de construir el resto.
 

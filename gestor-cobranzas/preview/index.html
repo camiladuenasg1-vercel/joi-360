@@ -201,56 +201,114 @@ label.fl{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;tex
 .banner h3{font-size:16px;font-weight:700;margin-bottom:4px}
 .banner p{font-size:12px;opacity:.85;max-width:560px;line-height:1.5}
 .banner .msi{font-size:32px;opacity:.9}
+
+.navgh{padding:14px 16px 6px;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--outline);font-family:'JetBrains Mono',monospace}
+.navtab{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;color:var(--osv);font-size:14px;cursor:pointer;width:100%;border:0;background:none;font-family:inherit;text-align:left;margin-bottom:2px}
+.navtab:hover{background:var(--sc);color:var(--primary)}
+.navtab.on{color:var(--primary);font-weight:700;background:var(--primary-fixed)}
+.navtab .msi{font-size:20px}
+.navfoot{padding:14px 16px 0;border-top:1px solid var(--ov);margin-top:8px}
+.navuser{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.navuser .msi{font-size:30px;color:var(--outline)}
+.navuser b{font-size:12px;font-weight:600;display:block;word-break:break-all}
+.navuser span{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--osv)}
+.navout{display:flex;align-items:center;gap:10px;width:100%;padding:8px 0;border:0;background:none;color:var(--osv);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.navout:hover{color:var(--error)}
+
+.login{position:fixed;inset:0;z-index:90;background:linear-gradient(140deg,#0D1A45,#1A3270 55%,#3B5BDB);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.lcard{background:#fff;border-radius:18px;padding:32px;width:560px;max-width:100%;box-shadow:0 24px 64px rgba(0,0,0,.34)}
+.lbrand{display:flex;gap:14px;align-items:center;margin-bottom:18px}
+.llogo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#6B4FA3,#3B5BDB);color:#fff;display:flex;align-items:center;justify-content:center}
+.lbrand h1{font-size:20px;font-weight:800}
+.lbrand p{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--osv)}
+.lintro{font-size:13px;color:var(--osv);line-height:1.6;padding:14px;background:var(--sc-low);border-radius:10px;border:1px solid var(--ov);margin-bottom:22px}
+.lsec{margin-bottom:22px}
+.lsl{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--osv);margin-bottom:10px}
+.luser{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid var(--ov);border-radius:10px;background:var(--sc-low)}
+.luser .msi{font-size:28px}
+.luser b{font-size:13px;display:block}
+.luser span{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--osv);text-transform:uppercase;letter-spacing:.06em}
+.lcaja{display:flex;gap:14px;align-items:center;width:100%;padding:16px;border:1px solid var(--ov);border-radius:12px;background:#fff;cursor:pointer;margin-bottom:10px;font-family:inherit;text-align:left}
+.lcaja:hover{border-color:var(--primary);background:var(--primary-fixed)}
+.lcaja .ci{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.lcaja .cb{flex:1}
+.lcaja .cb b{font-size:14px;font-weight:700;display:block}
+.lcaja .cb span{font-size:12px;color:var(--osv)}
+.lcaja .cb code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);display:block;margin-top:3px}
+.lfoot{font-size:11px;color:var(--outline);text-align:center;border-top:1px solid var(--ov);padding-top:16px}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="login" id="login">
+  <div class="lcard">
+    <div class="lbrand">
+      <div class="llogo"><span class="msi" style="font-size:26px">request_quote</span></div>
+      <div><h1>Gestor de Cobranzas</h1><p>JOI 360 · Red Pontis</p></div>
+    </div>
+    <p class="lintro">Este portal es un <b>frente independiente</b>. No se entra por la consola de
+      Red Pontis: se entra con las credenciales que Red Pontis emitió al contratar el producto.</p>
+
+    <div class="lsec">
+      <span class="lsl">Sesión de Cognito</span>
+      <div class="luser">
+        <span class="msi" style="color:var(--primary)">account_circle</span>
+        <div><b>operaciones@yoki.pe</b><span>autenticado · JWT de Cognito</span></div>
+      </div>
+    </div>
+
+    <div class="lsec">
+      <span class="lsl">Rol del grupo de Cognito</span>
+      <div class="chips" id="lroles"></div>
+      <p class="hint" id="lrolhint"></p>
+    </div>
+
+    <div class="lsec">
+      <span class="lsl">Carteras a las que esta persona tiene acceso</span>
+      <p class="hint" style="margin:-2px 0 10px">Es lo que devuelve <span class="mono">GET /auth/me/access</span>
+        como cajas de tipo <span class="mono">COBRANZAS</span>. Con una sola, el shell entra directo.</p>
+      <div id="lcajas"></div>
+    </div>
+
+    <p class="lfoot">Prototipo de especificación. Los datos son de ejemplo y los cálculos corren en el navegador.</p>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
   <nav class="side">
     <div class="brand">
-      <div class="logo">RP</div>
-      <div><h1>Redpontis Admin</h1><p>JOI 360 · Control central</p></div>
+      <div class="logo" style="background:linear-gradient(135deg,#6B4FA3,#3B5BDB)"><span class="msi">request_quote</span></div>
+      <div><h1>Cobranzas</h1><p id="navTitular">—</p></div>
     </div>
-    <div style="flex:1;overflow-y:auto">
-      <div class="navgroup"><p>Plataforma</p>
-        <a class="navlink"><span class="msi">dashboard</span>Dashboard</a>
-        <a class="navlink"><span class="msi">library_books</span>Catálogos Globales</a>
-        <a class="navlink"><span class="msi">approval</span>Aprobaciones</a>
+    <div style="flex:1;overflow-y:auto;padding:0 12px">
+      <p class="navgh">Gestión</p>
+      <div id="tabs"></div>
+    </div>
+    <div class="navfoot">
+      <div class="navuser">
+        <span class="msi">account_circle</span>
+        <div><b>operaciones@yoki.pe</b><span id="navRol">—</span></div>
       </div>
-      <div class="navgroup"><p>Comunidades</p>
-        <a class="navlink"><span class="msi">public</span>Todos los Mundos</a>
-        <a class="navlink on"><span class="msi">request_quote</span>Cobranzas</a>
-      </div>
-      <div class="navgroup"><p>Operación</p>
-        <a class="navlink"><span class="msi">group</span>Usuarios</a>
-        <a class="navlink"><span class="msi">account_balance</span>Liquidación</a>
-        <a class="navlink"><span class="msi">analytics</span>Reportes</a>
-      </div>
+      <button class="navout" id="btnSalir"><span class="msi">logout</span>Cerrar sesión</button>
     </div>
   </nav>
   <div class="main">
     <header class="top">
-      <h2>JOI 360 · Cobranzas</h2>
-      <span class="pill"><span class="dot"></span>Prototipo</span>
+      <h2 id="topTitle">Gestor de Cobranzas</h2>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="pill" id="topScope"><span class="dot"></span>—</span>
+        <button class="btn bo" id="btnExport"><span class="msi">download</span>Exportar</button>
+      </div>
     </header>
     <main class="content">
       <div class="wrap">
-        <div class="crumb">
-          <a><span class="msi" style="font-size:14px">arrow_back</span> Mundos</a><span>/</span>
-          <a>JOCKEY-01</a><span>/</span>
-          <a>Comercios</a><span>/</span>
-          <span class="cur">YOKI</span>
-        </div>
+        <div id="roBanner"></div>
         <div class="mhead">
           <div>
-            <h1><span class="mlogo"><span class="msi">card_membership</span></span>YOKI</h1>
-            <p class="sub">Mundo <b>Jockey Plaza</b> · Suscripciones · RUC 20512345678 · PEN</p>
+            <h1><span class="mlogo" id="titLogo"><span class="msi">card_membership</span></span><span id="titNombre">—</span></h1>
+            <p class="sub" id="titSub">—</p>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <span class="pill"><span class="dot"></span>Cobranzas activa</span>
-            <button class="btn bo" id="btnExport"><span class="msi">download</span>Exportar</button>
-          </div>
+          <span class="pill"><span class="dot"></span>Producto contratado</span>
         </div>
-        <div class="tabs" id="tabs"></div>
         <div id="view"></div>
       </div>
     </main>

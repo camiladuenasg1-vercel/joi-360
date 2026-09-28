@@ -1,7 +1,12 @@
 # Gestor de Cobranzas — especificación y prototipo
 
-Frente nuevo para **Admin RP**: un motor de cobranzas activable por comercio, pensado para el
-caso YOKI dentro del mundo Jockey Plaza.
+**Cuarto frente del ecosistema JOI 360**: un software de cobranza recurrente con su propio panel,
+su propio login y sus propias credenciales de Cognito. Se activa desde el catálogo y se contrata
+por mundo o por comercio, discriminadamente. Caso de referencia: YOKI, comercio de suscripciones
+dentro del mundo Jockey Plaza.
+
+No es una sección de Admin RP. Admin RP solo **activa** la capacidad y **entrega** las credenciales;
+el titular gestiona su cobranza en su propio portal.
 
 Este directorio **no es código de producción**. Es el paquete que Salvador ancla e implementa
 dentro de `joi360mono`: especificación, contratos y un prototipo navegable que fija el
@@ -15,13 +20,20 @@ comportamiento esperado antes de escribir la feature.
 gestor-cobranzas/
   README.md                      este archivo
   specs/
-    requirements.md              22 requerimientos verificables con criterios de aceptación
-    design.md                    arquitectura, modelo de datos, contratos API, reuso de Admin RP
+    frente-y-accesos.md          LEER PRIMERO — arquitectura del frente, catálogo con alcance,
+                                 grupos de Cognito, entrega del producto, REQ-COB-001 a 007
+    requirements.md              los requerimientos del dominio, REQ-COB-010 a 093
+    design.md                    modelo de datos, contratos API, prorateo, riesgos
     tasks.md                     tareas ordenadas por dependencia, trazadas a requerimientos
   preview/
-    index.html                   prototipo navegable, un solo archivo, sin build
-    ejemplo-cartera-yoki.csv     archivo de carga de ejemplo, con filas válidas y con error
+    index.html                   prototipo navegable, sin build
+    app.js                       lógica real: validación de CSV, prorateo, morosidad
+    ejemplo-cartera-yoki.csv     archivo de carga con filas válidas y con error
 ```
+
+`frente-y-accesos.md` corrige la primera versión del spec, que ubicaba el panel dentro de Admin RP.
+Las secciones reemplazadas de `requirements.md`, `design.md` y `tasks.md` están marcadas como tales
+en su propio encabezado.
 
 ---
 
@@ -88,14 +100,54 @@ preparado para eso, pero no se construye todavía.
 
 ---
 
-## Decisión de arquitectura que hay que tomar antes de construir
+## Cómo se entrega el producto
 
-Hoy en Admin RP las capacidades se activan **por mundo** (`world_module`). Para este caso la
-capacidad tiene que activarse **por comercio**: Jockey Plaza es el mundo, YOKI es un comercio
-dentro de él, y el gestor de cobranzas se le entrega a YOKI, no a todo Jockey Plaza.
+```
+Red Pontis activa la capacidad en el mundo o en el comercio
+   └─ aparece la tarjeta de entrega en Admin RP
+        └─ se indica el correo del titular y su rol
+             └─ se crea el usuario en Cognito, se lo suma al grupo collections-*
+                y se emite la credencial en portal_credential
+                  └─ el titular entra por el shell, que le ofrece su caja de Cobranzas
+                       └─ gestiona: crea planes, carga cartera, define reglas, cobra
+```
 
-Eso no existe hoy. `design.md` lo detalla en la sección 7 y `tasks.md` lo pone como primera
-tarea bloqueante, porque el resto del frente depende de esa decisión.
+Grupos de Cognito nuevos, resueltos por el mismo mecanismo de sufijo que los actuales:
+
+| Grupo | Puede |
+|---|---|
+| `collections-admin` | todo: planes, reglas, cartera, prorateo, anulaciones |
+| `collections-operator` | cargar cartera, cobrar, recordar, registrar pagos. No cambia reglas ni precios |
+| `collections-readonly` | ver y exportar. Ninguna escritura |
+
+Un mundo y uno de sus comercios pueden tener el producto a la vez, y cada uno ve **solo su
+cartera**. Son carteras distintas, no una jerarquía.
+
+---
+
+## Lo que ya está decidido
+
+**Activación por comercio**: tabla `merchant_module`, con el alcance declarado en el catálogo
+(`scope: ['WORLD'] | ['MERCHANT'] | ambos`). Las capacidades existentes se declaran `['WORLD']` y el
+resolver de capacidades **no cambia de comportamiento para ninguna**, que es lo que protege a los
+cinco frentes que dependen de él.
+
+**Credenciales**: no hace falta tabla nueva. `portal_credential` ya existe y ya tiene `scope_type`;
+se le suman `COLLECTIONS_WORLD` y `COLLECTIONS_MERCHANT`.
+
+---
+
+## Lo que queda pendiente de definición
+
+- **Proveedor de correo transaccional.** No existe en el monolito. Sin él, el aviso automático no
+  sale; el recordatorio manual sí funciona, copiando el link.
+- **Pasarela de pago.** La recarga de wallet es deliberadamente simulada. Sin pasarela, el pago se
+  registra por la vía manual, que es lo que YOKI hace hoy.
+- **Impersonación de soporte.** Si Red Pontis necesita entrar al panel de un cliente para
+  diagnosticar, va como impersonación explícita y registrada. Sin decidir.
+
+Ninguna de las tres bloquea la fase 1: el valor está en saber a quién cobrar, cuánto, y tener el
+canal de recordatorio listo.
 
 ---
 
