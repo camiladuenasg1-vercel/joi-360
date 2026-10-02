@@ -280,6 +280,8 @@ const S = {
   historialReglas: [],
   bitacora: [],
   corridas: [],
+  lotes: [],
+  pagos: [],
   importJob: null,
   filtros: { q: "", plan: "", estado: "", tramo: "" },
 };
@@ -1054,6 +1056,7 @@ const TABS_CARTERA = [
   { k: "carga",        l: "Cargar cartera", i: "upload_file" },
   { k: "renovaciones", l: "Renovaciones", i: "event_repeat" },
   { k: "cobros",       l: "Cobros",       i: "receipt_long" },
+  { k: "lotes",        l: "Lotes y cobro", i: "playlist_add_check" },
   { k: "morosidad",    l: "Morosidad",    i: "running_with_errors" },
   { k: "prorateo",     l: "Prorateo",     i: "calculate" },
   { k: "reglas",       l: "Reglas y avisos", i: "tune" },
@@ -1148,7 +1151,7 @@ function bloquear(selectores, motivo) {
 function aplicarSoloLectura() {
   if (S.rol === "LECTURA") {
     bloquear(["#view .btn.bp", "#view .mini", "#view .sw", "#view #drop", `#view [data-w="rule"]`,
-      `#view [data-w="world"]`, `#view [data-w="renov"]`],
+      `#view [data-w="world"]`, `#view [data-w="renov"]`, `#view [data-w="lote"]`],
       "Tu rol es de solo lectura. Red Pontis puede cambiarlo.");
     return;
   }
@@ -1168,6 +1171,7 @@ const VISTAS = {
   carga:        [vCarga, wCarga],
   renovaciones: [vRenovaciones, wRenovaciones],
   cobros:       [vCobros, wCobros],
+  lotes:        [vLotes, wLotes],
   morosidad:    [vMorosidad, wMorosidad],
   prorateo:     [vProrateo, wProrateo],
   reglas:       [vReglas, wReglas],
@@ -1834,11 +1838,11 @@ function drawerCobrar(cargoId) {
         cerrarDrawer(); toast(`Recordatorio enviado a ${s.nombre}.`); render();
       };
       document.getElementById("pagoManual").onclick = () => {
-        const monto = saldo(c);
-        c.pagado = r2(c.pagado + monto);
-        c.estado = "PAID"; c.medio = "MANUAL"; c.pagadoEl = iso(HOY);
-        bita("payment", "PAGO_MANUAL", `${s.nombre} · ${c.id} · ${money(monto)} registrado como MANUAL`);
-        cerrarDrawer(); toast(`Pago de ${money(monto)} registrado. El cargo quedó pagado.`); render();
+        const r = registrarPago({
+          cargoId: c.id, monto: saldo(c), origen: "MANUAL",
+          referencia: `manual-${c.id}-${iso(HOY)}`, medio: "MANUAL",
+        });
+        if (r.ok) { cerrarDrawer(); render(); }
       };
     },
   });
@@ -3986,7 +3990,7 @@ function arrancar() {
   document.getElementById("btnExport").onclick = () => {
     const mapa = {
       suscriptores: "expSus", cobros: "expCob", morosidad: "expMor",
-      comercios: "expComercios", renovaciones: "expProy",
+      comercios: "expComercios", renovaciones: "expProy", lotes: "expLotes",
     };
     const b = document.getElementById(mapa[S.tab]);
     if (b) return b.click();
@@ -4572,6 +4576,824 @@ function drawerDetalleCorrida(id) {
         cargo: e.cargoId, suscripcion: e.susId, suscriptor: e.nombre, periodo: e.periodo,
         ciclo_ini: e.cicloIni, ciclo_fin: e.cicloFin, vence: e.vence, monto: e.monto,
       })));
+    },
+  });
+}
+
+const ESTADOS_LOTE = {
+  OPEN:              { label: "Abierto",            cls: "b-pending",   d: "Se está armando. Todavía se pueden agregar o quitar cargos." },
+  CLOSED:            { label: "Cerrado",            cls: "b-partial",   d: "Cerrado e inmutable. Su composición ya no cambia." },
+  PRESENTED:         { label: "Presentado",         cls: "b-partial",   d: "Entregado al adquirente. Se espera su retorno." },
+  PARTIALLY_SETTLED: { label: "Parcialmente cobrado", cls: "b-overdue", d: "El retorno acreditó algunos cargos y rechazó otros." },
+  SETTLED:           { label: "Cobrado",            cls: "b-paid",      d: "Todos sus cargos quedaron acreditados." },
+  REJECTED:          { label: "Rechazado",          cls: "b-arrears",   d: "El adquirente rechazó todos sus cargos." },
+  CANCELLED:         { label: "Anulado",            cls: "b-cancelled", d: "Se anuló antes de cobrarse. Sus cargos volvieron a quedar libres." },
+};
+
+const TRANSICIONES_LOTE = {
+  OPEN:              ["CLOSED", "CANCELLED"],
+  CLOSED:            ["PRESENTED", "CANCELLED"],
+  PRESENTED:         ["SETTLED", "PARTIALLY_SETTLED", "REJECTED"],
+  PARTIALLY_SETTLED: ["SETTLED"],
+  SETTLED:           [],
+  REJECTED:          [],
+  CANCELLED:         [],
+};
+
+const ESTADOS_LOTE_VIVOS = ["OPEN", "CLOSED", "PRESENTED", "PARTIALLY_SETTLED"];
+
+/// Un lote retiene sus cargos solo hasta que llega su retorno. Después de eso los acreditados ya
+/// están pagados y los rechazados quedan libres para entrar al lote de reintento, que es un lote
+/// nuevo: el original no se reabre nunca.
+const ESTADOS_LOTE_RETIENEN = ["OPEN", "CLOSED", "PRESENTED"];
+
+const MOTIVOS_RECHAZO = {
+  INSUFFICIENT_FUNDS: "Fondos insuficientes",
+  INVALID_ACCOUNT:    "Cuenta o instrumento inválido",
+  EXPIRED_INSTRUMENT: "Instrumento vencido",
+  REJECTED_BY_ISSUER: "Rechazado por el emisor",
+  TECHNICAL_ERROR:    "Error técnico del adquirente",
+  UNKNOWN:            "Sin motivo informado",
+};
+
+const ORIGENES_PAGO = {
+  MANUAL:          { label: "Manual",              ico: "edit_note",   d: "Lo registró una persona desde el panel." },
+  ACQUIRER_RETURN: { label: "Retorno adquirente",  ico: "sync_alt",    d: "Entró por el retorno de un lote presentado." },
+  RECONCILIATION:  { label: "Conciliación",        ico: "rule",        d: "Lo acreditó el cuadre entre lo presentado y lo retornado." },
+  CREDIT_BALANCE:  { label: "Saldo a favor",       ico: "savings",     d: "Se aplicó un saldo a favor del suscriptor." },
+};
+
+const CRITERIOS_LOTE = {
+  ALL_OPEN:           { label: "Todo lo abierto",        d: "Todos los cargos con saldo que no estén en otro lote vivo." },
+  BY_DUE_DATE:        { label: "Por fecha de corte",     d: "Los cargos que vencen hasta la fecha que elijas." },
+  BY_PLAN:            { label: "Por plan",               d: "Los cargos de un plan, para presentarlos juntos." },
+  BY_PAYMENT_METHOD:  { label: "Por medio de pago",      d: "Los cargos de un medio, que es como suele pedirlo el adquirente." },
+};
+
+const TOPE_CARGOS_POR_LOTE = 5000;
+
+function puedeOperarLotes() { return S.rol === "ADMIN" || S.rol === "OPERADOR"; }
+function motivoRolLotes() {
+  return "Armar, presentar y conciliar lotes requiere el grupo collections-admin o collections-operator.";
+}
+
+function lotePorId(id) { return S.lotes.find((l) => l.id === id) || null; }
+function lotesVivos() { return S.lotes.filter((l) => ESTADOS_LOTE_VIVOS.includes(l.estado)); }
+
+function loteVivoDelCargo(cargoId) {
+  return S.lotes.find((l) => ESTADOS_LOTE_RETIENEN.includes(l.estado)
+    && l.items.some((it) => it.cargoId === cargoId)) || null;
+}
+
+function cargoAbierto(c) {
+  return c.estado !== "CANCELLED" && c.estado !== "PAID" && saldo(c) > 0;
+}
+
+function cargosElegiblesParaLote() {
+  return S.cargos.filter((c) => cargoAbierto(c) && !loteVivoDelCargo(c.id));
+}
+
+function seleccionarPorCriterio(criterio, valor) {
+  const libres = cargosElegiblesParaLote();
+  if (criterio === "BY_DUE_DATE") return libres.filter((c) => c.vence <= valor);
+  if (criterio === "BY_PLAN") return libres.filter((c) => c.planId === valor);
+  if (criterio === "BY_PAYMENT_METHOD") return libres.filter((c) => (c.medio || "SIN_MEDIO") === valor);
+  return libres;
+}
+
+function itemDeCargo(c) {
+  const s = sus(c.suscriptorId);
+  return {
+    cargoId: c.id, susId: s.id, documento: s.documento, suscriptor: s.nombre,
+    periodo: c.periodo, vence: c.vence, monto: saldo(c),
+    medio: c.medio || "SIN_MEDIO", referencia: referenciaDeCargo(c),
+    resultado: null, motivo: null, acreditado: 0,
+  };
+}
+
+/// Referencia externa estable por cargo. En producción la emite el adquirente o el frente; acá se
+/// deriva del id para que el ida y vuelta del archivo sea comparable.
+function referenciaDeCargo(c) {
+  return "REF" + String(c.id).replace("C-", "") + "-" + String(c.periodo).replace("-", "");
+}
+
+function nuevoIdLote() {
+  return "L-" + String(S.lotes.length + 1).padStart(4, "0");
+}
+
+function puedeTransicionar(desde, hacia) {
+  return (TRANSICIONES_LOTE[desde] || []).includes(hacia);
+}
+
+function crearLote({ criterio, valor, nota }) {
+  if (!puedeOperarLotes()) { toast(motivoRolLotes(), "err"); return null; }
+  if (!CRITERIOS_LOTE[criterio]) { toast("invalid_batch_criteria: ese criterio no existe.", "err"); return null; }
+  const cargos = seleccionarPorCriterio(criterio, valor);
+  if (cargos.length === 0) {
+    toast("batch_empty: ningún cargo libre coincide con ese criterio. No se creó el lote.", "err");
+    return null;
+  }
+  if (cargos.length > TOPE_CARGOS_POR_LOTE) {
+    toast(`batch_size_exceeded: ${cargos.length} cargos pasan el tope de ${TOPE_CARGOS_POR_LOTE} por lote.`, "err");
+    return null;
+  }
+  const items = cargos.map(itemDeCargo);
+  const lote = {
+    id: nuevoIdLote(), estado: "OPEN", criterio, valor: valor || null, nota: nota || null,
+    creadoEl: iso(HOY), creadoPor: ACTOR, cerradoEl: null, presentadoEl: null,
+    retornoEl: null, conciliadoEl: null, anuladoEl: null,
+    reintentoDe: null, reintentadoEn: null,
+    items, monto: r2(items.reduce((a, it) => a + it.monto, 0)),
+    acreditado: 0, rechazado: 0, archivo: null, retorno: null, conciliacion: null,
+    historial: [{ estado: "OPEN", cuando: new Date(), quien: ACTOR }],
+  };
+  S.lotes.unshift(lote);
+  bita("collection_batch", "CREAR",
+    `${lote.id} · ${CRITERIOS_LOTE[criterio].label} · ${items.length} cargos por ${money(lote.monto)} · actor ${ACTOR}`);
+  return lote;
+}
+
+function moverLote(lote, hacia, extra) {
+  lote.estado = hacia;
+  lote.historial.push({ estado: hacia, cuando: new Date(), quien: ACTOR, extra: extra || null });
+}
+
+function cerrarLote(id) {
+  if (!puedeOperarLotes()) { toast(motivoRolLotes(), "err"); return false; }
+  const l = lotePorId(id);
+  if (!l) { toast("forbidden: el lote no pertenece a esta cartera.", "err"); return false; }
+  if (!puedeTransicionar(l.estado, "CLOSED")) {
+    toast(`invalid_batch_transition: un lote ${ESTADOS_LOTE[l.estado].label.toLowerCase()} no se puede cerrar.`, "err");
+    return false;
+  }
+  if (l.items.length === 0) { toast("batch_empty: un lote vacío no se cierra.", "err"); return false; }
+  const pol = politicaAplicable();
+  if (pol && pol.topeMontoLote != null && l.monto > Number(pol.topeMontoLote)) {
+    toast(`policy_limit_exceeded: el lote suma ${money(l.monto)} y ${S.mundo.nombre} permite hasta ${money(pol.topeMontoLote)} por lote.`, "err");
+    return false;
+  }
+  l.cerradoEl = iso(HOY);
+  moverLote(l, "CLOSED");
+  bita("collection_batch", "CERRAR", `${l.id} · ${l.items.length} cargos por ${money(l.monto)} · queda inmutable · actor ${ACTOR}`);
+  return true;
+}
+
+function anularLote(id, motivo) {
+  if (S.rol !== "ADMIN") { toast("Anular un lote requiere el grupo collections-admin.", "err"); return false; }
+  const l = lotePorId(id);
+  if (!l) { toast("forbidden: el lote no pertenece a esta cartera.", "err"); return false; }
+  if (!puedeTransicionar(l.estado, "CANCELLED")) {
+    toast(`invalid_batch_transition: un lote ${ESTADOS_LOTE[l.estado].label.toLowerCase()} ya no se puede anular.`, "err");
+    return false;
+  }
+  if (!String(motivo || "").trim()) { toast("Anular un lote exige un motivo.", "err"); return false; }
+  l.anuladoEl = iso(HOY);
+  moverLote(l, "CANCELLED", motivo);
+  bita("collection_batch", "ANULAR", `${l.id} · ${esc(motivo)} · sus ${l.items.length} cargos vuelven a quedar libres · actor ${ACTOR}`);
+  return true;
+}
+
+/// Formato canónico de salida, agnóstico del proveedor. El adaptador de cada adquirente traduce
+/// desde acá; el frente no conoce ningún formato propietario.
+const CABECERA_PRESENTACION = ["lote", "cargo", "referencia", "suscripcion", "documento", "suscriptor", "periodo", "vence", "moneda", "monto", "medio"];
+const CABECERA_RETORNO = ["lote", "cargo", "referencia", "resultado", "motivo", "monto_acreditado", "fecha"];
+
+function celdaCsv(v) {
+  const s = String(v == null ? "" : v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function serializarPresentacion(lote) {
+  const filas = lote.items.map((it) => [
+    lote.id, it.cargoId, it.referencia, it.susId, it.documento, it.suscriptor,
+    it.periodo, it.vence, MONEDA, it.monto.toFixed(2), it.medio,
+  ]);
+  return [CABECERA_PRESENTACION.join(","), ...filas.map((f) => f.map(celdaCsv).join(","))].join("\n");
+}
+
+function leerCsvCanonico(texto, cabeceraEsperada) {
+  const lineas = String(texto).trim().split(/\r?\n/).filter((l) => l.trim());
+  if (lineas.length === 0) return { error: "archivo_vacio", filas: [] };
+  const cab = partirLineaCsv(lineas[0]);
+  if (cab.join(",") !== cabeceraEsperada.join(","))
+    return { error: "cabecera_invalida", esperada: cabeceraEsperada.join(","), recibida: cab.join(","), filas: [] };
+  const filas = lineas.slice(1).map((l) => {
+    const cel = partirLineaCsv(l);
+    const o = {};
+    cab.forEach((k, i) => { o[k] = cel[i] == null ? "" : cel[i]; });
+    return o;
+  });
+  return { error: null, filas };
+}
+
+function partirLineaCsv(linea) {
+  const out = [];
+  let actual = "", dentro = false;
+  for (let i = 0; i < linea.length; i++) {
+    const ch = linea[i];
+    if (dentro) {
+      if (ch === '"' && linea[i + 1] === '"') { actual += '"'; i += 1; }
+      else if (ch === '"') dentro = false;
+      else actual += ch;
+    } else if (ch === '"') dentro = true;
+    else if (ch === ",") { out.push(actual); actual = ""; }
+    else actual += ch;
+  }
+  out.push(actual);
+  return out;
+}
+
+function presentarLote(id) {
+  if (!puedeOperarLotes()) { toast(motivoRolLotes(), "err"); return null; }
+  const l = lotePorId(id);
+  if (!l) { toast("forbidden: el lote no pertenece a esta cartera.", "err"); return null; }
+  if (!puedeTransicionar(l.estado, "PRESENTED")) {
+    toast(`batch_not_closed: hay que cerrar el lote antes de presentarlo. Está ${ESTADOS_LOTE[l.estado].label.toLowerCase()}.`, "err");
+    return null;
+  }
+  l.archivo = {
+    nombre: `lote-${l.id}-${iso(HOY).replace(/-/g, "")}.csv`,
+    contenido: serializarPresentacion(l),
+    generadoEl: iso(HOY), filas: l.items.length,
+  };
+  l.presentadoEl = iso(HOY);
+  moverLote(l, "PRESENTED");
+  bita("collection_batch", "PRESENTAR",
+    `${l.id} · ${l.archivo.nombre} · ${l.items.length} filas por ${money(l.monto)} · adquirente sin definir · actor ${ACTOR}`);
+  return l.archivo;
+}
+
+/// Retorno simulado del adquirente. Existe solo en el prototipo: no hay pasarela integrada, así que
+/// el contrato se demuestra generando un retorno con la mezcla de resultados que se quiera probar.
+function simularRetorno(lote, mezcla) {
+  const motivos = Object.keys(MOTIVOS_RECHAZO);
+  const filas = lote.items.map((it, i) => {
+    const rechaza = mezcla === "TODO_RECHAZADO"
+      || (mezcla === "PARCIAL" && i % 3 === 0);
+    return [
+      lote.id, it.cargoId, it.referencia,
+      rechaza ? "REJECTED" : "APPROVED",
+      rechaza ? motivos[i % motivos.length] : "",
+      rechaza ? "0.00" : it.monto.toFixed(2),
+      iso(HOY),
+    ];
+  });
+  return [CABECERA_RETORNO.join(","), ...filas.map((f) => f.map(celdaCsv).join(","))].join("\n");
+}
+
+function ingerirRetorno(id, texto) {
+  if (!puedeOperarLotes()) { toast(motivoRolLotes(), "err"); return null; }
+  const l = lotePorId(id);
+  if (!l) { toast("forbidden: el lote no pertenece a esta cartera.", "err"); return null; }
+  if (l.estado !== "PRESENTED" && l.estado !== "PARTIALLY_SETTLED") {
+    toast(`batch_without_return: un lote ${ESTADOS_LOTE[l.estado].label.toLowerCase()} no espera retorno.`, "err");
+    return null;
+  }
+  const leido = leerCsvCanonico(texto, CABECERA_RETORNO);
+  if (leido.error) {
+    toast(`invalid_return_file: ${leido.error}${leido.esperada ? ` · se esperaba ${leido.esperada}` : ""}.`, "err");
+    return null;
+  }
+
+  const resultado = { aplicados: 0, rechazados: 0, ajenos: [], duplicados: [], acreditado: 0 };
+  leido.filas.forEach((f) => {
+    const it = l.items.find((x) => x.cargoId === f.cargo && x.referencia === f.referencia);
+    if (!it) { resultado.ajenos.push(f.cargo || "(sin cargo)"); return; }
+    if (f.resultado === "APPROVED") {
+      const pago = registrarPago({
+        cargoId: it.cargoId, monto: Number(f.monto_acreditado), origen: "ACQUIRER_RETURN",
+        referencia: it.referencia, medio: it.medio === "SIN_MEDIO" ? null : it.medio, silencioso: true,
+      });
+      if (!pago.ok && pago.codigo === "duplicate_payment") { resultado.duplicados.push(it.cargoId); return; }
+      it.resultado = "APPROVED"; it.motivo = null; it.acreditado = Number(f.monto_acreditado);
+      resultado.aplicados += 1;
+      resultado.acreditado = r2(resultado.acreditado + Number(f.monto_acreditado));
+      return;
+    }
+    it.resultado = "REJECTED";
+    it.motivo = MOTIVOS_RECHAZO[f.motivo] ? f.motivo : "UNKNOWN";
+    it.acreditado = 0;
+    resultado.rechazados += 1;
+  });
+
+  l.retorno = { recibidoEl: iso(HOY), filas: leido.filas.length, contenido: texto, resultado };
+  l.retornoEl = iso(HOY);
+  l.acreditado = r2(l.items.reduce((a, it) => a + Number(it.acreditado || 0), 0));
+  l.rechazado = l.items.filter((it) => it.resultado === "REJECTED").length;
+
+  const aprobados = l.items.filter((it) => it.resultado === "APPROVED").length;
+  const sinResultado = l.items.filter((it) => !it.resultado).length;
+  const destino = aprobados === l.items.length ? "SETTLED"
+    : aprobados === 0 && sinResultado === 0 ? "REJECTED"
+      : "PARTIALLY_SETTLED";
+  if (puedeTransicionar(l.estado, destino)) moverLote(l, destino);
+
+  l.conciliacion = conciliarLote(l);
+  bita("collection_batch", "RETORNO",
+    `${l.id} · ${resultado.aplicados} acreditados por ${money(resultado.acreditado)} · ${resultado.rechazados} rechazados · ${resultado.ajenos.length} ajenos · ${resultado.duplicados.length} duplicados · actor ${ACTOR}`);
+  return resultado;
+}
+
+function conciliarLote(l) {
+  const presentado = l.monto;
+  const acreditado = r2(l.items.reduce((a, it) => a + Number(it.acreditado || 0), 0));
+  const rechazado = r2(l.items.filter((it) => it.resultado === "REJECTED").reduce((a, it) => a + it.monto, 0));
+  const sinResponder = r2(l.items.filter((it) => !it.resultado).reduce((a, it) => a + it.monto, 0));
+  const diferencia = r2(presentado - acreditado - rechazado - sinResponder);
+  const tipos = [];
+  if (rechazado > 0) tipos.push({ tipo: "RECHAZADO", monto: rechazado, d: "El adquirente no los cobró. Se reintentan en un lote nuevo." });
+  if (sinResponder > 0) tipos.push({ tipo: "SIN_RESPUESTA", monto: sinResponder, d: "El retorno no trajo resultado para estos cargos." });
+  if (l.retorno && l.retorno.resultado.ajenos.length)
+    tipos.push({ tipo: "AJENO_AL_LOTE", monto: 0, cuantos: l.retorno.resultado.ajenos.length, d: "El retorno trajo cargos que no están en este lote. No se aplicaron." });
+  if (l.retorno && l.retorno.resultado.duplicados.length)
+    tipos.push({ tipo: "DUPLICADO", monto: 0, cuantos: l.retorno.resultado.duplicados.length, d: "Ya estaban acreditados con la misma referencia. La clave de idempotencia los frenó." });
+  if (diferencia !== 0) tipos.push({ tipo: "DESCUADRE", monto: diferencia, d: "Presentado menos acreditado, rechazado y sin respuesta no da cero." });
+  return { presentado, acreditado, rechazado, sinResponder, diferencia, cuadra: diferencia === 0, tipos, cuando: iso(HOY) };
+}
+
+function reintentarLote(id) {
+  if (!puedeOperarLotes()) { toast(motivoRolLotes(), "err"); return null; }
+  const l = lotePorId(id);
+  if (!l) { toast("forbidden: el lote no pertenece a esta cartera.", "err"); return null; }
+  if (l.estado !== "PARTIALLY_SETTLED" && l.estado !== "REJECTED") {
+    toast(`batch_not_reopenable: solo se reintenta un lote con rechazos. Está ${ESTADOS_LOTE[l.estado].label.toLowerCase()}.`, "err");
+    return null;
+  }
+  const rechazados = l.items.filter((it) => it.resultado === "REJECTED");
+  if (rechazados.length === 0) { toast("batch_has_no_rejections: este lote no dejó rechazos para reintentar.", "err"); return null; }
+  const vivos = rechazados.filter((it) => {
+    const c = S.cargos.find((x) => x.id === it.cargoId);
+    return c && cargoAbierto(c) && !loteVivoDelCargo(c.id);
+  });
+  if (vivos.length === 0) { toast("batch_empty: los cargos rechazados ya se cobraron o están en otro lote vivo.", "err"); return null; }
+
+  const items = vivos.map((it) => itemDeCargo(S.cargos.find((x) => x.id === it.cargoId)));
+  const nuevo = {
+    id: nuevoIdLote(), estado: "OPEN", criterio: "ALL_OPEN", valor: null,
+    nota: `Reintento de ${l.id}`, creadoEl: iso(HOY), creadoPor: ACTOR,
+    cerradoEl: null, presentadoEl: null, retornoEl: null, conciliadoEl: null, anuladoEl: null,
+    reintentoDe: l.id, reintentadoEn: null,
+    items, monto: r2(items.reduce((a, it) => a + it.monto, 0)),
+    acreditado: 0, rechazado: 0, archivo: null, retorno: null, conciliacion: null,
+    historial: [{ estado: "OPEN", cuando: new Date(), quien: ACTOR, extra: `reintento de ${l.id}` }],
+  };
+  S.lotes.unshift(nuevo);
+  l.reintentadoEn = nuevo.id;
+  bita("collection_batch", "REINTENTAR",
+    `${nuevo.id} reintenta ${l.id} con ${items.length} cargos rechazados por ${money(nuevo.monto)} · el lote original queda inmutable · actor ${ACTOR}`);
+  return nuevo;
+}
+
+/// Único punto de acreditación. Los tres orígenes pasan por acá, y la clave de idempotencia
+/// (cargo, origen, referencia) impide que el mismo pago entre dos veces.
+function registrarPago({ cargoId, monto, origen, referencia, medio, silencioso }) {
+  const avisar = (msg, tipo) => { if (!silencioso) toast(msg, tipo); };
+  if (!puedeOperarLotes()) {
+    avisar("Registrar un pago requiere el grupo collections-admin o collections-operator.", "err");
+    return { ok: false, codigo: "forbidden" };
+  }
+  if (!ORIGENES_PAGO[origen]) {
+    avisar(`invalid_payment_source: "${origen}" no es un origen de pago válido.`, "err");
+    return { ok: false, codigo: "invalid_payment_source" };
+  }
+  const c = S.cargos.find((x) => x.id === cargoId);
+  if (!c) {
+    avisar(`charge_not_found: el cargo ${cargoId} no existe en esta cartera.`, "err");
+    return { ok: false, codigo: "charge_not_found" };
+  }
+  if (c.estado === "CANCELLED") {
+    avisar("charge_cancelled: un cargo anulado no recibe pagos.", "err");
+    return { ok: false, codigo: "charge_cancelled" };
+  }
+  const importe = Number(monto);
+  if (!Number.isFinite(importe) || importe <= 0) {
+    avisar("invalid_charge_amount: el monto del pago tiene que ser mayor que cero.", "err");
+    return { ok: false, codigo: "invalid_charge_amount" };
+  }
+  const ref = String(referencia == null ? "" : referencia).trim();
+  if (origen !== "MANUAL" && !ref) {
+    avisar("idempotency_key_required: un pago que no es manual necesita su referencia externa.", "err");
+    return { ok: false, codigo: "idempotency_key_required" };
+  }
+  const clave = `${cargoId}|${origen}|${ref}`;
+  if (S.pagos.some((p) => p.clave === clave)) {
+    avisar(`duplicate_payment: ya hay un pago de ${cargoId} con origen ${origen} y referencia ${ref || "(vacía)"}. No se acreditó dos veces.`, "info");
+    return { ok: false, codigo: "duplicate_payment", clave };
+  }
+
+  const pendiente = saldo(c);
+  const aplicado = r2(Math.min(importe, pendiente));
+  const excedente = r2(importe - aplicado);
+  const s = sus(c.suscriptorId);
+
+  c.pagado = r2(c.pagado + aplicado);
+  c.medio = medio || c.medio || origen;
+  c.pagadoEl = iso(HOY);
+  c.estado = saldo(c) <= 0 ? "PAID" : "PARTIALLY_PAID";
+  if (excedente > 0) s.saldoFavor = r2(s.saldoFavor + excedente);
+
+  const pago = {
+    id: "P-" + String(S.pagos.length + 1).padStart(5, "0"), clave,
+    cargoId, susId: s.id, origen, referencia: ref || null, medio: c.medio,
+    monto: importe, aplicado, excedente, cuando: iso(HOY), quien: ACTOR,
+  };
+  S.pagos.unshift(pago);
+
+  const reactivo = reactivarSiCorresponde(s);
+  bita("payment", "ACREDITAR",
+    `${pago.id} · ${c.id} · ${money(aplicado)} aplicados${excedente > 0 ? ` y ${money(excedente)} a saldo a favor` : ""} · origen ${origen} · ref ${ref || "—"} · actor ${ACTOR}`);
+  if (!silencioso) {
+    toast(`${money(aplicado)} acreditados en ${c.id}. El cargo quedó ${ESTADOS[c.estado].label.toLowerCase()}.${
+      excedente > 0 ? ` ${money(excedente)} fueron a saldo a favor.` : ""}${
+      reactivo ? ` ${s.nombre} se reactivó.` : ""}`, "ok");
+  }
+  return { ok: true, pago, cargo: c, reactivado: reactivo };
+}
+
+function reactivarSiCorresponde(s) {
+  if (s.estado !== "SUSPENDED") return false;
+  const vencidos = cargosDe(s.id).filter(esMoroso);
+  if (vencidos.length > 0) return false;
+  const ultimo = cargosDe(s.id).slice().sort((a, b) => (a.vence < b.vence ? 1 : -1))[0];
+  const regla = ultimo ? reglaDelCargo(ultimo) : reglaEfectiva(s.planId);
+  if (regla.suspension.reactivacion !== "AUTO_ON_PAYMENT") return false;
+  s.estado = "ACTIVE";
+  bita("subscription", "REACTIVAR", `${s.nombre} (${s.id}) · sin cargos vencidos y su regla reactiva al pagar`);
+  return true;
+}
+
+function vLotes() {
+  const libres = cargosElegiblesParaLote();
+  const montoLibre = r2(libres.reduce((a, c) => a + saldo(c), 0));
+  const enCurso = lotesVivos().filter((l) => l.estado !== "OPEN");
+  const conRechazos = S.lotes.filter((l) => l.rechazado > 0 && !l.reintentadoEn);
+  const descuadrados = S.lotes.filter((l) => l.conciliacion && !l.conciliacion.cuadra);
+
+  return `
+  ${notaEmisionBloqueada()}
+  <div class="kpis">
+    ${kpi("playlist_add", "#1F66B8", "#1F66B81a", String(libres.length), "Cargos libres para lotear", money0(montoLibre))}
+    ${kpi("send", "#6B4FA3", "#6B4FA31a", String(enCurso.length), "Lotes en curso", "cerrados o presentados")}
+    ${kpi("report", "#C8202F", "#C8202F1a", String(conRechazos.length), "Con rechazos sin reintentar", "se reintentan en lote nuevo")}
+    ${kpi("rule", "#AB4F00", "#AB4F001a", String(descuadrados.length), "Conciliaciones que no cuadran", "presentado menos retornado")}
+  </div>
+
+  <div class="note n-warn"><span class="msi">info</span>
+    <div><b>No hay adquirente integrado.</b> El contrato de salida es canónico y agnóstico del
+    proveedor: el lote se arma, se cierra y se exporta, y el retorno se ingiere con el mismo formato.
+    Qué proveedor lo procesa es una decisión abierta del spec, y por eso el retorno de este
+    prototipo se simula en lugar de inventar una integración.</div></div>
+
+  <div class="sech"><div><h3>Armar un lote</h3>
+    <p>Un lote cerrado es inmutable: su composición ya no cambia. Si el adquirente rechaza parte, el
+    reintento es un lote nuevo que referencia al anterior.</p></div>
+    <button class="btn bp" data-w="lote" id="nuevoLote"><span class="msi">add</span>Nuevo lote</button></div>
+
+  <div class="sech" style="margin-top:18px"><div><h3 style="font-size:13px">Lotes</h3>
+    <p>Estados y transiciones del ciclo de cobro.</p></div>
+    <button class="btn bo" id="expLotes"><span class="msi">download</span>CSV</button></div>
+  ${S.lotes.length === 0
+    ? `<div class="tablewrap"><div class="empty"><span class="msi">inbox</span>
+        <h4>Todavía no armaste ningún lote</h4>
+        <p>Hay ${libres.length} cargos libres por ${money(montoLibre)} esperando presentarse a cobro.</p></div></div>`
+    : `<div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Lote</th><th>Criterio</th><th>Estado</th><th class="num">Cargos</th>
+          <th class="num">Presentado</th><th class="num">Acreditado</th><th class="num">Rechazados</th>
+          <th>Conciliación</th><th>Creado</th><th></th></tr></thead>
+        <tbody>${S.lotes.map((l) => `<tr>
+          <td class="mono" style="font-size:12px"><b>${esc(l.id)}</b>
+            ${l.reintentoDe ? `<div style="font-size:10px;color:var(--osv)">reintento de ${esc(l.reintentoDe)}</div>` : ""}
+            ${l.reintentadoEn ? `<div style="font-size:10px;color:var(--osv)">reintentado en ${esc(l.reintentadoEn)}</div>` : ""}</td>
+          <td style="font-size:12px">${CRITERIOS_LOTE[l.criterio].label}
+            ${l.valor ? `<div style="font-size:10px;color:var(--osv)">${esc(l.valor)}</div>` : ""}</td>
+          <td><span class="badge ${ESTADOS_LOTE[l.estado].cls}">${ESTADOS_LOTE[l.estado].label}</span></td>
+          <td class="num">${l.items.length}</td>
+          <td class="num">${money(l.monto)}</td>
+          <td class="num">${l.acreditado > 0 ? money(l.acreditado) : "—"}</td>
+          <td class="num">${l.rechazado > 0 ? `<b style="color:var(--error)">${l.rechazado}</b>` : "—"}</td>
+          <td>${l.conciliacion
+            ? `<span class="badge ${l.conciliacion.cuadra ? "b-paid" : "b-overdue"}">${l.conciliacion.cuadra ? "Cuadra" : "No cuadra"}</span>`
+            : `<span style="color:var(--osv)">—</span>`}</td>
+          <td style="font-size:12px">${fecha(l.creadoEl)}</td>
+          <td><button class="mini" data-lote="${l.id}"><span class="msi">visibility</span>Abrir</button></td>
+        </tr>`).join("")}</tbody></table></div></div>`}
+
+  <div class="sech" style="margin-top:22px"><div><h3 style="font-size:13px">Pagos acreditados</h3>
+    <p>Los tres orígenes pasan por el mismo registrador, con clave de idempotencia
+    <span class="mono">(cargo, origen, referencia)</span>.</p></div>
+    <button class="btn bo" id="expPagos"><span class="msi">download</span>CSV</button></div>
+  ${S.pagos.length === 0
+    ? `<div class="tablewrap"><div class="empty"><span class="msi">receipt</span>
+        <h4>Todavía no se acreditó ningún pago desde el panel</h4>
+        <p>Los pagos entran por registro manual, por retorno del adquirente o por conciliación.</p></div></div>`
+    : `<div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Pago</th><th>Cargo</th><th>Suscriptor</th><th>Origen</th><th>Referencia</th>
+          <th class="num">Recibido</th><th class="num">Aplicado</th><th class="num">A saldo a favor</th><th>Fecha</th></tr></thead>
+        <tbody>${S.pagos.map((p) => `<tr>
+          <td class="mono" style="font-size:12px">${esc(p.id)}</td>
+          <td class="mono" style="font-size:12px">${esc(p.cargoId)}</td>
+          <td class="strong">${esc(sus(p.susId) ? sus(p.susId).nombre : p.susId)}</td>
+          <td><span class="msi" style="font-size:15px;vertical-align:-3px">${ORIGENES_PAGO[p.origen].ico}</span>
+            ${ORIGENES_PAGO[p.origen].label}</td>
+          <td class="mono" style="font-size:11px">${p.referencia ? esc(p.referencia) : "—"}</td>
+          <td class="num">${money(p.monto)}</td>
+          <td class="num">${money(p.aplicado)}</td>
+          <td class="num">${p.excedente > 0 ? money(p.excedente) : "—"}</td>
+          <td style="font-size:12px">${fecha(p.cuando)}</td>
+        </tr>`).join("")}</tbody></table></div></div>`}`;
+}
+
+function wLotes() {
+  document.getElementById("nuevoLote").onclick = () => drawerNuevoLote();
+  document.querySelectorAll("[data-lote]").forEach((b) => b.onclick = () => drawerLote(b.dataset.lote));
+  document.getElementById("expLotes").onclick = () => exportar("lotes", S.lotes.map((l) => ({
+    lote: l.id, criterio: l.criterio, estado: l.estado, cargos: l.items.length,
+    presentado: l.monto, acreditado: l.acreditado, rechazados: l.rechazado,
+    cuadra: l.conciliacion ? (l.conciliacion.cuadra ? "si" : "no") : "",
+    diferencia: l.conciliacion ? l.conciliacion.diferencia : "",
+    reintento_de: l.reintentoDe || "", reintentado_en: l.reintentadoEn || "",
+    creado: l.creadoEl, cerrado: l.cerradoEl || "", presentado_el: l.presentadoEl || "",
+  })));
+  document.getElementById("expPagos").onclick = () => exportar("pagos", S.pagos.map((p) => ({
+    pago: p.id, cargo: p.cargoId, suscripcion: p.susId, origen: p.origen,
+    referencia: p.referencia || "", recibido: p.monto, aplicado: p.aplicado,
+    saldo_a_favor: p.excedente, medio: p.medio || "", fecha: p.cuando, quien: p.quien,
+  })));
+}
+
+function drawerNuevoLote() {
+  if (!puedeOperarLotes()) return toast(motivoRolLotes(), "err");
+  const medios = [...new Set(S.cargos.filter(cargoAbierto).map((c) => c.medio || "SIN_MEDIO"))];
+  abrirDrawer({
+    titulo: "Armar un lote de cobro", sub: S.caja.titulo, ico: "playlist_add", ancho: 680,
+    cuerpo: `
+      <label class="fl">Criterio de armado</label>
+      <select id="loCrit">${Object.entries(CRITERIOS_LOTE).map(([k, v]) =>
+        `<option value="${k}">${v.label}</option>`).join("")}</select>
+      <p class="hint" id="loHint">${CRITERIOS_LOTE.ALL_OPEN.d}</p>
+
+      <div id="loValor" style="margin-top:12px"></div>
+
+      <label class="fl" style="margin-top:12px">Nota del lote</label>
+      <input id="loNota" placeholder="Opcional: para qué se arma este lote">
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Lo que entraría</h3>
+        <p>Solo cargos con saldo que no estén en otro lote vivo.</p></div></div>
+      <div id="loPrev"></div>`,
+    pie: `<button class="btn bo" data-cerrar>Cancelar</button>
+          <button class="btn bp" id="loOk">Crear el lote</button>`,
+    luego: () => {
+      const crit = document.getElementById("loCrit");
+      const cajaValor = document.getElementById("loValor");
+      const prev = document.getElementById("loPrev");
+
+      const valorActual = () => {
+        const sel = document.getElementById("loVal");
+        return sel ? sel.value : null;
+      };
+      const pintarValor = () => {
+        const k = crit.value;
+        document.getElementById("loHint").textContent = CRITERIOS_LOTE[k].d;
+        if (k === "BY_DUE_DATE") {
+          cajaValor.innerHTML = `<label class="fl">Vencen hasta</label>
+            <input id="loVal" type="date" value="${iso(addDia(HOY, 7))}">`;
+        } else if (k === "BY_PLAN") {
+          cajaValor.innerHTML = `<label class="fl">Plan</label>
+            <select id="loVal">${S.planes.map((p) => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("")}</select>`;
+        } else if (k === "BY_PAYMENT_METHOD") {
+          cajaValor.innerHTML = `<label class="fl">Medio de pago</label>
+            <select id="loVal">${medios.map((m) => `<option value="${m}">${MEDIOS_PAGO[m] || m}</option>`).join("")}</select>`;
+        } else {
+          cajaValor.innerHTML = "";
+        }
+        const el = document.getElementById("loVal");
+        if (el) { el.onchange = pintarPrev; el.oninput = pintarPrev; }
+        pintarPrev();
+      };
+      const pintarPrev = () => {
+        const cargos = seleccionarPorCriterio(crit.value, valorActual());
+        const monto = r2(cargos.reduce((a, c) => a + saldo(c), 0));
+        const pol = politicaAplicable();
+        const pasaTope = pol && pol.topeMontoLote != null && monto > Number(pol.topeMontoLote);
+        prev.innerHTML = `
+          <div class="card">
+            <div class="kv"><span>Cargos</span><b>${cargos.length}</b></div>
+            <div class="kv"><span>Monto</span><b>${money(monto)}</b></div>
+            <div class="kv"><span>Tope del mundo por lote</span>
+              <b>${pol && pol.topeMontoLote != null ? money(pol.topeMontoLote) : "sin límite"}</b></div>
+          </div>
+          ${cargos.length === 0 ? `<div class="note n-warn" style="margin-top:10px"><span class="msi">block</span>
+            <div><b class="mono">batch_empty</b> — ningún cargo libre coincide. No se creará nada.</div></div>` : ""}
+          ${pasaTope ? `<div class="note n-err" style="margin-top:10px"><span class="msi">block</span>
+            <div><b class="mono">policy_limit_exceeded</b> — se puede crear, pero no se podrá cerrar
+            hasta que baje del tope de ${money(pol.topeMontoLote)}.</div></div>` : ""}
+          ${cargos.length > 0 ? `<div class="tablewrap" style="margin-top:10px"><div class="tablescroll"><table>
+            <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Vence</th><th>Medio</th><th class="num">Saldo</th></tr></thead>
+            <tbody>${cargos.slice(0, 40).map((c) => `<tr>
+              <td class="mono" style="font-size:12px">${esc(c.id)}</td>
+              <td class="strong">${esc(sus(c.suscriptorId).nombre)}</td>
+              <td class="mono" style="font-size:12px">${esc(c.periodo)}</td>
+              <td style="font-size:12px">${fecha(c.vence)}</td>
+              <td style="font-size:12px">${MEDIOS_PAGO[c.medio] || c.medio || "sin medio"}</td>
+              <td class="num">${money(saldo(c))}</td></tr>`).join("")}</tbody></table></div>
+            ${cargos.length > 40 ? `<p class="hint" style="padding:10px">Se muestran 40 de ${cargos.length}.</p>` : ""}</div>` : ""}`;
+      };
+
+      crit.onchange = pintarValor;
+      pintarValor();
+
+      document.getElementById("loOk").onclick = () => {
+        const l = crearLote({
+          criterio: crit.value, valor: valorActual(),
+          nota: document.getElementById("loNota").value,
+        });
+        if (l) { cerrarDrawer(); render(); toast(`${l.id} creado con ${l.items.length} cargos por ${money(l.monto)}.`, "ok"); }
+      };
+    },
+  });
+}
+
+function drawerLote(id) {
+  const l = lotePorId(id);
+  if (!l) return toast("forbidden: el lote no pertenece a esta cartera.", "err");
+  const con = l.conciliacion;
+  const siguientes = TRANSICIONES_LOTE[l.estado] || [];
+
+  abrirDrawer({
+    titulo: `Lote ${l.id}`, sub: `${CRITERIOS_LOTE[l.criterio].label} · ${l.items.length} cargos`, ico: "receipt_long", ancho: 760,
+    cuerpo: `
+      <div class="note ${l.estado === "SETTLED" ? "n-ok" : l.estado === "REJECTED" ? "n-err" : "n-info"}">
+        <span class="msi">info</span>
+        <div><b>${ESTADOS_LOTE[l.estado].label}.</b> ${ESTADOS_LOTE[l.estado].d}
+        ${siguientes.length ? `Desde acá puede pasar a ${siguientes.map((x) => ESTADOS_LOTE[x].label.toLowerCase()).join(" o ")}.`
+          : "Es un estado final."}</div></div>
+
+      <div class="card" style="margin:14px 0">
+        <div class="kv"><span>Criterio</span><b>${CRITERIOS_LOTE[l.criterio].label}${l.valor ? ` · ${esc(l.valor)}` : ""}</b></div>
+        ${l.nota ? `<div class="kv"><span>Nota</span><b>${esc(l.nota)}</b></div>` : ""}
+        <div class="kv"><span>Presentado</span><b>${money(l.monto)} en ${l.items.length} cargos</b></div>
+        <div class="kv"><span>Acreditado</span><b>${money(l.acreditado)}</b></div>
+        <div class="kv"><span>Rechazados</span><b>${l.rechazado}</b></div>
+        <div class="kv"><span>Creado</span><b>${fecha(l.creadoEl)} por ${esc(l.creadoPor)}</b></div>
+        ${l.cerradoEl ? `<div class="kv"><span>Cerrado</span><b>${fecha(l.cerradoEl)}</b></div>` : ""}
+        ${l.presentadoEl ? `<div class="kv"><span>Presentado el</span><b>${fecha(l.presentadoEl)}</b></div>` : ""}
+        ${l.retornoEl ? `<div class="kv"><span>Retorno recibido</span><b>${fecha(l.retornoEl)}</b></div>` : ""}
+        ${l.reintentoDe ? `<div class="kv"><span>Reintenta a</span><b class="mono">${esc(l.reintentoDe)}</b></div>` : ""}
+        ${l.reintentadoEn ? `<div class="kv"><span>Reintentado en</span><b class="mono">${esc(l.reintentadoEn)}</b></div>` : ""}
+      </div>
+
+      ${l.archivo ? `
+      <div class="sech"><div><h3 style="font-size:13px">Archivo de presentación</h3>
+        <p>Formato canónico, agnóstico del adquirente.</p></div>
+        <button class="btn bo" id="bajarArchivo"><span class="msi">download</span>${esc(l.archivo.nombre)}</button></div>
+      <div class="copybox mono" style="font-size:11px;white-space:pre;overflow:auto;max-height:160px">${esc(l.archivo.contenido.split("\n").slice(0, 8).join("\n"))}${l.archivo.filas > 7 ? "\n…" : ""}</div>` : ""}
+
+      ${con ? `
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Conciliación</h3>
+        <p>Cuadre entre lo presentado y lo retornado.</p></div>
+        <span class="badge ${con.cuadra ? "b-paid" : "b-overdue"}">${con.cuadra ? "Cuadra" : "No cuadra"}</span></div>
+      <div class="card">
+        <div class="kv"><span>Presentado</span><b>${money(con.presentado)}</b></div>
+        <div class="kv"><span>Acreditado</span><b>${money(con.acreditado)}</b></div>
+        <div class="kv"><span>Rechazado</span><b>${money(con.rechazado)}</b></div>
+        <div class="kv"><span>Sin respuesta</span><b>${money(con.sinResponder)}</b></div>
+        <div class="kv"><span>Diferencia</span>
+          <b style="${con.diferencia === 0 ? "" : "color:var(--error)"}">${money(con.diferencia)}</b></div>
+      </div>
+      ${con.tipos.length ? `<div class="card" style="margin-top:10px">
+        ${con.tipos.map((t) => `<div class="kv"><span><b class="mono">${t.tipo}</b><br>
+          <span style="font-size:11px;color:var(--osv)">${t.d}</span></span>
+          <b>${t.cuantos != null ? t.cuantos : money(t.monto)}</b></div>`).join("")}</div>` : ""}` : ""}
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Cargos del lote</h3></div></div>
+      <div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Referencia</th>
+          <th class="num">Monto</th><th>Resultado</th><th>Motivo</th></tr></thead>
+        <tbody>${l.items.map((it) => `<tr>
+          <td class="mono" style="font-size:12px">${esc(it.cargoId)}</td>
+          <td class="strong">${esc(it.suscriptor)}</td>
+          <td class="mono" style="font-size:12px">${esc(it.periodo)}</td>
+          <td class="mono" style="font-size:11px">${esc(it.referencia)}</td>
+          <td class="num">${money(it.monto)}</td>
+          <td>${it.resultado
+            ? `<span class="badge ${it.resultado === "APPROVED" ? "b-paid" : "b-arrears"}">${it.resultado === "APPROVED" ? "Acreditado" : "Rechazado"}</span>`
+            : `<span style="color:var(--osv)">sin respuesta</span>`}</td>
+          <td style="font-size:12px">${it.motivo ? esc(MOTIVOS_RECHAZO[it.motivo]) : "—"}</td>
+        </tr>`).join("")}</tbody></table></div></div>
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Historial del lote</h3></div></div>
+      <div class="card">${l.historial.map((h) => `<div class="kv">
+        <span><span class="badge ${ESTADOS_LOTE[h.estado].cls}">${ESTADOS_LOTE[h.estado].label}</span>
+        ${h.extra ? `<span style="font-size:11px;color:var(--osv)"> · ${esc(h.extra)}</span>` : ""}</span>
+        <b style="font-size:12px">${h.cuando.toLocaleString("es-PE")} · ${esc(h.quien)}</b></div>`).join("")}</div>`,
+    pie: `
+      ${l.estado === "OPEN" ? `<button class="btn bp" data-w="lote" id="loCerrar">Cerrar el lote</button>` : ""}
+      ${l.estado === "CLOSED" ? `<button class="btn bp" data-w="lote" id="loPresentar">Presentar al adquirente</button>` : ""}
+      ${(l.estado === "PRESENTED" || l.estado === "PARTIALLY_SETTLED")
+        ? `<button class="btn bp" data-w="lote" id="loRetorno">Ingerir retorno</button>` : ""}
+      ${(l.estado === "PARTIALLY_SETTLED" || l.estado === "REJECTED") && !l.reintentadoEn
+        ? `<button class="btn bp" data-w="lote" id="loReintentar">Reintentar los rechazados</button>` : ""}
+      ${puedeTransicionar(l.estado, "CANCELLED") ? `<button class="btn bo" data-w="lote" id="loAnular">Anular</button>` : ""}
+      <button class="btn bo" data-cerrar>Cerrar</button>`,
+    luego: () => {
+      const bajar = document.getElementById("bajarArchivo");
+      if (bajar) bajar.onclick = () => descargar(l.archivo.nombre, l.archivo.contenido);
+
+      const cerrar = document.getElementById("loCerrar");
+      if (cerrar) cerrar.onclick = () => { if (cerrarLote(l.id)) { cerrarDrawer(); render(); drawerLote(l.id); } };
+
+      const presentar = document.getElementById("loPresentar");
+      if (presentar) presentar.onclick = () => {
+        const a = presentarLote(l.id);
+        if (a) { cerrarDrawer(); render(); toast(`${l.id} presentado. ${a.filas} filas en ${a.nombre}.`, "ok"); drawerLote(l.id); }
+      };
+
+      const retorno = document.getElementById("loRetorno");
+      if (retorno) retorno.onclick = () => { cerrarDrawer(); drawerRetorno(l.id); };
+
+      const reint = document.getElementById("loReintentar");
+      if (reint) reint.onclick = () => {
+        const n = reintentarLote(l.id);
+        if (n) { cerrarDrawer(); render(); toast(`${n.id} reintenta ${l.id} con ${n.items.length} cargos.`, "ok"); drawerLote(n.id); }
+      };
+
+      const anular = document.getElementById("loAnular");
+      if (anular) anular.onclick = () => { cerrarDrawer(); drawerAnularLote(l.id); };
+    },
+  });
+}
+
+function drawerAnularLote(id) {
+  const l = lotePorId(id);
+  abrirDrawer({
+    titulo: "Anular el lote", sub: `${l.id} · ${l.items.length} cargos por ${money(l.monto)}`, ico: "cancel", ancho: 560,
+    cuerpo: `
+      <div class="note n-warn"><span class="msi">warning</span>
+        <div>Anular no borra nada: los ${l.items.length} cargos del lote <b>vuelven a quedar libres</b>
+        y se pueden volver a lotear. El lote queda en el historial con su motivo.</div></div>
+      ${S.rol !== "ADMIN" ? `<div class="note n-err" style="margin-top:12px"><span class="msi">block</span>
+        <div>Anular un lote requiere el grupo <span class="mono">collections-admin</span>.</div></div>` : ""}
+      <label class="fl" style="margin-top:14px">Motivo</label>
+      <input id="anMotivo" placeholder="Por qué se anula este lote">
+      <p class="hint">El motivo es obligatorio y queda en la bitácora.</p>`,
+    pie: `<button class="btn bo" data-cerrar>Volver</button>
+          <button class="btn bp" id="anOk">Anular</button>`,
+    luego: () => {
+      document.getElementById("anOk").onclick = () => {
+        if (anularLote(id, document.getElementById("anMotivo").value)) {
+          cerrarDrawer(); render(); toast(`${id} anulado. Sus cargos volvieron a quedar libres.`, "ok");
+        }
+      };
+    },
+  });
+}
+
+function drawerRetorno(id) {
+  const l = lotePorId(id);
+  abrirDrawer({
+    titulo: "Retorno del adquirente", sub: `${l.id} · ${l.items.length} cargos`, ico: "sync_alt", ancho: 720,
+    cuerpo: `
+      <div class="note n-warn"><span class="msi">info</span>
+        <div><b>No hay adquirente integrado.</b> Acá se pega el archivo de retorno en el formato
+        canónico, o se genera uno simulado para recorrer el camino. El formato es
+        <span class="mono">${CABECERA_RETORNO.join(",")}</span>, con resultado
+        <span class="mono">APPROVED</span> o <span class="mono">REJECTED</span>.</div></div>
+
+      <div class="chips" style="margin:14px 0">
+        <button class="chip" data-sim-ret="TODO_APROBADO">Simular todo aprobado</button>
+        <button class="chip" data-sim-ret="PARCIAL">Simular rechazo parcial</button>
+        <button class="chip" data-sim-ret="TODO_RECHAZADO">Simular todo rechazado</button>
+      </div>
+
+      <label class="fl">Archivo de retorno</label>
+      <textarea id="retTexto" rows="10" class="mono" style="font-size:11px;width:100%"
+        placeholder="${CABECERA_RETORNO.join(",")}"></textarea>
+      <p class="hint">Las filas que no pertenezcan a este lote se informan como
+        <span class="mono">AJENO_AL_LOTE</span> y no se aplican. Una referencia ya acreditada se frena
+        con <span class="mono">duplicate_payment</span>.</p>
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Motivos canónicos de rechazo</h3>
+        <p>Mismo vocabulario que usa el resto del ecosistema.</p></div></div>
+      <div class="card">${Object.entries(MOTIVOS_RECHAZO).map(([k, v]) =>
+        `<div class="kv"><span class="mono">${k}</span><b style="font-size:12px">${v}</b></div>`).join("")}</div>`,
+    pie: `<button class="btn bo" data-cerrar>Cancelar</button>
+          <button class="btn bp" id="retOk">Ingerir el retorno</button>`,
+    luego: () => {
+      const area = document.getElementById("retTexto");
+      document.querySelectorAll("[data-sim-ret]").forEach((b) => b.onclick = () => {
+        area.value = simularRetorno(l, b.dataset.simRet);
+        toast("Retorno simulado generado. Revisalo antes de ingerirlo.", "info");
+      });
+      document.getElementById("retOk").onclick = () => {
+        const r = ingerirRetorno(id, area.value);
+        if (r) {
+          cerrarDrawer(); render();
+          toast(`${r.aplicados} acreditados por ${money(r.acreditado)}, ${r.rechazados} rechazados${
+            r.ajenos.length ? `, ${r.ajenos.length} ajenos al lote` : ""}${
+            r.duplicados.length ? `, ${r.duplicados.length} duplicados frenados` : ""}.`, "ok");
+          drawerLote(id);
+        }
+      };
     },
   });
 }
