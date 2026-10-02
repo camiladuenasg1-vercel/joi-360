@@ -279,6 +279,7 @@ const S = {
   vigenciasProgramadas: [],
   historialReglas: [],
   bitacora: [],
+  corridas: [],
   importJob: null,
   filtros: { q: "", plan: "", estado: "", tramo: "" },
 };
@@ -689,6 +690,8 @@ function seed() {
       S.cargos.push(cargo);
     });
   });
+
+  inicializarCiclos();
 }
 
 const total = (c) => r2(c.base + c.mora);
@@ -1049,6 +1052,7 @@ const TABS_CARTERA = [
   { k: "planes",       l: "Planes",       i: "workspace_premium" },
   { k: "suscriptores", l: "Suscriptores", i: "groups" },
   { k: "carga",        l: "Cargar cartera", i: "upload_file" },
+  { k: "renovaciones", l: "Renovaciones", i: "event_repeat" },
   { k: "cobros",       l: "Cobros",       i: "receipt_long" },
   { k: "morosidad",    l: "Morosidad",    i: "running_with_errors" },
   { k: "prorateo",     l: "Prorateo",     i: "calculate" },
@@ -1143,7 +1147,8 @@ function bloquear(selectores, motivo) {
 
 function aplicarSoloLectura() {
   if (S.rol === "LECTURA") {
-    bloquear(["#view .btn.bp", "#view .mini", "#view .sw", "#view #drop", `#view [data-w="rule"]`, `#view [data-w="world"]`],
+    bloquear(["#view .btn.bp", "#view .mini", "#view .sw", "#view #drop", `#view [data-w="rule"]`,
+      `#view [data-w="world"]`, `#view [data-w="renov"]`],
       "Tu rol es de solo lectura. Red Pontis puede cambiarlo.");
     return;
   }
@@ -1161,6 +1166,7 @@ const VISTAS = {
   planes:       [vPlanes, wPlanes],
   suscriptores: [vSuscriptores, wSuscriptores],
   carga:        [vCarga, wCarga],
+  renovaciones: [vRenovaciones, wRenovaciones],
   cobros:       [vCobros, wCobros],
   morosidad:    [vMorosidad, wMorosidad],
   prorateo:     [vProrateo, wProrateo],
@@ -1555,10 +1561,10 @@ function drawerFicha(id) {
       <div class="kv"><span class="k">Correo</span><span class="v">${esc(s.correo)}</span></div>
       <div class="kv"><span class="k">Teléfono</span><span class="v">${s.telefono ? esc(s.telefono) : "—"}</span></div>
       <div class="kv"><span class="k">Plan</span><span class="v">${esc(p.nombre)} · ${money(s.monto)}</span></div>
-      <div class="kv"><span class="k">Frecuencia</span><span class="v">${p.periodicidad === "ANUAL" ? "Anual" : "Mensual"}</span></div>
       <div class="kv"><span class="k">Alta</span><span class="v">${fecha(s.altaEl)}</span></div>
-      <div class="kv"><span class="k">Próximo cobro</span><span class="v">${fecha(proximoCobro(s))}</span></div>
       <div class="kv"><span class="k">Saldo a favor</span><span class="v">${s.saldoFavor > 0 ? money(s.saldoFavor) : "—"}</span></div>
+
+      <div style="margin-top:22px">${bloqueCicloDeLaFicha(s)}</div>
 
       <div class="sech" style="margin-top:22px"><h3 style="font-size:13px">Historial de cargos</h3></div>
       <div class="tl">${cs.map((c) => `<div class="tli">
@@ -1585,6 +1591,13 @@ function drawerFicha(id) {
     pie: `<button class="btn bo" data-cerrar>Cerrar</button>`,
     luego: () => {
       document.getElementById("fProrateo").onclick = () => { cerrarDrawer(); S.tab = "prorateo"; S.prorateoSus = id; render(); };
+      document.querySelectorAll("[data-autorenew]").forEach((b) => b.onclick = () => {
+        const sx = sus(b.dataset.autorenew);
+        if (cambiarAutoRenovacion(sx.id, !sx.autoRenew)) { cerrarDrawer(); render(); }
+      });
+      document.querySelectorAll("[data-vigencia]").forEach((b) => b.onclick = () => {
+        cerrarDrawer(); drawerFinDeVigencia(b.dataset.vigencia);
+      });
       const r = document.getElementById("fRecordar");
       if (r) r.onclick = () => {
         const c = cs.find((x) => saldo(x) > 0 && x.estado !== "CANCELLED");
@@ -3966,16 +3979,601 @@ function exportar(nombre, filas) {
   toast(`${filas.length} filas exportadas.`, "info");
 }
 
-seed();
-pintarLogin();
-document.getElementById("btnSalir").onclick = salir;
-document.getElementById("btnExport").onclick = () => {
-  const mapa = { suscriptores: "expSus", cobros: "expCob", morosidad: "expMor", comercios: "expComercios" };
-  const b = document.getElementById(mapa[S.tab]);
-  if (b) return b.click();
-  exportar("cartera", S.suscriptores.map((s) => ({
-    documento: s.documento, nombre: s.nombre, correo: s.correo, telefono: s.telefono,
-    plan: plan(s.planId).nombre, monto: s.monto, proximo_cobro: proximoCobro(s),
-    deuda: deudaDe(s.id), mora: moraDe(s.id), antiguedad_dias: atrasoMax(s.id),
-  })));
+function arrancar() {
+  seed();
+  pintarLogin();
+  document.getElementById("btnSalir").onclick = salir;
+  document.getElementById("btnExport").onclick = () => {
+    const mapa = {
+      suscriptores: "expSus", cobros: "expCob", morosidad: "expMor",
+      comercios: "expComercios", renovaciones: "expProy",
+    };
+    const b = document.getElementById(mapa[S.tab]);
+    if (b) return b.click();
+    exportar("cartera", S.suscriptores.map((s) => ({
+      documento: s.documento, nombre: s.nombre, correo: s.correo, telefono: s.telefono,
+      plan: plan(s.planId).nombre, monto: s.monto, proximo_cobro: proximoCobro(s),
+      deuda: deudaDe(s.id), mora: moraDe(s.id), antiguedad_dias: atrasoMax(s.id),
+    })));
+  };
+}
+
+const MESES_PERIODICIDAD = { MENSUAL: 1, TRIMESTRAL: 3, SEMESTRAL: 6, ANUAL: 12 };
+
+const MOTIVOS_OMISION = {
+  ALREADY_ISSUED:          { label: "Ya emitido",                   cls: "b-paid",      d: "El cargo de ese período ya existe. La corrida es idempotente por suscripción y período." },
+  NOT_DUE_YET:             { label: "Todavía no toca",              cls: "b-pending",   d: "La renovación cae fuera de la ventana de anticipación de su regla." },
+  AUTO_RENEW_OFF:          { label: "Sin renovación automática",    cls: "b-cancelled", d: "Se dio de baja la renovación. Cierra el ciclo en curso y no se abre el siguiente." },
+  VALID_UNTIL_REACHED:     { label: "Fin de vigencia alcanzado",    cls: "b-cancelled", d: "La suscripción no renueva más allá de su fin de vigencia." },
+  SUBSCRIPTION_NOT_ACTIVE: { label: "Suscripción no activa",        cls: "b-arrears",   d: "Solo renueva una suscripción en estado ACTIVE." },
+  HELD_BY_DEBT:            { label: "Retenido por deuda",           cls: "b-arrears",   d: "Su regla manda retener o suspender cuando queda deuda abierta al renovar." },
+  POLICY_VIOLATION:        { label: "Excede la política del mundo", cls: "b-overdue",   d: "El monto del cargo pasa el tope que fijó el mundo." },
+  RULES_REVIEW_PENDING:    { label: "Revisión de reglas pendiente", cls: "b-overdue",   d: "La capacidad fue reactivada y falta que el mundo confirme la revisión de reglas." },
 };
+
+const ESTADOS_CORRIDA = {
+  RUNNING:     { label: "En curso",     cls: "b-pending" },
+  FINISHED:    { label: "Terminada",    cls: "b-paid" },
+  INTERRUPTED: { label: "Interrumpida", cls: "b-arrears" },
+};
+
+const TIPOS_CORRIDA = {
+  MANUAL:    { label: "Manual",     ico: "touch_app", d: "La disparó una persona desde el panel." },
+  SCHEDULED: { label: "Programada", ico: "schedule",  d: "La dispararía el planificador. En el prototipo se simula: HOY está congelado." },
+};
+
+const diasDelMes = (anio, mes) => new Date(anio, mes + 1, 0).getDate();
+const pasoDe = (periodicidad) => MESES_PERIODICIDAD[periodicidad] || 1;
+
+function fechaDeCiclo(anioBase, mesBase, k, pasoMeses, anclaje) {
+  const total = mesBase + k * pasoMeses;
+  const anio = anioBase + Math.floor(total / 12);
+  const mes = ((total % 12) + 12) % 12;
+  return new Date(anio, mes, Math.min(anclaje, diasDelMes(anio, mes)));
+}
+
+function anclajeDe(s) {
+  if (Number.isInteger(s.anclaje)) return s.anclaje;
+  const corte = reglaEfectiva(s.planId).diaCorte;
+  return corte.modo === "RELATIVE_TO_SIGNUP" ? new Date(s.altaEl + "T00:00:00").getDate() : corte.dia;
+}
+
+const etiquetaPeriodo = (venc) => `${venc.getFullYear()}-${String(venc.getMonth() + 1).padStart(2, "0")}`;
+
+/// El cargo que vence en D cubre [D, siguiente D menos un día]. Dos ciclos consecutivos no se
+/// solapan ni dejan días sin cubrir. El anclaje no se degrada porque cada vencimiento se calcula
+/// desde el par (año, mes) nominal, no desde la fecha ya recortada por un mes corto.
+function cicloDesde(venc, periodicidad, anclaje) {
+  const sig = fechaDeCiclo(venc.getFullYear(), venc.getMonth(), 1, pasoDe(periodicidad), anclaje);
+  return { vence: iso(venc), cicloIni: iso(venc), cicloFin: iso(addDia(sig, -1)), periodo: etiquetaPeriodo(venc) };
+}
+
+function cicloSiguienteDe(s) {
+  const anclaje = anclajeDe(s);
+  const base = new Date(s.vence + "T00:00:00");
+  const sig = fechaDeCiclo(base.getFullYear(), base.getMonth(), 1, pasoDe(s.periodicidad), anclaje);
+  return cicloDesde(sig, s.periodicidad, anclaje);
+}
+
+/// Variaciones sembradas para que la corrida tenga los ocho motivos y los bordes de calendario a
+/// la vista. ciclo0 es el vencimiento del ciclo vigente; de ahí sale la próxima renovación.
+const CICLO_SEMBRADO = {
+  "s-10": { anclaje: 5,  ciclo0: "2025-10-05" },
+  "s-19": { anclaje: 5,  ciclo0: "2025-10-05" },
+  "s-7":  { anclaje: 30, ciclo0: "2026-08-30" },
+  "s-15": { anclaje: 30, ciclo0: "2026-08-30" },
+  "s-6":  { anclaje: 30, ciclo0: "2026-08-30", autoRenew: false },
+  "s-11": { anclaje: 31, ciclo0: "2026-08-31" },
+  "s-20": { anclaje: 30, ciclo0: "2026-08-30", monto: 3200 },
+  "s-22": { anclaje: 28, ciclo0: "2026-08-28", validUntil: "2026-09-27" },
+};
+
+function inicializarCiclos() {
+  S.suscriptores.forEach((s) => {
+    const v = CICLO_SEMBRADO[s.id] || {};
+    s.anclaje = Number.isInteger(v.anclaje) ? v.anclaje : anclajeDe(s);
+    if (v.monto != null) s.monto = v.monto;
+    s.autoRenew = v.autoRenew != null ? v.autoRenew : plan(s.planId).autoRenewPorDefecto !== false;
+    s.validUntil = v.validUntil || null;
+
+    const paso = pasoDe(s.periodicidad);
+    const propios = cargosDe(s.id).filter((c) => c.estado !== "CANCELLED")
+      .sort((a, b) => (a.vence < b.vence ? -1 : 1));
+    const cero = v.ciclo0
+      ? new Date(v.ciclo0 + "T00:00:00")
+      : fechaDeCiclo(HOY.getFullYear(), HOY.getMonth(), 0, paso, s.anclaje);
+
+    propios.forEach((c, i) => {
+      const venc = fechaDeCiclo(cero.getFullYear(), cero.getMonth(), -(propios.length - 1 - i), paso, s.anclaje);
+      const ciclo = cicloDesde(venc, s.periodicidad, s.anclaje);
+      const snapshot = c.rulesSnapshot || reglaEfectiva(c.planId);
+      c.vence = ciclo.vence;
+      c.cicloIni = ciclo.cicloIni;
+      c.cicloFin = ciclo.cicloFin;
+      c.periodo = ciclo.periodo;
+      c.emitido = iso(addDia(venc, -Number(snapshot.anticipacion.dias || 0)));
+      if (v.monto != null) c.base = v.monto;
+      if (c.estado === "PAID") c.pagado = c.base;
+      else if (c.estado === "PARTIALLY_PAID") c.pagado = r2(c.base * 0.4);
+      c.mora = moraCalculada(c);
+      sellarComision(c);
+    });
+
+    const vigente = cicloDesde(cero, s.periodicidad, s.anclaje);
+    s.vence = vigente.vence;
+    s.cicloIni = vigente.cicloIni;
+    s.cicloFin = vigente.cicloFin;
+    s.proximaRenovacion = cicloSiguienteDe(s).vence;
+  });
+}
+
+function puedeRenovar() { return S.rol === "ADMIN" || S.rol === "OPERADOR"; }
+function motivoRolRenovacion() {
+  return "Ejecutar renovaciones requiere el grupo collections-admin o collections-operator.";
+}
+
+function cargoDePeriodo(susId, periodo) {
+  return S.cargos.find((c) => c.suscriptorId === susId && c.periodo === periodo && c.estado !== "CANCELLED") || null;
+}
+
+function aperturaDeEmision(venc, efectiva) {
+  return addDia(new Date(venc + "T00:00:00"), -Number(efectiva.anticipacion.dias || 0));
+}
+
+/// Única función de dominio que decide si una suscripción renueva. La corrida programada y la
+/// manual pasan las dos por acá, así que no pueden divergir.
+/// Emitir no mueve el ciclo vigente: el ciclo avanza con el calendario, no con la emisión. Por eso
+/// la clave de idempotencia (suscripción, período) sigue apuntando al mismo período en la corrida
+/// siguiente, y el segundo intento sale ALREADY_ISSUED en vez de colarse como ciclo nuevo.
+function evaluarRenovacion(s) {
+  const ciclo = cicloSiguienteDe(s);
+  const efectiva = reglaEfectiva(s.planId);
+  const base = {
+    susId: s.id, nombre: s.nombre, planId: s.planId, periodicidad: s.periodicidad,
+    anclaje: s.anclaje, ciclo, monto: s.monto,
+  };
+  const bloqueo = emisionBloqueada();
+  if (bloqueo) return { ...base, emite: false, motivo: "RULES_REVIEW_PENDING", detalle: bloqueo };
+  if (s.estado !== "ACTIVE")
+    return { ...base, emite: false, motivo: "SUBSCRIPTION_NOT_ACTIVE", detalle: `La suscripción está en ${s.estado}.` };
+  if (cargoDePeriodo(s.id, ciclo.periodo))
+    return { ...base, emite: false, motivo: "ALREADY_ISSUED", detalle: `El cargo del período ${ciclo.periodo} ya existe.` };
+  if (!s.autoRenew)
+    return { ...base, emite: false, motivo: "AUTO_RENEW_OFF", detalle: `Tiene servicio hasta el ${fecha(s.cicloFin)} y no se abre otro ciclo.` };
+  if (s.validUntil && ciclo.vence > s.validUntil)
+    return { ...base, emite: false, motivo: "VALID_UNTIL_REACHED", detalle: `Su fin de vigencia es el ${fecha(s.validUntil)}.` };
+  const abre = aperturaDeEmision(ciclo.vence, efectiva);
+  if (abre > HOY)
+    return { ...base, emite: false, motivo: "NOT_DUE_YET", detalle: `Vence el ${fecha(ciclo.vence)} y se emite desde el ${fecha(abre)}.` };
+  const deuda = deudaDe(s.id);
+  const politica = efectiva.renovacionConDeuda.politica;
+  if (deuda > 0 && politica !== "ISSUE_ANYWAY")
+    return {
+      ...base, emite: false, motivo: "HELD_BY_DEBT", deuda, politica,
+      detalle: `Debe ${money(deuda)} y su regla dice ${POLITICAS_RENOVACION[politica]}.`,
+    };
+  const pol = politicaAplicable();
+  if (pol && pol.topeMontoCargo != null && Number(s.monto) > Number(pol.topeMontoCargo))
+    return {
+      ...base, emite: false, motivo: "POLICY_VIOLATION", codigo: "policy_limit_exceeded",
+      detalle: `${money(s.monto)} pasa el tope de ${money(pol.topeMontoCargo)} por cargo que fijó ${S.mundo.nombre}.`,
+    };
+  return { ...base, emite: true, deuda, politica };
+}
+
+function simularCorrida() { return S.suscriptores.map(evaluarRenovacion); }
+
+function resumenSimulacion(sim) {
+  const porMotivo = {};
+  sim.filter((r) => !r.emite).forEach((r) => { porMotivo[r.motivo] = (porMotivo[r.motivo] || 0) + 1; });
+  const emite = sim.filter((r) => r.emite);
+  return {
+    emite: emite.length,
+    monto: r2(emite.reduce((a, r) => a + Number(r.monto), 0)),
+    omite: sim.length - emite.length,
+    porMotivo,
+  };
+}
+
+function nuevoIdCargo() {
+  const usados = S.cargos.map((c) => Number(String(c.id).replace("C-", "")) || 0);
+  return "C-" + String(Math.max(2600, ...usados) + 1);
+}
+
+function emitirRenovacion(r) {
+  const s = sus(r.susId);
+  const efectiva = reglaEfectiva(s.planId);
+  const cargo = {
+    id: nuevoIdCargo(), suscriptorId: s.id, planId: s.planId,
+    periodo: r.ciclo.periodo, cicloIni: r.ciclo.cicloIni, cicloFin: r.ciclo.cicloFin,
+    emitido: iso(HOY), vence: r.ciclo.vence,
+    base: s.monto, mora: 0, pagado: 0, estado: "PENDING",
+    medio: null, pagadoEl: null, intentos: 0, avisos: [], manual: false,
+    renovacion: true, rulesSnapshot: clonar(efectiva),
+  };
+  sellarComision(cargo);
+  S.cargos.push(cargo);
+  s.ultimoPeriodoEmitido = cargo.periodo;
+  return cargo;
+}
+
+function ejecutarCorrida(tipo) {
+  if (!puedeRenovar()) { toast(motivoRolRenovacion(), "err"); return null; }
+  const sim = simularCorrida();
+  const corrida = {
+    id: "run-" + String(S.corridas.length + 1).padStart(3, "0") + "-" + iso(HOY).replace(/-/g, ""),
+    tipo: TIPOS_CORRIDA[tipo] ? tipo : "MANUAL",
+    estado: "RUNNING", cuando: new Date(), quien: ACTOR,
+    emitidos: [], omitidos: [], monto: 0,
+    bloqueo: emisionBloqueada(),
+  };
+  S.corridas.unshift(corrida);
+
+  sim.forEach((r) => {
+    if (r.emite) {
+      const cargo = emitirRenovacion(r);
+      corrida.emitidos.push({
+        susId: r.susId, nombre: r.nombre, cargoId: cargo.id, periodo: cargo.periodo,
+        monto: cargo.base, vence: cargo.vence, cicloIni: cargo.cicloIni, cicloFin: cargo.cicloFin,
+      });
+      corrida.monto = r2(corrida.monto + Number(cargo.base));
+      return;
+    }
+    corrida.omitidos.push({ susId: r.susId, nombre: r.nombre, motivo: r.motivo, detalle: r.detalle });
+    if (r.motivo === "HELD_BY_DEBT" && r.politica === "SUSPEND") {
+      const s = sus(r.susId);
+      s.estado = "SUSPENDED";
+      bita("subscription", "SUSPENDER", `${s.nombre} (${s.id}) · su regla manda SUSPEND al renovar con deuda · corrida ${corrida.id}`);
+    }
+  });
+
+  corrida.estado = "FINISHED";
+  bita("renovaciones", "CORRIDA",
+    `${corrida.id} · ${TIPOS_CORRIDA[corrida.tipo].label} · emitidos ${corrida.emitidos.length} por ${money(corrida.monto)} · omitidos ${corrida.omitidos.length} · actor ${ACTOR}`);
+  return corrida;
+}
+
+function cambiarAutoRenovacion(susId, activar) {
+  if (!puedeRenovar()) { toast(motivoRolRenovacion(), "err"); return false; }
+  const s = sus(susId);
+  if (!s) { toast(`forbidden: la suscripción ${susId} no pertenece a esta cartera.`, "err"); return false; }
+  s.autoRenew = !!activar;
+  s.proximaRenovacion = cicloSiguienteDe(s).vence;
+  bita("subscription", activar ? "AUTORENEW_ON" : "AUTORENEW_OFF",
+    `${s.nombre} (${s.id}) · servicio hasta ${s.cicloFin} · actor ${ACTOR}`);
+  toast(activar
+    ? `${s.nombre} vuelve a renovar automáticamente. Próxima renovación el ${fecha(s.proximaRenovacion)}.`
+    : `${s.nombre} no renueva más. La suscripción sigue activa hasta el ${fecha(s.cicloFin)} y no se abre otro ciclo.`, "ok");
+  return true;
+}
+
+function fijarFinDeVigencia(susId, hasta) {
+  if (!puedeRenovar()) { toast(motivoRolRenovacion(), "err"); return false; }
+  const s = sus(susId);
+  if (!s) { toast(`forbidden: la suscripción ${susId} no pertenece a esta cartera.`, "err"); return false; }
+  if (hasta == null || hasta === "") {
+    s.validUntil = null;
+    bita("subscription", "VALID_UNTIL_OFF", `${s.nombre} (${s.id}) · sin fin de vigencia · actor ${ACTOR}`);
+    toast(`${s.nombre} queda sin fin de vigencia: renueva mientras tenga la renovación automática activa.`, "ok");
+    return true;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hasta) || Number.isNaN(new Date(hasta + "T00:00:00").getTime())) {
+    toast("invalid_valid_until: la fecha tiene que venir como AAAA-MM-DD.", "err");
+    return false;
+  }
+  if (hasta < s.cicloFin) {
+    toast(`invalid_valid_until: el fin de vigencia no puede ser anterior al fin del ciclo vigente, que es el ${fecha(s.cicloFin)}.`, "err");
+    return false;
+  }
+  s.validUntil = hasta;
+  bita("subscription", "VALID_UNTIL_SET", `${s.nombre} (${s.id}) · hasta ${hasta} · actor ${ACTOR}`);
+  toast(`${s.nombre} deja de renovar después del ${fecha(hasta)}. Sigue activa hasta cerrar su último ciclo.`, "ok");
+  return true;
+}
+
+function renovacionesEnVentana(ventanaDias) {
+  const hasta = addDia(HOY, ventanaDias);
+  const filas = S.suscriptores
+    .filter((s) => s.estado === "ACTIVE" && s.autoRenew)
+    .filter((s) => !s.validUntil || s.proximaRenovacion <= s.validUntil)
+    .filter((s) => {
+      const d = new Date(s.proximaRenovacion + "T00:00:00");
+      return d >= HOY && d <= hasta;
+    });
+  return { filas, monto: r2(filas.reduce((a, s) => a + Number(s.monto), 0)) };
+}
+
+function bloqueCicloDeLaFicha(s) {
+  const sim = evaluarRenovacion(s);
+  const efectiva = reglaEfectiva(s.planId);
+  const abre = aperturaDeEmision(sim.ciclo.vence, efectiva);
+  return `
+  <div class="sech"><div><h3 style="font-size:13px">Ciclo y renovación</h3>
+    <p>La columna de base se llama <span class="mono">periodicity</span>. El día de anclaje se conserva
+    entre ciclos aunque un mes corto obligue a vencer antes.</p></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="kv"><span>Periodicidad</span><b>${esc(s.periodicidad)}</b></div>
+    <div class="kv"><span>Día de anclaje</span><b>${s.anclaje}</b></div>
+    <div class="kv"><span>Ciclo vigente</span><b>${fecha(s.cicloIni)} → ${fecha(s.cicloFin)}</b></div>
+    <div class="kv"><span>Próxima renovación</span><b>${fecha(s.proximaRenovacion)}</b></div>
+    <div class="kv"><span>Se emite desde</span><b>${fecha(abre)}</b></div>
+    <div class="kv"><span>Renovación automática</span>
+      <b>${s.autoRenew ? "Activa" : "De baja"}</b></div>
+    <div class="kv"><span>Fin de vigencia</span>
+      <b>${s.validUntil ? fecha(s.validUntil) : "sin fijar"}</b></div>
+    <div class="kv"><span>En la próxima corrida</span>
+      <b>${sim.emite
+        ? `<span class="badge b-paid">Emite ${money(sim.monto)}</span>`
+        : `<span class="badge ${MOTIVOS_OMISION[sim.motivo].cls}">${MOTIVOS_OMISION[sim.motivo].label}</span>`}</b></div>
+  </div>
+  ${sim.emite ? "" : `<p class="hint" style="margin:-8px 0 14px">${esc(sim.detalle)}</p>`}
+  <div class="chips" style="margin-bottom:16px">
+    <button class="mini" data-w="renov" data-autorenew="${s.id}">
+      <span class="msi">${s.autoRenew ? "autorenew_off" : "autorenew"}</span>
+      ${s.autoRenew ? "Dar de baja la renovación" : "Reactivar la renovación"}</button>
+    <button class="mini" data-w="renov" data-vigencia="${s.id}">
+      <span class="msi">event_busy</span>${s.validUntil ? "Cambiar fin de vigencia" : "Fijar fin de vigencia"}</button>
+  </div>`;
+}
+
+function drawerFinDeVigencia(susId) {
+  const s = sus(susId);
+  abrirDrawer({
+    titulo: "Fin de vigencia", sub: `${s.nombre} · ${s.id}`, ico: "event_busy", ancho: 560,
+    cuerpo: `
+      <div class="note n-info"><span class="msi">info</span>
+        <div>La suscripción sigue <b>ACTIVE</b> hasta cerrar su último ciclo y deja de renovar desde
+        esa fecha. No es lo mismo que darla de baja hoy.</div></div>
+      <div class="card" style="margin:14px 0">
+        <div class="kv"><span>Ciclo vigente</span><b>${fecha(s.cicloIni)} → ${fecha(s.cicloFin)}</b></div>
+        <div class="kv"><span>Próxima renovación</span><b>${fecha(s.proximaRenovacion)}</b></div>
+        <div class="kv"><span>Fin de vigencia actual</span><b>${s.validUntil ? fecha(s.validUntil) : "sin fijar"}</b></div>
+      </div>
+      <label class="fl">Fin de vigencia</label>
+      <input id="fvFecha" type="date" value="${esc(s.validUntil || s.cicloFin)}">
+      <p class="hint">Una fecha anterior al ${fecha(s.cicloFin)} se rechaza con
+        <span class="mono">invalid_valid_until</span>.</p>`,
+    pie: `<button class="btn bo" id="fvQuitar">Quitar el fin de vigencia</button>
+          <button class="btn bp" id="fvOk">Guardar</button>`,
+    luego: () => {
+      document.getElementById("fvOk").onclick = () => {
+        if (fijarFinDeVigencia(susId, document.getElementById("fvFecha").value)) { cerrarDrawer(); render(); }
+      };
+      document.getElementById("fvQuitar").onclick = () => {
+        if (fijarFinDeVigencia(susId, "")) { cerrarDrawer(); render(); }
+      };
+    },
+  });
+}
+
+function vRenovaciones() {
+  const v30 = renovacionesEnVentana(30), v60 = renovacionesEnVentana(60), v90 = renovacionesEnVentana(90);
+  const sim = simularCorrida();
+  const res = resumenSimulacion(sim);
+  const porPeriodicidad = Object.keys(MESES_PERIODICIDAD).map((k) => ({
+    k, filas: S.suscriptores.filter((s) => s.periodicidad === k),
+  })).filter((g) => g.filas.length);
+
+  return `
+  ${notaEmisionBloqueada()}
+  <div class="kpis">
+    ${kpi("event_repeat", "#1F66B8", "#1F66B81a", String(v30.filas.length), "Renuevan en 30 días", money0(v30.monto))}
+    ${kpi("date_range", "#6B4FA3", "#6B4FA31a", String(v60.filas.length), "En 60 días", money0(v60.monto))}
+    ${kpi("calendar_month", "#0F5C52", "#0F5C521a", String(v90.filas.length), "En 90 días", money0(v90.monto))}
+    ${kpi("playlist_add_check", "#AB4F00", "#AB4F001a", String(res.emite), "Emitiría la corrida de hoy", money0(res.monto))}
+  </div>
+
+  <div class="sech"><div><h3>Corrida de renovación</h3>
+    <p>Abre el ciclo siguiente y emite su cargo. Es idempotente por suscripción y período: correrla
+    dos veces no duplica nada.</p></div>
+    <div class="rowflex">
+      <button class="btn bo" id="expProy"><span class="msi">download</span>Proyección</button>
+      <button class="btn bp" data-w="renov" id="correr"><span class="msi">play_arrow</span>Previsualizar y correr</button>
+    </div></div>
+
+  <div class="note n-info"><span class="msi">schedule</span>
+    <div>La corrida se dispara de dos formas, las dos sobre la misma función de dominio:
+    <b>programada</b> y <b>manual</b>. En este prototipo la programada se simula, porque
+    <span class="mono">HOY</span> está congelado en ${fecha(HOY)} y no hay planificador.
+    Quién la dispara en producción y con qué frecuencia es una decisión abierta del spec.</div></div>
+
+  <div class="card" style="margin:14px 0 18px">
+    <div class="kv"><span>Emitiría</span><b>${res.emite} cargos por ${money(res.monto)}</b></div>
+    <div class="kv"><span>Omitiría</span><b>${res.omite}</b></div>
+    ${Object.entries(res.porMotivo).sort((a, b) => b[1] - a[1]).map(([m, n]) =>
+      `<div class="kv"><span>${MOTIVOS_OMISION[m].label}</span>
+        <b><span class="badge ${MOTIVOS_OMISION[m].cls}">${n}</span></b></div>`).join("")}
+  </div>
+
+  ${porPeriodicidad.map((g) => `
+  <div class="sech"><div><h3 style="font-size:13px">${g.k}
+    <span class="pill">${g.filas.length}</span></h3>
+    <p>Un ciclo de ${MESES_PERIODICIDAD[g.k]} ${MESES_PERIODICIDAD[g.k] === 1 ? "mes" : "meses"}.</p></div></div>
+  <div class="tablewrap" style="margin-bottom:18px"><div class="tablescroll"><table>
+    <thead><tr><th>Suscriptor</th><th>Plan</th><th class="num">Monto</th><th>Anclaje</th>
+      <th>Ciclo vigente</th><th>Próxima renovación</th><th>Automática</th><th>Fin de vigencia</th>
+      <th>En la corrida</th><th></th></tr></thead>
+    <tbody>${g.filas.map((s) => {
+      const r = sim.find((x) => x.susId === s.id);
+      return `<tr>
+        <td><div class="strong">${esc(s.nombre)}</div>
+          <div style="font-size:11px;color:var(--osv)" class="mono">${esc(s.id)}</div></td>
+        <td>${esc(plan(s.planId).nombre)}</td>
+        <td class="num">${money(s.monto)}</td>
+        <td class="num">${s.anclaje}</td>
+        <td style="font-size:12px">${fecha(s.cicloIni)} → ${fecha(s.cicloFin)}</td>
+        <td style="font-size:12px">${fecha(s.proximaRenovacion)}</td>
+        <td><span class="badge ${s.autoRenew ? "b-paid" : "b-cancelled"}">${s.autoRenew ? "Sí" : "De baja"}</span></td>
+        <td style="font-size:12px">${s.validUntil ? fecha(s.validUntil) : `<span style="color:var(--osv)">—</span>`}</td>
+        <td>${r.emite
+          ? `<span class="badge b-paid">Emite</span>`
+          : `<span class="badge ${MOTIVOS_OMISION[r.motivo].cls}" title="${esc(r.detalle)}">${MOTIVOS_OMISION[r.motivo].label}</span>`}</td>
+        <td><button class="mini" data-ficha="${s.id}"><span class="msi">person</span>Ficha</button></td>
+      </tr>`;
+    }).join("")}</tbody></table></div></div>`).join("")}
+
+  <div class="sech"><div><h3>Historial de corridas</h3>
+    <p>Cada corrida guarda qué emitió, qué omitió y por qué.</p></div></div>
+  ${S.corridas.length === 0
+    ? `<div class="tablewrap"><div class="empty"><span class="msi">history_toggle_off</span>
+        <h4>Todavía no corriste ninguna renovación</h4>
+        <p>Previsualizá la corrida de hoy y confirmala para abrir los ciclos que correspondan.</p></div></div>`
+    : `<div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Corrida</th><th>Tipo</th><th>Estado</th><th class="num">Emitidos</th>
+          <th class="num">Monto</th><th class="num">Omitidos</th><th>Cuándo</th><th></th></tr></thead>
+        <tbody>${S.corridas.map((c) => `<tr>
+          <td class="mono" style="font-size:12px">${esc(c.id)}</td>
+          <td><span class="msi" style="font-size:15px;vertical-align:-3px">${TIPOS_CORRIDA[c.tipo].ico}</span>
+            ${TIPOS_CORRIDA[c.tipo].label}</td>
+          <td><span class="badge ${ESTADOS_CORRIDA[c.estado].cls}">${ESTADOS_CORRIDA[c.estado].label}</span></td>
+          <td class="num">${c.emitidos.length}</td>
+          <td class="num">${money(c.monto)}</td>
+          <td class="num">${c.omitidos.length}</td>
+          <td style="font-size:12px">${c.cuando.toLocaleString("es-PE")}</td>
+          <td><button class="mini" data-corrida="${c.id}"><span class="msi">visibility</span>Detalle</button></td>
+        </tr>`).join("")}</tbody></table></div></div>`}`;
+}
+
+function wRenovaciones() {
+  document.getElementById("correr").onclick = () => drawerCorrida();
+  document.getElementById("expProy").onclick = () => exportar("renovaciones-proyectadas",
+    simularCorrida().map((r) => ({
+      suscripcion: r.susId, suscriptor: r.nombre, plan: plan(r.planId).nombre,
+      periodicity: r.periodicidad, anclaje: r.anclaje, periodo: r.ciclo.periodo,
+      ciclo_ini: r.ciclo.cicloIni, ciclo_fin: r.ciclo.cicloFin, vence: r.ciclo.vence,
+      monto: r.monto, emite: r.emite ? "si" : "no", motivo: r.emite ? "" : r.motivo,
+      detalle: r.emite ? "" : r.detalle,
+    })));
+  document.querySelectorAll("[data-ficha]").forEach((b) => b.onclick = () => drawerFicha(b.dataset.ficha));
+  document.querySelectorAll("[data-corrida]").forEach((b) => b.onclick = () => drawerDetalleCorrida(b.dataset.corrida));
+}
+
+function drawerCorrida() {
+  if (!puedeRenovar()) return toast(motivoRolRenovacion(), "err");
+  const sim = simularCorrida();
+  const res = resumenSimulacion(sim);
+  const emite = sim.filter((r) => r.emite);
+  const omite = sim.filter((r) => !r.emite);
+
+  abrirDrawer({
+    titulo: "Previsualización de la corrida", sub: `${S.caja.titulo} · ${fecha(HOY)}`, ico: "play_circle", ancho: 720,
+    cuerpo: `
+      ${notaEmisionBloqueada()}
+      <div class="note n-info"><span class="msi">info</span>
+        <div>Esto <b>no escribe nada todavía</b>. Al confirmar se emiten ${res.emite} cargos por
+        ${money(res.monto)}. La corrida es idempotente: si la volvés a correr, esos mismos períodos
+        salen como <span class="mono">ALREADY_ISSUED</span>.</div></div>
+
+      <div class="chips" style="margin:14px 0">
+        <button class="chip on" data-tipo="MANUAL">${TIPOS_CORRIDA.MANUAL.label}</button>
+        <button class="chip" data-tipo="SCHEDULED">${TIPOS_CORRIDA.SCHEDULED.label}</button>
+      </div>
+      <p class="hint" id="tipoHint">${TIPOS_CORRIDA.MANUAL.d}</p>
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Emite
+        <span class="pill">${emite.length}</span></h3></div></div>
+      ${emite.length === 0
+        ? `<p class="hint">Ninguna suscripción entra hoy en su ventana de emisión.</p>`
+        : `<div class="tablewrap"><div class="tablescroll"><table>
+            <thead><tr><th>Suscriptor</th><th>Período</th><th>Ciclo</th><th>Vence</th><th class="num">Monto</th></tr></thead>
+            <tbody>${emite.map((r) => `<tr>
+              <td class="strong">${esc(r.nombre)}</td>
+              <td class="mono" style="font-size:12px">${r.ciclo.periodo}</td>
+              <td style="font-size:12px">${fecha(r.ciclo.cicloIni)} → ${fecha(r.ciclo.cicloFin)}</td>
+              <td style="font-size:12px">${fecha(r.ciclo.vence)}</td>
+              <td class="num">${money(r.monto)}</td></tr>`).join("")}</tbody></table></div></div>`}
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Omite
+        <span class="pill">${omite.length}</span></h3>
+        <p>Cada omisión lleva su motivo canónico.</p></div></div>
+      <div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Suscriptor</th><th>Motivo</th><th>Por qué</th></tr></thead>
+        <tbody>${omite.map((r) => `<tr>
+          <td class="strong">${esc(r.nombre)}</td>
+          <td><span class="badge ${MOTIVOS_OMISION[r.motivo].cls}">${MOTIVOS_OMISION[r.motivo].label}</span>
+            <div class="mono" style="font-size:10px;color:var(--osv)">${r.motivo}</div></td>
+          <td style="font-size:12px">${esc(r.detalle)}</td></tr>`).join("")}</tbody></table></div></div>`,
+    pie: `<button class="btn bo" id="corrCancel">Cancelar</button>
+          <button class="btn bp" id="corrOk">Confirmar y correr</button>`,
+    luego: () => {
+      let tipo = "MANUAL";
+      document.querySelectorAll("[data-tipo]").forEach((b) => b.onclick = () => {
+        tipo = b.dataset.tipo;
+        document.querySelectorAll("[data-tipo]").forEach((x) => x.classList.toggle("on", x.dataset.tipo === tipo));
+        document.getElementById("tipoHint").textContent = TIPOS_CORRIDA[tipo].d;
+      });
+      document.getElementById("corrCancel").onclick = () => { cerrarDrawer(); toast("No se escribió nada.", "info"); };
+      document.getElementById("corrOk").onclick = () => {
+        const c = ejecutarCorrida(tipo);
+        cerrarDrawer();
+        if (c) {
+          render();
+          toast(`${c.id}: ${c.emitidos.length} cargos emitidos por ${money(c.monto)}, ${c.omitidos.length} omitidos.`, "ok");
+        }
+      };
+    },
+  });
+}
+
+function drawerDetalleCorrida(id) {
+  const c = S.corridas.find((x) => x.id === id);
+  if (!c) return toast("La corrida no existe.", "err");
+  const porMotivo = {};
+  c.omitidos.forEach((o) => { porMotivo[o.motivo] = (porMotivo[o.motivo] || 0) + 1; });
+
+  abrirDrawer({
+    titulo: "Detalle de la corrida", sub: `${c.id} · ${TIPOS_CORRIDA[c.tipo].label}`, ico: "history", ancho: 720,
+    cuerpo: `
+      <div class="card">
+        <div class="kv"><span>Estado</span>
+          <b><span class="badge ${ESTADOS_CORRIDA[c.estado].cls}">${ESTADOS_CORRIDA[c.estado].label}</span></b></div>
+        <div class="kv"><span>Disparo</span><b>${TIPOS_CORRIDA[c.tipo].label}</b></div>
+        <div class="kv"><span>Correlación</span><b class="mono">${esc(c.id)}</b></div>
+        <div class="kv"><span>Quién</span><b>${esc(c.quien)}</b></div>
+        <div class="kv"><span>Cuándo</span><b>${c.cuando.toLocaleString("es-PE")}</b></div>
+        <div class="kv"><span>Emitidos</span><b>${c.emitidos.length} por ${money(c.monto)}</b></div>
+        <div class="kv"><span>Omitidos</span><b>${c.omitidos.length}</b></div>
+      </div>
+      ${c.bloqueo ? `<div class="note n-err" style="margin-top:14px"><span class="msi">block</span>
+        <div>Esta corrida no emitió nada: ${esc(c.bloqueo)}</div></div>` : ""}
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Cargos emitidos</h3></div>
+        <button class="btn bo" id="expCorr"><span class="msi">download</span>CSV</button></div>
+      ${c.emitidos.length === 0
+        ? `<p class="hint">No emitió ninguno.</p>`
+        : `<div class="tablewrap"><div class="tablescroll"><table>
+            <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Ciclo</th><th>Vence</th><th class="num">Monto</th></tr></thead>
+            <tbody>${c.emitidos.map((e) => `<tr>
+              <td class="mono" style="font-size:12px">${esc(e.cargoId)}</td>
+              <td class="strong">${esc(e.nombre)}</td>
+              <td class="mono" style="font-size:12px">${e.periodo}</td>
+              <td style="font-size:12px">${fecha(e.cicloIni)} → ${fecha(e.cicloFin)}</td>
+              <td style="font-size:12px">${fecha(e.vence)}</td>
+              <td class="num">${money(e.monto)}</td></tr>`).join("")}</tbody></table></div></div>`}
+
+      <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Omisiones por motivo</h3></div></div>
+      <div class="card" style="margin-bottom:14px">
+        ${Object.entries(porMotivo).sort((a, b) => b[1] - a[1]).map(([m, n]) =>
+          `<div class="kv"><span>${MOTIVOS_OMISION[m].label}
+            <span class="mono" style="font-size:10px">${m}</span></span><b>${n}</b></div>`).join("")
+          || `<div class="kv"><span>Sin omisiones</span><b>0</b></div>`}
+      </div>
+      <div class="tablewrap"><div class="tablescroll"><table>
+        <thead><tr><th>Suscriptor</th><th>Motivo</th><th>Por qué</th></tr></thead>
+        <tbody>${c.omitidos.map((o) => `<tr>
+          <td class="strong">${esc(o.nombre)}</td>
+          <td><span class="badge ${MOTIVOS_OMISION[o.motivo].cls}">${MOTIVOS_OMISION[o.motivo].label}</span></td>
+          <td style="font-size:12px">${esc(o.detalle)}</td></tr>`).join("")}</tbody></table></div></div>`,
+    pie: `<button class="btn bp" id="cerrarCorr">Cerrar</button>`,
+    luego: () => {
+      document.getElementById("cerrarCorr").onclick = cerrarDrawer;
+      const exp = document.getElementById("expCorr");
+      if (exp) exp.onclick = () => exportar(`corrida-${c.id}`, c.emitidos.map((e) => ({
+        cargo: e.cargoId, suscripcion: e.susId, suscriptor: e.nombre, periodo: e.periodo,
+        ciclo_ini: e.cicloIni, ciclo_fin: e.cicloFin, vence: e.vence, monto: e.monto,
+      })));
+    },
+  });
+}
+
+arrancar();
