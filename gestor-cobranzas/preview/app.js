@@ -282,6 +282,7 @@ const S = {
   corridas: [],
   lotes: [],
   pagos: [],
+  pag: {},
   importJob: null,
   filtros: { q: "", plan: "", estado: "", tramo: "" },
 };
@@ -705,6 +706,77 @@ const cargosDe = (id) => S.cargos.filter((c) => c.suscriptorId === id);
 const deudaDe = (id) => r2(cargosDe(id).filter((c) => esMoroso(c) || c.estado === "PENDING" || c.estado === "PARTIALLY_PAID").reduce((a, c) => a + saldo(c), 0));
 const moraDe = (id) => r2(cargosDe(id).filter(esMoroso).reduce((a, c) => a + c.mora, 0));
 const atrasoMax = (id) => Math.max(0, ...cargosDe(id).filter(esMoroso).map(atrasoDias), 0);
+
+const TAMANOS_PAGINA = [10, 25, 50, 100];
+const TAMANO_PAGINA_POR_DEFECTO = 25;
+
+function estadoPagina(clave) {
+  if (!S.pag[clave]) S.pag[clave] = { pagina: 1, tam: TAMANO_PAGINA_POR_DEFECTO, paginas: 1 };
+  return S.pag[clave];
+}
+
+function resetPagina(clave) { estadoPagina(clave).pagina = 1; }
+
+/// Corta la lista en la pagina vigente y devuelve con que mostrar los controles. La pagina se
+/// recorta si quedo fuera de rango, que es lo que pasa cuando un filtro deja menos filas de las
+/// que habia cuando el usuario avanzo.
+function paginar(clave, filas) {
+  const st = estadoPagina(clave);
+  const total = filas.length;
+  const paginas = Math.max(1, Math.ceil(total / st.tam));
+  st.paginas = paginas;
+  if (st.pagina > paginas) st.pagina = paginas;
+  if (st.pagina < 1) st.pagina = 1;
+  const inicio = (st.pagina - 1) * st.tam;
+  return {
+    clave, total, paginas, pagina: st.pagina, tam: st.tam,
+    desde: total === 0 ? 0 : inicio + 1,
+    hasta: Math.min(total, inicio + st.tam),
+    filas: filas.slice(inicio, inicio + st.tam),
+  };
+}
+
+function controlesPaginacion(info, etiqueta) {
+  if (info.total === 0) return "";
+  const unaSola = info.paginas === 1;
+  const boton = (accion, ico, activo, titulo) =>
+    `<button class="pgb" data-pg="${info.clave}" data-pgacc="${accion}"${activo ? "" : " disabled"}
+      title="${titulo}" aria-label="${titulo}"><span class="msi">${ico}</span></button>`;
+  const atras = info.pagina > 1;
+  const adelante = info.pagina < info.paginas;
+  return `<div class="pager">
+    <span class="pgi">${info.desde}–${info.hasta} de ${info.total}${etiqueta ? " " + esc(etiqueta) : ""}</span>
+    ${unaSola ? "" : `<div class="pgn">
+      ${boton("primera", "first_page", atras, "Primera página")}
+      ${boton("anterior", "chevron_left", atras, "Página anterior")}
+      <span class="pgp">${info.pagina} / ${info.paginas}</span>
+      ${boton("siguiente", "chevron_right", adelante, "Página siguiente")}
+      ${boton("ultima", "last_page", adelante, "Última página")}
+    </div>`}
+    <label class="pgt">Por página
+      <select data-pgtam="${info.clave}">
+        ${TAMANOS_PAGINA.map((t) => `<option value="${t}"${t === info.tam ? " selected" : ""}>${t}</option>`).join("")}
+      </select></label>
+  </div>`;
+}
+
+function wPaginacion(alCambiar) {
+  document.querySelectorAll("[data-pg]").forEach((b) => b.onclick = () => {
+    const st = estadoPagina(b.dataset.pg);
+    const acc = b.dataset.pgacc;
+    if (acc === "primera") st.pagina = 1;
+    else if (acc === "anterior") st.pagina = Math.max(1, st.pagina - 1);
+    else if (acc === "siguiente") st.pagina = Math.min(st.paginas, st.pagina + 1);
+    else if (acc === "ultima") st.pagina = st.paginas;
+    alCambiar();
+  });
+  document.querySelectorAll("[data-pgtam]").forEach((sel) => sel.onchange = () => {
+    const st = estadoPagina(sel.dataset.pgtam);
+    st.tam = Number(sel.value);
+    st.pagina = 1;
+    alCambiar();
+  });
+}
 
 function tramosDe(lista) {
   return (lista || []).map((t, i) => ({
@@ -1505,10 +1577,11 @@ function tablaSus() {
     };
     return;
   }
+  const pag = paginar("sus", rows);
   box.innerHTML = `<div class="tablewrap"><div class="tablescroll"><table>
     <thead><tr><th>Documento</th><th>Suscriptor</th><th>Plan</th><th class="num">Monto</th>
       <th>Próximo cobro</th><th>Suscripción</th><th class="num">Deuda</th><th>Antigüedad</th><th></th></tr></thead>
-    <tbody>${rows.map((s) => {
+    <tbody>${pag.filas.map((s) => {
       const d = deudaDe(s.id), at = atrasoMax(s.id), t = tramoDe(at);
       return `<tr>
         <td class="mono" style="font-size:12px">${esc(s.documento)}</td>
@@ -1521,16 +1594,17 @@ function tablaSus() {
         <td>${at > 0 ? `<span class="badge" style="background:${t.color}1a;color:${t.color}">${at} días</span>` : `<span style="color:var(--osv)">—</span>`}</td>
         <td><button class="mini" data-ficha="${s.id}"><span class="msi">person</span>Ficha</button></td>
       </tr>`;
-    }).join("")}</tbody></table></div></div>`;
+    }).join("")}</tbody></table></div>${controlesPaginacion(pag, "suscriptores")}</div>`;
   document.querySelectorAll("[data-ficha]").forEach((b) => b.onclick = () => drawerFicha(b.dataset.ficha));
+  wPaginacion(tablaSus);
 }
 
 function wSuscriptores() {
   tablaSus();
   const q = document.getElementById("q");
-  q.oninput = () => { S.filtros.q = q.value; tablaSus(); };
-  document.getElementById("fplan").onchange = (e) => { S.filtros.plan = e.target.value; tablaSus(); };
-  document.getElementById("festado").onchange = (e) => { S.filtros.estado = e.target.value; tablaSus(); };
+  q.oninput = () => { S.filtros.q = q.value; resetPagina("sus"); tablaSus(); };
+  document.getElementById("fplan").onchange = (e) => { S.filtros.plan = e.target.value; resetPagina("sus"); tablaSus(); };
+  document.getElementById("festado").onchange = (e) => { S.filtros.estado = e.target.value; resetPagina("sus"); tablaSus(); };
   document.getElementById("expSus").onclick = () => exportar("cartera", filtrarSus().map((s) => ({
     documento: s.documento, nombre: s.nombre, correo: s.correo, telefono: s.telefono,
     plan: plan(s.planId).nombre, monto: s.monto, proximo_cobro: proximoCobro(s),
@@ -1647,11 +1721,12 @@ function tablaCobros() {
     document.getElementById("limpiaC").onclick = () => { S.filtros = { q: "", plan: "", estado: "", tramo: "" }; render(); };
     return;
   }
+  const pag = paginar("cobros", rows);
   box.innerHTML = `<div class="tablewrap"><div class="tablescroll"><table>
     <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Vence</th>
       <th class="num">Base</th><th class="num">Mora</th><th class="num">Total</th><th class="num">Saldo</th>
       <th>Estado</th><th>Medio</th><th class="num">Int.</th><th></th></tr></thead>
-    <tbody>${rows.map((c) => {
+    <tbody>${pag.filas.map((c) => {
       const s = sus(c.suscriptorId);
       const at = atrasoDias(c);
       return `<tr>
@@ -1670,16 +1745,17 @@ function tablaCobros() {
           ? `<button class="mini" data-cobrar="${c.id}"><span class="msi">bolt</span>Cobrar</button>`
           : `<span style="color:var(--outline);font-size:11px">—</span>`}</td>
       </tr>`;
-    }).join("")}</tbody></table></div></div>`;
+    }).join("")}</tbody></table></div>${controlesPaginacion(pag, "cargos")}</div>`;
   document.querySelectorAll("[data-cobrar]").forEach((b) => b.onclick = () => drawerCobrar(b.dataset.cobrar));
+  wPaginacion(tablaCobros);
 }
 
 function wCobros() {
   tablaCobros();
   const q = document.getElementById("cq");
-  q.oninput = () => { S.filtros.q = q.value; tablaCobros(); };
-  document.getElementById("cest").onchange = (e) => { S.filtros.estado = e.target.value; tablaCobros(); };
-  document.getElementById("cplan").onchange = (e) => { S.filtros.plan = e.target.value; tablaCobros(); };
+  q.oninput = () => { S.filtros.q = q.value; resetPagina("cobros"); tablaCobros(); };
+  document.getElementById("cest").onchange = (e) => { S.filtros.estado = e.target.value; resetPagina("cobros"); tablaCobros(); };
+  document.getElementById("cplan").onchange = (e) => { S.filtros.plan = e.target.value; resetPagina("cobros"); tablaCobros(); };
   document.getElementById("expCob").onclick = () => exportar("cobros", filtrarCargos().map((c) => ({
     cargo: c.id, suscriptor: sus(c.suscriptorId).nombre, documento: sus(c.suscriptorId).documento,
     plan: plan(c.planId).nombre, periodo: c.periodo, emitido: c.emitido, vence: c.vence,
@@ -1889,7 +1965,7 @@ function vMorosidad() {
   <div class="tablewrap"><div class="tablescroll"><table>
     <thead><tr><th>Suscriptor</th><th>Contacto</th><th>Plan</th><th class="num">Cargos</th>
       <th class="num">Deuda</th><th class="num">Mora</th><th>Antigüedad</th><th>Tramo</th><th></th></tr></thead>
-    <tbody>${filtrados.map(({ s, deuda, mora, at, n }) => {
+    <tbody>${paginar("morosidad", filtrados).filas.map(({ s, deuda, mora, at, n }) => {
       const t = tramoDe(at);
       return `<tr>
         <td><div class="strong">${esc(s.nombre)}</div><div class="mono" style="font-size:10px;color:var(--osv)">${esc(s.documento)}</div></td>
@@ -1903,15 +1979,18 @@ function vMorosidad() {
         <td><button class="mini" data-cobrar="${cargosDe(s.id).filter((c) => saldo(c) > 0 && c.estado !== "CANCELLED").sort((a, b) => a.vence < b.vence ? -1 : 1)[0].id}">
           <span class="msi">notifications_active</span>Recordar</button></td>
       </tr>`;
-    }).join("")}</tbody></table></div></div>`;
+    }).join("")}</tbody></table></div>${controlesPaginacion(paginar("morosidad", filtrados), "deudores")}</div>`;
 }
 
 function wMorosidad() {
   document.querySelectorAll("[data-tramo]").forEach((b) => b.onclick = () => {
-    S.filtros.tramo = S.filtros.tramo === b.dataset.tramo ? "" : b.dataset.tramo; render();
+    S.filtros.tramo = S.filtros.tramo === b.dataset.tramo ? "" : b.dataset.tramo;
+    resetPagina("morosidad");
+    render();
   });
   const vt = document.getElementById("verTodos");
-  if (vt) vt.onclick = () => { S.filtros.tramo = ""; render(); };
+  if (vt) vt.onclick = () => { S.filtros.tramo = ""; resetPagina("morosidad"); render(); };
+  wPaginacion(render);
   document.querySelectorAll("[data-cobrar]").forEach((b) => b.onclick = () => drawerCobrar(b.dataset.cobrar));
   document.getElementById("masivo").onclick = () => {
     const deudores = S.suscriptores.filter((s) => atrasoMax(s.id) > 0 && (!S.filtros.tramo || tramoDe(atrasoMax(s.id))?.id === S.filtros.tramo));
@@ -2064,6 +2143,10 @@ function vCarga() {
     return { r, d };
   }).filter((x) => x.d.length > 0);
 
+  const pagInv = paginar("cargaInv", inv);
+  const pagCam = paginar("cargaCam", cambios);
+  const pagAltas = paginar("cargaAltas", altas);
+
   return `
   ${notaEmisionBloqueada()}
   <div class="sech"><div><h3>Validación de <span class="mono">${esc(j.filename)}</span></h3>
@@ -2082,37 +2165,37 @@ function vCarga() {
       <button class="btn bo" id="expErr"><span class="msi">download</span>Descargar errores</button></div>
     <div class="tablewrap"><div class="tablescroll"><table>
       <thead><tr><th>Fila</th><th>Documento</th><th>Nombre</th><th>Motivo</th></tr></thead>
-      <tbody>${inv.map((r) => `<tr>
+      <tbody>${pagInv.filas.map((r) => `<tr>
         <td class="mono">${r.fila._fila}</td>
         <td class="mono" style="font-size:11px">${esc(r.fila.documento)}</td>
         <td style="font-size:12px">${esc(r.fila.nombre)}</td>
         <td>${r.errores.map((e) => `<div style="font-size:11px;color:var(--error);display:flex;gap:6px;align-items:flex-start">
           <span class="msi" style="font-size:13px">error</span><span><b class="mono">${e}</b> — ${esc(motivoDe(e))}</span></div>`).join("")}</td>
-      </tr>`).join("")}</tbody></table></div></div></div>` : ""}
+      </tr>`).join("")}</tbody></table></div>${controlesPaginacion(pagInv, "con error")}</div></div>` : ""}
 
   ${cambios.length ? `<div class="sec">
     <div class="sech"><div><h3>Vista previa de cambios</h3><p>Qué se va a modificar en la cartera que ya tenés</p></div></div>
     <div class="tablewrap"><div class="tablescroll"><table>
       <thead><tr><th>Suscriptor</th><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
-      <tbody>${cambios.flatMap(({ r, d }) => d.map((c, k) => `<tr>
+      <tbody>${pagCam.filas.flatMap(({ r, d }) => d.map((c, k) => `<tr>
         <td>${k === 0 ? `<div class="strong" style="font-size:12px">${esc(r.fila.nombre)}</div><div class="mono" style="font-size:10px;color:var(--osv)">${esc(r.fila.documento)}</div>` : ""}</td>
         <td style="font-size:12px">${c[0]}</td>
         <td style="font-size:12px;color:var(--osv)">${esc(c[1])}</td>
         <td style="font-size:12px;font-weight:600;color:var(--primary)">${esc(c[2])}</td>
-      </tr>`)).join("")}</tbody></table></div></div></div>` : ""}
+      </tr>`)).join("")}</tbody></table></div>${controlesPaginacion(pagCam, "con cambios")}</div></div>` : ""}
 
   ${altas.length ? `<div class="sec">
     <div class="sech"><div><h3>Altas nuevas</h3><p>${altas.length} personas que todavía no están en la cartera</p></div></div>
     <div class="tablewrap"><div class="tablescroll"><table>
       <thead><tr><th>Documento</th><th>Nombre</th><th>Correo</th><th>Plan</th><th class="num">Monto</th><th>Primer cobro</th></tr></thead>
-      <tbody>${altas.map((r) => `<tr>
+      <tbody>${pagAltas.filas.map((r) => `<tr>
         <td class="mono" style="font-size:11px">${esc(r.fila.documento)}</td>
         <td class="strong" style="font-size:12px">${esc(r.fila.nombre)}</td>
         <td style="font-size:11px;color:var(--osv)">${esc(r.fila.correo)}</td>
         <td style="font-size:12px">${esc(r.fila.plan)}</td>
         <td class="num">${money(r.monto)}</td>
         <td style="font-size:12px">${fecha(r.fila.fecha_primer_cobro)}</td>
-      </tr>`).join("")}</tbody></table></div></div></div>` : ""}
+      </tr>`).join("")}</tbody></table></div>${controlesPaginacion(pagAltas, "altas")}</div></div>` : ""}
 
   ${(() => {
     const pol = politicaAplicable();
@@ -2165,6 +2248,7 @@ function wCarga() {
   if (cj) cj.onclick = () => { S.importJob = null; toast("Carga cancelada. No se importó nada.", "info"); render(); };
   const aj = document.getElementById("aplicarJob");
   if (aj) aj.onclick = aplicarCarga;
+  wPaginacion(render);
 }
 
 function leer(f) {
@@ -2175,6 +2259,7 @@ function leer(f) {
     if (error) return toast(error, "err");
     const vistos = new Set();
     S.importJob = { filename: f.name, estado: "VALIDADO", resultados: filas.map((x) => validarFila(x, vistos)), creadas: 0, actualizadas: 0 };
+    ["cargaInv", "cargaCam", "cargaAltas"].forEach(resetPagina);
     const v = S.importJob.resultados.filter((r) => r.errores.length === 0).length;
     toast(`${filas.length} filas leídas · ${v} válidas · ${filas.length - v} con error`, filas.length - v ? "info" : "ok");
     render();
@@ -4542,7 +4627,7 @@ function vRenovaciones() {
     <thead><tr><th>Suscriptor</th><th>Plan</th><th class="num">Monto</th><th>Anclaje</th>
       <th>Ciclo vigente</th><th>Próxima renovación</th><th>Automática</th><th>Fin de vigencia</th>
       <th>En la corrida</th><th></th></tr></thead>
-    <tbody>${g.filas.map((s) => {
+    <tbody>${paginar("renov-" + g.k, g.filas).filas.map((s) => {
       const r = sim.find((x) => x.susId === s.id);
       return `<tr>
         <td><div class="strong">${esc(s.nombre)}</div>
@@ -4559,7 +4644,7 @@ function vRenovaciones() {
           : `<span class="badge ${MOTIVOS_OMISION[r.motivo].cls}" title="${esc(r.detalle)}">${MOTIVOS_OMISION[r.motivo].label}</span>`}</td>
         <td><button class="mini" data-ficha="${s.id}"><span class="msi">person</span>Ficha</button></td>
       </tr>`;
-    }).join("")}</tbody></table></div></div>`).join("")}
+    }).join("")}</tbody></table></div>${controlesPaginacion(paginar("renov-" + g.k, g.filas), g.k.toLowerCase())}</div>`).join("")}
 
   <div class="sech"><div><h3>Historial de corridas</h3>
     <p>Cada corrida guarda qué emitió, qué omitió y por qué.</p></div></div>
@@ -4595,6 +4680,7 @@ function wRenovaciones() {
     })));
   document.querySelectorAll("[data-ficha]").forEach((b) => b.onclick = () => drawerFicha(b.dataset.ficha));
   document.querySelectorAll("[data-corrida]").forEach((b) => b.onclick = () => drawerDetalleCorrida(b.dataset.corrida));
+  wPaginacion(render);
 }
 
 function drawerCorrida() {
@@ -5205,7 +5291,7 @@ function vLotes() {
         <thead><tr><th>Lote</th><th>Criterio</th><th>Estado</th><th class="num">Cargos</th>
           <th class="num">Presentado</th><th class="num">Acreditado</th><th class="num">Rechazados</th>
           <th>Conciliación</th><th>Creado</th><th></th></tr></thead>
-        <tbody>${S.lotes.map((l) => `<tr>
+        <tbody>${paginar("lotes", S.lotes).filas.map((l) => `<tr>
           <td class="mono" style="font-size:12px"><b>${esc(l.id)}</b>
             ${l.reintentoDe ? `<div style="font-size:10px;color:var(--osv)">reintento de ${esc(l.reintentoDe)}</div>` : ""}
             ${l.reintentadoEn ? `<div style="font-size:10px;color:var(--osv)">reintentado en ${esc(l.reintentadoEn)}</div>` : ""}</td>
@@ -5221,7 +5307,7 @@ function vLotes() {
             : `<span style="color:var(--osv)">—</span>`}</td>
           <td style="font-size:12px">${fecha(l.creadoEl)}</td>
           <td><button class="mini" data-lote="${l.id}"><span class="msi">visibility</span>Abrir</button></td>
-        </tr>`).join("")}</tbody></table></div></div>`}
+        </tr>`).join("")}</tbody></table></div>${controlesPaginacion(paginar("lotes", S.lotes), "lotes")}</div>`}
 
   <div class="sech" style="margin-top:22px"><div><h3 style="font-size:13px">Pagos acreditados</h3>
     <p>Los tres orígenes pasan por el mismo registrador, con clave de idempotencia
@@ -5234,7 +5320,7 @@ function vLotes() {
     : `<div class="tablewrap"><div class="tablescroll"><table>
         <thead><tr><th>Pago</th><th>Cargo</th><th>Suscriptor</th><th>Origen</th><th>Referencia</th>
           <th class="num">Recibido</th><th class="num">Aplicado</th><th class="num">A saldo a favor</th><th>Fecha</th></tr></thead>
-        <tbody>${S.pagos.map((p) => `<tr>
+        <tbody>${paginar("pagos", S.pagos).filas.map((p) => `<tr>
           <td class="mono" style="font-size:12px">${esc(p.id)}</td>
           <td class="mono" style="font-size:12px">${esc(p.cargoId)}</td>
           <td class="strong">${esc(sus(p.susId) ? sus(p.susId).nombre : p.susId)}</td>
@@ -5245,12 +5331,13 @@ function vLotes() {
           <td class="num">${money(p.aplicado)}</td>
           <td class="num">${p.excedente > 0 ? money(p.excedente) : "—"}</td>
           <td style="font-size:12px">${fecha(p.cuando)}</td>
-        </tr>`).join("")}</tbody></table></div></div>`}`;
+        </tr>`).join("")}</tbody></table></div>${controlesPaginacion(paginar("pagos", S.pagos), "pagos")}</div>`}`;
 }
 
 function wLotes() {
   document.getElementById("nuevoLote").onclick = () => drawerNuevoLote();
   document.querySelectorAll("[data-lote]").forEach((b) => b.onclick = () => drawerLote(b.dataset.lote));
+  wPaginacion(render);
   document.getElementById("expLotes").onclick = () => exportar("lotes", S.lotes.map((l) => ({
     lote: l.id, criterio: l.criterio, estado: l.estado, cargos: l.items.length,
     presentado: l.monto, acreditado: l.acreditado, rechazados: l.rechazado,
@@ -5298,6 +5385,7 @@ function drawerNuevoLote() {
       };
       const pintarValor = () => {
         const k = crit.value;
+        resetPagina("lotePrev");
         document.getElementById("loHint").textContent = CRITERIOS_LOTE[k].d;
         if (k === "BY_DUE_DATE") {
           cajaValor.innerHTML = `<label class="fl">Vencen hasta</label>
@@ -5332,16 +5420,20 @@ function drawerNuevoLote() {
           ${pasaTope ? `<div class="note n-err" style="margin-top:10px"><span class="msi">block</span>
             <div><b class="mono">policy_limit_exceeded</b> — se puede crear, pero no se podrá cerrar
             hasta que baje del tope de ${money(pol.topeMontoLote)}.</div></div>` : ""}
-          ${cargos.length > 0 ? `<div class="tablewrap" style="margin-top:10px"><div class="tablescroll"><table>
+          ${cargos.length > 0 ? (() => {
+            const pg = paginar("lotePrev", cargos);
+            return `<div class="tablewrap" style="margin-top:10px"><div class="tablescroll"><table>
             <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Vence</th><th>Medio</th><th class="num">Saldo</th></tr></thead>
-            <tbody>${cargos.slice(0, 40).map((c) => `<tr>
+            <tbody>${pg.filas.map((c) => `<tr>
               <td class="mono" style="font-size:12px">${esc(c.id)}</td>
               <td class="strong">${esc(sus(c.suscriptorId).nombre)}</td>
               <td class="mono" style="font-size:12px">${esc(c.periodo)}</td>
               <td style="font-size:12px">${fecha(c.vence)}</td>
               <td style="font-size:12px">${MEDIOS_PAGO[c.medio] || c.medio || "sin medio"}</td>
               <td class="num">${money(saldo(c))}</td></tr>`).join("")}</tbody></table></div>
-            ${cargos.length > 40 ? `<p class="hint" style="padding:10px">Se muestran 40 de ${cargos.length}.</p>` : ""}</div>` : ""}`;
+            ${controlesPaginacion(pg, "cargos")}</div>`;
+          })() : ""}`;
+        wPaginacion(pintarPrev);
       };
 
       crit.onchange = pintarValor;
@@ -5414,7 +5506,7 @@ function drawerLote(id) {
       <div class="tablewrap"><div class="tablescroll"><table>
         <thead><tr><th>Cargo</th><th>Suscriptor</th><th>Período</th><th>Referencia</th>
           <th class="num">Monto</th><th>Resultado</th><th>Motivo</th></tr></thead>
-        <tbody>${l.items.map((it) => `<tr>
+        <tbody>${paginar("loteItems", l.items).filas.map((it) => `<tr>
           <td class="mono" style="font-size:12px">${esc(it.cargoId)}</td>
           <td class="strong">${esc(it.suscriptor)}</td>
           <td class="mono" style="font-size:12px">${esc(it.periodo)}</td>
@@ -5424,7 +5516,7 @@ function drawerLote(id) {
             ? `<span class="badge ${it.resultado === "APPROVED" ? "b-paid" : "b-arrears"}">${it.resultado === "APPROVED" ? "Acreditado" : "Rechazado"}</span>`
             : `<span style="color:var(--osv)">sin respuesta</span>`}</td>
           <td style="font-size:12px">${it.motivo ? esc(MOTIVOS_RECHAZO[it.motivo]) : "—"}</td>
-        </tr>`).join("")}</tbody></table></div></div>
+        </tr>`).join("")}</tbody></table></div>${controlesPaginacion(paginar("loteItems", l.items), "cargos")}</div>
 
       <div class="sech" style="margin-top:16px"><div><h3 style="font-size:13px">Historial del lote</h3></div></div>
       <div class="card">${l.historial.map((h) => `<div class="kv">
@@ -5464,6 +5556,8 @@ function drawerLote(id) {
 
       const anular = document.getElementById("loAnular");
       if (anular) anular.onclick = () => { cerrarDrawer(); drawerAnularLote(l.id); };
+
+      wPaginacion(() => { cerrarDrawer(); drawerLote(l.id); });
     },
   });
 }

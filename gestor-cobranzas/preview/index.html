@@ -104,6 +104,17 @@ tbody tr:hover{background:var(--sc-low)}
 .mini:hover{border-color:var(--primary);color:var(--primary)}
 .mini .msi{font-size:14px}
 
+.pager{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--ov);background:var(--sc-low)}
+.pager .pgi{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--osv);white-space:nowrap}
+.pager .pgn{display:flex;gap:4px;align-items:center}
+.pager .pgp{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--on-surface);padding:0 8px;white-space:nowrap}
+.pgb{width:28px;height:28px;border-radius:6px;border:1px solid var(--ov);background:var(--surface);color:var(--osv);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.pgb .msi{font-size:17px}
+.pgb:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+.pgb:disabled{opacity:.35;cursor:not-allowed}
+.pager .pgt{display:flex;gap:6px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--osv);white-space:nowrap}
+.pager .pgt select{width:auto;padding:4px 8px;font-size:11px}
+
 .fbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 .search{position:relative;flex:1;min-width:220px}
 .search .msi{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--outline);font-size:18px}
