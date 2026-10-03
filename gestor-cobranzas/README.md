@@ -18,22 +18,32 @@ comportamiento esperado antes de escribir la feature.
 
 ```
 gestor-cobranzas/
-  README.md                      este archivo
+  README.md                        este archivo
   specs/
-    frente-y-accesos.md          LEER PRIMERO — arquitectura del frente, catálogo con alcance,
-                                 grupos de Cognito, entrega del producto, REQ-COB-001 a 007
-    requirements.md              los requerimientos del dominio, REQ-COB-010 a 093
-    design.md                    modelo de datos, contratos API, prorateo, riesgos
-    tasks.md                     tareas ordenadas por dependencia, trazadas a requerimientos
+    frente-y-accesos.md            LEER PRIMERO — arquitectura del frente, catálogo con alcance,
+                                   grupos de Cognito, entrega del producto, REQ-COB-001 a 007
+    requirements.md                los requerimientos del dominio, REQ-COB-010 a 093
+    reglas-plan-y-renovaciones.md  reglas por plan, gobierno del mundo sobre sus comercios,
+                                   renovaciones, lotes, adquirente y pago. REQ-COB-100 a 148
+    design.md                      modelo de datos, contratos API, prorateo, riesgos
+    tasks.md                       tareas ordenadas por dependencia, trazadas a requerimientos
   preview/
-    index.html                   prototipo navegable, sin build
-    app.js                       lógica real: validación de CSV, prorateo, morosidad
-    ejemplo-cartera-yoki.csv     archivo de carga con filas válidas y con error
+    index.html                     prototipo navegable, sin build
+    app.js                         lógica real: reglas, renovaciones, lotes, pagos, prorateo
+    ejemplo-cartera-yoki.csv       archivo de carga con filas válidas y con error
 ```
+
+**Orden de lectura:** `frente-y-accesos.md`, después `requirements.md`, después
+`reglas-plan-y-renovaciones.md`, y `design.md` como referencia de modelo de datos y contratos.
 
 `frente-y-accesos.md` corrige la primera versión del spec, que ubicaba el panel dentro de Admin RP.
 Las secciones reemplazadas de `requirements.md`, `design.md` y `tasks.md` están marcadas como tales
 en su propio encabezado.
+
+`reglas-plan-y-renovaciones.md` es incremental sobre lo anterior: no lo reescribe. Cada
+requerimiento declara explícitamente si extiende a uno previo o si es nuevo, y cierra siete
+decisiones de negocio que el analista comercial dejó planteadas. Al final lleva cinco huecos
+anotados que necesitan decisión y no se inventaron.
 
 ---
 
@@ -77,6 +87,25 @@ npx --yes serve gestor-cobranzas/preview -l 4173
 6. **Cobrar** — desde cualquier fila: generar QR, copiar link de pago, o mandar recordatorio. El
    prototipo registra el intento en la bitácora del suscriptor.
 7. **Exportar** — cualquier listado baja a CSV respetando los filtros aplicados.
+8. **Reglas y avisos** — elegí el nivel: Cartera, o un plan. Cada uno de los nueve grupos de la
+   regla muestra de dónde sale su valor, heredado de la cartera o propio del plan, con la acción
+   para declararlo propio o devolverlo a herencia. Cambiá algo y mirá la confirmación: dice cuántas
+   suscripciones y cuántos cargos futuros quedan afectados, y cuántos emitidos **no** se tocan,
+   porque cada cargo guarda congelada la regla con la que nació.
+9. **Renovaciones** — qué renueva en 30, 60 y 90 días. Previsualizá la corrida: muestra cuántas
+   emitiría y cuántas omitiría, con el motivo de cada omisión. Confirmala y después correla otra
+   vez: los mismos períodos salen como `ALREADY_ISSUED`, que es la idempotencia a la vista.
+10. **Lotes y cobro** — armá un lote, cerralo (queda inmutable), presentalo y bajá el archivo
+    canónico. Después ingerí un retorno: hay tres simulaciones, todo aprobado, rechazo parcial y
+    todo rechazado. Con rechazo parcial mirá la conciliación y reintentá: el reintento es un lote
+    **nuevo** que referencia al anterior.
+11. **Entrar como Jockey Plaza** — la caja de mundo tiene dos pestañas que no existen en la de
+    comercio: Comercios y Política del mundo. Habilitá cobranzas a un comercio, emitile
+    credenciales, y probá los dos simuladores: sin facultad delegada y con el proveedor de
+    identidad caído. En Política, bajá el tope de mora y después intentá guardar una regla del
+    comercio que lo pase.
+12. **Cambiar de rol** — salí y volvé a entrar como operador y como solo lectura. Las acciones que
+    no corresponden quedan deshabilitadas **con el motivo visible**, no escondidas.
 
 ---
 
@@ -149,10 +178,36 @@ se le suman `COLLECTIONS_WORLD` y `COLLECTIONS_MERCHANT`.
 Ninguna de las tres bloquea la fase 1: el valor está en saber a quién cobrar, cuánto, y tener el
 canal de recordatorio listo.
 
+El incremento de `reglas-plan-y-renovaciones.md` suma cinco huecos más, anotados al final de ese
+documento con el ID que les correspondería:
+
+- **Quién dispara la corrida programada**, con qué frecuencia, y qué pasa si no hay planificador.
+  En `joi360mono` no se verificó que exista uno, así que el prototipo ofrece la corrida manual y
+  dice que la programada está simulada.
+- **Nota de crédito y reverso de un pago ya acreditado**, incluido el reverso que el adquirente
+  informa después de haber aprobado.
+- **Migración de `billing_cycle` a `periodicity`** sin romper consumidores. El código nuevo usa
+  siempre `periodicity`; falta el expandir, migrar, conmutar y contraer del campo viejo.
+- **Alerta proactiva** cuando una corrida termina con errores o un lote queda sin conciliar.
+- **Qué resuelve el enlace de pago** mientras no haya pasarela integrada.
+
 ---
 
 ## Estado
 
-- Especificación: completa y revisable.
-- Prototipo: funcional, con datos de ejemplo y cálculos reales en el navegador.
+- Especificación: completa y revisable, en dos capas. La base del dominio, y el incremento de
+  reglas por plan, gobierno del mundo y ciclo de cobro.
+- Prototipo: funcional, con datos de ejemplo y cálculos reales en el navegador. Cubre las cuatro
+  áreas del incremento: reglas afiliadas al plan, el mundo habilitando y acotando a sus comercios,
+  renovaciones con corrida idempotente, y lotes con entrega al adquirente y registro de pago.
 - Implementación: **no empezada**. Es lo que sigue, y va en `joi360mono`.
+
+### Lo que el prototipo demuestra y lo que no
+
+Demuestra comportamiento: las reglas se resuelven de verdad, el prorrateo calcula, los ciclos no se
+solapan, la corrida no duplica cargos, el lote cerrado no se reabre y un pago con la misma clave no
+entra dos veces. Todo eso está verificado con un arnés que ejercita el código sin navegador.
+
+No demuestra integración: no hay base de datos, no hay Cognito real, no hay proveedor de correo y
+no hay adquirente. Donde hace falta uno, el prototipo lo simula y lo dice en pantalla, en lugar de
+fingir una integración que no existe.
