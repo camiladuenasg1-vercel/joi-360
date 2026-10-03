@@ -2248,16 +2248,118 @@ function prorratear({ cicloIni, cicloFin, efectiva, montoActual, montoNuevo }) {
   };
 }
 
+function anclajeDePlan(s, planId) {
+  const corte = reglaEfectiva(planId).diaCorte;
+  return corte.modo === "RELATIVE_TO_SIGNUP" ? new Date(s.altaEl + "T00:00:00").getDate() : corte.dia;
+}
+
+/// Si el plan destino tiene otro día de corte, el primer ciclo posterior al cambio se calcula con
+/// el corte del destino. La pantalla lo muestra antes de confirmar, porque le mueve la fecha de
+/// cobro al suscriptor.
+function proximoCicloConPlan(s, planId) {
+  const p = plan(planId);
+  const anclaje = anclajeDePlan(s, planId);
+  const base = new Date(s.vence + "T00:00:00");
+  const sig = fechaDeCiclo(base.getFullYear(), base.getMonth(), 1, pasoDe(p.periodicidad), anclaje);
+  return cicloDesde(sig, p.periodicidad, anclaje);
+}
+
+function deudaVencidaDe(susId) {
+  return cargosDe(susId).filter((c) => c.estado === "OVERDUE" || c.estado === "IN_ARREARS");
+}
+
+function aplicarCambioDePlan({ susId, planDestinoId, fechaEfectiva, confirmadoConDeuda }) {
+  if (S.rol === "LECTURA") {
+    toast("Tu rol es de solo lectura. Red Pontis puede cambiarlo.", "err");
+    return { ok: false, codigo: "forbidden" };
+  }
+  const frenado = emisionBloqueada();
+  if (frenado) { toast(frenado, "err"); return { ok: false, codigo: "rules_review_pending" }; }
+
+  const s = sus(susId);
+  if (!s) { toast(`forbidden: la suscripción ${susId} no pertenece a esta cartera.`, "err"); return { ok: false, codigo: "forbidden" }; }
+  const pNuevo = plan(planDestinoId);
+  if (!pNuevo) { toast("plan_version_not_found: el plan destino no existe.", "err"); return { ok: false, codigo: "plan_version_not_found" }; }
+  if (pNuevo.id === s.planId) { toast("El plan destino es el mismo que tiene hoy.", "err"); return { ok: false, codigo: "same_plan" }; }
+  if (s.estado !== "ACTIVE") {
+    toast(`subscription_not_active: la suscripción está en ${s.estado}.`, "err");
+    return { ok: false, codigo: "subscription_not_active" };
+  }
+
+  const vencidos = deudaVencidaDe(s.id);
+  if (vencidos.length > 0) {
+    if (S.rol !== "ADMIN") {
+      toast(`Cambiar de plan con ${vencidos.length} cargos vencidos requiere el grupo collections-admin.`, "err");
+      return { ok: false, codigo: "forbidden", vencidos: vencidos.length };
+    }
+    if (!confirmadoConDeuda) {
+      return { ok: false, codigo: "confirmation_required", vencidos: vencidos.length, deuda: deudaDe(s.id) };
+    }
+  }
+
+  const res = prorratear({
+    cicloIni: s.cicloIni, cicloFin: s.cicloFin, efectiva: fechaEfectiva,
+    montoActual: s.monto, montoNuevo: pNuevo.monto,
+  });
+  if (res.error) { toast(res.error, "err"); return { ok: false, codigo: "invalid_effective_date", error: res.error }; }
+
+  const planAntes = plan(s.planId);
+  const montoAntes = s.monto;
+  const reglaOrigen = reglaEfectiva(s.planId);
+  const cicloAntes = { ini: s.cicloIni, fin: s.cicloFin, proxima: s.proximaRenovacion };
+
+  s.planId = pNuevo.id;
+  s.monto = pNuevo.monto;
+  s.periodicidad = pNuevo.periodicidad;
+  s.anclaje = anclajeDePlan(s, pNuevo.id);
+  s.proximaRenovacion = proximoCicloConPlan(s, pNuevo.id).vence;
+
+  let cargoAjuste = null;
+  if (res.direccion === "CARGO") {
+    cargoAjuste = sellarComision({
+      id: nuevoIdCargo(), suscriptorId: s.id, planId: pNuevo.id,
+      periodo: `${etiquetaPeriodo(new Date(s.cicloIni + "T00:00:00"))}-AJ`,
+      cicloIni: s.cicloIni, cicloFin: s.cicloFin,
+      emitido: iso(HOY), vence: iso(addDia(HOY, 5)),
+      base: res.neto, mora: 0, pagado: 0, estado: "PENDING",
+      medio: null, pagadoEl: null, intentos: 0, avisos: [], manual: true,
+      ajuste: true, rulesSnapshot: clonar(reglaEfectiva(pNuevo.id)),
+    });
+    S.cargos.push(cargoAjuste);
+    toast(`Plan cambiado. Se emitió el cargo de ajuste ${cargoAjuste.id} por ${money(res.neto)}.`, "ok");
+  } else if (res.direccion === "CREDITO") {
+    s.saldoFavor = r2(s.saldoFavor + Math.abs(res.neto));
+    toast(`Plan cambiado. Quedó ${money(Math.abs(res.neto))} de saldo a favor.`, "ok");
+  } else {
+    toast("Plan cambiado sin movimiento de dinero.", "ok");
+  }
+
+  bita("plan_change", "APLICAR",
+    `${s.nombre} (${s.id}): ${planAntes.nombre} ${money(montoAntes)} → ${pNuevo.nombre} ${money(pNuevo.monto)} · ` +
+    `efectiva ${fechaEfectiva} · ciclo ${cicloAntes.ini} a ${cicloAntes.fin} · ${res.restantes}/${res.diasCiclo} días · ` +
+    `neto ${money(res.neto)} · regla origen ${reglaOrigen.diaCorte.dia}/${reglaOrigen.gracia.dias}d, ` +
+    `regla destino ${reglaEfectiva(pNuevo.id).diaCorte.dia}/${reglaEfectiva(pNuevo.id).gracia.dias}d · ` +
+    `proxima renovacion ${cicloAntes.proxima} → ${s.proximaRenovacion} · actor ${ACTOR}`);
+
+  return { ok: true, res, cargoAjuste, suscriptor: s, cicloAntes };
+}
+
 function vProrateo() {
   const elegido = S.prorateoSus || S.suscriptores[0].id;
   const s = sus(elegido);
   const pActual = plan(s.planId);
-  const cicloIni = iso(new Date(HOY.getFullYear(), HOY.getMonth(), 1));
-  const cicloFin = iso(new Date(HOY.getFullYear(), HOY.getMonth() + 1, 0));
+  const cicloIni = s.cicloIni;
+  const cicloFin = s.cicloFin;
   const destino = S.prorateoPlan && S.prorateoPlan !== s.planId ? S.prorateoPlan : (S.planes.find((p) => p.id !== s.planId) || pActual).id;
   const pNuevo = plan(destino);
-  const efectiva = S.prorateoFecha || iso(HOY);
+  const dentroDelCiclo = (d) => d >= cicloIni && d <= cicloFin;
+  const efectiva = S.prorateoFecha && dentroDelCiclo(S.prorateoFecha)
+    ? S.prorateoFecha
+    : (dentroDelCiclo(iso(HOY)) ? iso(HOY) : cicloIni);
   const res = prorratear({ cicloIni, cicloFin, efectiva, montoActual: s.monto, montoNuevo: pNuevo.monto });
+  const cicloDestino = proximoCicloConPlan(s, destino);
+  const corteCambia = cicloDestino.vence !== s.proximaRenovacion;
+  const vencidos = deudaVencidaDe(s.id);
 
   return `
   ${notaEmisionBloqueada()}
@@ -2279,8 +2381,22 @@ function vProrateo() {
         </div>
         <div><label class="fl">Fecha efectiva del cambio</label>
           <input type="date" id="prFecha" value="${efectiva}" min="${cicloIni}" max="${cicloFin}">
-          <p class="hint">Ciclo en curso: ${fecha(cicloIni)} a ${fecha(cicloFin)}</p></div>
+          <p class="hint">Ciclo vigente de la suscripción: ${fecha(cicloIni)} a ${fecha(cicloFin)}.
+          Periodicidad <span class="mono">${esc(s.periodicidad)}</span>, anclaje día ${s.anclaje}.</p></div>
       </div>
+
+      <div class="kv" style="margin-top:14px"><span class="k">Próxima renovación hoy</span>
+        <span class="v">${fecha(s.proximaRenovacion)}</span></div>
+      <div class="kv"><span class="k">Si cambia a ${esc(pNuevo.nombre)}</span>
+        <span class="v" style="${corteCambia ? "color:var(--warning)" : ""}">${fecha(cicloDestino.vence)}</span></div>
+      ${corteCambia ? `<div class="note n-warn" style="margin-top:10px"><span class="msi">event_repeat</span>
+        <div>El plan destino tiene otro día de corte, así que la fecha de cobro se corre del
+        <b>${fecha(s.proximaRenovacion)}</b> al <b>${fecha(cicloDestino.vence)}</b>. El ciclo siguiente va a
+        cubrir ${fecha(cicloDestino.cicloIni)} a ${fecha(cicloDestino.cicloFin)}.</div></div>` : ""}
+      ${vencidos.length ? `<div class="note n-err" style="margin-top:10px"><span class="msi">running_with_errors</span>
+        <div>Tiene <b>${vencidos.length} ${vencidos.length === 1 ? "cargo vencido" : "cargos vencidos"}</b>
+        por ${money(deudaDe(s.id))}. Cambiar de plan con deuda abierta requiere el grupo
+        <span class="mono">collections-admin</span> y una confirmación explícita.</div></div>` : ""}
     </div>
 
     <div class="card" style="padding:20px">
@@ -2341,33 +2457,62 @@ function wProrateo() {
   if (pf) pf.onchange = () => { S.prorateoFecha = pf.value; render(); };
   const ap = document.getElementById("prAplicar");
   if (ap) ap.onclick = () => {
-    const frenado = emisionBloqueada();
-    if (frenado) return toast(frenado, "err");
     const s = sus(S.prorateoSus || S.suscriptores[0].id);
-    const pNuevo = plan(S.prorateoPlan || S.planes.find((p) => p.id !== s.planId).id);
-    const cicloIni = iso(new Date(HOY.getFullYear(), HOY.getMonth(), 1));
-    const cicloFin = iso(new Date(HOY.getFullYear(), HOY.getMonth() + 1, 0));
-    const res = prorratear({ cicloIni, cicloFin, efectiva: S.prorateoFecha || iso(HOY), montoActual: s.monto, montoNuevo: pNuevo.monto });
-    if (res.error) return toast(res.error, "err");
-    const antes = plan(s.planId).nombre, montoAntes = s.monto;
-    s.planId = pNuevo.id; s.monto = pNuevo.monto; s.periodicidad = pNuevo.periodicidad;
-    if (res.direccion === "CARGO") {
-      S.cargos.push(sellarComision({
-        id: "C-" + String(4500 + S.cargos.length), suscriptorId: s.id, planId: pNuevo.id,
-        periodo: `${HOY.getFullYear()}-${String(HOY.getMonth() + 1).padStart(2, "0")}-AJ`,
-        cicloIni, cicloFin, emitido: iso(HOY), vence: iso(addDia(HOY, 5)),
-        base: res.neto, mora: 0, pagado: 0, estado: "PENDING",
-        medio: null, pagadoEl: null, intentos: 0, avisos: [], manual: true,
-        rulesSnapshot: reglaEfectiva(pNuevo.id),
-      }));
-      toast(`Plan cambiado. Se emitió un cargo de ajuste por ${money(res.neto)}.`);
-    } else if (res.direccion === "CREDITO") {
-      s.saldoFavor = r2(s.saldoFavor + Math.abs(res.neto));
-      toast(`Plan cambiado. Quedó ${money(Math.abs(res.neto))} de saldo a favor.`);
-    } else toast("Plan cambiado sin movimiento de dinero.");
-    bita("plan_change", "APLICAR", `${s.nombre}: ${antes} (${money(montoAntes)}) → ${pNuevo.nombre} (${money(pNuevo.monto)}) · ${res.restantes}/${res.diasCiclo} días · neto ${money(res.neto)}`);
-    S.tab = "suscriptores"; render();
+    const destino = S.prorateoPlan && S.prorateoPlan !== s.planId
+      ? S.prorateoPlan
+      : S.planes.find((p) => p.id !== s.planId).id;
+    const dentro = (d) => d >= s.cicloIni && d <= s.cicloFin;
+    const efectiva = S.prorateoFecha && dentro(S.prorateoFecha)
+      ? S.prorateoFecha
+      : (dentro(iso(HOY)) ? iso(HOY) : s.cicloIni);
+
+    const intento = aplicarCambioDePlan({ susId: s.id, planDestinoId: destino, fechaEfectiva: efectiva });
+    if (intento.ok) { S.prorateoFecha = null; S.tab = "suscriptores"; render(); return; }
+    if (intento.codigo === "confirmation_required") {
+      drawerCambioConDeuda({ susId: s.id, destino, efectiva, vencidos: intento.vencidos, deuda: intento.deuda });
+    }
   };
+}
+
+function drawerCambioConDeuda({ susId, destino, efectiva, vencidos, deuda }) {
+  const s = sus(susId);
+  const pNuevo = plan(destino);
+  const res = prorratear({
+    cicloIni: s.cicloIni, cicloFin: s.cicloFin, efectiva,
+    montoActual: s.monto, montoNuevo: pNuevo.monto,
+  });
+  abrirDrawer({
+    titulo: "Cambiar de plan con deuda abierta", sub: `${s.nombre} · ${s.id}`, ico: "warning", ancho: 600,
+    cuerpo: `
+      <div class="note n-err"><span class="msi">running_with_errors</span>
+        <div>${esc(s.nombre)} tiene <b>${vencidos} ${vencidos === 1 ? "cargo vencido" : "cargos vencidos"}</b>
+        por <b>${money(deuda)}</b>. El cambio de plan <b>no cancela esa deuda</b>: los cargos ya emitidos
+        conservan su monto y la regla con la que nacieron.</div></div>
+      <div class="card" style="margin:14px 0">
+        <div class="kv"><span>Plan actual</span><b>${esc(plan(s.planId).nombre)} · ${money(s.monto)}</b></div>
+        <div class="kv"><span>Plan destino</span><b>${esc(pNuevo.nombre)} · ${money(pNuevo.monto)}</b></div>
+        <div class="kv"><span>Ciclo vigente</span><b>${fecha(s.cicloIni)} → ${fecha(s.cicloFin)}</b></div>
+        <div class="kv"><span>Fecha efectiva</span><b>${fecha(efectiva)}</b></div>
+        <div class="kv"><span>Días que quedan</span><b>${res.restantes} de ${res.diasCiclo}</b></div>
+        <div class="kv"><span>${res.direccion === "CREDITO" ? "Saldo a favor" : "A cobrar ahora"}</span>
+          <b>${money(Math.abs(res.neto))}</b></div>
+        <div class="kv"><span>Próxima renovación</span>
+          <b>${fecha(s.proximaRenovacion)} → ${fecha(proximoCicloConPlan(s, destino).vence)}</b></div>
+      </div>
+      <p class="hint">Esta confirmación es de nivel <span class="mono">ADMIN</span> y queda en la bitácora
+      con el desglose del prorrateo y las dos reglas, la del plan origen y la del destino.</p>`,
+    pie: `<button class="btn bo" data-cerrar>Cancelar</button>
+          <button class="btn bp" id="cdOk">Entiendo la deuda, cambiar el plan</button>`,
+    luego: () => {
+      document.getElementById("cdOk").onclick = () => {
+        const r = aplicarCambioDePlan({
+          susId, planDestinoId: destino, fechaEfectiva: efectiva, confirmadoConDeuda: true,
+        });
+        cerrarDrawer();
+        if (r.ok) { S.prorateoFecha = null; S.tab = "suscriptores"; render(); }
+      };
+    },
+  });
 }
 
 function nivelClave() { return S.reglaNivel === "PLAN" ? "PLAN:" + S.reglaPlanId : "PORTFOLIO"; }
