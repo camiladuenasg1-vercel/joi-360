@@ -116,7 +116,10 @@ function WalletTemplate({ cfg, u }) {
   // Task #210 quedaron con monedaPermitida guardado como índice numérico
   // (ej. 2) en vez del id real ("PEN"/"USD") -- se veía "2 37.14" en el
   // saldo. Guarda defensiva: solo acepta un id de moneda real conocido.
-  const MONEDAS_VALIDAS = { PEN: "S/", USD: "US$" };
+  // "$" (no "US$") para que coincida con el resto de la SuperApp (Donaciones,
+  // Eventos, Marketplace, Pay) y con el catálogo de Emisión del admin —
+  // ambos ya muestran "$" para mundos USD (verificado en vivo, BCS Corp).
+  const MONEDAS_VALIDAS = { PEN: "S/", USD: "$" };
   const currency = MONEDAS_VALIDAS[cfg.config.monedaPermitida] || "S/";
   const myCode = getSyntheticUserId();
 
@@ -1809,7 +1812,7 @@ function CashbackTemplate({ cfg, u }) {
 function DonacionesTemplate({ cfg, u }) {
   const worldId = cfg.mundo.id;
   const userId = getSyntheticUserId();
-  const moneda = cfg.mundo.currency === "USD" ? "$" : "S/";
+  const moneda = cfg.mundo.moneda === "USD" ? "$" : "S/";
   const montoMin = cfg.config.montoMinimo || 1;
   const montoMax = cfg.config.montoMaximo;
   const sugeridos = [montoMin, montoMin * 2, montoMin * 5].filter((v,i,a)=>a.indexOf(v)===i);
@@ -1872,7 +1875,7 @@ function DonacionesTemplate({ cfg, u }) {
           ))}
         </div>
         <input type="number" inputMode="decimal" value={monto} onChange={e=>setMonto(e.target.value)}
-          className="w-full px-4 py-3 rounded-2xl border border-[#CDD1E4] text-base font-bold" placeholder={`Monto en ${cfg.mundo.currency||"USD"}`}/>
+          className="w-full px-4 py-3 rounded-2xl border border-[#CDD1E4] text-base font-bold" placeholder={`Monto en ${cfg.mundo.moneda||"USD"}`}/>
       </SectionCard>
 
       <SectionCard className="p-4">
@@ -2517,6 +2520,7 @@ function EventoMarketplaceSection({ ev, mundo, comercios }) {
 // Ticket Selector (Organism reutilizado del catálogo, doc §5.3) + checkout con Wallet.
 function EventoEntradasSection({ ev, mundo, onComprado }) {
   const userId = getSyntheticUserId();
+  const moneda = mundo?.moneda === "USD" ? "$" : "S/";
   const { saldo, refresh: refreshWallet } = useWalletLive(mundo.id);
   const [tipos, setTipos] = useState(null);           // null = cargando
   const [vendidasTipo, setVendidasTipo] = useState({});
@@ -2597,7 +2601,7 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
             </p>
             <p className="text-xs text-red-600 mt-1">
               {resultado.mensaje
-                ? [resultado.mensaje, resultado.motivo === "saldo" ? `Tu saldo actual: S/ ${(resultado.balance ?? saldo).toFixed(2)}.` : null, resultado.accion].filter(Boolean).join(" ")
+                ? [resultado.mensaje, resultado.motivo === "saldo" ? `Tu saldo actual: ${moneda} ${(resultado.balance ?? saldo).toFixed(2)}.` : null, resultado.accion].filter(Boolean).join(" ")
                 : resultado.detalle || "Intenta nuevamente."}
             </p>
           </div>
@@ -2639,7 +2643,7 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
                     {fuera && " · fuera de ventana de venta"}
                   </p>
                 </div>
-                <p className="font-black text-[#1A3270] flex-shrink-0 ml-3">{+t.precio === 0 ? "Gratis" : `S/ ${(+t.precio).toFixed(2)}`}</p>
+                <p className="font-black text-[#1A3270] flex-shrink-0 ml-3">{+t.precio === 0 ? "Gratis" : `${moneda} ${(+t.precio).toFixed(2)}`}</p>
               </div>
             </button>
           );
@@ -2660,10 +2664,10 @@ function EventoEntradasSection({ ev, mundo, onComprado }) {
             </div>
             <div className="flex justify-between text-xs text-[#404255]">
               <span>Pagas con tu saldo del mundo</span>
-              <span>Saldo: <b className="text-[#1C1C1E]">S/ {saldo.toFixed(2)}</b></span>
+              <span>Saldo: <b className="text-[#1C1C1E]">{moneda} {saldo.toFixed(2)}</b></span>
             </div>
             <PrimaryBtn
-              label={comprando ? "Procesando…" : totalPagar === 0 ? `Reservar ${qty} entrada(s)` : `Pagar S/ ${totalPagar.toFixed(2)}`}
+              label={comprando ? "Procesando…" : totalPagar === 0 ? `Reservar ${qty} entrada(s)` : `Pagar ${moneda} ${totalPagar.toFixed(2)}`}
               icon="confirmation_number" disabled={comprando} onClick={comprar}/>
           </div>
         )}
@@ -2895,6 +2899,8 @@ function MisEntradasList({ mundo, refreshKey, nombreTitular }) {
 // pendiente de retiro para que el comercio lo entregue (ver OperadorApp.jsx
 // > EntregarPrecompraEventoOperador).
 function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose }) {
+  const st = useStore();
+  const moneda = (st.mundos||[]).find(m=>m.id===worldId)?.moneda === "USD" ? "$" : "S/";
   const eventId = ticket.event_id;
   const [comercios, setComercios] = useState(null);
   const [productos, setProductos] = useState(null);
@@ -2937,13 +2943,13 @@ function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose
         setResultado({ ok: false, mensaje: `"${r.producto}" solo tiene ${r.stockDisponible} disponible(s) — ajusta la cantidad.` });
       } else if (r.motivo === "orden_no_registrada") {
         // El pago SÍ se procesó — no lo mandes a reintentar (cobraría dos veces).
-        setResultado({ ok: true, mensaje: `Tu pago de S/ ${(r.total ?? 0).toFixed(2)} se procesó, pero hubo un problema registrando el retiro. Acércate al stand de ${nombrePorComercio[merchantId] || "el comercio"} con este mensaje o escríbenos.` });
+        setResultado({ ok: true, mensaje: `Tu pago de ${moneda} ${(r.total ?? 0).toFixed(2)} se procesó, pero hubo un problema registrando el retiro. Acércate al stand de ${nombrePorComercio[merchantId] || "el comercio"} con este mensaje o escríbenos.` });
         setCart(c => { const n = { ...c }; items.forEach(it => delete n[it.id]); return n; });
         cargar();
       } else {
         const err = await errorControlado("saldo_insuficiente");
         logErrorControlado("saldo_insuficiente", `precompra-evento:${merchantId}`, worldId);
-        setResultado({ ok: false, mensaje: `${err.mensaje} Saldo actual: S/ ${(r.balance ?? 0).toFixed(2)}.` });
+        setResultado({ ok: false, mensaje: `${err.mensaje} Saldo actual: ${moneda} ${(r.balance ?? 0).toFixed(2)}.` });
       }
     } catch (e) {
       const err = await mensajeDeError(e, "operacion_no_completada");
@@ -2997,7 +3003,7 @@ function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose
                   <div key={p.id} className="flex items-center justify-between gap-2 bg-[#F2F2F7] rounded-xl px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#1C1C1E] truncate">{p.name}</p>
-                      <p className="text-xs text-[#404255]">S/ {Number(p.price).toFixed(2)}{agotado ? " · Agotado" : p.stock !== null ? ` · Quedan ${p.stock}` : ""}</p>
+                      <p className="text-xs text-[#404255]">{moneda} {Number(p.price).toFixed(2)}{agotado ? " · Agotado" : p.stock !== null ? ` · Quedan ${p.stock}` : ""}</p>
                     </div>
                     {agotado ? (
                       <span className="text-[10px] font-bold text-red-500">Agotado</span>
@@ -3016,7 +3022,7 @@ function PrecompraEventoDrawer({ ticket, worldId, userId, nombreTitular, onClose
               {itemsPorComercio(merchantId).length > 0 && (
                 <button onClick={() => pagar(merchantId)} disabled={pagando}
                   className="w-full py-2.5 rounded-xl bg-[#1A3270] text-white font-bold text-sm tap-active disabled:opacity-50 flex items-center justify-center gap-1.5">
-                  {pagando ? "Pagando…" : `Pagar S/ ${itemsPorComercio(merchantId).reduce((a, it) => a + it.precio * it.cantidad, 0).toFixed(2)}`}
+                  {pagando ? "Pagando…" : `Pagar ${moneda} ${itemsPorComercio(merchantId).reduce((a, it) => a + it.precio * it.cantidad, 0).toFixed(2)}`}
                 </button>
               )}
             </div>
@@ -4969,6 +4975,7 @@ function HistorialContratoBNPL({ contrato: k, abierto, onToggle }) {
 // ══════════════════════════════════════════════════════════════════════════════
 function ConsumosTemplate({ cfg, u }) {
   const mundoId = cfg.mundo.id;
+  const moneda = cfg.mundo.moneda === "USD" ? "$" : "S/";
   const { historial } = useWalletLive(mundoId);
   const txs = historial.filter(t=>t.monto<0).slice(0,10);
   const totalGastado = txs.reduce((a,t)=>a+Math.abs(t.monto),0);
@@ -4978,7 +4985,7 @@ function ConsumosTemplate({ cfg, u }) {
     <div className="px-5 space-y-4 pb-8">
       {horario && <ConfigBanner icon="schedule" message={`POS operativo: ${horario}`} color="blue"/>}
       <StatGrid stats={[
-        {label:"Total gastado",value:`S/ ${totalGastado.toFixed(2)}`,icon:"shopping_bag",color:"text-[#1A3270]"},
+        {label:"Total gastado",value:`${moneda} ${totalGastado.toFixed(2)}`,icon:"shopping_bag",color:"text-[#1A3270]"},
         {label:"Compras",value:txs.length,icon:"receipt",color:"text-[#404255]"},
       ]}/>
       <SectionCard>
@@ -4988,7 +4995,7 @@ function ConsumosTemplate({ cfg, u }) {
           : txs.map(t=>(
             <ListItem key={t.id} icon="shopping_bag" iconBg="bg-[#EEF2FD]" iconColor="text-[#1A3270]"
               title={t.titulo} subtitle={new Date(t.fecha).toLocaleDateString("es-PE")}
-              right={<span className="font-black text-sm text-[#1C1C1E]">S/ {Math.abs(t.monto).toFixed(2)}</span>}/>
+              right={<span className="font-black text-sm text-[#1C1C1E]">{moneda} {Math.abs(t.monto).toFixed(2)}</span>}/>
           ))}
       </SectionCard>
     </div>
@@ -5028,6 +5035,7 @@ function resolvePorUxComponent(cfg) {
 // ══════════════════════════════════════════════════════════════════════════════
 function MarketplaceTemplate({ cfg, u }) {
   const worldId = cfg.mundo.id;
+  const moneda = cfg.mundo.moneda === "USD" ? "$" : "S/";
   const userId = getSyntheticUserId();
   const nombreTitular = u?.auth?.nombre || "Yo";
   const location = useLocation();
@@ -5122,7 +5130,7 @@ function MarketplaceTemplate({ cfg, u }) {
       } else {
         const err = await errorControlado("saldo_insuficiente");
         logErrorControlado("saldo_insuficiente", `marketplace-checkout:${cartMerchant}`, worldId);
-        setResultado({ ok: false, titulo: err.titulo, mensaje: `${err.mensaje} Saldo de ${beneficiario.nombre}: S/ ${(r.balance ?? saldoMostrado).toFixed(2)}.`, accion: err.accion });
+        setResultado({ ok: false, titulo: err.titulo, mensaje: `${err.mensaje} Saldo de ${beneficiario.nombre}: ${moneda} ${(r.balance ?? saldoMostrado).toFixed(2)}.`, accion: err.accion });
       }
     } catch (e) {
       const err = await mensajeDeError(e, "operacion_no_completada");
@@ -5137,7 +5145,7 @@ function MarketplaceTemplate({ cfg, u }) {
       <SectionCard className="p-6 text-center">
         <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
         <p className="font-black text-[#1C1C1E] text-lg mt-2">Compra realizada</p>
-        <p className="text-sm text-[#404255] mt-1">Pagaste <b>S/ {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
+        <p className="text-sm text-[#404255] mt-1">Pagaste <b>{moneda} {resultado.total.toFixed(2)}</b> a <b>{resultado.comercio}</b> con el saldo de <b>{resultado.beneficiario}</b>. El detalle está en Actividad.</p>
         <div className="mt-4"><PrimaryBtn label="Seguir comprando" icon="storefront" onClick={() => setResultado(null)}/></div>
       </SectionCard>
     </div>
@@ -5160,14 +5168,14 @@ function MarketplaceTemplate({ cfg, u }) {
                 <button onClick={() => quitar(it.product.id)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="remove" size="text-xs" color="text-[#1A3270]"/></button>
                 <span className="font-bold w-4 text-center">{it.qty}</span>
                 <button onClick={() => agregar(it.product)} className="w-6 h-6 rounded-full bg-[#EEF2FD] flex items-center justify-center tap-active"><Icon name="add" size="text-xs" color="text-[#1A3270]"/></button>
-                <span className="font-mono text-xs w-16 text-right">S/ {((+it.product.price) * it.qty).toFixed(2)}</span>
+                <span className="font-mono text-xs w-16 text-right">{moneda} {((+it.product.price) * it.qty).toFixed(2)}</span>
               </div>
             </div>
           ))}
         </div>
         <div className="border-t border-[#CDD1E4] pt-3 flex justify-between items-center mb-1">
           <span className="font-bold text-[#1C1C1E]">Total</span>
-          <span className="font-black text-xl text-[#1A3270]">S/ {total.toFixed(2)}</span>
+          <span className="font-black text-xl text-[#1A3270]">{moneda} {total.toFixed(2)}</span>
         </div>
         {beneficiarios.length > 1 && (
           <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2 mb-1">
@@ -5180,14 +5188,14 @@ function MarketplaceTemplate({ cfg, u }) {
             ))}
           </div>
         )}
-        <p className="text-[10px] text-[#404255] mb-4">Saldo de {beneficiario.nombre}: S/ {saldoMostrado.toFixed(2)}</p>
+        <p className="text-[10px] text-[#404255] mb-4">Saldo de {beneficiario.nombre}: {moneda} {saldoMostrado.toFixed(2)}</p>
         {resultado && !resultado.ok && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-3">
             <p className="font-bold text-red-700 text-sm">{resultado.titulo}</p>
             <p className="text-xs text-red-600 mt-0.5">{[resultado.mensaje, resultado.accion].filter(Boolean).join(" ")}</p>
           </div>
         )}
-        <PrimaryBtn label={pagando ? "Procesando…" : `Pagar S/ ${total.toFixed(2)} con saldo de ${beneficiario.nombre}`} icon="account_balance_wallet"
+        <PrimaryBtn label={pagando ? "Procesando…" : `Pagar ${moneda} ${total.toFixed(2)} con saldo de ${beneficiario.nombre}`} icon="account_balance_wallet"
           disabled={!cart.length || pagando} onClick={pagar}/>
       </SectionCard>
     </div>
@@ -5269,7 +5277,7 @@ function MarketplaceTemplate({ cfg, u }) {
                       {bloqueado && <p className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1"><Icon name="block" size="text-xs" color="text-red-600"/>Restringido para {beneficiario.nombre}</p>}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="font-black text-[#1A3270] text-sm">S/ {Number(p.price).toFixed(2)}</p>
+                      <p className="font-black text-[#1A3270] text-sm">{moneda} {Number(p.price).toFixed(2)}</p>
                       {!bloqueado && (
                         <button onClick={() => agregar(p)}
                           className="mt-1 text-[10px] bg-[#1A3270] text-white px-2.5 py-1 rounded-xl font-bold tap-active">
@@ -5289,7 +5297,7 @@ function MarketplaceTemplate({ cfg, u }) {
                 <button onClick={() => { setResultado(null); setEnCheckout(true); }}
                   className="w-full py-3.5 rounded-2xl bg-[#1A3270] text-white font-black flex items-center justify-between px-5 tap-active" style={{boxShadow:"0 8px 24px rgba(26,50,112,0.35)"}}>
                   <span className="flex items-center gap-2"><Icon name="shopping_cart" size="text-base" color="text-white"/>{unidades} {unidades === 1 ? "item" : "items"} · {nombreDe(cartMerchant)}</span>
-                  <span>S/ {total.toFixed(2)} →</span>
+                  <span>{moneda} {total.toFixed(2)} →</span>
                 </button>
               </div>
             </div>

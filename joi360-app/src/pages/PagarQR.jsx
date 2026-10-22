@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useStore } from "../hooks.js";
 import { getSyntheticUserId, fetchChargeRequestRemote, pagarChargeRequestRemote, errorControlado, logErrorControlado, mensajeDeError } from "../supabaseClient.js";
 import { Icon } from "../components/ModuleAtoms.jsx";
 import { showToast } from "../components/Toast.jsx";
@@ -11,11 +12,14 @@ import { showToast } from "../components/Toast.jsx";
 export default function PagarQRPage() {
   const { id } = useParams();
   const nav = useNavigate();
+  const st = useStore();
   const userId = getSyntheticUserId();
   const [cr, setCr] = useState(null); // null=cargando, undefined=no encontrado
   const [pagando, setPagando] = useState(false);
   const [error, setError] = useState("");
   const [pagado, setPagado] = useState(null); // resultado ok
+  const mundo = cr ? (st.mundos||[]).find(m=>m.id===cr.world_id) : null;
+  const moneda = mundo?.moneda === "USD" ? "$" : "S/";
 
   useEffect(() => {
     let vivo = true;
@@ -29,7 +33,7 @@ export default function PagarQRPage() {
       const r = await pagarChargeRequestRemote(id, userId);
       if (r.ok) {
         setPagado(r);
-        showToast({ titulo: "Pago confirmado", mensaje: `S/ ${r.monto.toFixed(2)} a ${r.merchantNombre || "el comercio"}.` }, "success");
+        showToast({ titulo: "Pago confirmado", mensaje: `${moneda} ${r.monto.toFixed(2)} a ${r.merchantNombre || "el comercio"}.` }, "success");
       } else {
         const code = r.motivo === "saldo" ? "saldo_insuficiente" : "operacion_no_completada";
         const err = await errorControlado(code);
@@ -64,7 +68,7 @@ export default function PagarQRPage() {
           <div className="glass-card rounded-2xl p-6 text-center">
             <Icon name="check_circle" fill size="text-5xl" color="text-green-600"/>
             <p className="font-black text-[#1C1C1E] text-lg mt-2">Pago confirmado</p>
-            <p className="text-sm text-[#404255] mt-1">S/ {pagado.monto.toFixed(2)} a {pagado.merchantNombre || "el comercio"}</p>
+            <p className="text-sm text-[#404255] mt-1">{moneda} {pagado.monto.toFixed(2)} a {pagado.merchantNombre || "el comercio"}</p>
             <button onClick={() => nav("/hub")} className="mt-5 w-full py-3.5 rounded-xl bg-[#1A3270] text-white font-black tap-active">Ir al inicio</button>
           </div>
         )}
@@ -79,7 +83,7 @@ export default function PagarQRPage() {
             <div className="glass-card rounded-2xl p-6">
               <p className="text-[#404255] text-xs font-semibold uppercase mb-1">Te está cobrando</p>
               <h1 className="text-xl font-black text-[#1C1C1E]">{cr.merchant_nombre || "Comercio"}</h1>
-              <p className="text-4xl font-black text-[#1A3270] mt-4">S/ {Number(cr.monto).toFixed(2)}</p>
+              <p className="text-4xl font-black text-[#1A3270] mt-4">{moneda} {Number(cr.monto).toFixed(2)}</p>
               {error && <p className="text-xs text-red-500 mt-3">{error}</p>}
               <button onClick={confirmar} disabled={pagando}
                 className="mt-5 w-full py-3.5 rounded-xl bg-[#1A3270] text-white font-black tap-active disabled:opacity-50 flex items-center justify-center gap-2">
