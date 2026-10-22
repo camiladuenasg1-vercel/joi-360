@@ -28,7 +28,7 @@ Comercio "Tienda Rana Dorada" — 2 productos (peluche $12, botella $8).
 ## 4. Donaciones — lo único genuinamente nuevo
 Tile "Donaciones" en el Hub → pantalla con montos sugeridos, selector Yappy/Wompi, confirmar. El saldo de Wallet no debe moverse — la donación queda en su propio registro (tabla `donations`, aparte).
 
-**Pendiente antes del demo: la tabla `donations` todavía no existe en Supabase** (`supabase-donaciones-bcs-corp.sql` en la raíz del repo, lista para correr) — sin ella, el botón "Donar" va a fallar al confirmar. Correrla en el SQL Editor de Supabase o darme el Personal Access Token para correrla yo.
+Tabla `donations` creada en Supabase (22-oct) vía Management API y verificada con un insert+delete real de punta a punta — el botón "Donar" ya puede confirmar.
 
 ## Qué decir si preguntan "¿esto ya cobra de verdad?"
 No. Yappy/Wompi están marcados `demo_mock`/`api_ready:false` en el catálogo — el checkout corre de punta a punta pero no llama ninguna pasarela real. La documentación real de Yappy que tenemos (Commerce API v1.1.0) es solo de consulta, no de cobro; de Wompi no se recibió documentación técnica.
