@@ -175,8 +175,8 @@ export function Emision() {
                           </div>
                           <p className="text-xs text-on-surface-variant mb-3">{ch.desc}</p>
                           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-xs">
-                            <Param label="Monto mín." val={`S/ ${ch.montoMin}`} />
-                            <Param label="Monto máx." val={ch.montoMax===0?"Sin límite":`S/ ${ch.montoMax}`} />
+                            <Param label="Monto mín." val={`${ch.monedas?.[0]==="USD"?"$":"S/"} ${ch.montoMin}`} />
+                            <Param label="Monto máx." val={ch.montoMax===0?"Sin límite":`${ch.monedas?.[0]==="USD"?"$":"S/"} ${ch.montoMax}`} />
                             <Param label="Comisión PSP" val={ch.comisionPSP>0?`${ch.comisionPSP}%`:"Gratis"} highlight={ch.comisionPSP>0}/>
                             <Param label="Quién la absorbe" val={ch.comisionTarget==="sponsor"?"Sponsor":"Plataforma"}/>
                             <Param label="Acreditación" val={ch.tiempoAcreditacion}/>
