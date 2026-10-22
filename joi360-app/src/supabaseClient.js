@@ -1170,6 +1170,25 @@ export async function cancelarReservaRemote(id) {
   });
 }
 
+// Donaciones v0.1.0 (demo BCS Corp / ONG Rana Dorada, 26-oct) -- tabla propia
+// (`donations`), nunca toca wallets.balance -- ver supabase-donaciones-bcs-corp.sql.
+// channelId/channelNombre vienen del mismo catálogo de Emisión (canalesHabilitadosDeMundoLive),
+// reutilizado tal cual -- Donaciones no inventa su propio catálogo de métodos de pago.
+export async function crearDonacionRemote(worldId, userId, monto, channelId, channelNombre, causa = null) {
+  const rows = await rest("donations", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      world_id: worldId, user_id: userId, amount: monto, currency: "USD",
+      channel_id: channelId, channel_nombre: channelNombre, causa,
+      comprobante_code: `DON-${Date.now().toString(36).toUpperCase()}`,
+    }),
+  });
+  return rows?.[0];
+}
+export async function fetchMisDonaciones(userId, worldId) {
+  return rest(`donations?user_id=eq.${userId}&world_id=eq.${worldId}&select=*&order=created_at.desc`);
+}
+
 // Estacionamiento v1.0.0 (26-ago) -- sesión real de ingreso/salida; el cobro
 // en sí reutiliza pagarSupabase (mismo RPC ya probado), calculado al salir
 // según la duración real -- nunca antes, para no cobrar por adelantado un

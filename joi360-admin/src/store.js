@@ -327,6 +327,25 @@ export const MODULE_CATALOG = [
     ],
   },
 
+  { id: "donaciones", name: "Donaciones", tier: "OPCIONAL", category: "Mixto", e: true, a: false, icon: "volunteer_activism",
+    version: "0.1.0",
+    desc: "Captura aportes puntuales a una causa del mundo (ONG, fundación, evento benéfico). Independiente del Wallet: una donación nunca acredita saldo ni se mezcla con Consumos o recargas — queda en su propio registro, por diseño.",
+    servicios: [
+      { id:"causas",      nombre:"Causas del mundo",      desc:"El sponsor define una o varias causas (título, descripción, imagen) a las que el usuario puede donar." },
+      { id:"donar",       nombre:"Donar desde la app",     desc:"El usuario elige monto (sugerido o libre) y método de pago habilitado, y confirma. No requiere tener Wallet activo en el mundo." },
+      { id:"historial",   nombre:"Historial de donaciones", desc:"El usuario ve sus propias donaciones; el sponsor ve el total recaudado por causa en el backoffice." },
+    ],
+    pricing: { modelo: "transaccional", porTx: 0, setup: 0, moneda: "USD" },
+    configFields: [
+      { key: "montoMinimo", label: "Monto mínimo por donación", type: "currency", default: 1 },
+      { key: "montoMaximo", label: "Monto máximo por donación", type: "currency", default: null, nullable: true, nullLabel: "Sin tope" },
+      { key: "permiteSinWallet", label: "Permitir donar sin tener Wallet activo en este mundo", type: "switch", default: true },
+      { key: "emiteComprobante", label: "Emitir comprobante no fiscal al donante", type: "switch", default: true,
+        hint: "Comprobante informativo dentro de la app, no es un comprobante fiscal/tributario real todavía." },
+    ],
+    posiblesIngresos: [],
+  },
+
   { id: "credito", name: "Crédito", tier: "OPCIONAL", category: "Emisión", e: true, a: false, icon: "credit_score",
     version: "0.0.0",
     desc: "Otorga líneas de crédito o saldo financiado a usuarios para realizar consumos dentro del ecosistema. Alto control regulatorio.",
@@ -557,6 +576,7 @@ export const MODULE_CATALOG = [
 export const VERTICALS = [
   "Educación", "Evento", "Retail", "Hospitalidad", "Salud", "Club Deportivo", "Entretenimiento",
   "Empresa", "Comunidad", // legados — sin mundos nuevos esperados, no se eliminan por compatibilidad
+  "ONG / Fundación", // demo BCS Corp / ONG Rana Dorada (26-oct)
   "Especial RedPontis", // interno — excluido del selector de creación
 ];
 
@@ -572,6 +592,7 @@ export const GIROS_POR_VERTICAL = {
   "Entretenimiento": ["Discoteca", "Casino", "Rooftop", "Karaoke", "Club social"],
   "Empresa": ["Corporativo / Comedor empresarial"],
   "Comunidad": ["Comunidad vecinal"],
+  "ONG / Fundación": ["Fundación de conservación", "ONG social", "Organización benéfica"],
   "Especial RedPontis": ["Interno RedPontis"],
 };
 export const CORE_IDS = MODULE_CATALOG.filter(m => m.tier === "CORE").map(m => m.id);
@@ -1568,6 +1589,22 @@ export const PSP_PROVIDERS = [
     api_endpoint:"https://api.culqi.com/v2",
     logo_icon:"credit_card", color:"#10B981",
     desc:"Pasarela peruana. Visa / Mastercard, checkout embebido vía Culqi.js. Pendiente de convenio comercial firmado." },
+  // Panamá (demo BCS Corp, 2026-10-23). api_ready:false porque lo único que
+  // nos compartieron de Yappy (swagger "Commerce Integration" v1.1.0 + manual
+  // v1.0.0) es la API de CONSULTA (sesión, historial, métodos de cobro) --
+  // ningún endpoint de creación de cobro (eso es "Botón de Pago V2", no
+  // suministrado). De Wompi no se encontró ninguna documentación. Por eso
+  // demo_mock:true: el checkout corre, pero nunca llama nada real.
+  { id:"yappy",     nombre:"Yappy",             categoria:"billetera_digital",
+    api_slug:"yappy",  api_ready:false,  checkout_type:"qr", demo_mock:true,
+    api_endpoint:null,  // Commerce API (consulta) !== Botón de Pago V2 (cobro, no suministrado)
+    logo_icon:"qr_code_2", color:"#00C3A5",
+    desc:"Billetera móvil de Panamá. Solo tenemos la API de consulta (sesión/historial/métodos de cobro); cobrar de verdad requiere Botón de Pago V2, no suministrado. Modo demo: simula el flujo, no cobra." },
+  { id:"wompi_pa",  nombre:"Wompi",             categoria:"pasarela_pago",
+    api_slug:"wompi_pa",  api_ready:false,  checkout_type:"form", demo_mock:true,
+    api_endpoint:null,  // sin documentación suministrada
+    logo_icon:"credit_card", color:"#5A3FFF",
+    desc:"Pasarela de Panamá. No se recibió documentación técnica (se buscó en disco, no existe). Modo demo: simula el flujo, no cobra." },
 ];
 
 // ============ CANALES DE EMISIÓN (recargas / top-up de wallet) ============
@@ -1608,6 +1645,21 @@ export const CANALES_EMISION = [
     montoMin:20, montoMax:50000, comisionPSP:0, comisionTarget:"plataforma",
     tiempoAcreditacion:"1-2 horas", horarioGlobal:"08:00-18:00", monedas:["PEN","USD"],
     desc:"CCI interbancaria. Solo para mundos corporativos de alto volumen. Activación manual por Admin RP." },
+
+  // ── PANAMÁ (demo BCS Corp / ONG Rana Dorada, 2026-10-23) ──────────
+  // disponible:true a propósito (distinto del resto de arriba): el toggle
+  // SÍ debe poder activarse para que el flujo de checkout corra en la demo.
+  // demo_mock:true en el PSP es lo que hace que nunca se llame nada real.
+  { id:"yappy", categoria:"billetera_digital", nombre:"Yappy", icon:"qr_code_2", disponible:true,
+    psp_id:"yappy", checkout_type:"qr",
+    montoMin:1, montoMax:2000, comisionPSP:0, comisionTarget:"plataforma",
+    tiempoAcreditacion:"Inmediato (simulado)", horarioGlobal:"00:00-23:59", monedas:["USD"],
+    desc:"MODO DEMO — simula un cobro Yappy. No ejecuta ningún cobro real (ver PSP_PROVIDERS: solo tenemos la API de consulta, no la de cobro)." },
+  { id:"wompi_pa", categoria:"pasarela_pago", nombre:"Wompi", icon:"credit_card", disponible:true,
+    psp_id:"wompi_pa", checkout_type:"form",
+    montoMin:1, montoMax:2000, comisionPSP:0, comisionTarget:"plataforma",
+    tiempoAcreditacion:"Inmediato (simulado)", horarioGlobal:"00:00-23:59", monedas:["USD"],
+    desc:"MODO DEMO — simula un cobro Wompi. No ejecuta ningún cobro real (sin documentación técnica suministrada)." },
 ];
 
 // Helpers para la UI y la app

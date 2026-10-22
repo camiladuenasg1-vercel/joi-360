@@ -22,6 +22,7 @@ import {
   fetchMisReservas, fetchOcupacionRecurso, crearReservaRemote, cancelarReservaRemote,
   fetchSesionEstacionamientoActiva, ingresarEstacionamientoRemote, fetchMisSesionesEstacionamiento, salirEstacionamientoRemote,
   fetchMisSubsidios,
+  canalesHabilitadosDeMundoLive, crearDonacionRemote, fetchMisDonaciones,
 } from "../supabaseClient.js";
 import { hoyLocalISO, fmtFechaLocal } from "../dates.js";
 import { MODULES } from "../modules.js";
@@ -1789,6 +1790,119 @@ function CashbackTemplate({ cfg, u }) {
               title={h.tipo === "CASHBACK_CANJEADO" ? "Cashback canjeado" : h.tipo === "CASHBACK_REVERTIDO" ? "Cashback revertido" : "Cashback ganado"}
               subtitle={new Date(h.fecha).toLocaleDateString("es-PE")}
               right={<span className="font-black text-sm text-orange-600">{h.monto > 0 ? "+" : ""}S/ {Math.abs(h.monto).toFixed(2)}</span>}
+            />
+          ))}
+      </SectionCard>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TEMPLATE: DONACIONES v0.1.0 (demo BCS Corp / ONG Rana Dorada, 26-oct)
+// config: montoMinimo, montoMaximo, permiteSinWallet, emiteComprobante.
+// Independiente de Wallet por diseño -- nunca llama recargarSupabase/pagarSupabase,
+// nunca toca wallets.balance. Reutiliza el mismo catálogo de canales de Emisión
+// que Wallet (canalesHabilitadosDeMundoLive) -- Yappy/Wompi (Panamá, modo demo)
+// aparecen aquí automáticamente si el mundo los tiene habilitados, sin
+// inventar un catálogo de métodos de pago propio para Donaciones.
+// ══════════════════════════════════════════════════════════════════════════════
+function DonacionesTemplate({ cfg, u }) {
+  const worldId = cfg.mundo.id;
+  const userId = getSyntheticUserId();
+  const moneda = cfg.mundo.currency === "USD" ? "$" : "S/";
+  const montoMin = cfg.config.montoMinimo || 1;
+  const montoMax = cfg.config.montoMaximo;
+  const sugeridos = [montoMin, montoMin * 2, montoMin * 5].filter((v,i,a)=>a.indexOf(v)===i);
+
+  const [canales, setCanales] = useState([]);
+  const [monto, setMonto] = useState(sugeridos[1] || montoMin);
+  const [canalSel, setCanalSel] = useState(null);
+  const [donando, setDonando] = useState(false);
+  const [misDonaciones, setMisDonaciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      setCargando(true);
+      try {
+        const [chs, mias] = await Promise.all([
+          canalesHabilitadosDeMundoLive(worldId),
+          fetchMisDonaciones(userId, worldId).catch(() => []),
+        ]);
+        if (!vivo) return;
+        setCanales(chs || []);
+        setCanalSel((chs || [])[0] || null);
+        setMisDonaciones(mias || []);
+      } finally { if (vivo) setCargando(false); }
+    })();
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldId]);
+
+  const handleDonar = async () => {
+    const m = +monto;
+    if (!m || m < montoMin || (montoMax && m > montoMax) || !canalSel || donando) return;
+    setDonando(true);
+    try {
+      await crearDonacionRemote(worldId, userId, m, canalSel.id, canalSel.nombre, cfg.mundo.nombre);
+      showToast(`¡Gracias! Donación de ${moneda} ${m.toFixed(2)} vía ${canalSel.nombre} registrada.`);
+      const mias = await fetchMisDonaciones(userId, worldId).catch(() => []);
+      setMisDonaciones(mias || []);
+      setMonto(sugeridos[1] || montoMin);
+    } catch (e) {
+      const err = await mensajeDeError(e, "operacion_no_completada");
+      showToast({ titulo: err.titulo, mensaje: err.mensaje }, err.severidad);
+    } finally { setDonando(false); }
+  };
+
+  return (
+    <div className="px-5 space-y-4 pb-8">
+      <HeroBalance label={`Dona a ${cfg.mundo.nombre}`} amount={(+monto || 0)} currency={moneda}
+        subtitle="Independiente de tu Wallet — una donación nunca acredita saldo." dark />
+
+      <SectionCard className="p-4">
+        <SectionHeader label="Monto" icon="payments"/>
+        <div className="flex gap-2 flex-wrap mb-3">
+          {sugeridos.map(v => (
+            <button key={v} onClick={()=>setMonto(v)}
+              className={`px-4 py-2 rounded-2xl text-sm font-bold border ${+monto===v ? "bg-[#1A3270] text-white border-[#1A3270]" : "border-[#CDD1E4] text-[#404255]"}`}>
+              {moneda} {v}
+            </button>
+          ))}
+        </div>
+        <input type="number" inputMode="decimal" value={monto} onChange={e=>setMonto(e.target.value)}
+          className="w-full px-4 py-3 rounded-2xl border border-[#CDD1E4] text-base font-bold" placeholder={`Monto en ${cfg.mundo.currency||"USD"}`}/>
+      </SectionCard>
+
+      <SectionCard className="p-4">
+        <SectionHeader label="Método de pago" icon="credit_card"/>
+        {cargando ? <p className="text-xs text-[#404255] px-1">Cargando métodos…</p> :
+          canales.length === 0 ? <EmptyState icon="credit_card_off" title="Sin métodos habilitados" subtitle="El sponsor de este mundo todavía no activó ningún canal para donar."/> :
+          <div className="space-y-2">
+            {canales.map(ch => (
+              <button key={ch.id} onClick={()=>setCanalSel(ch)}
+                className={`w-full flex items-center justify-between p-3 rounded-2xl border tap-active ${canalSel?.id===ch.id ? "border-[#1A3270] bg-[#EEF2FD]" : "border-[#CDD1E4]"}`}>
+                <span className="font-bold text-sm text-[#1C1C1E]">{ch.nombre}</span>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">MODO DEMO</span>
+              </button>
+            ))}
+          </div>
+        }
+      </SectionCard>
+
+      <PrimaryBtn label={`Donar ${moneda} ${(+monto||0).toFixed(2)} (simulado)`} icon="volunteer_activism"
+        onClick={handleDonar} disabled={!canalSel || !(+monto>0)} loading={donando} loadingLabel="Procesando…"/>
+
+      <SectionCard>
+        <SectionHeader label="Mis donaciones" icon="history"/>
+        {misDonaciones.length === 0
+          ? <EmptyState icon="volunteer_activism" title="Sin donaciones todavía" subtitle="Tus aportes a este mundo aparecerán aquí."/>
+          : misDonaciones.slice(0,10).map(d => (
+            <ListItem key={d.id} icon="volunteer_activism" iconBg="bg-[#E6F7F1]" iconColor="text-[#0BA878]"
+              title={`Donación vía ${d.channel_nombre || "—"}`}
+              subtitle={new Date(d.created_at).toLocaleDateString("es-PE")}
+              right={<span className="font-black text-sm text-[#0BA878]">+{moneda} {Number(d.amount).toFixed(2)}</span>}
             />
           ))}
       </SectionCard>
@@ -5332,6 +5446,7 @@ const TEMPLATE_MAP = {
   bnpl:            (cfg, u) => <BNPLTemplate cfg={cfg} u={u}/>,
   consumos:        (cfg, u) => <ConsumosTemplate cfg={cfg} u={u}/>,
   suscripciones:   (cfg, u) => <SuscripcionesTemplate cfg={cfg} u={u}/>,
+  donaciones:      (cfg, u) => <DonacionesTemplate cfg={cfg} u={u}/>,
 };
 
 const MODULE_META = {
@@ -5354,6 +5469,7 @@ const MODULE_META = {
   turnos:      { title:"Mis Turnos",       icon:"pending_actions",        bg:"bg-[#EAF3FC]", color:"text-cyan-700"  },
   transporte:  { title:"Transporte",       icon:"directions_bus",         bg:"bg-[#EAF3FC]", color:"text-blue-700"  },
   bnpl:        { title:"Paga después",     icon:"schedule_send",          bg:"bg-[#EEF2FD]", color:"text-purple-700"},
+  donaciones:  { title:"Donaciones",       icon:"volunteer_activism",     bg:"bg-[#E6F7F1]", color:"text-[#0BA878]" },
 };
 
 export default function ModulePage() {

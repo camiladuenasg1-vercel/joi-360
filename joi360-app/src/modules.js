@@ -25,6 +25,7 @@ export const MODULES = {
   turnos:          { icon:"pending_actions",        label:"Turnos",         bg:"bg-[#EAF3FC]",  color:"text-[#00838f]" },
   bnpl:            { icon:"schedule_send",          label:"BNPL",           bg:"bg-[#EEF2FD]",  color:"text-[#3B5BDB]" },
   transporte:      { icon:"directions_bus",         label:"Transporte",     bg:"bg-[#EAF3FC]",  color:"text-[#0288d1]" },
+  donaciones:      { icon:"volunteer_activism",      label:"Donaciones",     bg:"bg-[#E6F7F1]",  color:"text-[#0BA878]" },
 };
 
 export const QUICK_ACTIONS = [
