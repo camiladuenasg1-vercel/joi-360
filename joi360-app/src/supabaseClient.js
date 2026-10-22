@@ -1035,8 +1035,13 @@ export async function fetchWorldConfigLive(worldId) {
 // no un "PEN" fijo — hoy no se nota porque los mundos reales son todos PEN,
 // pero era la fuente de verdad equivocada.
 async function monedaDeMundo(worldId) {
-  const rows = await rest(`worlds?id=eq.${worldId}&select=moneda`).catch(() => []);
-  return rows?.[0]?.moneda || "PEN";
+  // Bug real encontrado el 22-oct: la columna real de `worlds` es `currency`,
+  // no `moneda` -- la query fallaba silenciosamente (catch a []) y toda
+  // wallet nueva caía al default "PEN", incluso en un mundo USD. No se
+  // notaba porque hasta ahora todos los mundos reales eran PEN (BCS Corp /
+  // Rana Dorada es el primero en USD).
+  const rows = await rest(`worlds?id=eq.${worldId}&select=currency`).catch(() => []);
+  return rows?.[0]?.currency || "PEN";
 }
 
 // ── Sucursales — saldo compartido (Etapa B) ─────────────────────────────────
