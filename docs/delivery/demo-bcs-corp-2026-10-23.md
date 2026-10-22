@@ -1,6 +1,6 @@
 # Guión de demo — BCS Corp / ONG Rana Dorada (2026-10-23)
 
-Rama: `feature/bcs-corp-rana-dorada` (commits `bc50e18`, `4740af8`, `8880df9`)
+Rama: `feature/bcs-corp-rana-dorada` (commits `bc50e18`, `4740af8`, `8880df9`, `32cb287`, `98a272f`)
 Sistema real: **joi360-admin** + **joi360-app** (React + Supabase, repo `camiladuenasg1-vercel/joi-360`). NO es `prototype-separated` (prototipo anterior, retirado).
 
 ## Qué está verificado en vivo vs. solo revisado en código
@@ -33,6 +33,8 @@ Tile "Donaciones" en el Hub → pantalla con montos sugeridos, selector Yappy/Wo
 ## Qué decir si preguntan "¿esto ya cobra de verdad?"
 No. Yappy/Wompi están marcados `demo_mock`/`api_ready:false` en el catálogo — el checkout corre de punta a punta pero no llama ninguna pasarela real. La documentación real de Yappy que tenemos (Commerce API v1.1.0) es solo de consulta, no de cobro; de Wompi no se recibió documentación técnica.
 
-## 2 bugs reales encontrados y corregidos durante esta verificación (no relacionados entre sí, ambos ya en la rama)
+## Bugs reales encontrados y corregidos durante esta verificación (ya en la rama)
 1. El catálogo de Emisión mostraba "S/" en vez de "$" para canales en USD (cosmético, Emision.jsx).
 2. `monedaDeMundo()` consultaba una columna `worlds.moneda` que no existe — toda wallet nueva caía a "PEN" sin importar la moneda real del mundo. Nunca se notó porque hasta ahora todos los mundos reales eran PEN.
+3. Barrido completo de "S/" hardcodeado en la SuperApp, en toda pantalla alcanzable con las capacidades reales de este mundo (Wallet/recarga, QR de pago, compra de entradas, Mis Compras, Marketplace de comercios) — todas mostraban soles aunque el mundo sea USD. Se corrigió usando la moneda real del mundo en cada pantalla (`Pay.jsx`, `PagarQR.jsx`, `Module.jsx`). También se unificó el símbolo de dólar: `WalletTemplate` mostraba "US$" mientras el resto de la app ya mostraba "$" — ahora todo dice "$" de forma consistente.
+   - Quedan sin corregir, a propósito, dos rutas que no son alcanzables en este mundo (verificado contra su configuración real en Supabase): la transferencia P2P (`p2pEnabled:false`) y la creación de eventos por el propio usuario (`allowB2C:false`). Si alguna de las dos se activa más adelante para otro mundo USD, van a necesitar el mismo arreglo.
