@@ -192,7 +192,7 @@ export default function ProfilePage() {
                     <p className="text-[#1C1C1E] font-bold text-sm truncate">{d.nombre}</p>
                     <p className="text-[#404255] text-xs">{d.mundoNombre}{d.alergias ? ` · alergias: ${d.alergias}` : ""}</p>
                   </div>
-                  <p className="text-[#1C1C1E] font-black text-sm flex-shrink-0">S/ {(d.balance||0).toFixed(2)}</p>
+                  <p className="text-[#1C1C1E] font-black text-sm flex-shrink-0">{(st.mundos||[]).find(w=>w.id===d.mundoId)?.moneda === "USD" ? "$" : "S/"} {(d.balance||0).toFixed(2)}</p>
                 </button>
               ))
             )}
@@ -224,7 +224,7 @@ export default function ProfilePage() {
                       <p className="text-[#404255] text-xs">{m.vertical} · {pts.toLocaleString()} pts</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[#1C1C1E] font-black text-sm">S/ {bal.toFixed(2)}</p>
+                      <p className="text-[#1C1C1E] font-black text-sm">{m.moneda === "USD" ? "$" : "S/"} {bal.toFixed(2)}</p>
                       {isActive ? <p className="text-[10px] font-mono text-[#1A3270]">ACTIVO</p>
                         : <button onClick={() => { setActiveMundo(m.id); showToast(`Cambiado a ${m.nombre}`); }} className="text-[10px] font-bold text-[#404255]">Activar</button>}
                     </div>

@@ -162,6 +162,7 @@ export default function HubPage() {
   const wc = useWorldConfig(activeMundo?.id);
   const puntos = useLoyaltyPuntos(activeMundo?.id);
   const nombre = u?.auth?.nombre || "JOI";
+  const moneda = activeMundo?.moneda === "USD" ? "$" : "S/";
   const initials = nombre.split(" ").map(p => p[0]).join("").toUpperCase().slice(0, 2);
   // ── Todo derivado de la config VIVA del mundo (Supabase) ──────────────
   // Grid de módulos: capacidades activas cuya experiencia no vive ya en otra
@@ -250,7 +251,7 @@ export default function HubPage() {
           </p>
           {verSaldo ? (
             <p className="text-[42px] font-black text-[#1C1C1E] tracking-tight leading-none">
-              S/ {saldo.toFixed(2)}
+              {moneda} {saldo.toFixed(2)}
             </p>
           ) : (
             // Mundo en modo solo-identificación: sin saldo, sin montos.
@@ -362,7 +363,7 @@ export default function HubPage() {
                     <p className="text-[#404255] text-[11px]">{new Date(t.fecha).toLocaleDateString("es-PE")}</p>
                   </div>
                   <p className={`font-black text-sm ${t.monto > 0 ? "text-green-600" : "text-[#1C1C1E]"}`}>
-                    {t.monto > 0 ? "+" : ""}S/ {Math.abs(t.monto).toFixed(2)}
+                    {t.monto > 0 ? "+" : ""}{moneda} {Math.abs(t.monto).toFixed(2)}
                   </p>
                 </div>
               ))}

@@ -15,6 +15,7 @@ export default function ActivityPage() {
   const [filterMundo, setFilterMundo] = useState(null);
 
   const activeMundo = (st.mundos||[]).find(m=>m.id===u?.activeMundoId);
+  const moneda = activeMundo?.moneda === "USD" ? "$" : "S/";
   const memberships = (u?.memberships||[]).map(id=>(st.mundos||[]).find(m=>m.id===id)).filter(Boolean);
   const { historial } = useWalletLive(activeMundo?.id);
 
@@ -70,11 +71,11 @@ export default function ActivityPage() {
           <div className="flex gap-3 mt-4">
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
               <p className="text-[#404255] text-[10px] font-semibold uppercase">Gastado</p>
-              <p className="text-red-500 font-black text-lg">- S/ {gastos.toFixed(2)}</p>
+              <p className="text-red-500 font-black text-lg">- {moneda} {gastos.toFixed(2)}</p>
             </div>
             <div className="glass-card rounded-2xl px-4 py-3 flex-1">
               <p className="text-[#404255] text-[10px] font-semibold uppercase">Ingresado</p>
-              <p className="text-green-600 font-black text-lg">+ S/ {entradas.toFixed(2)}</p>
+              <p className="text-green-600 font-black text-lg">+ {moneda} {entradas.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function ActivityPage() {
                       </div>
                       {t.monto !== 0 && (
                         <p className={`font-black text-sm ${t.monto>0?"text-green-600":"text-[#1C1C1E]"}`}>
-                          {t.monto>0?"+":""}S/ {Math.abs(t.monto).toFixed(2)}
+                          {t.monto>0?"+":""}{moneda} {Math.abs(t.monto).toFixed(2)}
                         </p>
                       )}
                     </div>

@@ -90,7 +90,7 @@ export default function MundosPage() {
                 </div>
                 <div>
                   <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-1">SALDO</p>
-                  <p className={`text-white font-black ${isActive ? "text-3xl" : "text-xl"}`}>S/ {saldo.toFixed(2)}</p>
+                  <p className={`text-white font-black ${isActive ? "text-3xl" : "text-xl"}`}>{mod?.moneda === "USD" ? "$" : "S/"} {saldo.toFixed(2)}</p>
                 </div>
               </div>
             );
